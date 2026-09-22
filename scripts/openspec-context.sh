@@ -19,7 +19,7 @@ ctx = f"""  Read CLAUDE.md first (rules, structure, what not to do) and adr/ for
   Tests: patterns {t["patterns"]}; layers {json.dumps(t["layers"])}. Test file edits are gated
   (red gate) and go in test: commits before feat: commits.
   Verify (definition of done): `{c["verify"]}`. Platform: {pl["profile"]}.
-  Design source: {d["design"]["source"]} (see design/NO_FIGMA). Not yet declared (null): {", ".join(null_slots)}.
+  Design source: {d["design"]["source"]} (node index: design/map.md). Not yet declared (null): {", ".join(null_slots)}.
   No new dependencies without the LIBRARY gate + ADR. Conventional commits in Korean, subject <= 50 chars.
   Security/data invariants never weakened: drafts never on public API, 409 on stale revision,
   URL scheme allow-list, MCP tokens cannot publish.

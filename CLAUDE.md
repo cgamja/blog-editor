@@ -15,7 +15,7 @@
 
 1. `adr/` — 왜 이렇게 만들었나 (D1~D14 결정 기록이 원천)
 2. `~/2026-09-20 blog-plan.md` — 설계 문서(어떻게 만드는가). 3-3 구조 · 3-4 저장 형식 · 05 테스트 층 · 11 M0 스파이크
-3. PRD https://claude.ai/artifact/Rm3nPgTioyyenou6MTjoNW (PRD · 디자인 · 아키텍처 상세 탭) · 화면 디자인 https://claude.ai/artifact/UkuCE9TwgtodyfShVeybSB (Design 캔버스, Figma 아님 — 화면 대응표 `design/map.md` · 뽑은 값 `design/tokens.json`)
+3. PRD https://claude.ai/artifact/Rm3nPgTioyyenou6MTjoNW (PRD · 디자인 · 아키텍처 상세 탭) · 화면 디자인 Figma https://www.figma.com/design/cEy6fybMcrnEfokCc8XVQB 페이지 "Editor design" (노드 인덱스 `design/map.md` · 뽑은 값 `design/tokens.json`)
 4. GitHub 이슈 — 마일스톤 M0~M6. 이슈 하나 = PR 하나. Tier-2 작업은 OpenSpec change로(`openspec list`가 열린 change)
 5. 필요할 때(`@`로 불러오지 않는다): `.claude/cgamja.json`(선언 — 강제 수단의 원천) · `.claude/rules/`(파일별 규칙과 각 규칙의 강제 수단) · `docs/conventions.md`(이유) · `openspec/specs/`(행동 스펙) · 작업 절차는 develop-fe 스킬
 
