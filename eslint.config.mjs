@@ -15,20 +15,29 @@ import tseslint from "typescript-eslint";
  *   - TipTap은 editor-core · editor-react 밖으로 나가지 않는다
  *   - React는 editor-react · web에만
  */
-const TIPTAP = { group: ["@tiptap/*"], message: "TipTap은 editor-core·editor-react 안에만 둔다." };
+/**
+ * `group`은 gitignore 방식이라 `*`가 `/`를 넘지 않는다. 패키지 이름과 그 아래 모든 경로를 같이 막는다
+ * — `@tiptap/core/deep` 같은 중첩 import로 우회하지 못하게. eslint.boundaries.test.ts가 이것을 검사한다.
+ */
+const withSubpaths = (...names) => names.flatMap((n) => [n, `${n}/**`]);
+
+const TIPTAP = {
+  group: withSubpaths("@tiptap/*"),
+  message: "TipTap은 editor-core·editor-react 안에만 둔다.",
+};
 const PROSEMIRROR = {
-  group: ["prosemirror-*", "@tiptap/pm", "@tiptap/pm/*"],
+  group: withSubpaths("prosemirror-*", "@tiptap/pm"),
   message: "ProseMirror는 content-schema 밖에서만 쓴다.",
 };
 const REACT = {
-  group: ["react", "react-dom", "react/*", "react-dom/*"],
+  group: withSubpaths("react", "react-dom"),
   message: "React는 editor-react·web에만 둔다.",
 };
 
 /** 각 패키지가 import하면 안 되는 워크스페이스 패키지 — 의존 방향의 역방향·건너뛰기 전부 */
 function forbidWorkspace(...names) {
   return {
-    group: names.map((n) => `@blog-editor/${n}`),
+    group: withSubpaths(...names.map((n) => `@blog-editor/${n}`)),
     message: "패키지 의존 방향을 어긴다 (eslint.config.mjs 머리 주석 참고).",
   };
 }
