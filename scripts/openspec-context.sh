@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # openspec/config.yaml 을 .claude/cgamja.json(선언)에서 생성한다 — 같은 사실을 손으로 두 번 쓰지 않는다(adr-010).
-# 선언을 바꿨으면 이 스크립트를 다시 돌린다. 스택 · 규칙의 원문은 CLAUDE.md / adr/ 이고 여기서는 가리키기만 한다.
+#   scripts/openspec-context.sh          생성해서 덮어쓴다
+#   scripts/openspec-context.sh --check  생성 결과와 커밋된 파일이 같은지만 본다(파일을 바꾸지 않는다). verify가 돈다 — 선언만 바꾸고 재생성을 잊으면 빨강.
+# 스택 · 규칙의 원문은 CLAUDE.md / adr/ 이고 여기서는 가리키기만 한다.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-python3 - <<'PY'
-import json
+out="$(mktemp)"; trap 'rm -f "$out"' EXIT
+python3 - "$out" <<'PY'
+import json, sys
 d = json.load(open(".claude/cgamja.json"))
 c, t, dm, pl = d["commands"], d["tests"], d["domains"], d["platform"]
 edges = "\n".join(f"    - {e}" for e in dm["allowed_edges"])
@@ -24,7 +27,7 @@ ctx = f"""  Read CLAUDE.md first (rules, structure, what not to do) and adr/ for
   Security/data invariants never weakened: drafts never on public API, 409 on stale revision,
   URL scheme allow-list, MCP tokens cannot publish.
 """
-out = f"""# 생성 파일 — 손으로 고치지 않는다. 원천은 .claude/cgamja.json + CLAUDE.md, 생성은 scripts/openspec-context.sh (adr-010)
+text = f"""# 생성 파일 — 손으로 고치지 않는다. 원천은 .claude/cgamja.json + CLAUDE.md, 생성은 scripts/openspec-context.sh (adr-010)
 schema: feature # 기본 스키마 = Tier-2 (delta spec + tasks)
 context: |
 {ctx}rules:
@@ -45,6 +48,13 @@ operations:
       - Before archiving run the two review axes (cgamja:review-cgamja for philosophy/spec compliance, code review for bugs). Resolve blockers first (one batched fix pass, one recheck).
       - Confirm every `#### Scenario:` has a matching test or screenshot (Converge group) before archive
 """
-open("openspec/config.yaml", "w").write(out)
-print("openspec/config.yaml 생성")
+open(sys.argv[1], "w").write(text)
 PY
+# 커밋된 파일은 prettier 포맷을 거치므로 생성물도 같은 포맷으로 맞춘 뒤 비교한다
+pnpm exec prettier --log-level warn --stdin-filepath openspec/config.yaml < "$out" > "$out.fmt" && mv "$out.fmt" "$out"
+if [ "${1:-}" = "--check" ]; then
+  if diff -u openspec/config.yaml "$out"; then echo "openspec/config.yaml 최신"; else
+    echo "✗ openspec/config.yaml 이 선언(.claude/cgamja.json)과 다르다 — scripts/openspec-context.sh 를 돌려 재생성하고 커밋" >&2; exit 1; fi
+else
+  cp "$out" openspec/config.yaml; echo "openspec/config.yaml 생성"
+fi

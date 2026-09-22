@@ -4,7 +4,7 @@
 
 ## 하지 않는 것 (훅 · 린트가 막는다 — 이유를 알고 우회하지 않는다)
 
-- 새 의존성 · 보호 파일(매니페스트 · lockfile · 린트/훅 설정 · `.claude/cgamja.json`) 변경을 쉘로 — Edit로 제안하면 **사람이 diff를 보고 승인**한다. `pnpm add`류는 거부된다. 새 라이브러리는 LIBRARY 게이트(`~/cgamja-philosophy/docs/LIBRARY.md`) + ADR 먼저. TipTap · Hono · prosemirror-markdown · React Router · MCP SDK도 예외 없음
+- 새 의존성 · 보호 파일(매니페스트 · lockfile · 린트/훅 설정 · `.claude/cgamja.json`) 변경을 쉘로 — Edit로 제안하면 **사람이 diff를 보고 승인**한다. `pnpm add`류는 거부된다. 새 라이브러리는 LIBRARY 게이트(https://github.com/cgamja/cgamja-philosophy/blob/main/docs/LIBRARY.md) + ADR 먼저. TipTap · Hono · prosemirror-markdown · React Router · MCP SDK도 예외 없음
 - 테스트를 초록으로 만들기 위한 테스트 수정 — 첫 테스트 편집은 세션당 1회 사람 승인(red 게이트). 각 red의 실패 출력 원문을 보고하고 `test:` 커밋으로 분리. **보안 · 데이터 테스트(공개 API에 초안 없음 · 409 · URL 스킴 허용 목록 · MCP 토큰으로 발행 불가)는 고쳐서 통과시키지 않는다**
 - 패키지 경계 넘기 — 의존 방향 역행, TipTap/React/ProseMirror를 허용 패키지 밖에서, 상대경로로 다른 패키지에 들어가기. ESLint가 막는다. 막히면 구조를 바꾸지 말고 이유를 묻는다
 - `--no-verify`, `git push --force`, 훅 우회 환경변수 (거부됨)
@@ -48,7 +48,7 @@ pnpm verify    # typecheck · lint · format:check · test · docs:check — 완
 
 ## 협업 규약
 
-- 커밋: Conventional Commits, 한국어 제목 50자 이내, 테스트는 `test:`로 분리 — commitlint + lefthook이 검사한다(`~/cgamja-philosophy/docs/COMMIT.md`)
+- 커밋: Conventional Commits, 한국어 제목 50자 이내, 테스트는 `test:`로 분리 — commitlint + lefthook이 검사한다(규약 원문 https://github.com/cgamja/cgamja-philosophy/blob/main/docs/COMMIT.md)
 - 이슈 → 브랜치(`feat/…` `fix/…` `chore/…`) → PR. 템플릿은 `.github/`. PR 하나 = 목적 하나, 본문에는 "왜"와 "하지 않은 것".
 - ADR은 `.github/ADR-TEMPLATE.md`를 복사해 `adr/YYYY-MM-DD-adr-NNN-<제목>.md`. append-only — 뒤집으면 새 ADR. `docs/adr`는 같은 폴더의 별칭(cgamja 도구가 그 경로를 읽는다).
 - 스파이크 코드는 버린다. 남기는 것은 결과(통과/실패 · 고른 대안)뿐이고 이슈와 plan 09에 적는다.

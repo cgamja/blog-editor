@@ -1,6 +1,6 @@
 # conventions — 이유와 예시
 
-규칙 자체는 `.claude/rules/`와 린트에 있다. 여기는 "왜"와 정본 포인터만. `@`로 CLAUDE.md에 불러오지 않는다. 규칙을 여기에 추가로 쓰지 않는다 — 린트나 `.claude/rules/`에 쓰고 여기엔 이유만. 철학 원문은 `~/cgamja-philosophy/docs/`.
+규칙 자체는 `.claude/rules/`와 린트에 있다. 여기는 "왜"와 정본 포인터만. `@`로 CLAUDE.md에 불러오지 않는다. 규칙을 여기에 추가로 쓰지 않는다 — 린트나 `.claude/rules/`에 쓰고 여기엔 이유만. 철학 원문은 https://github.com/cgamja/cgamja-philosophy/tree/main/docs.
 
 ## 패키지 경계
 

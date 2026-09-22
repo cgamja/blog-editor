@@ -6,9 +6,10 @@ commit-msg:
       run: pnpm exec commitlint --edit {1}
     no-test-edit-in-feat:
       # 구현 커밋에 테스트 파일이 섞이면 거부. 테스트 커밋은 test(scope):로 분리 — 테스트 약화가 diff에 보이게.
+      # 테스트 경로는 .claude/cgamja.json tests.patterns(**/*.test.* · e2e/**)와 같은 범위.
       # commit-msg 단계에서 {1}(현재 메시지 파일)을 읽는다 — pre-commit에서 .git/COMMIT_EDITMSG를 읽으면 `git commit -m`일 때 직전 메시지가 보여 오탐.
       run: |
-        if grep -qE '^(feat|fix|refactor)' "{1}" && git diff --cached --name-only | grep -qE '\.test\.tsx?$'; then
+        if grep -qE '^(feat|fix|refactor)' "{1}" && git diff --cached --name-only | grep -qE '(^|/)e2e/|\.test\.[^/]+$'; then
           echo "feat/fix/refactor 커밋에 테스트 파일이 포함됨 — test(scope): 커밋으로 분리하세요"; exit 1; fi
 pre-commit:
   commands:
