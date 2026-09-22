@@ -1,0 +1,4 @@
+# 전부 내부 패키지 — npm에 배포하지 않는다 (adr-001). 사이트는 공개 API의 HTML을 받는다.
+packages:
+  - packages/*
+  - apps/editor/*
