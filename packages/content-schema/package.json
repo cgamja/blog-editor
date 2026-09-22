@@ -1,0 +1,16 @@
+{
+  "name": "@blog-editor/content-schema",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "저장 형식의 주인 — zod 스키마 · 타입 · schemaVersion · 마이그레이션 · 정규화 · 픽스처. ProseMirror를 모른다.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}
