@@ -9,6 +9,10 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["packages/*/src/**/*.test.ts", "apps/editor/*/src/**/*.test.{ts,tsx}"],
+    include: [
+      "*.test.ts", // 루트 도구 검사 (eslint.boundaries.test.ts)
+      "packages/*/src/**/*.test.ts",
+      "apps/editor/*/src/**/*.test.{ts,tsx}",
+    ],
   },
 });
