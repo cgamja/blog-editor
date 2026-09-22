@@ -1,0 +1,36 @@
+{
+  "$schema": "cgamja 프로젝트 선언 v1 (플러그인 adr/0014). 훅·스모크·리뷰어가 읽는 사실. 없는 강제 수단은 null — 대조표의 ✗로 남아 다음 세팅 때 다시 보인다. ≤40줄이라 prettier 제외.",
+  "commands": { "verify": "pnpm verify", "typecheck": "pnpm typecheck", "test": "pnpm test", "lint": "pnpm lint", "dev": null, "perf": null },
+  "tests": {
+    "patterns": ["**/*.test.*", "e2e/**"],
+    "layers": { "unit": "pnpm test", "browser": null, "e2e": null }
+  },
+  "contract": null,
+  "mock": { "boundary": null },
+  "design": { "source": "none", "tokens": null },
+  "platform": { "profile": "web-desktop" },
+  "domains": {
+    "root": "packages",
+    "apps": "apps/editor",
+    "allowed_edges": [
+      "content-render → content-schema",
+      "content-convert → content-schema",
+      "editor-core → content-schema · content-convert",
+      "editor-react → editor-core · content-render · content-schema",
+      "api → content-schema · content-convert · content-render",
+      "web → editor-react · content-schema"
+    ]
+  },
+  "a11y": { "lint": null, "runtime": null },
+  "evidence": { "screenshot": null, "dark": true, "platforms": null, "zoom200": true },
+  "protected": [
+    "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig*.json",
+    "eslint.config.*", "vitest.config.*", ".env", ".env.*", "lefthook.yml", "commitlint.config.*",
+    ".claude/settings.json", ".claude/hooks/*", ".claude/cgamja.json"
+  ],
+  "parallel": { "worktrees": ".claude/worktrees", "port_env": "PORT", "max_concurrent": 3 },
+  "lint_file": {
+    "extensions": ["ts", "tsx", "mjs", "js"],
+    "command": "pnpm exec prettier --log-level warn --write {file} && pnpm exec eslint --fix {file}"
+  }
+}

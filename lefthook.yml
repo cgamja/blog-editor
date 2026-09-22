@@ -1,0 +1,26 @@
+# lefthook.yml — 비대화형만. commitizen류 프롬프트 금지(에이전트 · non-TTY에서 행).
+# 설치: package.json `prepare` → `lefthook install` (postinstall은 pnpm allowBuilds로 껐다, adr-010)
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
+    no-test-edit-in-feat:
+      # 구현 커밋에 테스트 파일이 섞이면 거부. 테스트 커밋은 test(scope):로 분리 — 테스트 약화가 diff에 보이게.
+      # commit-msg 단계에서 {1}(현재 메시지 파일)을 읽는다 — pre-commit에서 .git/COMMIT_EDITMSG를 읽으면 `git commit -m`일 때 직전 메시지가 보여 오탐.
+      run: |
+        if grep -qE '^(feat|fix|refactor)' "{1}" && git diff --cached --name-only | grep -qE '\.test\.tsx?$'; then
+          echo "feat/fix/refactor 커밋에 테스트 파일이 포함됨 — test(scope): 커밋으로 분리하세요"; exit 1; fi
+pre-commit:
+  commands:
+    eslint:
+      glob: "*.{ts,tsx,js,mjs}"
+      run: pnpm exec eslint --fix {staged_files} && git add {staged_files}
+    prettier:
+      glob: "*.{ts,tsx,js,mjs,json,md,yaml,yml,css}"
+      exclude:
+        - adr/0001-domain-structure.md # 심볼릭 링크(adr-009 별칭) — prettier는 명시된 심링크에 에러를 낸다
+      run: pnpm exec prettier --write {staged_files} && git add {staged_files}
+pre-push:
+  commands:
+    verify:
+      run: pnpm verify
