@@ -4,6 +4,7 @@ import tseslint from "typescript-eslint";
 
 /**
  * import 경계 — 문서에만 있으면 AI가 편한 길로 넘는다(plan 10장). 린트로 잡을 수 있는 것은 여기서 잡는다.
+ * 표는 adr-009(= docs/adr/0001-domain-structure.md)와 1:1. 엣지를 더하면 ADR 표 · 여기 · eslint.boundaries.test.ts를 함께 고친다.
  *
  * 패키지 의존 방향 (plan 3-3):
  *   content-schema ← content-render · content-convert ← editor-core ← editor-react
@@ -53,14 +54,37 @@ const ALL = [
 ];
 const except = (...allowed) => ALL.filter((n) => !allowed.includes(n));
 
+/**
+ * 상대경로로 패키지 경계를 넘는 import. `@blog-editor/*`만 막으면 `../../content-render/src/…`로 우회된다
+ * (2026-09-22 세팅 프로브에서 실제로 통과됐다, adr-009). 패키지 사이는 워크스페이스 이름으로만 넘는다.
+ * 패턴을 `../` `./`로 앵커해 `@blog-editor/content-schema` 같은 패키지 이름은 건드리지 않는다.
+ * `api` · `web`은 흔한 디렉터리 이름이라(`../api/client`는 정상) `<name>/src` 모양만 막는다 — 막는 모양은 테스트가 열거한다.
+ */
+const RELATIVE_CROSS_PACKAGE = {
+  group: [
+    ...withSubpaths("../**/packages", "./**/packages", "../**/apps", "./**/apps"),
+    ...withSubpaths(...except("api", "web").map((n) => `../**/${n}`)),
+    ...withSubpaths("../**/api/src", "../**/web/src"),
+  ],
+  message:
+    "다른 패키지는 @blog-editor/<name>으로 import한다 — 상대경로로 패키지 경계를 넘지 않는다 (adr-009).",
+};
+
 const boundary = (files, patterns) => ({
   files,
-  rules: { "no-restricted-imports": ["error", { patterns }] },
+  rules: {
+    "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
+  },
 });
 
 export default defineConfig([
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  // 패키지 밖(루트 도구 · 스크립트)에서도 상대경로로 패키지에 들어가지 않는다. 아래 패키지별 블록이 이 규칙을 덮어쓰므로 boundary()가 같은 패턴을 다시 넣는다.
+  {
+    files: ["**/*.{ts,tsx,mts,cts,js,mjs,cjs}"],
+    rules: { "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE] }] },
+  },
   boundary(
     ["packages/content-schema/**"],
     [TIPTAP, PROSEMIRROR, REACT, forbidWorkspace(...except())],
@@ -94,5 +118,5 @@ export default defineConfig([
     ["apps/editor/web/**"],
     [TIPTAP, PROSEMIRROR, forbidWorkspace(...except("editor-react", "content-schema"))],
   ),
-  globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**"]),
+  globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
 ]);
