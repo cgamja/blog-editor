@@ -11,7 +11,8 @@
 ## 결정
 
 - 저장은 **S3(버저닝 켬)**. 키는 `workspaces/<workspaceId>/posts/<slug>.json`. 1단계에는 워크스페이스가 하나지만 경로는 처음부터 이렇게(ADR-007).
-- `PUT /api/posts/:slug`는 `If-Match: <revision>` 필수. 어긋나면 **409**와 현재 revision. 화면은 「저장 충돌」 대화상자로 두 본문을 보여 준다. S3에는 조건부 쓰기(`If-Match` → 412)를 그대로 넘긴다.
+- `PUT /api/posts/:slug`는 `If-Match: <revision>` 필수. 어긋나면 **409**와 현재 revision. 화면은 「저장 충돌」 대화상자로 두 본문을 보여 준다.
+- **revision은 불투명 문자열이고 주인은 `PostStore`다.** `get`이 돌려주고 `put`이 받으며, API는 그 값을 `ETag` 응답 헤더 / `If-Match` 요청 헤더로 그대로 실어 나른다 — 변환하지 않는다. `S3PostStore`는 S3가 준 ETag(따옴표 포함 원문)를 revision으로 쓰고 `put`에서 그대로 `IfMatch`에 넣는다(412 → `ConflictError`). `MemoryPostStore` · `FilePostStore`는 내용 해시를 revision으로 쓰고 직접 비교한다. 계약 테스트는 「`get`이 준 revision으로 `put`하면 성공, 낡은 revision이면 `ConflictError`」만 본다 — 형식은 보지 않는다.
 - 저장소는 인터페이스 `PostStore { list · get · put(slug, file, revision | null) }` 하나. 구현은 Memory(테스트) · File(로컬 개발 · CI) · S3(운영). **셋이 같은 계약 테스트를 통과한다.**
 - 이미지는 `images/<해시>.webp`로 같은 버킷. presigned POST에 크기 · 형식 조건.
 - 계정 · OAuth 상태 · 연결용 토큰 해시는 DynamoDB 온디맨드(미검증 — 스파이크에서 S3만으로 되는지 본다).

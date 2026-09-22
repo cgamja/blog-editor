@@ -11,7 +11,7 @@
 ## 결정
 
 - **AWS 서버리스**: S3(화면 정적 파일 + 글 + 이미지) · CloudFront(SPA fallback은 CloudFront Function으로 — 배포 단위 「403/404 → index.html」은 API 오류까지 삼키므로 쓰지 않는다) · API Gateway HTTP API · Lambda(Hono) · SSM Parameter Store(비밀값) · DynamoDB(계정 · OAuth). 화면과 API가 같은 도메인이라 CORS가 없다. IaC(SST · CDK · SAM 중 스파이크에서 선정)로만 만든다. 예상 비용 월 $0~1.
-- **WAF는 쓰지 않는다.** 대신: 비밀번호 관리자가 만든 **20자 이상 무작위 비밀번호** + scrypt 해시(시도당 수십 ms) + 실패 응답 고정 지연 + **API Gateway 라우트 스로틀**(`/api/session`에 초당 1~2회 · burst 5 — 시도 속도와 비용이 함께 묶인다) + AWS Budgets 월 $5 알림. Lambda 예약 동시성은 쓰지 않는다(새 계정 동시성 한도 10에서 예약이 거부된다).
+- **WAF는 쓰지 않는다.** 대신: 비밀번호 관리자가 만든 **20자 이상 무작위 비밀번호** + scrypt 해시(시도당 수십 ms) + 실패 응답 고정 지연 + **API Gateway 라우트 스로틀**(`/api/session`에 초당 1~2회 · burst 5 — 시도 속도와 비용이 함께 묶인다) + AWS Budgets 월 $5 알림. Lambda 예약 동시성은 쓰지 않는다 — 예약은 계정 동시성 quota에서 미예약분 100을 남기고 걸어야 하는데, 새 계정은 quota가 기본값(1,000)보다 훨씬 낮게 시작할 수 있어(우리 계정의 실제 값은 M4에서 확인) 그 경우 예약 자체가 거부된다. 라우트 스로틀은 이 quota와 무관하다.
 - 세션은 HMAC 서명 쿠키 `httpOnly · Secure · SameSite=Strict`. 비밀값은 SSM에서 Lambda로만, 클라이언트 번들에는 아무것도 없다.
 - **로컬 우선**: M0~M3은 클라우드 없이(Hono를 Node로, `FilePostStore`, Vite 프록시). AWS는 M4에서. 단 M0 스파이크에서 최소 스택을 올려 확인하고 철거한다.
 
