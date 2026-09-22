@@ -7,7 +7,7 @@
   },
   "contract": null,
   "mock": { "boundary": null },
-  "design": { "source": "none", "tokens": null },
+  "design": { "source": "artifact:UkuCE9TwgtodyfShVeybSB", "tokens": null },
   "platform": { "profile": "web-desktop" },
   "domains": {
     "root": "packages",
@@ -21,8 +21,8 @@
       "web → editor-react · content-schema"
     ]
   },
-  "a11y": { "lint": null, "runtime": null },
-  "evidence": { "screenshot": null, "dark": true, "platforms": null, "zoom200": true },
+  "a11y": { "lint": "jsx-a11y", "runtime": null },
+  "evidence": { "screenshot": null, "dark": false, "platforms": null, "zoom200": true },
   "protected": [
     "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig*.json",
     "eslint.config.*", "vitest.config.*", ".env", ".env.*", "lefthook.yml", "commitlint.config.*",

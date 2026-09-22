@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import tseslint from "typescript-eslint";
 
 /**
@@ -80,6 +81,9 @@ const boundary = (files, patterns) => ({
 export default defineConfig([
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  // 접근성 1층(cgamja a11y-frontend §1) — 대체 텍스트 없는 이미지 · 클릭만 있는 비대화형 요소 · 라벨 없는 input을 편집 직후 잡는다.
+  // 디자인(캔버스)이 실제 button/label · aria-label · 44px 타깃을 이미 정했으므로 구현이 그것을 깎지 못하게 한다. 2층(axe)은 브라우저 층이 생길 때.
+  { ...jsxA11y.flatConfigs.strict, files: ["**/*.tsx", "**/*.jsx"] },
   // 패키지 밖(루트 도구 · 스크립트)에서도 상대경로로 패키지에 들어가지 않는다. 아래 패키지별 블록이 이 규칙을 덮어쓰므로 boundary()가 같은 패턴을 다시 넣는다.
   {
     files: ["**/*.{ts,tsx,mts,cts,js,mjs,cjs}"],

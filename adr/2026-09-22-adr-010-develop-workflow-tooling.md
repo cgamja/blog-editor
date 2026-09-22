@@ -25,10 +25,13 @@ CLAUDE.md의 규칙(커밋 규약 · 테스트/구현 커밋 분리 · 보호 �
 | lefthook 2.1                               | 2026-09     | 없음(git 훅 매니저 0개) | husky — 훅마다 쉘 파일 · parallel 없음         |
 | @commitlint/cli · config-conventional 21.2 | 2026-09     | 없음                    | commitizen — 대화형(에이전트 · non-TTY에서 행) |
 | @fission-ai/openspec 1.13                  | 2026-09     | 없음                    | 전역 설치 — 버전 표류, CI 재현 불가            |
+| eslint-plugin-jsx-a11y 6.10                | 2024-10     | 없음                    | 없음(React a11y 린트는 사실상 하나). 아래 소명 |
+
+**jsx-a11y 소명** (LIBRARY "12개월 이내" 예외): 마지막 릴리스가 23개월 전이고 peer가 ESLint 9까지지만, 규칙 집합은 WAI-ARIA에 묶여 있어 완성된 라이브러리에 가깝다. ESLint 10 + flat config `flatConfigs.strict`로 프로브했더니 `alt-text` · `click-events-have-key-events` · `no-static-element-interactions`가 에러로 잡히고 올바른 마크업은 통과했다(2026-09-22). tsx가 0개라도 게이트는 첫 tsx가 생기기 **전에** 있어야 한다 — 디자인 캔버스가 이미 접근성(실제 button/label · aria-label · 44px · focus-visible)을 정해 뒀고 구현이 그것을 깎는 것을 편집 직후 막는다. 전이 의존성 15개(axe-core 포함)는 개발용.
 
 ## 버린 대안
 
-- **jsx-a11y를 지금 설치**: 마지막 릴리스 2024-10(23개월), peer가 ESLint 9까지 — 게이트 탈락. tsx가 0개라 web 패키지 생성 시 ESLint 10 호환 대안과 함께 다시 본다.
+- **a11y 린트를 web 패키지 생성 때까지 미루기**: 첫 세팅에서 이렇게 판단했다가 사용자가 "접근성은 신경 안 써도 되냐"고 물어 다시 봤다. 미루면 첫 컴포넌트가 게이트 없이 들어온다.
 - **훅을 프로젝트에 맞게 수정**: 훅은 선언을 읽으므로 수정할 이유가 없고, 수정하면 플러그인 갱신을 못 받는다.
 - **`docs/adr/`로 ADR 이동**: 레포 규약과 8건의 기존 링크를 깬다. 별칭이 싸다.
 
@@ -41,5 +44,5 @@ CLAUDE.md의 규칙(커밋 규약 · 테스트/구현 커밋 분리 · 보호 �
 
 ## 재검토 조건
 
-- web/api 패키지가 생길 때: `a11y.lint` · `mock.boundary`(msw) · `contract`(openapi) · `design.tokens` · `commands.dev` 선언(`.claude/cgamja.json`의 `null`이 목록이다).
+- web/api 패키지가 생길 때: `a11y.runtime`(axe, 브라우저 층) · `mock.boundary`(msw) · `contract`(openapi) · `design.tokens` · `commands.dev` 선언(`.claude/cgamja.json`의 `null`이 목록이다).
 - 훅 deny/ask가 세션당 5회를 넘으면 범위 재조정.

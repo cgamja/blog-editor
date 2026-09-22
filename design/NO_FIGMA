@@ -1,3 +1,4 @@
-디자인 원천은 Figma가 아니다 (design.source: none).
-- 화면 디자인: https://claude.ai/artifact/UkuCE9TwgtodyfShVeybSB (PRD 디자인 탭)
-- 토큰: 사이트 레포 ~/simsimeestudio-intro/src/styles/globals.css 값을 수동으로 옮긴다(plan 09, adr-006). web 패키지가 생기면 .claude/cgamja.json design.tokens에 경로를 선언한다.
+디자인 원천은 Figma가 아니라 Claude Design 캔버스다 (design.source: artifact:UkuCE9TwgtodyfShVeybSB).
+- 캔버스: https://claude.ai/artifact/UkuCE9TwgtodyfShVeybSB — 아트보드 6장(project/*.dc.html), 전부 라이트 · 데스크톱(1360×860, 대화상자 640)
+- 화면 대응표: design/map.md · 캔버스에서 뽑은 값: design/tokens.json (2026-09-22 스냅샷 — 캔버스가 바뀌면 다시 뽑는다)
+- 코드 토큰 파일은 web 패키지가 생길 때 만들고 .claude/cgamja.json design.tokens에 경로를 선언한다. 사이트 globals.css의 같은 이름 토큰과 값이 겹친다(--paper · --line · --ink · --brand-ink …).
