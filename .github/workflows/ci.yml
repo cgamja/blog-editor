@@ -10,10 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # commitlint --from base
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
+      - run: pnpm verify # typecheck · lint · format:check · test · docs:check — package.json과 같은 한 줄
+      - run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
+        if: github.event_name == 'pull_request'
+      - run: pnpm exec openspec validate --archived --strict
+        env:
+          OPENSPEC_TELEMETRY: "0"

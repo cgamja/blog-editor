@@ -1,0 +1,89 @@
+{
+  "$comment": ".claude/settings.json — develop-fe 워크플로우 훅. 훅의 if 필터는 fail-open이라 hard deny는 permissions.deny에도 넣는다(JS 매니페스트·lockfile 4종·선언 파일). 다른 스택의 의존성 파일(Gemfile·pyproject 등)은 선언 protected로 훅이 막는다 — deny 목록에 직접 추가해도 된다.",
+  "env": {
+    "GIT_PAGER": "cat"
+  },
+  "permissions": {
+    "deny": [
+      "Bash(git commit*--no-verify*)",
+      "Bash(git commit*-n *)",
+      "Bash(git push*--force*)",
+      "Bash(git push*-f *)",
+      "Bash(*HUSKY=0*)",
+      "Bash(*LEFTHOOK=0*)",
+      "Bash(*tee *package.json*)",
+      "Bash(*sed -i*package.json*)",
+      "Bash(*> package.json*)",
+      "Bash(*tee *pnpm-lock.yaml*)",
+      "Bash(*> pnpm-lock.yaml*)",
+      "Bash(*tee *package-lock.json*)",
+      "Bash(*> package-lock.json*)",
+      "Bash(*tee *yarn.lock*)",
+      "Bash(*> yarn.lock*)",
+      "Bash(*tee *bun.lockb*)",
+      "Bash(*> bun.lockb*)",
+      "Bash(*tee *.claude/cgamja.json*)",
+      "Bash(*> .claude/cgamja.json*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lint-file.sh",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/red-mark.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/protect-files.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/protect-bash.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/verify-on-stop.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  },
+  "$hooks_note": "아래 스펙의 구현체는 templates/hooks/*.sh — 그대로 .claude/hooks/ 에 복사한다. 모든 패턴·명령은 .claude/cgamja.json(프로젝트 선언, adr/0014)에서 읽는다: 훅에 스택·경로 하드코딩 없음.",
+  "$hooks_spec": {
+    "lint-file.sh": "file_path 확장자가 lint_file.extensions 에 있으면 lint_file.command({file} 치환) 실행. 생성물(contract.generated)·openspec 제외. 전체 타입검사 금지(느림).",
+    "protect-files.sh": "file_path가 protected 에 맞으면 permissionDecision 'ask'(사람이 diff 승인 = escape hatch, adr/0017). contract.generated 에 맞으면 exit 2 + '원천을 고치고 contract.generate'. tests.patterns 에 맞으면 env TDD_PHASE=red 또는 세션 마커(.claude/state/red-approved-<session_id>)가 있으면 허용, 아니면 'ask'(세션당 1회 red 게이트, adr/0018).",
+    "red-mark.sh": "PostToolUse(Edit|Write): file_path가 tests.patterns 에 맞으면(편집이 성공했다 = 첫 ask가 승인됐다) 세션 마커 .claude/state/red-approved-<session_id> 를 touch(adr/0018).",
+    "protect-bash.sh": "command에 --no-verify|-n |HUSKY=0|LEFTHOOK=0|push --force, core.hooksPath 값 설정(조회는 허용), 또는 패키지 추가/삭제 명령(expo install 포함)이면 exit 2. protected·contract.generated·tests.patterns 경로와 쓰기 연산(sed -i|perl -pi|tee|>|>>|rm|cp|mv|cat <<|python open 'w')이 함께 있으면 exit 2(fd 리다이렉트 2>&1, >/dev/null 제외; 커밋된 적 없는 테스트 파일의 rm만 예외). 인터프리터 일회성 실행은 보호 경로+쓰기 호출이 함께 있을 때만 exit 2(읽기 실행 허용). TDD_PHASE= 인라인이면 exit 2. (adr/0017)",
+    "verify-on-stop.sh": "stop_hook_active==true면 exit 0. 이번 턴에 코드 변경 없으면 exit 0. .claude/state/handoff 마커가 있으면 사유를 시끄럽게 남기고 1회 통과(adr/0017). 그 외엔 commands.verify 실행; 실패 시 오류 줄 요약(15줄)+마지막 50줄을 stderr로, exit 2. 선언이 없으면 안내만."
+  }
+}

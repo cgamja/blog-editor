@@ -2,3 +2,11 @@ node_modules
 dist
 coverage
 pnpm-lock.yaml
+.claude/worktrees
+.claude/state
+.claude/commands/opsx
+.claude/skills/openspec-*
+openspec/changes/archive
+.claude/cgamja.json
+adr/0001-domain-structure.md
+docs/adr
