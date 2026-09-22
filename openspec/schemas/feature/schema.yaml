@@ -1,0 +1,47 @@
+name: feature
+version: 1
+description: Tier-2 feature - delta spec + tasks only
+artifacts:
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Delta spec - behavior contract; scenarios become tests/screenshots
+    template: spec.md
+    instruction: |
+      Delta spec (## ADDED / MODIFIED / REMOVED Requirements). Each `### Requirement:` MUST have
+      >=1 `#### Scenario:` with WHEN/THEN. Write in Korean but put `SHALL` in the first sentence of
+      every Requirement (strict validation). UI scenarios state the viewport(s) and the visible
+      evidence (text, state, screenshot). Include empty / loading / error states unless the user
+      excluded them. If the feature mutates server state, answer three failure-semantics questions:
+      (1) lost-response retry — the server succeeded but the response never arrived and the user
+      retries (idempotency key reuse?); (2) resource lifetime — a token, session, signed URL or
+      cache entry expires mid-use; (3) concurrent input — double-tap, re-submit while in flight,
+      leaving the screen mid-request. Write a scenario for each that applies; if none applies, state
+      `실패 의미론: 해당 없음` so the omission is a decision, not a blind spot. Security/data
+      invariants of this project (drafts never appear on the public API, 409 on stale revision, URL
+      scheme allow-list, MCP tokens cannot publish) are never weakened — if a feature touches them,
+      add a scenario that asserts the invariant still holds. Mark anything you had to guess with
+      `[NEEDS CLARIFICATION: ...]` and ask (max 5 questions, batched) before writing tasks.
+    requires: []
+  - id: tasks
+    generates: tasks.md
+    description: Checklist; every task names its verification
+    template: tasks.md
+    instruction: |
+      `- [ ] X.Y <task> → verify: <vitest path | screenshot 1280/768/375 | tsc | manual IME checklist>`.
+      A test-writing task comes BEFORE the implementation task it verifies.
+      Search for existing code in the target package (and its index.ts) before any "create" task;
+      reference it by path. Pure logic (schema · convert · render · commands · API handlers) is
+      tested in Vitest node without DOM; editor behavior (selection · IME · NodeView) lists a manual
+      real-browser check until a browser layer exists. Last group is always "Converge": compare
+      code against every scenario in the spec and append tasks for anything missing.
+    requires: [specs]
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: |
+    For each test task: run it and report the failure output and why it fails (missing behavior,
+    not import/typo); commit as `test(scope): ...` and stop for the human to review.
+    Implementation tasks: test files are read-only; report green + all previously green tests still
+    green; commit `feat(scope): ...`. Mark [x] only with evidence (test output or screenshot path).
+    Never edit assertions/skip/tolerances to get green; stop and report the failing assertion.
+    Done = `pnpm verify` green; show its output.

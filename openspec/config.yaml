@@ -1,0 +1,37 @@
+# 생성 파일 — 손으로 고치지 않는다. 원천은 .claude/cgamja.json + CLAUDE.md, 생성은 scripts/openspec-context.sh (adr-010)
+schema: feature # 기본 스키마 = Tier-2 (delta spec + tasks)
+context: |
+  Read CLAUDE.md first (rules, structure, what not to do) and adr/ for decisions.
+  Stack: pnpm monorepo, TypeScript strict, zod (content-schema), Vitest node (no DOM).
+  Units: workspace packages under packages/ and apps/editor/. Import between packages only as
+  @blog-editor/<name>; allowed edges (eslint-enforced, adr-009):
+    - content-render → content-schema
+    - content-convert → content-schema
+    - editor-core → content-schema · content-convert
+    - editor-react → editor-core · content-render · content-schema
+    - api → content-schema · content-convert · content-render
+    - web → editor-react · content-schema
+  Tests: patterns ['**/*.test.*', 'e2e/**']; layers {"unit": "pnpm test", "browser": null, "e2e": null}. Test file edits are gated
+  (red gate) and go in test: commits before feat: commits.
+  Verify (definition of done): `pnpm verify`. Platform: web-desktop.
+  Design source: figma:cEy6fybMcrnEfokCc8XVQB (node index: design/map.md). Not yet declared (null): contract, mock.boundary, design.tokens, a11y.runtime.
+  No new dependencies without the LIBRARY gate + ADR. Conventional commits in Korean, subject <= 50 chars.
+  Security/data invariants never weakened: drafts never on public API, 409 on stale revision,
+  URL scheme allow-list, MCP tokens cannot publish.
+rules:
+  specs:
+    - One capability per file; keep under 80 lines
+    - Scenarios must be observable (what the user or the API caller sees), not implementation
+    - Korean prose; put SHALL in the first sentence of each Requirement (strict validation)
+  tasks:
+    - Max 8 tasks per change; if more, split the change
+operations:
+  apply:
+    guidance:
+      - Commit per stage (test(scope) before feat(scope)); tests in a separate commit before implementation
+      - Editor behavior tasks (selection · IME · NodeView) list a manual real-browser check in the PR
+      - Run `pnpm verify` before marking the last task complete
+  archive:
+    guidance:
+      - Before archiving run the two review axes (cgamja:review-cgamja for philosophy/spec compliance, code review for bugs). Resolve blockers first (one batched fix pass, one recheck).
+      - Confirm every `#### Scenario:` has a matching test or screenshot (Converge group) before archive

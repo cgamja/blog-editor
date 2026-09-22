@@ -2,3 +2,5 @@
 packages:
   - packages/*
   - apps/editor/*
+allowBuilds:
+  lefthook: false # postinstall 대신 package.json prepare가 `lefthook install`을 돈다
