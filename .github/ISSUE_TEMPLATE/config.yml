@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 설계 문서 · PRD
+    url: https://claude.ai/artifact/Rm3nPgTioyyenou6MTjoNW
+    about: 결정이 바뀌는 일이면 이슈보다 먼저 설계 문서(D1~D14)와 ADR을 본다
