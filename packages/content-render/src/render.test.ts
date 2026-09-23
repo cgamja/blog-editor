@@ -19,9 +19,10 @@ function paragraph(text: string, attrs?: Extract<Block, { type: "paragraph" }>["
  */
 function attributeNames(html: string): Set<string> {
   const names = new Set<string>();
-  for (const [, inside] of html.matchAll(/<[a-z0-9]+(\s[^>]*)?>/gi)) {
-    const withoutValues = (inside ?? "").replace(/"[^"]*"|'[^']*'/g, '""');
-    for (const [, name] of withoutValues.matchAll(/\s([^\s="'>/]+)/g)) {
+  // 구분자는 공백뿐 아니라 `/`도 된다(`<img/onload=1>`), 따옴표 값 바로 뒤에 붙은 속성도 센다
+  for (const [, inside] of html.matchAll(/<[a-z0-9]+([\s/][^>]*)?>/gi)) {
+    const withoutValues = (inside ?? "").replace(/"[^"]*"|'[^']*'/g, " ");
+    for (const [, name] of withoutValues.matchAll(/[\s/]([^\s="'>/]+)/g)) {
       names.add(name!.toLowerCase());
     }
   }
@@ -125,6 +126,25 @@ describe("render-safety", () => {
     expect(hostileHtml).toContain('alt="&quot; onload=&quot;x"');
     expect(hostileHtml).toContain("<p>javascript:alert(1)</p>");
     expect(hostileHtml).toContain('<a href="/a&quot;onmouseover=&quot;x">링크</a>');
+  });
+
+  it("WHEN 표에 없는 heading level · 스티커 id를 렌더하면 THEN RangeError를 던진다", () => {
+    // 검증을 건너뛴 문서를 흉내 낸다 — 태그 이름 · 파일 이름은 이스케이프로 막을 수 없어 오류가 답이다
+    const heading = (level: unknown): Block =>
+      ({ type: "heading", attrs: { level }, content: [{ type: "text", text: "제목" }] }) as Block;
+    const sticker = (id: string): Block =>
+      paragraph("문단", { stickers: [{ id: id as "heart", x: 0, y: 0, size: 10, rotate: 0 }] });
+    // "toString" · "constructor"는 일반 객체의 프로토타입 키라 표에 없어도 값이 나온다 — 자기 키만 인정해야 한다
+    const cases = [
+      docOf(heading(4)),
+      docOf(heading("2 onload=x")),
+      docOf(heading("toString")),
+      docOf(sticker("moon")),
+      docOf(sticker("constructor")),
+    ];
+    for (const file of cases) {
+      expect(() => renderHtml(file, { imageBaseUrl: BASE })).toThrow(RangeError);
+    }
   });
 
   it("WHEN decorationMax를 렌더하면 THEN 속성 이름이 닫힌 목록의 부분집합이다", () => {
