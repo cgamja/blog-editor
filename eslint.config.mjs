@@ -71,12 +71,31 @@ const RELATIVE_CROSS_PACKAGE = {
     "다른 패키지는 @blog-editor/<name>으로 import한다 — 상대경로로 패키지 경계를 넘지 않는다 (adr-009).",
 };
 
-const boundary = (files, patterns) => ({
-  files,
-  rules: {
-    "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
-  },
+/**
+ * `@blog-editor/content-schema/testing`은 fast-check 생성기다 — 런타임 파일이 import하면 fast-check가
+ * api · web 번들로 샌다(document-fixtures). 테스트와 테스트 지원 파일만 쓸 수 있다.
+ */
+const TEST_SUPPORT_FILES = ["**/*.test.{ts,tsx}", "**/*.arbitrary.ts"];
+const TESTING_ENTRY = {
+  group: withSubpaths("@blog-editor/*/testing"),
+  message: "testing 진입점은 테스트(*.test.ts)와 생성기(*.arbitrary.ts)에서만 import한다.",
+};
+
+const restrictedImports = (patterns) => ({
+  "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
 });
+
+/**
+ * 패키지 경계 한 벌을 런타임 파일과 테스트 쪽 파일 두 블록으로 건다. 같은 규칙을 뒤 블록이 통째로 덮어쓰므로
+ * 테스트 파일만 푸는 블록을 따로 두면 패키지 경계까지 풀린다 — 그래서 `files`의 AND 배열로 좁힌다.
+ */
+const boundary = (files, patterns) => [
+  { files, ignores: TEST_SUPPORT_FILES, rules: restrictedImports([...patterns, TESTING_ENTRY]) },
+  {
+    files: files.flatMap((dir) => TEST_SUPPORT_FILES.map((test) => [dir, test])),
+    rules: restrictedImports(patterns),
+  },
+];
 
 export default defineConfig([
   js.configs.recommended,

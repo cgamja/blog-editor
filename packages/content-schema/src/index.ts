@@ -20,12 +20,13 @@ export {
   MAX_STICKERS_PER_DOC,
   WIDTH_RANGE,
   NATURAL_SIZE_RANGE,
+  naturalSizeOf,
   STICKER_RANGES,
   ALT_MAX_LENGTH,
   CAPTION_MAX_LENGTH,
   CODE_LANGUAGE_PATTERN,
 } from "./doc";
-export type { Doc, Block, Mark, TextNode, DecorationAttrs, Sticker } from "./doc";
+export type { Doc, Block, Mark, TextNode, DecorationAttrs, Sticker, NaturalSizeAttrs } from "./doc";
 
 export { createPostFileSchema, migrations, migrate, MigrationError } from "./post-file";
 export type { PostFile } from "./post-file";

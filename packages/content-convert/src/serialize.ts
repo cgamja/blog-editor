@@ -1,4 +1,4 @@
-import { normalize } from "@blog-editor/content-schema";
+import { naturalSizeOf, normalize } from "@blog-editor/content-schema";
 import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
 import { APP_FRAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
 import { CALLOUT_CONTAINER_NAME } from "./tokens";
@@ -160,10 +160,10 @@ function directiveValue(block: Block, key: (typeof DIRECTIVE_KEYS)[number]): unk
   if (key === "frame") return block.type === "appScreenshot" ? APP_FRAME : undefined;
   const attrs = block.attrs as Record<string, unknown> | undefined;
   if (key === "size") {
-    const { naturalWidth, naturalHeight } = attrs ?? {};
-    return naturalWidth === undefined || naturalHeight === undefined
+    const size = naturalSizeOf(attrs ?? {});
+    return size === null
       ? undefined
-      : `${String(naturalWidth)}${SIZE_SEPARATOR}${String(naturalHeight)}`;
+      : `${String(size.width)}${SIZE_SEPARATOR}${String(size.height)}`;
   }
   return attrs?.[key];
 }

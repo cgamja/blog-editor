@@ -1,18 +1,13 @@
 import fc from "fast-check";
-import {
-  CALLOUT_TONES,
-  FONTS,
-  MOTIONS,
-  NATURAL_SIZE_RANGE,
-  WIDTH_RANGE,
-  docSchema,
-} from "@blog-editor/content-schema";
+import { CALLOUT_TONES, docSchema } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
+import { decorationArbitrary, naturalSizeArbitrary } from "@blog-editor/content-schema/testing";
 
 /**
  * 왕복 속성 테스트(markdown-serialize) 전용 — 스티커 · 빈 문단이 없는 유효 doc를 만든다. 테스트
- * 전용이라 index.ts에서 export하지 않는다. content-schema의 docArbitrary를 쓰지 않는 이유는
- * design.md 5번: 패키지 exports 밖이고, 그 글자는 ASCII뿐이라 한글 · 줄바꿈 경계를 못 만든다.
+ * 전용이라 index.ts에서 export하지 않는다. 꾸미기 · 원본 크기 생성기는 content-schema `./testing`의
+ * 것을 쓴다 — 스키마에 속성이 늘면 거기 한 곳만 고친다(document-fixtures). docArbitrary 전체를 쓰지
+ * 않는 이유: 그 글자는 ASCII뿐이라 한글 · 줄바꿈 · markdown 문법 경계를 못 만든다.
  */
 
 /** markdown 문법 글자 · 한글 · 공백류를 섞는다 — 이스케이프와 flanking 경계를 두드리는 게 목적이다. */
@@ -94,25 +89,9 @@ const inlinesArb = fc.array(inlineArb, { minLength: 1, maxLength: 4 });
 
 const paragraphInner = inlinesArb.map((content) => ({ type: "paragraph", content }));
 
-function decoration(opts: { font: boolean; width: boolean }) {
-  return fc
-    .record({
-      font: opts.font
-        ? fc.option(fc.constantFrom(...FONTS), { nil: undefined })
-        : fc.constant(undefined),
-      motion: fc.option(fc.constantFrom(...MOTIONS), { nil: undefined }),
-      width: opts.width
-        ? fc.option(fc.integer({ min: WIDTH_RANGE.min, max: WIDTH_RANGE.max }), { nil: undefined })
-        : fc.constant(undefined),
-    })
-    .map((attrs) => {
-      const result: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(attrs)) {
-        if (value !== undefined) result[key] = value;
-      }
-      return result;
-    });
-}
+/** markdown에는 스티커 자리가 없다 — 공용 생성기에서 스티커만 끈다. */
+const decoration = (opts: { font: boolean; width: boolean }) =>
+  decorationArbitrary({ ...opts, maxStickers: 0 });
 
 function withAttrs<T extends Record<string, unknown>>(
   node: T,
@@ -183,26 +162,15 @@ const horizontalRule = decoration({ font: false, width: false }).map((attrs) =>
 
 const altArb = fc.string({ unit: fc.constantFrom(...TEXT_UNITS), maxLength: 8 });
 
-/** 원본 크기는 짝으로만 있거나 없다 — size 지시어로 왕복한다. */
-const naturalSize = fc
-  .option(
-    fc.tuple(
-      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
-      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
-    ),
-    { nil: undefined },
-  )
-  .map((size) => (size === undefined ? {} : { naturalWidth: size[0], naturalHeight: size[1] }));
-
 const image = fc
-  .tuple(altArb, naturalSize, decoration({ font: false, width: true }))
+  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true }))
   .map(([alt, size, attrs]) => ({
     type: "image",
     attrs: { src: "/images/a-1.webp", alt, ...size, ...attrs },
   }));
 
 const appScreenshot = fc
-  .tuple(altArb, naturalSize, decoration({ font: false, width: true }))
+  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true }))
   .map(([caption, size, attrs]) => ({
     type: "appScreenshot",
     attrs: { src: "/images/shot.png", caption, ...size, ...attrs },
