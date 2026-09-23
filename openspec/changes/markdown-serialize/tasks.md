@@ -4,13 +4,14 @@
 
 ## 1. 테스트
 
-- [ ] 1.1 `src/serialize.arbitrary.ts` — 스티커 · 빈 문단 없는 유효 doc 생성기(한글 · 문법 글자 · 공백 · 줄바꿈 글자, 마크 조합, 모든 블록). 테스트 전용, index에서 export 안 함 → verify: 생성 doc가 `docSchema` 통과(테스트 안에서 확인)
-- [ ] 1.2 `src/serialize.test.ts` — 스펙 시나리오 5개(예제 4 + 속성 1) → verify: `pnpm vitest run packages/content-convert` 빨강 · 실패 원문 보고
+- [x] 1.1 `src/serialize.arbitrary.ts` — losses가 비는 유효 doc 생성기(한글 · 문법 글자 · 공백 · 줄바꿈 글자, 마크 조합, 모든 블록). 테스트 전용, index에서 export 안 함 → verify: 생성 doc를 `docSchema.parse`로 만든다
+- [x] 1.2 `src/serialize.test.ts` — 스펙 시나리오(예제 + 속성) → verify: `pnpm vitest run packages/content-convert` 빨강 · 실패 원문 보고
 
 ## 2. 구현
 
-- [ ] 2.1 `src/serialize.ts` — 블록 직렬화(지시어 줄 · 콜아웃 · 목록 표지 교대 · 펜스 길이) · 인라인(링크 묶음 → 강조 스택 → 코드 스팬, flanking 보정) · 글자 이스케이프 · losses. `index.ts`에서 export → verify: 1.2 초록 + `pnpm test` PASS_TO_PASS
+- [x] 2.1 `src/serialize.ts` · `src/serialize-inline.ts` — 블록 직렬화(지시어 줄 · 콜아웃 · 목록 표지 교대 · 펜스 길이) · 인라인(링크 묶음 → 강조 스택 → 코드 스팬, flanking 보정) · 글자 이스케이프 · losses. `index.ts`에서 export → verify: 1.2 초록 + `pnpm test` PASS_TO_PASS
 
 ## 3. Converge
 
-- [ ] 3.1 스펙 시나리오 5개 ↔ 테스트 대조, 빠진 것은 여기 append → verify: `pnpm verify` 초록 출력
+- [x] 3.1 스펙 시나리오 6개 ↔ 테스트 대조 → verify: `pnpm verify` 초록 출력
+- [x] 3.2 속성 테스트가 찾은 반례 — 줄 첫 링크 안 코드 마크의 `]:`(참조 정의로 읽힘)를 losses `codeMark`로(design.md 7번) · 스펙 시나리오 1개 추가 · 생성기에서 코드 마크의 `:` 제외 → verify: 속성 30,000회 초록(로컬 1회)
