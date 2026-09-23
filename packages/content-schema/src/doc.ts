@@ -65,7 +65,7 @@ export const hrefSchema = z
   );
 
 /** 소문자 · 숫자 · +/#/. 만 — 공백 · 대문자를 쓰면 거부된다("Bash Script" 등). */
-const CODE_LANGUAGE_PATTERN = /^[a-z][a-z0-9+#.]*$/;
+export const CODE_LANGUAGE_PATTERN = /^[a-z][a-z0-9+#.]*$/;
 
 // ── 2. 마크 + 텍스트 ────────────────────────────────────────────────────
 
