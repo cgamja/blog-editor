@@ -1,0 +1,17 @@
+{
+  "name": "@blog-editor/content-render",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "doc → HTML 순수 렌더러 + 본문용 CSS. 미리보기와 공개 API가 같은 것을 쓴다(adr-001 · adr-008).",
+  "exports": {
+    ".": "./src/index.ts",
+    "./post.css": "./src/post.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@blog-editor/content-schema": "workspace:*"
+  }
+}
