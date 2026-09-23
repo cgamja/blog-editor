@@ -1,58 +1,25 @@
 import type {
   Block,
-  DecorationAttrs,
+  HEADING_LEVELS,
   Mark,
   PostFile,
   Sticker,
   TextNode,
 } from "@blog-editor/content-schema";
+import { HEADING_TAGS, MARK_INNER_TO_OUTER } from "./constants";
 import { escapeHtml } from "./escape";
 import { STICKER_SIZES } from "./stickers";
+import type {
+  CalloutChild,
+  Decoration,
+  InnerList,
+  InnerListItem,
+  InnerParagraph,
+  RenderContext,
+  RenderOptions,
+} from "./types";
 
-/** 이미지 · 스티커 경로 앞에 붙는 도메인(plan 3-8). 문서에는 경로만 있다. */
-export interface RenderOptions {
-  imageBaseUrl: string;
-}
-
-interface RenderContext {
-  imageBaseUrl: string;
-}
-
-// ── 안쪽 노드(blockquote · callout · listItem 안) — attrs 자리가 없다(spec: html-render) ──
-// content-schema는 이 모양을 내부 타입으로만 쓰고 export하지 않는다. 여기서는 구조적으로
-// 같은 모양을 다시 선언해 쓴다 — z.infer 결과가 구조적으로 일치하므로 그대로 대입된다.
-
-interface InnerParagraph {
-  type: "paragraph";
-  content?: TextNode[] | undefined;
-}
-interface InnerListItem {
-  type: "listItem";
-  content: [InnerParagraph, ...InnerList[]];
-}
-interface InnerBulletList {
-  type: "bulletList";
-  content: InnerListItem[];
-}
-interface InnerOrderedList {
-  type: "orderedList";
-  content: InnerListItem[];
-}
-type InnerList = InnerBulletList | InnerOrderedList;
-type CalloutChild = InnerParagraph | InnerList;
-
-/**
- * 최상위 블록 attrs 중 꾸미기 필드만 뽑은 모양 — DecorationAttrs(Partial)를 그대로 쓰지 않는다.
- * exactOptionalPropertyTypes 아래에서 zod가 만드는 실제 attrs 타입은 `font?: F | undefined`처럼
- * optional 필드에 명시적 undefined가 섞여 있어 Partial<{ font: F }>(= `font?: F`, undefined
- * 불가)에 그대로 대입되지 않는다 — 여기서만 명시적으로 `| undefined`를 더해 받아들인다.
- */
-interface Decoration {
-  font?: DecorationAttrs["font"] | undefined;
-  motion?: DecorationAttrs["motion"] | undefined;
-  width?: DecorationAttrs["width"] | undefined;
-  stickers?: DecorationAttrs["stickers"] | undefined;
-}
+export type { RenderOptions } from "./types";
 
 // ── 진입점 ────────────────────────────────────────────────────────────
 
@@ -78,7 +45,7 @@ function renderTopLevelBlock(block: Block, ctx: RenderContext): string {
       return finishBlock(tag("p", "", renderInline(block.content)), block.attrs ?? {}, ctx);
     case "heading":
       return finishBlock(
-        tag(`h${block.attrs.level}`, "", renderInline(block.content)),
+        tag(headingTag(block.attrs.level), "", renderInline(block.content)),
         block.attrs,
         ctx,
       );
@@ -112,7 +79,7 @@ function renderTopLevelBlock(block: Block, ctx: RenderContext): string {
       return finishBlock(
         tag(
           "aside",
-          ` class="post-callout" data-tone="${block.attrs.tone}"`,
+          ` class="post-callout" data-tone="${escapeHtml(block.attrs.tone)}"`,
           block.content.map(renderCalloutChild).join(""),
         ),
         block.attrs,
@@ -153,9 +120,6 @@ function renderImg(src: string, alt: string, ctx: RenderContext): string {
 }
 
 // ── 인라인(텍스트 + 마크) ────────────────────────────────────────────────
-
-/** 바깥부터 a > strong > em > code 고정(입력 마크 순서 무관, spec: html-render) — 안에서 바깥으로 감싼다. */
-const MARK_INNER_TO_OUTER: readonly Mark["type"][] = ["code", "italic", "bold", "link"];
 
 function renderInline(content: readonly TextNode[] | undefined): string {
   return (content ?? []).map(renderText).join("");
@@ -213,7 +177,10 @@ function renderCalloutChild(node: CalloutChild): string {
 
 // ── 꾸미기 래퍼 + 스티커(spec: render-decoration) ────────────────────────────
 
-/** 최상위 블록 attrs에 font/motion/width/stickers 중 하나라도 실제로 있을 때만 감싼다. */
+/**
+ * 빈 `stickers: []`는 "없음"으로 본다 — 정규형은 빈 배열을 지우지만 정규화 전 문서가 올 수 있고,
+ * 스티커 없는 래퍼는 사이트 sanitizer가 허용해야 할 마크업만 늘린다.
+ */
 function hasDecoration(attrs: Decoration): boolean {
   return (
     attrs.font !== undefined ||
@@ -229,9 +196,11 @@ function finishBlock(elementHtml: string, decoration: Decoration, ctx: RenderCon
 
 /** 속성 순서 고정: class → data-font → data-motion → style(spec: render-decoration). */
 function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderContext): string {
-  const fontAttr = attrs.font !== undefined ? ` data-font="${attrs.font}"` : "";
-  const motionAttr = attrs.motion !== undefined ? ` data-motion="${attrs.motion}"` : "";
-  const styleAttr = attrs.width !== undefined ? ` style="--w:${attrs.width}"` : "";
+  // enum · 정수라 타입상 닫혀 있지만, 검증을 건너뛴 doc가 와도 속성 경계는 지킨다(spec: render-safety)
+  const fontAttr = attrs.font !== undefined ? ` data-font="${escapeHtml(attrs.font)}"` : "";
+  const motionAttr = attrs.motion !== undefined ? ` data-motion="${escapeHtml(attrs.motion)}"` : "";
+  const styleAttr =
+    attrs.width !== undefined ? ` style="--w:${escapeHtml(String(attrs.width))}"` : "";
   const stickersHtml = (attrs.stickers ?? [])
     .map((sticker) => renderSticker(sticker, ctx))
     .join("");
@@ -243,15 +212,28 @@ function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderConte
 }
 
 function renderSticker(sticker: Sticker, ctx: RenderContext): string {
-  const { width, height } = STICKER_SIZES[sticker.id];
-  const style = `--x:${sticker.x};--y:${sticker.y};--s:${sticker.size};--r:${sticker.rotate}`;
+  const size = STICKER_SIZES[sticker.id];
+  if (size === undefined)
+    throw new RangeError(`renderHtml: 알 수 없는 스티커 id — ${String(sticker.id)}`);
+  const { width, height } = size;
+  const style = [sticker.x, sticker.y, sticker.size, sticker.rotate]
+    .map((value, i) => `${["--x", "--y", "--s", "--r"][i]}:${escapeHtml(String(value))}`)
+    .join(";");
+  const id = escapeHtml(sticker.id);
   return (
-    `<img class="post-sticker" src="${ctx.imageBaseUrl}/stickers/${sticker.id}.png" alt="" ` +
+    `<img class="post-sticker" src="${ctx.imageBaseUrl}/stickers/${id}.png" alt="" ` +
     `width="${width}" height="${height}" loading="lazy" decoding="async" style="${style}">`
   );
 }
 
 // ── 작은 조립 헬퍼 ────────────────────────────────────────────────────────
+
+function headingTag(level: (typeof HEADING_LEVELS)[number]): string {
+  const name = HEADING_TAGS[level];
+  if (name === undefined)
+    throw new RangeError(`renderHtml: 허용되지 않는 heading level — ${String(level)}`);
+  return name;
+}
 
 function tag(name: string, attrsHtml: string, inner: string): string {
   return `<${name}${attrsHtml}>${inner}</${name}>`;

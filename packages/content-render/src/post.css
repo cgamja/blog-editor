@@ -86,15 +86,15 @@
   width: 100%;
   height: auto;
 }
-.post-image img {
+.post-body .post-image img {
   border-radius: 1rem;
 }
 /* 앱 화면은 기기 프레임처럼 — 둥근 모서리와 얇은 선으로 본문 사진과 구분한다 */
-.post-screenshot img {
+.post-body .post-screenshot img {
   border-radius: 1.5rem;
   border: 1px solid var(--line);
 }
-.post-screenshot figcaption {
+.post-body .post-screenshot figcaption {
   margin-top: 0.6em;
   text-align: center;
   font-size: 0.9em;
@@ -103,23 +103,23 @@
 
 /* ---------- 콜아웃 ---------- */
 
-.post-callout {
+.post-body .post-callout {
   padding: 1em 1.2em;
   border-radius: 1rem;
   border-left: 4px solid;
 }
-.post-callout > * + * {
+.post-body .post-callout > * + * {
   margin-top: 0.6em;
 }
-.post-callout[data-tone="note"] {
+.post-body .post-callout[data-tone="note"] {
   background: var(--surface-2);
   border-color: var(--line);
 }
-.post-callout[data-tone="tip"] {
+.post-body .post-callout[data-tone="tip"] {
   background: var(--accent-soft);
   border-color: var(--accent-ink);
 }
-.post-callout[data-tone="warning"] {
+.post-body .post-callout[data-tone="warning"] {
   background: var(--brand-soft);
   border-color: var(--brand-ink);
 }
@@ -142,13 +142,13 @@
 /* ---------- 꾸미기 래퍼 · 스티커 ---------- */
 
 /* --w는 단위 없는 정수(25~100). 스티커의 % 기준이 되도록 position: relative */
-.post-block {
+.post-body .post-block {
   position: relative;
   width: calc(var(--w, 100) * 1%);
   margin-inline: auto;
 }
 /* x · y는 스티커 중심의 블록 기준 %, s는 블록 폭 기준 %, r은 도. 블록이 옮겨지면 같이 간다(adr-008) */
-.post-sticker {
+.post-body .post-sticker {
   position: absolute;
   left: calc(var(--x) * 1%);
   top: calc(var(--y) * 1%);
@@ -163,7 +163,7 @@
   .post-body {
     overflow-x: clip;
   }
-  .post-sticker {
+  .post-body .post-sticker {
     left: clamp(0%, calc(var(--x) * 1%), 100%);
     top: clamp(0%, calc(var(--y) * 1%), 100%);
   }
