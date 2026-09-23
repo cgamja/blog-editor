@@ -56,7 +56,9 @@ export function createFilePostStore(options: { root: string; workspaceId: string
       }
       const slugs = names
         .filter((name) => name.endsWith(POST_EXTENSION))
-        .map((name) => name.slice(0, -POST_EXTENSION.length));
+        .map((name) => name.slice(0, -POST_EXTENSION.length))
+        // 손으로 넣은 `Hello_World.json` 하나가 목록 전체를 깨지 않게, slug 모양이 아닌 파일은 글이 아니다
+        .filter((slug) => slugSchema.safeParse(slug).success);
       return Promise.all(
         slugs.map(async (slug) => ({
           slug,

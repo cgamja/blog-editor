@@ -8,8 +8,16 @@ import {
   normalize,
   slugSchema,
 } from "@blog-editor/content-schema";
-import type { PostFile, PublicPostsResponse } from "@blog-editor/content-schema";
+import type { PostFile } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
+import {
+  BODY_NOT_JSON_MESSAGE,
+  CONFLICT_MESSAGE,
+  INVALID_SLUG_MESSAGE,
+  POST_NOT_FOUND_MESSAGE,
+  PRECONDITION_REQUIRED_MESSAGE,
+  SCHEMA_MISMATCH_MESSAGE,
+} from "./messages";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 
@@ -56,7 +64,7 @@ function summaryOf(slug: string, meta: PostFile["meta"]) {
 }
 
 function invalidSlug(c: Context) {
-  return c.json({ message: "slug는 소문자·숫자·하이픈만" }, 400);
+  return c.json({ message: INVALID_SLUG_MESSAGE }, 400);
 }
 
 export function createApp(options: AppOptions): Hono {
@@ -75,7 +83,7 @@ export function createApp(options: AppOptions): Hono {
     const slug = c.req.param("slug");
     if (!slugSchema.safeParse(slug).success) return invalidSlug(c);
     const found = await store.get(slug);
-    if (found === null) return c.json({ message: "글이 없다" }, 404);
+    if (found === null) return c.json({ message: POST_NOT_FOUND_MESSAGE }, 404);
     c.header("ETag", etagOf(found.revision));
     return c.json(found.file);
   });
@@ -90,17 +98,14 @@ export function createApp(options: AppOptions): Hono {
     if (ifNoneMatch === "*") expected = null;
     else if (ifMatch !== undefined) expected = revisionFromEtag(ifMatch);
     else {
-      return c.json(
-        { message: "새 글은 If-None-Match: *, 고치기는 If-Match: <ETag>가 필요하다" },
-        428,
-      );
+      return c.json({ message: PRECONDITION_REQUIRED_MESSAGE }, 428);
     }
 
     let body: unknown;
     try {
       body = await c.req.json();
     } catch {
-      return c.json({ message: "본문이 JSON이 아니다", issues: [] }, 400);
+      return c.json({ message: BODY_NOT_JSON_MESSAGE, issues: [] }, 400);
     }
     const parsed = postFileSchema.safeParse(body);
     if (!parsed.success) {
@@ -108,7 +113,7 @@ export function createApp(options: AppOptions): Hono {
         path: path.map((key) => (typeof key === "symbol" ? String(key) : key)),
         message,
       }));
-      return c.json({ message: "문서가 스키마에 맞지 않는다", issues }, 400);
+      return c.json({ message: SCHEMA_MISMATCH_MESSAGE, issues }, 400);
     }
 
     const file: PostFile = { ...parsed.data, doc: normalize(parsed.data.doc) };
@@ -118,22 +123,24 @@ export function createApp(options: AppOptions): Hono {
       return c.json({ revision }, expected === null ? 201 : 200);
     } catch (error) {
       if (error instanceof ConflictError) {
-        return c.json({ message: "다른 곳에서 수정됐다 — 다시 불러온 뒤 저장한다" }, 409);
+        return c.json({ message: CONFLICT_MESSAGE }, 409);
       }
       throw error;
     }
   });
 
   app.get("/public/posts", async (c) => {
+    // 저장소는 읽을 때 검증하지 않는다 — `false`로 적힌 글만 발행 글이다(빠진 값 · null은 초안 취급)
     const publishedSlugs = (await store.list())
-      .filter(({ meta }) => !meta.draft)
+      .filter(({ meta }) => meta.draft === false)
       .map(({ slug }) => slug);
-    const posts: PublicPostsResponse["posts"] = [];
+    // 모양은 아래 계약 재검사가 확정한다 — 여기서 공개 응답 타입으로 좁히면 draft를 false로 단정하게 된다
+    const posts: Array<{ slug: string; date: string; [field: string]: unknown }> = [];
     for (const slug of publishedSlugs) {
       const found = await store.get(slug);
       // 목록과 읽기 사이에 초안으로 돌아간 글도 거른다
-      if (found === null || found.file.meta.draft) continue;
-      const { title, description, date, updated, category, image } = found.file.meta;
+      if (found === null || found.file.meta.draft !== false) continue;
+      const { title, description, date, updated, category, draft, image } = found.file.meta;
       posts.push({
         slug,
         title,
@@ -141,7 +148,8 @@ export function createApp(options: AppOptions): Hono {
         date,
         ...(updated === undefined ? {} : { updated }),
         category,
-        draft: false,
+        // 실제 값을 넘긴다 — 아래 계약 재검사(`draft: z.literal(false)`)가 이 값을 본다
+        draft,
         ...(image === undefined ? {} : { image: new URL(image, imageBaseUrl).href }),
         html: renderHtml(found.file, { imageBaseUrl }),
       });
