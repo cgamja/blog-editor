@@ -23,10 +23,15 @@ function response(...posts: Record<string, unknown>[]): unknown {
 describe("public-posts-contract", () => {
   it("WHEN 모양이 맞는 발행 글 하나를 검증하면 THEN 통과한다", () => {
     expect(schema.safeParse(response(post())).success).toBe(true);
+    expect(
+      schema.safeParse(response(post({ image: "https://cdn.example.com/images/a.webp" }))).success,
+    ).toBe(true);
   });
 
-  it("WHEN 저장 전용 키나 겹치는 slug가 있으면 THEN 거부된다", () => {
+  it("WHEN 저장 전용 키 · 겹치는 slug · 호스트 없는 image가 있으면 THEN 거부된다", () => {
     expect(schema.safeParse(response(post({ source: "claude" }))).success).toBe(false);
+    expect(schema.safeParse(response(post({ image: "https:foo" }))).success).toBe(false);
+    expect(schema.safeParse(response(post({ image: "http://a.com/x.webp" }))).success).toBe(false);
     expect(schema.safeParse(response(post(), post({ title: "다른 글" }))).success).toBe(false);
   });
 
