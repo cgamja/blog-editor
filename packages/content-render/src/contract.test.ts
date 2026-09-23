@@ -12,12 +12,14 @@ const SLUGS: Record<keyof Fixtures, string> = {
   decorationMax: "decoration-max",
 };
 const CONTRACT_DIR = "../../../contract/public-api/public";
+const IMAGE_BASE_URL = "https://simsimeestudio.com";
+const POST_CSS_URL = "/public/post.css";
 
-/** 대표 픽스처를 발행 상태로 바꿔 공개 조회 응답을 만든다 — M1 API 핸들러가 생기기 전의 계약. */
+/** M1 API 핸들러가 생기기 전의 계약 — 핸들러가 생기면 이 함수 대신 핸들러 출력을 비교한다. */
 function contractResponse(): unknown {
   const posts = (Object.keys(SLUGS) as (keyof Fixtures)[]).map((name) => {
     const file = fixtures[name];
-    const { title, description, date, updated, category } = file.meta;
+    const { title, description, date, updated, category, image } = file.meta;
     return {
       slug: SLUGS[name],
       title,
@@ -26,17 +28,19 @@ function contractResponse(): unknown {
       ...(updated === undefined ? {} : { updated }),
       category,
       draft: false,
-      html: renderHtml(file, { imageBaseUrl: "https://simsimeestudio.com" }),
+      ...(image === undefined ? {} : { image: new URL(image, IMAGE_BASE_URL).href }),
+      html: renderHtml(file, { imageBaseUrl: IMAGE_BASE_URL }),
     };
   });
-  return { postCssUrl: "/public/post.css", posts };
+  return { postCssUrl: POST_CSS_URL, posts };
 }
 
 describe("public-posts-contract", () => {
   it("WHEN 대표 픽스처 3개로 응답을 만들면 THEN 스키마를 통과하고 계약 픽스처 · post.css 사본과 같다", async () => {
     const response = contractResponse();
     const schema = createPublicPostsResponseSchema({ categories: SITE_CATEGORIES });
-    expect(schema.safeParse(response).success).toBe(true);
+    // parse — 어긋나면 ZodError가 어느 필드인지 보여 준다
+    schema.parse(response);
     await expect(`${JSON.stringify(response, null, 2)}\n`).toMatchFileSnapshot(
       `${CONTRACT_DIR}/posts`,
     );
