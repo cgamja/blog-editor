@@ -16,10 +16,6 @@ function minimalDoc() {
  * post-file spec은 #### Scenario가 5개다(세 칸 통과 · 불일치/누락/여분 거부 · 현재 버전 그대로 ·
  * 미래/없음/문자열 → MigrationError · migrations.length 불변식) — tasks.md 2.1이 적은 "6개"와
  * 다르다. 1 Scenario = 1 it 규칙을 따라 spec.md를 기준으로 5개를 쓴다(notes에 기록).
- *
- * createPostFileSchema는 호출 자체는 던지지 않고 반환된 스키마의 parse/safeParse가 던진다 —
- * migrate는 호출 즉시 던진다. migrations는 지금 SCHEMA_VERSION(1)에 맞는 빈 배열이라
- * 그 자체로 이미 맞는 값이다(마지막 시나리오는 트리비얼 그린 — 보고 참고).
  */
 
 const schema = createPostFileSchema({ categories: BLOG_CATEGORIES });

@@ -5,9 +5,6 @@ import type { Doc } from "./doc";
 import { docArbitrary } from "./doc.arbitrary";
 
 /**
- * document-normalize spec은 #### Scenario 5개 — 1:1로 옮긴다.
- * normalize·docSchema 둘 다 자리표시자(호출 즉시 던짐)라 모든 테스트가 "기능 미구현"으로 빨강이다.
- *
  * 입력은 ProseMirror JSON 모양의 평범한 객체 리터럴이라 `type: "doc"`이 리터럴 타입으로 좁혀지지
  * 않는다 — Doc은 이 패키지가 아직 실제로 검증하지 않은 값이라 asDoc으로 캐스팅해 표현한다.
  */
@@ -100,9 +97,8 @@ describe("normalize — 검증된 문서를 정규형으로 만든다", () => {
     const json = JSON.stringify(normalize(asDoc(doc)));
 
     expect(json.startsWith('{"type":"doc"')).toBe(true);
-    expect(json).toContain(
-      '{"type":"paragraph","attrs":{"font":"jua","motion":"pop"},"content":[]}',
-    );
+    // rule ④ — content: [] 인 노드는 content 키 자체가 사라진다(ProseMirror toJSON과 같은 모양).
+    expect(json).toContain('{"type":"paragraph","attrs":{"font":"jua","motion":"pop"}}');
   });
 });
 

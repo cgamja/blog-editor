@@ -1,11 +1,5 @@
 import { docSchema } from "./doc";
 
-/**
- * document-schema(7) + decoration-schema(5) = 12 시나리오.
- * docSchema가 아직 자리표시자(호출 즉시 던짐)라 모든 테스트가 "docSchema: 기능 미구현"으로 빨강이다
- * — import 오류가 아니라 doc.ts export가 있고 호출이 실패하는 형태.
- */
-
 const allBlocksDoc = {
   type: "doc",
   content: [
@@ -154,6 +148,18 @@ describe("document-schema — 1차 블록과 마크만 통과한다", () => {
         ],
       },
     ],
+    [
+      "text에 marks bold 중복",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "x", marks: [{ type: "bold" }, { type: "bold" }] }],
+          },
+        ],
+      },
+    ],
   ])("WHEN %s THEN success는 false다", (_label, input) => {
     expect(docSchema.safeParse(input).success).toBe(false);
   });
@@ -188,6 +194,11 @@ describe("document-schema — 1차 블록과 마크만 통과한다", () => {
   ])("WHEN 내용 규칙 위반 — %s THEN success는 false다", (_label, input) => {
     expect(docSchema.safeParse(input).success).toBe(false);
   });
+
+  it("WHEN paragraph에 content 키가 없으면 THEN success는 true다(ProseMirror toJSON이 빈 content를 생략한다)", () => {
+    const result = docSchema.safeParse({ type: "doc", content: [{ type: "paragraph" }] });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("document-schema — 링크 href는 허용 목록 스킴만 통과한다 (보호 대상)", () => {
@@ -208,6 +219,8 @@ describe("document-schema — 링크 href는 허용 목록 스킴만 통과한�
     "//evil.com",
     "ftp://x",
     "https://",
+    "/\\evil.com",
+    "https://evil.com\u0001",
   ])("WHEN href가 %s THEN success는 false다", (href) => {
     expect(docSchema.safeParse(docWithHref(href)).success).toBe(false);
   });
@@ -354,6 +367,49 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
           {
             type: "paragraph",
             content: [{ type: "text", text: "x", attrs: { motion: "fade-in" } }],
+          },
+        ],
+      },
+    ],
+    [
+      "callout 안 bulletList에 stickers",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "callout",
+            attrs: { tone: "note" },
+            content: [
+              {
+                type: "bulletList",
+                attrs: { stickers: [sticker()] },
+                content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      "listItem에 중첩된 orderedList에 font",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  { type: "paragraph", content: [] },
+                  {
+                    type: "orderedList",
+                    attrs: { font: "jua" },
+                    content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }],
+                  },
+                ],
+              },
+            ],
           },
         ],
       },

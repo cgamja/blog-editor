@@ -6,8 +6,6 @@ import { BLOG_CATEGORIES } from "./test-helpers";
 
 /**
  * document-fixtures spec은 #### Scenario 3개 — 1:1로 옮긴다.
- * fixtures.*는 getter가 접근 즉시 던지고, invalidFixtures는 Proxy가 어떤 접근에도 던진다 —
- * 아직 4.2가 채우지 않았으니 셋 다 "기능 미구현"으로 빨강이다.
  *
  * document-schema Requirement 1이 나열하는 노드는 doc을 뺀 12종(paragraph·heading·bulletList·
  * orderedList·blockquote·codeBlock·horizontalRule·image·callout·appScreenshot·listItem·text)이다.
@@ -69,7 +67,7 @@ describe("document-fixtures — 유효 픽스처 셋은 스키마와 정규형�
 });
 
 describe("document-fixtures — 잘못된 문서 픽스처는 이유와 함께 거부된다 (보호 대상)", () => {
-  it("WHEN 각 invalidFixtures[i].file을 migrate 후 파싱하면 THEN 다섯 경우 모두 실패하고 실패 위치가 reason이 가리키는 곳이다", () => {
+  it("WHEN 각 invalidFixtures[i].file을 migrate 후 파싱하면 THEN 다섯 경우 모두 실패하고 실패 위치가 at과 일치한다", () => {
     const REQUIRED_REASONS = [
       "javascript-link",
       "absolute-image",
@@ -80,17 +78,19 @@ describe("document-fixtures — 잘못된 문서 픽스처는 이유와 함께 �
     const reasons = invalidFixtures.map((fixture) => fixture.reason);
     for (const required of REQUIRED_REASONS) expect(reasons).toContain(required);
 
-    for (const required of REQUIRED_REASONS) {
-      const fixture = invalidFixtures.find((candidate) => candidate.reason === required);
-      expect(fixture).toBeDefined();
-      if (!fixture) continue;
-
-      if (required === "future-version") {
+    for (const fixture of invalidFixtures) {
+      if (fixture.at === "migrate") {
         expect(() => migrate(fixture.file)).toThrow(MigrationError);
         continue;
       }
       const migrated = migrate(fixture.file);
-      expect(schema.safeParse(migrated).success).toBe(false);
+      const result = schema.safeParse(migrated);
+      expect(result.success).toBe(false);
+      if (result.success) continue;
+      const at = fixture.at;
+      expect(result.error.issues.some((issue) => at.every((seg, i) => issue.path[i] === seg))).toBe(
+        true,
+      );
     }
   });
 });
