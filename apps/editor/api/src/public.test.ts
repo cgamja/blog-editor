@@ -4,6 +4,7 @@ import { createPublicPostsResponseSchema, fixtures } from "@blog-editor/content-
 import type { Fixtures, PostFile } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
+import { testAuthOptions } from "./test-app";
 
 // 사이트 BLOG_CATEGORIES와 같은 목록 — 계약 픽스처의 category가 사이트 enum 안에 있어야 한다
 const SITE_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
@@ -17,7 +18,13 @@ const IMAGE_BASE_URL = "https://simsimeestudio.com";
 
 function setup() {
   const store = createMemoryPostStore();
-  const app = createApp({ store, categories: SITE_CATEGORIES, imageBaseUrl: IMAGE_BASE_URL });
+  // 공개 조회는 세션 없이 부른다 — 인증 옵션은 앱을 만들 때만 필요하다
+  const app = createApp({
+    store,
+    categories: SITE_CATEGORIES,
+    imageBaseUrl: IMAGE_BASE_URL,
+    ...testAuthOptions,
+  });
   return { store, app };
 }
 

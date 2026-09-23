@@ -2,6 +2,7 @@ import { fixtures, normalize } from "@blog-editor/content-schema";
 import type { PostFile } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
+import { testAuthOptions, withSession } from "./test-app";
 
 const CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 
@@ -11,8 +12,10 @@ function setup() {
     store,
     categories: CATEGORIES,
     imageBaseUrl: "https://simsimeestudio.com",
+    ...testAuthOptions,
   });
-  return { store, app };
+  // /api/*는 세션이 필요하다(api-session) — 모든 요청이 로그인한 쿠키를 싣는다
+  return { store, app: withSession(app) };
 }
 
 function putPost(
