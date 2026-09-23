@@ -20,4 +20,4 @@
 ## 4. Converge · 브라우저 확인
 
 - [x] 4.1 `.claude/state/evidence/content-render/preview.html`(gitignored)에 `decorationMax` 렌더 + `post.css` + 사이트 토큰 `:root` 복사본을 넣고 크롬에서: 스크롤 진입 움직임 · 줄이기 설정에서 즉시 보임 · 스티커가 블록 기준으로 붙음 · 1280/375 폭 → 스크린샷 경로를 PR 확인 방법에 → verify: screenshot 1280/375
-- [ ] 4.2 spec 4개의 `#### Scenario` 13개 ↔ 테스트 이름 1:1 대조(수동 시나리오 1개는 4.1 스크린샷), 빠진 것은 여기 append. 글꼴 서브셋(`pnpm fonts`)은 사이트 레포 작업(#8)으로 넘긴다 → verify: `pnpm verify` 초록 출력
+- [ ] 4.2 spec 4개의 `#### Scenario` 14개(자동 13 ↔ 테스트 13 · 수동 1 = 4.1 스크린샷) 대조, 빠진 것은 여기 append. 글꼴 서브셋(`pnpm fonts`)은 사이트 레포 작업(#8)으로 넘긴다 → verify: `pnpm verify` 초록 출력

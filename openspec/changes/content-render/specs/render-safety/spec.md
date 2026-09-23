@@ -8,7 +8,7 @@
 
 ### Requirement: 렌더 결과에 스크립트 · 이벤트 핸들러 · javascript: 스킴이 없다 (보호 대상 — 고쳐서 통과시키지 않는다)
 
-`renderHtml`의 출력은 SHALL 어떤 입력에서도 `<script` 문자열, 이름이 `on`으로 시작하는 속성, `javascript:` 스킴으로 시작하는 `href` · `src` 값을 담지 않는다. 판정은 태그 안의 속성 이름과 속성값에 대한 것이다 — 이스케이프되어 본문 글자로 남은 `onload=`나 `javascript:` 텍스트는 태그도 속성도 아니므로 위반이 아니다. 문서 문자열은 전부 이스케이프되고, 속성은 렌더러가 닫힌 목록에서만 만든다(`class` · `data-font` · `data-motion` · `data-tone` · `data-language` · `style` · `href` · `src` · `alt` · `width` · `height` · `loading` · `decoding`). `href`는 스키마가 스킴을 이미 막지만 렌더러도 이스케이프해 속성 경계를 지킨다. 이 테스트를 통과시키기 위해 단언을 완화하지 않는다.
+`renderHtml`의 출력은 SHALL 어떤 입력에서도 `<script` 문자열, 이름이 `on`으로 시작하는 속성, `javascript:` 스킴으로 시작하는 `href` · `src` 값을 담지 않는다. 판정은 태그 안의 속성 이름과 속성값에 대한 것이다 — 이스케이프되어 본문 글자로 남은 `onload=`나 `javascript:` 텍스트는 태그도 속성도 아니므로 위반이 아니다. 문서 문자열은 전부 이스케이프되고, 속성은 렌더러가 닫힌 목록에서만 만든다(`class` · `data-font` · `data-motion` · `data-tone` · `data-language` · `style` · `href` · `src` · `alt` · `width` · `height` · `loading` · `decoding`). `href`의 스킴은 스키마가 막는다(렌더러는 검증된 doc를 받는다, adr-009) — 렌더러의 책임은 `href`를 포함한 모든 값의 이스케이프이고, enum · 정수 값(font · motion · tone · 좌표)도 예외 없이 이스케이프한다. heading level과 스티커 id는 닫힌 표에서만 꺼내고 표에 없으면 렌더하지 않고 오류를 던진다(태그 이름은 이스케이프로 막을 수 없다). 이 테스트를 통과시키기 위해 단언을 완화하지 않는다.
 
 #### Scenario: 대표 픽스처와 적대적 문서 모두 금지 패턴이 없다
 

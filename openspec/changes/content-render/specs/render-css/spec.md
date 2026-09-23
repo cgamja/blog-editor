@@ -8,7 +8,7 @@
 
 ### Requirement: 본문용 CSS는 한 파일이고 사이트 토큰을 이어받는다
 
-패키지는 SHALL `packages/content-render/src/post.css` 한 파일을 `@blog-editor/content-render/post.css`로 export한다. 모든 규칙은 `.post-body` 아래에만 걸리고, 색 · 글꼴은 사이트 `globals.css`의 토큰 이름(`--ink` · `--ink-soft` · `--brand` · `--brand-ink` · `--brand-soft` · `--surface-2` · `--line` · `--accent-soft` · `--accent-ink` · `--font-sans` · `--font-display` · `--font-hand`)을 `var()`로 참조만 하며 `:root`에 토큰을 정의하지 않는다(수동 복사, plan 09). 기본 본문 모양(제목 · 링크 · 리스트 · 인용 · 코드 · 이미지 프레임 · 구분선)은 사이트 `.prose`와 같은 값으로 옮긴다.
+패키지는 SHALL `packages/content-render/src/post.css` 한 파일을 `@blog-editor/content-render/post.css`로 export한다. 모든 규칙은 `.post-body` 아래에만 걸리고, 색 · 글꼴은 사이트 `globals.css`의 토큰 이름(`--ink` · `--ink-soft` · `--brand` · `--brand-ink` · `--brand-soft` · `--surface-2` · `--line` · `--accent-soft` · `--accent-ink` · `--font-sans` · `--font-display` · `--font-hand`)을 `var()`로 참조만 하며 `:root`에 토큰을 정의하지 않는다(수동 복사, plan 09). 기본 본문 모양(제목 · 링크 · 리스트 · 인용 · 코드 · 이미지 프레임 · 구분선)은 사이트 `.prose`와 같은 값으로 옮긴다. 예외: 코드 블록 바탕 · 글자색은 사이트 `.prose pre`처럼 리터럴이다(사이트에도 그 의미의 토큰이 없다 — `--paper-ink`는 값만 같은 다른 뜻).
 
 #### Scenario: 토큰을 정의하지 않고 참조만 한다
 
