@@ -12,8 +12,13 @@
 
 #### Scenario: 대표 픽스처와 적대적 문서 모두 금지 패턴이 없다
 
-- **WHEN** `fixtures` 3개와, 텍스트 · `alt` · `caption` · `codeBlock` 본문에 `<script>alert(1)</script>` · `" onload="x` · `javascript:alert(1)`를 넣은 문서를 각각 렌더한다
-- **THEN** 어느 출력에도 `<script`가 없고, 태그 안 속성 이름 중 `on`으로 시작하는 것이 없고, `href` · `src` 값 중 `javascript:`로 시작하는 것이 없다. 적대적 문자열은 이스케이프된 글자로만 남는다(`<p>&lt;script&gt;…</p>` · `alt="&quot; onload=&quot;x"` · `<p>javascript:alert(1)</p>`)
+- **WHEN** `fixtures` 3개와, 텍스트 · `alt` · `caption` · `codeBlock` 본문에 `<script>alert(1)</script>` · `" onload="x` · `javascript:alert(1)`를 넣고 링크 `href`에 `/a"onmouseover="x`(스키마가 허용하는 내부 경로)를 넣은 문서를 각각 렌더한다
+- **THEN** 어느 출력에도 `<script`가 없고, 태그 안 속성 이름 중 `on`으로 시작하는 것이 없고, `href` · `src` 값 중 `javascript:`로 시작하는 것이 없다. 적대적 문자열은 이스케이프된 글자로만 남는다(`<p>&lt;script&gt;…</p>` · `alt="&quot; onload=&quot;x"` · `<p>javascript:alert(1)</p>` · `<a href="/a&quot;onmouseover=&quot;x">`)
+
+#### Scenario: 표에 없는 heading level · 스티커 id는 렌더하지 않고 오류를 던진다
+
+- **WHEN** 검증을 건너뛴 문서로 `attrs.level`이 `4`인 heading과 `"2 onload=x"`인 heading, `id`가 `"moon"`인 스티커를 각각 렌더한다
+- **THEN** 세 경우 모두 `RangeError`를 던지고 HTML을 돌려주지 않는다
 
 #### Scenario: 속성은 닫힌 목록 밖으로 나가지 않는다
 
