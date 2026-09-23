@@ -1,7 +1,7 @@
 # ADR-009. 패키지 경계 — 의존 방향 표를 정본으로, 상대경로로 경계를 넘는 import도 막는다
 
 - 날짜: 2026-09-22
-- 상태: 승인됨
+- 상태: 승인됨 · 일부 대체 → adr-015(테스트 전용 `./testing` 진입점)
 - 원천: plan 3-3 · CLAUDE.md 구조 · develop-setup 프로브(2026-09-22)
 - 별칭: `adr/0001-domain-structure.md` → 이 파일 (cgamja 플러그인이 `docs/adr/0001-domain-structure.md`를 읽는다)
 
