@@ -5,12 +5,12 @@
 ## 1. 패키지 뼈대
 
 - [x] 1.1 ADR-013 · `package.json`(prosemirror-markdown · prosemirror-model · markdown-it 14 · markdown-it-container) · `tsconfig.json` → 사람 승인(보호 파일) → 인자 없는 `pnpm install` → verify: `pnpm audit --prod` 취약점 없음
-- [ ] 1.2 `src/index.ts` + `src/convert.ts` — `convertMarkdown`이 `Error("not implemented")`를 던지는 스텁, 결과 타입 `ConvertResult` export → verify: `pnpm typecheck` 초록
+- [x] 1.2 `src/index.ts` + `src/convert.ts` — `convertMarkdown`이 `Error("not implemented")`를 던지는 스텁, 결과 타입 `ConvertResult` export → verify: `pnpm typecheck` 초록
 
 ## 2. 변환
 
-- [ ] 2.1 `src/convert.test.ts` — 스펙 5개의 `#### Scenario` 20개(markdown-format 5 · markdown-callout 2 · markdown-directive 7 · markdown-validation-message 4 · markdown-convert 2). 거부 시나리오는 `it.each`로 한 테스트 안에서 경우마다 `ok: false`를 본다. 가이드 시나리오는 `guide/format.md`를 `node:fs`로 읽어 info 문자열 `example` 블록을 이어 붙인다 → verify: `pnpm vitest run packages/content-convert` 빨강 · 실패 원문 보고
-- [ ] 2.2 `src/` 구현 — 지시어 줄 걷어내기(줄 번호 보존) · markdown-it 토큰 검사(정의 밖 · 변형 · 콜아웃 경계 · 지시어 자리) · 메시지 조립(세 칸 · 줄 순) · ProseMirror 스키마 + `MarkdownParser` · 지시어 attrs 붙이기 · `docSchema` 재검증 · `normalize` → verify: 2.1 초록 + `pnpm test` PASS_TO_PASS
+- [x] 2.1 `src/convert.test.ts` — 스펙 5개의 `#### Scenario` 20개(markdown-format 5 · markdown-callout 2 · markdown-directive 7 · markdown-validation-message 4 · markdown-convert 2). 거부 시나리오는 `it.each`로 한 테스트 안에서 경우마다 `ok: false`를 본다. 가이드 시나리오는 `guide/format.md`를 `node:fs`로 읽어 info 문자열 `example` 블록을 이어 붙인다 → verify: `pnpm vitest run packages/content-convert` 빨강 · 실패 원문 보고
+- [x] 2.2 `src/` 구현 — 지시어 줄 걷어내기(줄 번호 보존) · markdown-it 토큰 검사(정의 밖 · 변형 · 콜아웃 경계 · 지시어 자리) · 메시지 조립(세 칸 · 줄 순) · ProseMirror 스키마 + `MarkdownParser` · 지시어 attrs 붙이기 · `docSchema` 재검증 · `normalize` → verify: 2.1 초록 + `pnpm test` PASS_TO_PASS
 
 ## 3. Converge
 
