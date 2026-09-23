@@ -43,7 +43,8 @@ const MOTION_PATTERNS = [/animation-timeline/, /@keyframes/, /data-motion/];
 describe("render-css", () => {
   it("WHEN post.css를 읽으면 THEN 사이트 토큰을 정의하지 않고 var()로 참조만 한다", () => {
     expect(css).not.toMatch(/:root/);
-    for (const token of SITE_TOKENS) expect(css).toContain(`var(${token}`);
+    // `var(--ink` 접두어 일치는 `--ink-soft`로도 통과한다 — 닫는 괄호나 쉼표까지 본다
+    for (const token of SITE_TOKENS) expect(css).toMatch(new RegExp(`var\\(${token}[,)]`));
   });
 
   it("WHEN 스키마 enum 값마다 선택자를 만들면 THEN 열한 개 전부 post.css에 있다", () => {

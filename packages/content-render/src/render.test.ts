@@ -13,13 +13,17 @@ function paragraph(text: string, attrs?: Extract<Block, { type: "paragraph" }>["
 }
 
 /**
- * 태그 안의 속성 이름만 모은다 — `이름="값"` 단위로 읽어 값 안의 글자(이스케이프된 `onload=` 등)는
- * 속성으로 세지 않는다. 텍스트 노드의 `=`도 세지 않는다(render-safety).
+ * 태그 안의 속성 이름을 전부 모은다(render-safety) — 따옴표 안의 값을 먼저 지워 값 속 글자
+ * (이스케이프된 `onload=` 등)는 세지 않고, 남은 토큰은 따옴표 없는 값 · 값 없는 속성 · 대문자까지
+ * 이름으로 센다. 텍스트 노드의 `=`는 태그 밖이라 세지 않는다.
  */
 function attributeNames(html: string): Set<string> {
   const names = new Set<string>();
-  for (const [, inside] of html.matchAll(/<[a-z0-9]+(\s[^>]*)?>/g)) {
-    for (const [, name] of (inside ?? "").matchAll(/\s([a-z-]+)="[^"]*"/g)) names.add(name!);
+  for (const [, inside] of html.matchAll(/<[a-z0-9]+(\s[^>]*)?>/gi)) {
+    const withoutValues = (inside ?? "").replace(/"[^"]*"|'[^']*'/g, '""');
+    for (const [, name] of withoutValues.matchAll(/\s([^\s="'>/]+)/g)) {
+      names.add(name!.toLowerCase());
+    }
   }
   return names;
 }
@@ -86,7 +90,19 @@ describe("render-safety", () => {
   }
 
   it("WHEN 픽스처 3개와 적대적 문서를 렌더하면 THEN script 태그 · on* 속성 · javascript: 스킴 속성이 없다", () => {
+    // 내부 경로 href는 스키마가 `"`를 허용하므로 검증된 문서로도 도달하는 경로다 — 이스케이프가 지켜야 한다
+    const hostileHref: Block = {
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: "링크",
+          marks: [{ type: "link", attrs: { href: '/a"onmouseover="x' } }],
+        },
+      ],
+    };
     const hostile = docOf(
+      hostileHref,
       ...HOSTILE.map((text) => paragraph(text)),
       ...HOSTILE.map((alt): Block => ({ type: "image", attrs: { src: "/images/a.webp", alt } })),
       ...HOSTILE.map((caption): Block => ({
@@ -108,6 +124,7 @@ describe("render-safety", () => {
     expect(hostileHtml).toContain("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
     expect(hostileHtml).toContain('alt="&quot; onload=&quot;x"');
     expect(hostileHtml).toContain("<p>javascript:alert(1)</p>");
+    expect(hostileHtml).toContain('<a href="/a&quot;onmouseover=&quot;x">링크</a>');
   });
 
   it("WHEN decorationMax를 렌더하면 THEN 속성 이름이 닫힌 목록의 부분집합이다", () => {
