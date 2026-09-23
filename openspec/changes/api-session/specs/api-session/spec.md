@@ -30,7 +30,7 @@
 
 ### Requirement: /api/*는 세션이 있어야 하고 공개 조회는 열려 있다 (보호 대상)
 
-`POST /api/session`을 뺀 `/api/*`는 SHALL 유효한 세션 쿠키가 없으면(없음 · 서명 위조 · 만료) 401과 `message`를 주고 핸들러를 실행하지 않는다. `/public/*`는 세션 없이 그대로 열려 있다.
+`POST` · `DELETE /api/session`을 뺀 `/api/*`는 SHALL 유효한 세션 쿠키가 없으면(없음 · 서명 위조 · 만료) 401과 `message`를 주고 핸들러를 실행하지 않는다. `/public/*`는 세션 없이 그대로 열려 있다.
 
 #### Scenario: 쿠키 없이 글 목록을 부르면 401이다
 

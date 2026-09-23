@@ -18,7 +18,7 @@ import {
   PRECONDITION_REQUIRED_MESSAGE,
   SCHEMA_MISMATCH_MESSAGE,
 } from "./messages";
-import { registerSession } from "./session";
+import { registerSessionRoutes, requireSession, resolveSessionConfig } from "./session";
 import type { SessionOptions } from "./session";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
@@ -74,9 +74,10 @@ export function createApp(options: AppOptions): Hono {
   const postFileSchema = createPostFileSchema({ categories });
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
   const postCss = readPostCss();
+  const session = resolveSessionConfig(options);
   const app = new Hono();
-  // 세션 검사 미들웨어가 글 라우트보다 앞서야 한다
-  registerSession(app, options);
+  app.use("/api/*", requireSession(session));
+  registerSessionRoutes(app, session);
 
   app.get("/api/posts", async (c) => {
     const summaries = (await store.list()).map(({ slug, meta }) => summaryOf(slug, meta));

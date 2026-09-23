@@ -6,7 +6,7 @@ plan 3-5 · D8 · D13 · adr-007 그대로: scrypt 해시 + HMAC 서명 쿠키 +
 
 ### 1. 계정 테이블은 계약 + 메모리 구현만
 
-- 가정: `AccountStore.findByEmail(email) → { id, email, passwordHash, workspaceId } | null`. 구현은 `createMemoryAccountStore(rows)` 하나, 로컬 진입점이 env의 시드 1행을 넣는다
+- 가정: `AccountStore.findByEmail(email) → { id, email, passwordHash, workspaceId } | null`. 계약은 `accounts.ts`, 구현은 `memory-account-store.ts`의 `createMemoryAccountStore(rows)` 하나(store.ts / memory-store.ts 선례), 로컬 진입점이 env의 시드 1행을 넣는다
 - 근거: D13 "로그인을 비밀번호 하나가 아니라 계정 테이블 구조로(1단계 1행)". 저장 백엔드(DynamoDB · S3)는 plan 10의 미결 스파이크라 M4에서 같은 계약으로 붙인다
 - 되돌리는 비용: 계약 모양 변경 — 호출자는 `app.ts` 한 곳
 
@@ -18,14 +18,14 @@ plan 3-5 · D8 · D13 · adr-007 그대로: scrypt 해시 + HMAC 서명 쿠키 +
 
 ### 3. 해시 형식은 자기기술 문자열
 
-- 가정: `scrypt$<N>$<r>$<p>$<salt base64>$<hash base64>`, 기본 N=2^15 · r=8 · p=1 · salt 16바이트 · 키 32바이트. 검증은 문자열의 파라미터로 다시 계산해 `timingSafeEqual`
+- 가정: `scrypt$<N>$<r>$<p>$<salt base64>$<hash base64>`, 기본 N=2^15 · r=8 · p=1 · salt 16바이트 · 키 32바이트. 검증은 문자열의 파라미터로 다시 계산해 `timingSafeEqual`. N이 2의 거듭제곱이 아니거나 메모리가 한도(64MiB)를 넘는 해시는 맞지 않음으로 보고(로그인 500 대신 401), 로컬 진입점은 그런 시드 해시로 시작하지 않는다(리뷰 반영)
 - 근거: 파라미터를 올려도 옛 해시가 계속 검증된다. 테스트는 낮은 N으로 해시를 만들어 빠르다
 - 사람이 해시를 만드는 방법: `node apps/editor/api/src/hash-password.ts` — 비밀번호를 표준 입력으로 받아 해시를 출력(쉘 이력에 비밀번호가 남지 않게 인자로 받지 않는다). package.json 스크립트는 보호 파일이라 더하지 않았다
 - 되돌리는 비용: 형식 바꾸면 시드 해시 재생성 1회
 
 ### 4. 세션 쿠키 값 = `<accountId>.<만료 epoch 초>`, 서명은 Hono
 
-- 가정: 쿠키 이름 `session`, 수명 기본 7일(`sessionTtlSeconds`), `Max-Age`와 값 안의 만료 시각이 같다. 서버는 서명 검증 뒤 만료 시각을 `now()`와 비교하고, 계정이 테이블에 아직 있는지는 보지 않는다(1행 시드라 이득 없음 — 계정 삭제가 생기면 다시 본다)
+- 가정: 쿠키 이름 `__Host-session`(접두사 — 상위 도메인의 같은 이름 쿠키가 가리지 못한다, 리뷰 반영), 수명 기본 7일(`sessionTtlSeconds`), `Max-Age`와 값 안의 만료 시각이 같다. 서버는 서명 검증 뒤 만료 시각을 `now()`와 비교하고, 계정이 테이블에 아직 있는지는 보지 않는다(1행 시드라 이득 없음 — 계정 삭제가 생기면 다시 본다)
 - 근거: `Max-Age`는 브라우저가 지키는 것이라 복사된 쿠키에는 효력이 없다. 서명된 값 안의 만료가 서버의 진짜 만료다
 - 시계는 `createApp`의 `now` 옵션(기본 `Date.now`)으로 주입해 만료 시나리오를 결정적으로 테스트한다
 - 되돌리는 비용: 쿠키 값 모양 — 바꾸면 기존 세션이 모두 끊길 뿐

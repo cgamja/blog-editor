@@ -29,7 +29,8 @@ registerHooks({
 const { serve } = await import("@hono/node-server");
 const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
-const { createMemoryAccountStore } = await import("./accounts");
+const { createMemoryAccountStore } = await import("./memory-account-store");
+const { isValidPasswordHash } = await import("./password");
 
 const DEFAULT_PORT = 8787;
 // TLS 없는 로컬 개발 서버다 — 로그인 비밀번호와 세션 쿠키가 평문으로 오가므로 같은 네트워크의 다른 기기에 열지 않는다
@@ -65,10 +66,14 @@ function readRequiredEnv(): Record<(typeof REQUIRED_ENV)[number], string> {
       `환경 변수가 없다: ${missing.join(", ")} — apps/editor/api/src/serve.ts 머리 주석 참고`,
     );
   }
-  return Object.fromEntries(REQUIRED_ENV.map((name) => [name, process.env[name] ?? ""])) as Record<
-    (typeof REQUIRED_ENV)[number],
-    string
-  >;
+  const env = Object.fromEntries(
+    REQUIRED_ENV.map((name) => [name, process.env[name] ?? ""]),
+  ) as Record<(typeof REQUIRED_ENV)[number], string>;
+  // 틀린 해시로 뜨면 로그인만 영원히 401이다 — 원인이 보이는 시작 시점에 멈춘다
+  if (!isValidPasswordHash(env.ADMIN_PASSWORD_HASH)) {
+    throw new Error("ADMIN_PASSWORD_HASH 형식이 틀렸다 — hash-password.ts로 다시 만든다");
+  }
+  return env;
 }
 
 const env = readRequiredEnv();

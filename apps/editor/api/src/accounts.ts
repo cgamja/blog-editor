@@ -14,17 +14,3 @@ export interface AccountStore {
   /** email은 대소문자 · 앞뒤 공백을 무시하고 찾는다 */
   findByEmail(email: string): Promise<Account | null>;
 }
-
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-export function createMemoryAccountStore(accounts: readonly Account[]): AccountStore {
-  const byEmail = new Map(accounts.map((account) => [normalizeEmail(account.email), account]));
-  return {
-    async findByEmail(email) {
-      const account = byEmail.get(normalizeEmail(email));
-      return account === undefined ? null : { ...account };
-    },
-  };
-}
