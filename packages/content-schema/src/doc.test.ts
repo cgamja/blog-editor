@@ -1,4 +1,4 @@
-import { docSchema } from "./doc";
+import { docSchema, naturalSizeOf } from "./doc";
 
 const allBlocksDoc = {
   type: "doc",
@@ -469,5 +469,13 @@ describe("document-schema — 이미지는 원본 픽셀 크기를 선택으로 
     ["naturalWidth: 10.5", imageDoc({ naturalWidth: 10.5, naturalHeight: 800 })],
   ])("WHEN %s THEN success는 false다", (_label, input) => {
     expect(docSchema.safeParse(input).success).toBe(false);
+  });
+
+  it("WHEN 짝 · 빈 attrs · 한쪽만을 naturalSizeOf에 넣으면 THEN 짝일 때만 크기이고 나머지는 null이다", () => {
+    expect([
+      naturalSizeOf({ naturalWidth: 1200, naturalHeight: 800 }),
+      naturalSizeOf({}),
+      naturalSizeOf({ naturalWidth: 1200 }),
+    ]).toEqual([{ width: 1200, height: 800 }, null, null]);
   });
 });
