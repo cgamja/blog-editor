@@ -1,11 +1,12 @@
 node_modules
 dist
 coverage
+.data
 *.tsbuildinfo
 .env
 .env.*
 !.env.example
 .DS_Store
-.claude/state
+**/.claude/state
 .claude/worktrees
 .claude/settings.local.json
