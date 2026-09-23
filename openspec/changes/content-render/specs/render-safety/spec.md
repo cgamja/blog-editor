@@ -8,12 +8,12 @@
 
 ### Requirement: 렌더 결과에 스크립트 · 이벤트 핸들러 · javascript: 스킴이 없다 (보호 대상 — 고쳐서 통과시키지 않는다)
 
-`renderHtml`의 출력은 SHALL 어떤 입력에서도 `<script` · 공백 뒤 `on[a-z]+=` 형태의 속성 · `javascript:` 스킴을 담지 않는다. 문서 문자열은 전부 이스케이프되고, 속성은 렌더러가 닫힌 목록에서만 만든다(`class` · `data-font` · `data-motion` · `data-tone` · `data-language` · `style` · `href` · `src` · `alt` · `width` · `height` · `loading` · `decoding`). `href`는 스키마가 스킴을 이미 막지만 렌더러도 이스케이프해 속성 경계를 지킨다. 이 테스트를 통과시키기 위해 단언을 완화하지 않는다.
+`renderHtml`의 출력은 SHALL 어떤 입력에서도 `<script` 문자열, 이름이 `on`으로 시작하는 속성, `javascript:` 스킴으로 시작하는 `href` · `src` 값을 담지 않는다. 판정은 태그 안의 속성 이름과 속성값에 대한 것이다 — 이스케이프되어 본문 글자로 남은 `onload=`나 `javascript:` 텍스트는 태그도 속성도 아니므로 위반이 아니다. 문서 문자열은 전부 이스케이프되고, 속성은 렌더러가 닫힌 목록에서만 만든다(`class` · `data-font` · `data-motion` · `data-tone` · `data-language` · `style` · `href` · `src` · `alt` · `width` · `height` · `loading` · `decoding`). `href`는 스키마가 스킴을 이미 막지만 렌더러도 이스케이프해 속성 경계를 지킨다. 이 테스트를 통과시키기 위해 단언을 완화하지 않는다.
 
 #### Scenario: 대표 픽스처와 적대적 문서 모두 금지 패턴이 없다
 
 - **WHEN** `fixtures` 3개와, 텍스트 · `alt` · `caption` · `codeBlock` 본문에 `<script>alert(1)</script>` · `" onload="x` · `javascript:alert(1)`를 넣은 문서를 각각 렌더한다
-- **THEN** 어느 출력에도 `/<script/i` · `/\son[a-z]+=/i` · `/javascript:/i`가 매치되지 않는다(적대적 문자열은 이스케이프된 글자로만 남는다)
+- **THEN** 어느 출력에도 `<script`가 없고, 태그 안 속성 이름 중 `on`으로 시작하는 것이 없고, `href` · `src` 값 중 `javascript:`로 시작하는 것이 없다. 적대적 문자열은 이스케이프된 글자로만 남는다(`<p>&lt;script&gt;…</p>` · `alt="&quot; onload=&quot;x"` · `<p>javascript:alert(1)</p>`)
 
 #### Scenario: 속성은 닫힌 목록 밖으로 나가지 않는다
 
