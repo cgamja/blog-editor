@@ -1,6 +1,7 @@
 import type { PostFile } from "./post-file";
+import { minimal, allBlocks, decorationMax } from "./fixtures.posts";
 
-/** 4.2에서 채운다 — render · convert · API · 사이트 · Lighthouse 기준선이 같이 쓰는 대표 문서 3개. */
+/** render · convert · API · 사이트 · Lighthouse 기준선이 같이 쓰는 대표 문서 3개(spec: document-fixtures). */
 export type Fixtures = {
   minimal: PostFile;
   allBlocks: PostFile;
@@ -9,32 +10,93 @@ export type Fixtures = {
 
 export type InvalidFixture = { name: string; file: unknown; reason: string };
 
-function notImplemented(key: string): never {
-  throw new Error(`fixtures.${key}: 기능 미구현`);
+export const fixtures: Fixtures = { minimal, allBlocks, decorationMax };
+
+/**
+ * minimal을 깊은 복제해 field 하나만 깨뜨린다 — 그래서 각 invalid 픽스처는 정확히 한 가지
+ * 이유로만 거부된다(spec: document-fixtures 보호 대상).
+ */
+function cloneMinimal(): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(minimal)) as Record<string, unknown>;
 }
 
-/**
- * 4.2 이전에는 값이 없다. 접근하는 순간(모듈 로드 시점이 아니라) 던지도록 getter로 둬서
- * 각 테스트가 "기능 미구현"으로 빨강이 되게 한다 — import 자체는 실패하지 않는다.
- */
-export const fixtures: Fixtures = {
-  get minimal(): PostFile {
-    return notImplemented("minimal");
-  },
-  get allBlocks(): PostFile {
-    return notImplemented("allBlocks");
-  },
-  get decorationMax(): PostFile {
-    return notImplemented("decorationMax");
-  },
-} as unknown as Fixtures;
+function docOf(file: Record<string, unknown>): Record<string, unknown> {
+  return file.doc as Record<string, unknown>;
+}
 
-/**
- * javascript-link · absolute-image · unknown-attr · too-many-stickers · future-version —
- * 4.2에서 채운다. 배열의 어떤 속성에 접근해도(length · 인덱스 · 순회) 던지도록 Proxy를 쓴다.
- */
-export const invalidFixtures: ReadonlyArray<InvalidFixture> = new Proxy([] as InvalidFixture[], {
-  get(_target, prop) {
-    throw new Error(`invalidFixtures: 기능 미구현 (접근: ${String(prop)})`);
+function firstBlock(file: Record<string, unknown>): Record<string, unknown> {
+  const content = docOf(file).content as Record<string, unknown>[];
+  return content[0]!;
+}
+
+// javascript-link — href가 http(s)/mailto/내부 경로 허용 목록을 벗어난다.
+const javascriptLinkFixture = cloneMinimal();
+{
+  const block = firstBlock(javascriptLinkFixture);
+  const text = (block.content as Record<string, unknown>[])[0]!;
+  text.marks = [{ type: "link", attrs: { href: "javascript:alert(1)" } }];
+}
+
+// absolute-image — 이미지가 경로가 아니라 절대 URL이다.
+const absoluteImageFixture = cloneMinimal();
+{
+  const content = docOf(absoluteImageFixture).content as Record<string, unknown>[];
+  content.push({
+    type: "image",
+    attrs: { src: "https://example.com/images/foo.webp", alt: "잘못된 절대 URL 이미지" },
+  });
+}
+
+// unknown-attr — attrs 닫힌 집합에 없는 키.
+const unknownAttrFixture = cloneMinimal();
+{
+  const block = firstBlock(unknownAttrFixture);
+  block.attrs = { color: "red" };
+}
+
+// too-many-stickers — 문서 전체 스티커 합계가 13개(상한 12 초과).
+const tooManyStickersFixture = cloneMinimal();
+{
+  const block = firstBlock(tooManyStickersFixture);
+  block.attrs = {
+    stickers: Array.from({ length: 13 }, () => ({
+      id: "star-coral",
+      x: 0,
+      y: 0,
+      size: 10,
+      rotate: 0,
+    })),
+  };
+}
+
+// future-version — migrate가 지원하지 않는 미래 schemaVersion.
+const futureVersionFixture = cloneMinimal();
+futureVersionFixture.schemaVersion = 2;
+
+export const invalidFixtures: ReadonlyArray<InvalidFixture> = [
+  {
+    name: "javascript-link",
+    file: javascriptLinkFixture,
+    reason: "javascript-link",
   },
-}) as ReadonlyArray<InvalidFixture>;
+  {
+    name: "absolute-image",
+    file: absoluteImageFixture,
+    reason: "absolute-image",
+  },
+  {
+    name: "unknown-attr",
+    file: unknownAttrFixture,
+    reason: "unknown-attr",
+  },
+  {
+    name: "too-many-stickers",
+    file: tooManyStickersFixture,
+    reason: "too-many-stickers",
+  },
+  {
+    name: "future-version",
+    file: futureVersionFixture,
+    reason: "future-version",
+  },
+];
