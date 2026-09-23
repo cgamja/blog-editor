@@ -12,8 +12,10 @@ import {
 } from "./doc";
 
 /**
- * normalize의 멱등성 property test(3.2) 전용 — docSchema를 통과하는 임의 문서를 만든다.
- * 테스트 전용이라 index.ts에서 export하지 않는다(tasks 3.2). 닫힌 집합 상수는 doc.ts에서
+ * property test 전용 — docSchema를 통과하는 임의 문서와 그 속성 생성기를 만든다.
+ * 런타임 진입점(index.ts)이 아니라 `./testing` 진입점(package.json exports)으로만 나간다(adr-015).
+ * 이 파일 · `./testing` · fast-check는 *.test.ts와 *.arbitrary.ts에서만 import할 수 있고, 그 밖의
+ * 파일에서는 eslint.config.mjs의 GENERATORS 규칙이 막는다. 닫힌 집합 상수는 doc.ts에서
  * 그대로 가져온다 — 값이 늘어나면 여기도 자동으로 따라오지만, 새 노드 종류가 생기면 이 생성기를
  * 손으로 갱신해야 하고 지금은 그 누락을 잡는 것이 없다(adr-012 참고).
  */
@@ -69,7 +71,7 @@ const stickerArb = fc.record({
 });
 
 /** 최상위 블록 attrs — font/width는 자리가 있는 블록에서만 켠다(옵션으로 제어). */
-function decorationArb(opts: { font: boolean; width: boolean; maxStickers: number }) {
+export function decorationArbitrary(opts: { font: boolean; width: boolean; maxStickers: number }) {
   return fc
     .record({
       font: opts.font
@@ -101,14 +103,14 @@ const innerParagraphArb = fc.record({
 
 const paragraphArb = fc.record({
   type: fc.constant("paragraph" as const),
-  attrs: decorationArb({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+  attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
   content: fc.array(inlineArb, { maxLength: 3 }),
 });
 
 const headingArb = fc
   .record({
     level: fc.constantFrom(2, 3),
-    attrs: decorationArb({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+    attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
   })
   .chain(({ level, attrs }) =>
     fc.record({
@@ -120,13 +122,13 @@ const headingArb = fc
 
 const blockquoteArb = fc.record({
   type: fc.constant("blockquote" as const),
-  attrs: decorationArb({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+  attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
   content: fc.array(innerParagraphArb, { minLength: 1, maxLength: 2 }),
 });
 
 const codeBlockArb = fc.record({
   type: fc.constant("codeBlock" as const),
-  attrs: decorationArb({ font: false, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+  attrs: decorationArbitrary({ font: false, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
   content: fc.array(
     fc.record({
       type: fc.constant("text" as const),
@@ -140,7 +142,7 @@ const codeBlockArb = fc.record({
 
 const horizontalRuleArb = fc.record({
   type: fc.constant("horizontalRule" as const),
-  attrs: decorationArb({ font: false, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+  attrs: decorationArbitrary({ font: false, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
 });
 
 // listItem 재귀는 depth <= 2까지만 — 스펙 "nested listItem lists depth ≤ 2"
@@ -154,7 +156,11 @@ function listArb(
   return depth === 0
     ? fc.record({
         type: fc.constant(type),
-        attrs: decorationArb({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+        attrs: decorationArbitrary({
+          font: true,
+          width: false,
+          maxStickers: STICKER_CAP_PER_BLOCK,
+        }),
         content,
       })
     : fc.record({ type: fc.constant(type), content });
@@ -175,7 +181,7 @@ function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
 }
 
 /** 원본 크기는 짝으로만 있거나 없다(document-schema). */
-const naturalSizeArb = fc
+export const naturalSizeArbitrary = fc
   .option(
     fc.tuple(
       fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
@@ -190,8 +196,8 @@ const imageArb = fc.record({
   attrs: fc
     .tuple(
       fc.constantFrom("/images/a1.webp", "/images/b2.png"),
-      naturalSizeArb,
-      decorationArb({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
+      naturalSizeArbitrary,
+      decorationArbitrary({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
     )
     .map(([src, size, deco]) => ({ src, alt: "", ...size, ...deco })),
 });
@@ -215,7 +221,7 @@ const calloutArb = fc.record({
   attrs: fc
     .tuple(
       fc.constantFrom(...CALLOUT_TONES),
-      decorationArb({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+      decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
     )
     .map(([tone, deco]) => ({ tone, ...deco })),
   content: fc.array(
@@ -232,8 +238,8 @@ const appScreenshotArb = fc.record({
   attrs: fc
     .tuple(
       fc.constant("/images/shot1.webp"),
-      naturalSizeArb,
-      decorationArb({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
+      naturalSizeArbitrary,
+      decorationArbitrary({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
     )
     .map(([src, size, deco]) => ({ src, caption: "", ...size, ...deco })),
 });

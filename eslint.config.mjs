@@ -71,12 +71,41 @@ const RELATIVE_CROSS_PACKAGE = {
     "다른 패키지는 @blog-editor/<name>으로 import한다 — 상대경로로 패키지 경계를 넘지 않는다 (adr-009).",
 };
 
-const boundary = (files, patterns) => ({
-  files,
-  rules: {
-    "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
-  },
+/**
+ * 생성기(fast-check)는 런타임 번들(api · web)로 새지 않는다(adr-015). fast-check 직접 import · `*.arbitrary`
+ * 생성기 파일 · 패키지 `testing` 진입점은 테스트(*.test.ts)와 생성기 파일(*.arbitrary.ts)에서만 쓴다.
+ */
+const TEST_SUPPORT_FILES = ["**/*.test.{ts,tsx}", "**/*.arbitrary.ts"];
+const GENERATORS = {
+  group: [
+    ...withSubpaths("fast-check", "@blog-editor/*/testing"),
+    // 확장자를 붙인 명시자(`./x.arbitrary.js`)도 bundler 해석으로 같은 파일이 된다
+    ...withSubpaths(
+      "./**/*.arbitrary",
+      "../**/*.arbitrary",
+      "./**/*.arbitrary.*",
+      "../**/*.arbitrary.*",
+    ),
+  ],
+  message:
+    "생성기(fast-check · *.arbitrary · testing 진입점)는 테스트와 *.arbitrary.ts에서만 import한다 (adr-015).",
+};
+
+const restrictedImports = (patterns) => ({
+  "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
 });
+
+/**
+ * 경계 한 벌을 런타임 파일과 테스트 쪽 파일 두 블록으로 건다. 같은 규칙을 뒤 블록이 통째로 덮어쓰므로
+ * 테스트 파일만 푸는 블록을 따로 두면 패키지 경계까지 풀린다 — 그래서 `files`의 AND 배열로 좁힌다.
+ */
+const boundary = (files, patterns) => [
+  { files, ignores: TEST_SUPPORT_FILES, rules: restrictedImports([...patterns, GENERATORS]) },
+  {
+    files: files.flatMap((dir) => TEST_SUPPORT_FILES.map((test) => [dir, test])),
+    rules: restrictedImports(patterns),
+  },
+];
 
 export default defineConfig([
   js.configs.recommended,
@@ -84,11 +113,9 @@ export default defineConfig([
   // 접근성 1층(cgamja a11y-frontend §1) — 대체 텍스트 없는 이미지 · 클릭만 있는 비대화형 요소 · 라벨 없는 input을 편집 직후 잡는다.
   // 디자인(캔버스)이 실제 button/label · aria-label · 44px 타깃을 이미 정했으므로 구현이 그것을 깎지 못하게 한다. 2층(axe)은 브라우저 층이 생길 때.
   { ...jsxA11y.flatConfigs.strict, files: ["**/*.tsx", "**/*.jsx"] },
-  // 패키지 밖(루트 도구 · 스크립트)에서도 상대경로로 패키지에 들어가지 않는다. 아래 패키지별 블록이 이 규칙을 덮어쓰므로 boundary()가 같은 패턴을 다시 넣는다.
-  {
-    files: ["**/*.{ts,tsx,mts,cts,js,mjs,cjs}"],
-    rules: { "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE] }] },
-  },
+  // 패키지 밖(루트 도구 · 스크립트)에서도 상대경로로 패키지에 들어가지 않고, 런타임 파일은 생성기를 쓰지 않는다.
+  // 아래 패키지별 블록이 이 규칙을 덮어쓰므로 boundary()가 같은 패턴을 다시 넣는다.
+  boundary(["**/*.{ts,tsx,mts,cts,js,mjs,cjs}"], []),
   boundary(
     ["packages/content-schema/**"],
     [TIPTAP, PROSEMIRROR, REACT, forbidWorkspace(...except())],

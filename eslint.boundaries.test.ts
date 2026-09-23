@@ -103,15 +103,70 @@ const cases: { dir: string; forbidden: string[]; allowed: string[] }[] = [
   },
 ];
 
+/** 테스트 · 생성기 파일도 패키지 경계는 그대로다 — testing 진입점만 풀린다. */
+const PROBE_FILES = ["__probe__.ts", "__probe__.test.ts", "__probe__.arbitrary.ts"];
+
 describe.each(cases)("import 경계: $dir", ({ dir, forbidden, allowed }) => {
   const filePath = `${dir}/src/__probe__.ts`;
 
-  it.each(forbidden)("막는다: %s", async (specifier) => {
-    expect((await restrictedImports(filePath, [specifier])).length).toBeGreaterThanOrEqual(1);
-  });
+  it.each(PROBE_FILES.flatMap((probe) => forbidden.map((specifier) => [probe, specifier])))(
+    "%s에서 막는다: %s",
+    async (probe, specifier) => {
+      const messages = await restrictedImports(`${dir}/src/${probe}`, [specifier]);
+      expect(messages.length).toBeGreaterThanOrEqual(1);
+    },
+  );
 
   it("허용 import는 통과한다", async () => {
     expect(await restrictedImports(filePath, allowed)).toEqual([]);
+  });
+});
+
+describe("import 경계: content-schema/testing은 테스트 쪽에서만", () => {
+  const TESTING = "@blog-editor/content-schema/testing";
+
+  it("WHEN convert · api의 일반 파일에서 testing 진입점을 import하면 THEN 둘 다 막힌다", async () => {
+    const results = await Promise.all([
+      restrictedImports("packages/content-convert/src/__probe__.ts", [TESTING]),
+      restrictedImports("apps/editor/api/src/__probe__.ts", [TESTING]),
+    ]);
+    expect(results.map((messages) => messages.length > 0)).toEqual([true, true]);
+  });
+
+  it("WHEN convert의 *.test.ts · *.arbitrary.ts에서 testing 진입점을 import하면 THEN 막히지 않는다", async () => {
+    const results = await Promise.all([
+      restrictedImports("packages/content-convert/src/__probe__.test.ts", [TESTING]),
+      restrictedImports("packages/content-convert/src/__probe__.arbitrary.ts", [TESTING]),
+    ]);
+    expect(results).toEqual([[], []]);
+  });
+});
+
+describe("import 경계: 생성기(fast-check)는 런타임 파일에 들어오지 않는다", () => {
+  const GENERATORS = [
+    "fast-check",
+    "./doc.arbitrary",
+    "./doc.arbitrary.js",
+    "../x.arbitrary",
+    "../../x.arbitrary",
+    "@blog-editor/content-schema/testing",
+  ];
+
+  it.each([
+    "packages/content-convert/src/__probe__.ts",
+    "apps/editor/api/src/__probe__.ts",
+    "scripts/__probe__.ts",
+  ])("런타임 파일 %s에서 생성기 import를 모두 막는다", async (filePath) => {
+    const results = await Promise.all(GENERATORS.map((s) => restrictedImports(filePath, [s])));
+    expect(results.map((messages) => messages.length > 0)).toEqual(GENERATORS.map(() => true));
+  });
+
+  it.each([
+    "packages/content-convert/src/__probe__.test.ts",
+    "packages/content-render/src/__probe__.arbitrary.ts",
+    "__probe__.test.ts",
+  ])("테스트 · 생성기 파일 %s에서는 생성기 import가 통과한다", async (filePath) => {
+    expect(await restrictedImports(filePath, GENERATORS)).toEqual([]);
   });
 });
 
