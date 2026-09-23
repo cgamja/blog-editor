@@ -15,7 +15,7 @@ import {
   MOTIONS,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, CONTAINER_LABEL, KNOWN_KEYS } from "./constants";
+import { ALLOWED_IN, APP_FRAME, CONTAINER_LABEL, KNOWN_KEYS } from "./constants";
 import { CALLOUT_CONTAINER_NAME } from "./tokens";
 import type { ContainerKind, SemanticType } from "./types";
 
@@ -441,7 +441,7 @@ export function directiveWidthValueRule(): string {
 export const DIRECTIVE_WIDTH_VALUE_FIX = "60";
 
 export const DIRECTIVE_FRAME_VALUE_RULE = "frame 값은 app만 쓴다";
-export const DIRECTIVE_FRAME_VALUE_FIX = "app";
+export const DIRECTIVE_FRAME_VALUE_FIX = APP_FRAME;
 
 export function directiveCaptionLengthRule(): string {
   return `캡션은 ${CAPTION_MAX_LENGTH}자 이내로 쓴다`;
