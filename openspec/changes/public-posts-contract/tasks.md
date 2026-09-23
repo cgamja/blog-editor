@@ -9,5 +9,5 @@
 
 ## 2. 계약 픽스처
 
-- [x] 2.1 `packages/content-render/src/contract.test.ts` — 픽스처 3개 → 응답 → 스키마 통과 + `toMatchFileSnapshot`로 `contract/public-api/public/posts` · `post.css` 비교 → verify: 첫 실행 빨강(파일 없음) 원문 보고, `-u`로 생성 후 초록
+- [x] 2.1 `packages/content-render/src/contract.test.ts` — 픽스처 3개 → 응답 → 스키마 통과 + `toMatchFileSnapshot`로 `contract/public-api/public/posts` · `post.css` 비교 → verify: `CI=true`에서 파일 없음 빨강(로컬은 새 파일을 만들고 통과한다 — vitest updateSnapshot 기본값), 생성 후 초록 · slug 하나를 바꾸면 "Snapshot mismatched"
 - [x] 2.2 `contract/public-api/README.md` — 띄우는 법(`python3 -m http.server`), 다시 만드는 법, 사이트가 import하지 않는다는 것 → verify: `pnpm verify` 초록
