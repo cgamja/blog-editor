@@ -1,6 +1,6 @@
 # 공개 조회 계약 픽스처 (`GET /public/posts`)
 
-사이트 레포(`simsimeestudio-intro`)가 빌드할 때 받는 응답의 **계약 픽스처**다. M1에서 API(`apps/editor/api`)가 생기기 전까지 사이트는 이 디렉터리를 정적 서버로 띄워 빌드한다. 모양은 `openspec/specs/public-posts-contract/spec.md`(아카이브 전에는 `openspec/changes/public-posts-contract/specs/…`), 스키마는 `@blog-editor/content-schema`의 `createPublicPostsResponseSchema`다. 사이트는 이 코드를 import하지 않고 자기 zod로 같은 모양을 검증한다.
+사이트 레포(`simsimeestudio-intro`)가 빌드할 때 받는 응답의 **계약 픽스처**다. M1에서 API(`apps/editor/api`)가 생기기 전까지 사이트는 이 디렉터리를 정적 서버로 띄워 빌드한다. 모양은 `openspec/specs/public-posts-contract/spec.md`, 스키마는 `@blog-editor/content-schema`의 `createPublicPostsResponseSchema`다. 사이트는 이 코드를 import하지 않고 자기 zod로 같은 모양을 검증한다.
 
 | 파일              | 내용                                                                                                 |
 | ----------------- | ---------------------------------------------------------------------------------------------------- |
