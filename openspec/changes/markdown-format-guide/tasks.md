@@ -19,4 +19,4 @@
 
 ## 4. 보류
 
-- [ ] 4.1 스파이크 #2 결과 반영 — 컨테이너 파싱이 실패하면 markdown-callout Requirement를 ` ```callout ` 펜스로 수정하고 가이드 예시를 바꾼다 → verify: 스파이크 #2 이슈의 결과 댓글(이 change 밖)
+- [x] 4.1 스파이크 #2 결과 반영(통과 — 컨테이너 문법 유지, 유보 문구 삭제, 토큰 단계 검사 명시) — 컨테이너 파싱이 실패하면 markdown-callout Requirement를 ` ```callout ` 펜스로 수정하고 가이드 예시를 바꾼다 → verify: 스파이크 #2 이슈의 결과 댓글(이 change 밖)
