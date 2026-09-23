@@ -2,8 +2,9 @@ import { docSchema, normalize } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import { analyzeTokens } from "./check";
 import { resolveDirectives, stripDirectiveLines } from "./directives";
-import { docMessage, sortMessages } from "./message";
+import { emptyDocumentMessage, internalErrorMessage, sortMessages } from "./message";
 import { buildDoc } from "./parser";
+import { checkReferenceDefinitions, type MarkdownEnv } from "./references";
 import { createMarkdownIt } from "./tokens";
 
 export type ConvertResult =
@@ -23,26 +24,42 @@ function fail(messages: string[]): ConvertResult {
 
 const markdownIt = createMarkdownIt();
 
+/** 선행 BOM을 지우고 `\r\n`·`\r`을 `\n`으로 맞춘다 — 그 뒤 모든 줄 번호 계산이 이 기준이다. */
+function normalizeInput(markdown: string): string {
+  const withoutBom = markdown.startsWith("﻿") ? markdown.slice(1) : markdown;
+  return withoutBom.replace(/\r\n?/g, "\n");
+}
+
 /** markdown(MCP 입력 문법) → 정규형 doc. 실패하면 세 칸 메시지를 전부 모아 돌려준다. */
 export function convertMarkdown(markdown: string): ConvertResult {
   try {
-    if (typeof markdown !== "string") {
-      return fail([docMessage(1, "본문이 비어 있다", "", "문단 하나 이상을 쓴다").text]);
-    }
-    if (markdown.trim() === "") {
-      return fail([docMessage(1, "본문이 비어 있다", "", "문단 하나 이상을 쓴다").text]);
+    if (typeof markdown !== "string" || markdown.trim() === "") {
+      return fail([emptyDocumentMessage().text]);
     }
 
-    const { strippedText, lines, candidates } = stripDirectiveLines(markdown);
-    const tokens = markdownIt.parse(strippedText, {});
-    const { registry, messages: structuralMessages } = analyzeTokens(tokens, lines);
+    const normalized = normalizeInput(markdown);
+    const { strippedText, lines, candidates, footnoteMessages } = stripDirectiveLines(normalized);
+    const env: MarkdownEnv = {};
+    const tokens = markdownIt.parse(strippedText, env);
+    const { registry, messages: structuralMessages, usedHrefs } = analyzeTokens(tokens, lines);
     const { resolvedByMapStart, messages: directiveMessages } = resolveDirectives(
       candidates,
       lines,
       registry,
     );
+    const referenceMessages = checkReferenceDefinitions(
+      lines,
+      env,
+      usedHrefs,
+      markdownIt.utils.normalizeReference,
+    );
 
-    const found = [...structuralMessages, ...directiveMessages];
+    const found = [
+      ...footnoteMessages,
+      ...structuralMessages,
+      ...directiveMessages,
+      ...referenceMessages,
+    ];
     if (found.length > 0) {
       return fail(sortMessages(found));
     }
@@ -52,19 +69,16 @@ export function convertMarkdown(markdown: string): ConvertResult {
     const parsedDoc = docSchema.safeParse(rawDoc);
     if (!parsedDoc.success) {
       // stage 1이 전부 걸렀다면 여기 닿지 않는다(adr-013) — 닿으면 내부 오류로 취급한다.
-      throw new Error(`변환 결과가 docSchema를 통과하지 못했다: ${parsedDoc.error.message}`);
+      const firstIssue = parsedDoc.error.issues[0];
+      const detail = firstIssue
+        ? `${firstIssue.path.join(".")}: ${firstIssue.message}`
+        : parsedDoc.error.message;
+      throw new Error(`변환 결과가 docSchema를 통과하지 못했다: ${detail}`);
     }
 
     return { ok: true, doc: normalize(parsedDoc.data), messages: [] };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return fail([
-      docMessage(
-        1,
-        "변환 중 내부 오류가 났다",
-        reason.slice(0, 200),
-        "markdown을 확인해 다시 시도한다",
-      ).text,
-    ]);
+    return fail([internalErrorMessage(reason).text]);
   }
 }

@@ -1,16 +1,19 @@
-import MarkdownIt from "markdown-it";
+import MarkdownIt, { type PluginWithParams } from "markdown-it";
 import container from "markdown-it-container";
 
 export const CALLOUT_CONTAINER_NAME = "callout";
 
+/** markdown-it-container에 넘기는 옵션 타입 — container 자체의 3번째 매개변수에서 뽑는다. */
+type ContainerOpts = NonNullable<Parameters<typeof container>[2]>;
+
 /**
- * 콜아웃 컨테이너 마커의 첫 단어만 검사한다(tone 값은 여기서 안 본다) — tone이 정의 밖이어도
- * `:::callout tone=danger`를 컨테이너로 인식해야 check.ts가 "정의 밖 tone" 오류를 낼 수 있다
- * (markdown-it-container의 기본 validate는 marker 뒤 전체를 이름과 비교해 안 맞으면 그냥 문단
- * 글자로 흘려보낸다 — 그러면 오류가 조용히 사라진다, adr-013).
+ * `:::` 컨테이너 마커는 이름을 가리지 않고 전부 받아들인다 — `callout`이 아닌 이름(`:::note` 등)도
+ * 토큰으로 나오게 해서 check.ts가 "콜아웃은 :::callout만 쓴다"로 거부할 수 있게 한다. 기본
+ * validate는 marker 뒤 전체를 이름과 비교해 안 맞으면 그냥 문단 글자로 흘려보내 오류가 조용히
+ * 사라진다(adr-013) — 그래서 여기서는 항상 통과시키고 이름 검사는 stage 1(check.ts)로 미룬다.
  */
-function validateCalloutMarker(params: string): boolean {
-  return params.trim().split(/\s+/, 1)[0] === CALLOUT_CONTAINER_NAME;
+function validateCalloutMarker(): boolean {
+  return true;
 }
 
 /**
@@ -26,10 +29,12 @@ function validateCalloutMarker(params: string): boolean {
 export function createMarkdownIt(): MarkdownIt {
   const md = new MarkdownIt("default", { html: true, linkify: false, typographer: false });
   md.validateLink = () => true;
-  // @ts-expect-error -- markdown-it-container의 타입 선언은 markdown-it을 require()로 다시
-  // import해 우리가 쓰는 markdown-it의 ESM 타입과 이름은 같지만 다른 타입으로 취급된다(dual
-  // package hazard). prosemirror-markdown도 같은 이유로 markdown-it import 위에 @ts-ignore를
-  // 둔다(node_modules/prosemirror-markdown/src/from_markdown.ts) — 실행 시 동작은 같다.
-  md.use(container, CALLOUT_CONTAINER_NAME, { validate: validateCalloutMarker });
+  const containerOptions: ContainerOpts = { validate: validateCalloutMarker };
+  // markdown-it-container의 타입 선언은 markdown-it을 require()로 다시 import해 우리가 쓰는
+  // markdown-it의 ESM 타입과 이름은 같지만 다른 타입으로 취급된다(dual package hazard,
+  // node_modules/prosemirror-markdown/src/from_markdown.ts도 같은 이유로 markdown-it import
+  // 위에 @ts-ignore를 둔다). md.use()의 매개변수 타입 자체가 `...params: any[]`라 옵션 타입은
+  // 어차피 여기서 못 걸러 containerOptions 변수 선언에서 미리 걸러 둔다.
+  md.use(container as unknown as PluginWithParams, CALLOUT_CONTAINER_NAME, containerOptions);
   return md;
 }

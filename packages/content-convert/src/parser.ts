@@ -2,8 +2,7 @@ import { MarkdownParser } from "prosemirror-markdown";
 import { parseCalloutTone } from "./check";
 import { pmSchema } from "./pm-schema";
 import { createMarkdownIt } from "./tokens";
-import type { ResolvedDirective } from "./directives";
-import type { BlockRecord } from "./types";
+import type { BlockRecord, ResolvedDirective } from "./types";
 
 /**
  * markdown-it 토큰 → doc 노드 대응표(adr-013 ②). check.ts가 stage 1에서 정의 밖 토큰을 전부
@@ -34,7 +33,10 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   },
   container_callout: {
     block: "callout",
-    getAttrs: (tok) => ({ tone: parseCalloutTone(tok.info).value }),
+    getAttrs: (tok) => {
+      const tone = parseCalloutTone(tok.info);
+      return { tone: tone.ok ? tone.tone : "note" };
+    },
   },
   em: { mark: "italic" },
   strong: { mark: "bold" },
@@ -55,39 +57,46 @@ interface RawNode {
  * check.ts가 "글자와 섞이지 않고 최상위에 홀로 있는 이미지"만 통과시켰으므로 그 문단을 최상위
  * image(또는 frame=app이면 appScreenshot) 블록으로 푼다.
  */
-function applyTopLevelBlock(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
-  const solelyImage =
-    block.type === "paragraph" && block.content?.length === 1 && block.content[0]?.type === "image";
-  if (solelyImage) {
-    const image = block.content![0]!;
-    const src = (image.attrs?.src as string | undefined) ?? "";
-    const alt = (image.attrs?.alt as string | undefined) ?? "";
-    if (directive?.isAppScreenshot) {
-      return {
-        type: "appScreenshot",
-        attrs: {
-          src,
-          caption: alt,
-          ...(directive.width !== undefined ? { width: directive.width } : {}),
-        },
-      };
-    }
+function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined): RawNode {
+  const src = (image.attrs?.src as string | undefined) ?? "";
+  const alt = (image.attrs?.alt as string | undefined) ?? "";
+
+  if (directive?.isAppScreenshot) {
     return {
-      type: "image",
+      type: "appScreenshot",
       attrs: {
         src,
-        alt,
-        ...(directive?.motion !== undefined ? { motion: directive.motion } : {}),
-        ...(directive?.width !== undefined ? { width: directive.width } : {}),
+        caption: alt,
+        ...(directive.motion !== undefined ? { motion: directive.motion } : {}),
+        ...(directive.width !== undefined ? { width: directive.width } : {}),
       },
     };
   }
+  return {
+    type: "image",
+    attrs: {
+      src,
+      alt,
+      ...(directive?.motion !== undefined ? { motion: directive.motion } : {}),
+      ...(directive?.width !== undefined ? { width: directive.width } : {}),
+    },
+  };
+}
 
+/** font · motion 지시어 값을 block.attrs에 얹는다(이미지가 아닌 최상위 블록). */
+function withDecoration(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
   if (!directive) return block;
   const attrs: Record<string, unknown> = { ...(block.attrs ?? {}) };
   if (directive.font !== undefined) attrs.font = directive.font;
   if (directive.motion !== undefined) attrs.motion = directive.motion;
   return { ...block, attrs };
+}
+
+function applyTopLevelBlock(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
+  const solelyImage =
+    block.type === "paragraph" && block.content?.length === 1 && block.content[0]?.type === "image";
+  if (solelyImage) return toImageBlock(block.content![0]!, directive);
+  return withDecoration(block, directive);
 }
 
 /**

@@ -1,67 +1,83 @@
-import { FONTS, MOTIONS, WIDTH_RANGE } from "@blog-editor/content-schema";
-import { blockMessage, docMessage, type FoundMessage } from "./message";
-import type { BlockRecord, SemanticType } from "./types";
-
-export interface DirectiveCandidate {
-  /** 0-based, 지시어 줄 자신의 원문 줄 번호. */
-  lineIndex0: number;
-  /** 메시지의 "받음"에 쓰는 원문(트림). */
-  raw: string;
-  /** 앞에 공백(목록 들여쓰기)·`>`(인용)가 붙어 있었다 — 최상위가 아니라 그 자체로 거부. */
-  nested: boolean;
-  /** `{` `}` 안쪽 글자, 예: "font=jua motion=fade-up". */
-  pairsText: string;
-}
-
-export interface ResolvedDirective {
-  font?: (typeof FONTS)[number];
-  motion?: (typeof MOTIONS)[number];
-  width?: number;
-  isAppScreenshot?: boolean;
-}
+import { CAPTION_MAX_LENGTH, FONTS, MOTIONS, WIDTH_RANGE } from "@blog-editor/content-schema";
+import { KEY_ALLOW, KNOWN_KEYS } from "./constants";
+import {
+  blockMessage,
+  directiveNoBlockMessage,
+  docMessage,
+  footnoteDefinitionMessage,
+  type FoundMessage,
+} from "./message";
+import type { BlockRecord, DirectiveCandidate, ResolvedDirective, SemanticType } from "./types";
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
 const PREFIXED_LINE = /^(?:[ \t]+|(?:>[ \t]?)+)\{([^{}]+)\}[ \t]*$/;
 const PAIR = /^[^\s{}=]+=[^\s{}]+$/;
+const FOOTNOTE_DEFINITION_LINE = /^ {0,3}\[\^([^\]]+)\]:/;
 
 function isDirectiveBody(body: string): boolean {
   const tokens = body.trim().split(/\s+/);
   return tokens.length > 0 && tokens.every((t) => PAIR.test(t));
 }
 
-function isFenceMarker(line: string): { char: string; len: number } | null {
-  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+/**
+ * 여는 펜스인가 — CommonMark 규칙: 백틱 펜스는 정보 문자열에 백틱이 있으면 펜스를 열지 않는다
+ * (물결표 펜스는 백틱을 가져도 된다).
+ */
+function parseFenceOpen(line: string): { char: string; len: number } | null {
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
   if (!match) return null;
   const marker = match[1]!;
-  return { char: marker[0]!, len: marker.length };
+  const info = match[2]!;
+  const char = marker[0]!;
+  if (char === "`" && info.includes("`")) return null;
+  return { char, len: marker.length };
+}
+
+/** 닫는 펜스인가 — 같은 글자, 길이가 여는 펜스 이상, 뒤에 정보 문자열이 없다(공백만 허용). */
+function isFenceClose(line: string, fence: { char: string; len: number }): boolean {
+  const closeRe = fence.char === "`" ? /^ {0,3}(`{3,})[ \t]*$/ : /^ {0,3}(~{3,})[ \t]*$/;
+  const match = closeRe.exec(line);
+  return match !== null && match[1]!.length >= fence.len;
 }
 
 export interface StripResult {
   strippedText: string;
-  /** 지시어 줄이 빈 줄로 바뀐(줄 번호는 그대로인) 줄 배열 — 토큰화와 이후 메시지 조회가 이걸 쓴다. */
+  /** 지시어 · 각주 정의 줄이 빈 줄로 바뀐(줄 번호는 그대로인) 줄 배열 — 토큰화와 이후 메시지 조회가 이걸 쓴다. */
   lines: string[];
   candidates: DirectiveCandidate[];
+  /** 걷어낸 각주 정의(`[^label]: …`) 줄 — 각주는 정의 밖이라 여기서 바로 거부 메시지가 된다. */
+  footnoteMessages: FoundMessage[];
 }
 
 /**
- * 지시어 줄을 markdown 파싱보다 앞서 줄 단위로 걷어낸다(spec: markdown-directive). 코드 펜스
- * 안(``` · ~~~)의 `{…}` 모양 줄은 그냥 코드 글자로 남겨야 하므로 펜스 상태를 같이 추적한다.
+ * 지시어 줄과 각주 정의 줄을 markdown 파싱보다 앞서 줄 단위로 걷어낸다(spec: markdown-directive ·
+ * markdown-format). 코드 펜스 안(``` · ~~~)의 `{…}` · `[^…]:` 모양 줄은 그냥 코드 글자로 남겨야
+ * 하므로 펜스 상태를 같이 추적한다. 각주 정의를 여기서 지우는 이유는 하나 — markdown-it이 그걸
+ * 링크 참조 정의로 흡수해 `[^1]`이 진짜 링크가 되면(스파이크에서 확인) 더는 각주로 못 잡는다.
  */
 export function stripDirectiveLines(markdown: string): StripResult {
   const lines = markdown.split("\n");
   const candidates: DirectiveCandidate[] = [];
+  const footnoteMessages: FoundMessage[] = [];
   let fence: { char: string; len: number } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
-    const marker = isFenceMarker(line);
 
     if (fence) {
-      if (marker && marker.char === fence.char && marker.len >= fence.len) fence = null;
+      if (isFenceClose(line, fence)) fence = null;
       continue;
     }
-    if (marker) {
-      fence = marker;
+    const opened = parseFenceOpen(line);
+    if (opened) {
+      fence = opened;
+      continue;
+    }
+
+    const footnote = FOOTNOTE_DEFINITION_LINE.exec(line);
+    if (footnote) {
+      footnoteMessages.push(footnoteDefinitionMessage(i + 1, line.trim()));
+      lines[i] = "";
       continue;
     }
 
@@ -78,21 +94,8 @@ export function stripDirectiveLines(markdown: string): StripResult {
     }
   }
 
-  return { strippedText: lines.join("\n"), lines, candidates };
+  return { strippedText: lines.join("\n"), lines, candidates, footnoteMessages };
 }
-
-const KNOWN_KEYS = new Set(["font", "motion", "width", "frame"]);
-const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
-  paragraph: new Set(["font", "motion"]),
-  heading: new Set(["font", "motion"]),
-  bulletList: new Set(["font", "motion"]),
-  orderedList: new Set(["font", "motion"]),
-  blockquote: new Set(["font", "motion"]),
-  callout: new Set(["font", "motion"]),
-  codeBlock: new Set(["motion"]),
-  horizontalRule: new Set(["motion"]),
-  image: new Set(["motion", "width", "frame"]),
-};
 
 interface DirectiveIssue {
   rule: string;
@@ -100,7 +103,6 @@ interface DirectiveIssue {
   fix: string;
 }
 
-/** `{key=value ...}`의 안쪽 글자를 target(귀속된 블록의 의미) 기준으로 검증한다. */
 function validateDirective(
   pairsText: string,
   target: SemanticType,
@@ -205,6 +207,21 @@ function validateDirective(
   return { resolved, issues };
 }
 
+/** frame=app으로 정해진 지시어의 캡션(이미지 alt)이 길이 제한을 넘는지 검사해 issues에 보탠다. */
+function checkAppScreenshotCaption(
+  resolved: ResolvedDirective,
+  target: BlockRecord,
+  issues: DirectiveIssue[],
+): void {
+  if (!resolved.isAppScreenshot || target.imageAlt === undefined) return;
+  if (target.imageAlt.length <= CAPTION_MAX_LENGTH) return;
+  issues.push({
+    rule: `캡션은 ${CAPTION_MAX_LENGTH}자 이내로 쓴다`,
+    received: target.imageAlt,
+    fix: "캡션을 줄인다",
+  });
+}
+
 export interface ResolveOutcome {
   resolvedByMapStart: Map<number, ResolvedDirective>;
   messages: FoundMessage[];
@@ -241,14 +258,7 @@ export function resolveDirectives(
     const nextLineIndex0 = candidate.lineIndex0 + 1;
     const nextLine = sourceLines[nextLineIndex0];
     if (nextLine === undefined || nextLine.trim() === "") {
-      messages.push(
-        docMessage(
-          line,
-          "지시어 뒤에 블록이 없다",
-          candidate.raw,
-          "지시어 줄을 지우거나 바로 아래에 블록을 쓴다",
-        ),
-      );
+      messages.push(directiveNoBlockMessage(line, candidate.raw));
       continue;
     }
     if (candidateLines.has(nextLineIndex0)) {
@@ -260,14 +270,7 @@ export function resolveDirectives(
 
     const target = registry.find((r) => r.mapStart0 === nextLineIndex0);
     if (!target) {
-      messages.push(
-        docMessage(
-          line,
-          "지시어 뒤에 블록이 없다",
-          candidate.raw,
-          "지시어 줄을 지우거나 바로 아래에 블록을 쓴다",
-        ),
-      );
+      messages.push(directiveNoBlockMessage(line, candidate.raw));
       continue;
     }
     if (target.container !== "top") {
@@ -284,6 +287,7 @@ export function resolveDirectives(
     }
 
     const { resolved, issues } = validateDirective(candidate.pairsText, target.semantic);
+    checkAppScreenshotCaption(resolved, target, issues);
     if (issues.length > 0) {
       for (const issue of issues) {
         messages.push(blockMessage(target.topLevel, line, issue.rule, issue.received, issue.fix));

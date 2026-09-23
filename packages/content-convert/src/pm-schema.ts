@@ -48,7 +48,7 @@ export const pmSchema = new Schema({
   marks: {
     bold: {},
     italic: {},
-    code: { excludes: "_" },
+    code: {},
     link: { attrs: { href: { default: "" } }, inclusive: false },
   },
 });
