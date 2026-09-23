@@ -150,7 +150,8 @@
 /* x · y는 스티커 중심의 블록 기준 %, s는 블록 폭 기준 %, r은 도. 블록이 옮겨지면 같이 간다(adr-008) */
 .post-body .post-sticker {
   position: absolute;
-  left: calc(var(--x) * 1%);
+  /* 중심을 가장자리에서 스티커 폭만큼 안으로 — 90° 돌린 세로 긴 스티커까지 블록 가로 안에 들어와 화면에서 잘리지 않는다 */
+  left: clamp(calc(var(--s) * 1%), calc(var(--x) * 1%), calc(100% - var(--s) * 1%));
   top: calc(var(--y) * 1%);
   width: calc(var(--s) * 1%);
   height: auto;
@@ -158,13 +159,12 @@
   pointer-events: none;
   user-select: none;
 }
-/* 좁은 화면에서는 본문 밖으로 나간 스티커를 안으로 당겨 넣고, 남는 반쪽이 가로 스크롤을 만들지 않게 자른다 */
+/* 좁은 화면에서는 위아래로도 본문 안에 당겨 넣고, 남는 부분이 가로 스크롤을 만들지 않게 자른다 */
 @media (max-width: 48rem) {
   .post-body {
     overflow-x: clip;
   }
   .post-body .post-sticker {
-    left: clamp(0%, calc(var(--x) * 1%), 100%);
     top: clamp(0%, calc(var(--y) * 1%), 100%);
   }
 }

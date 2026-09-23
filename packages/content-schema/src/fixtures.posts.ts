@@ -292,7 +292,7 @@ export const decorationMax = {
         type: "paragraph",
         attrs: {
           motion: "slide-left",
-          stickers: [{ id: "cloud", x: 125, y: 125, size: 50, rotate: 180 }],
+          stickers: [{ id: "cloud", x: 125, y: 125, size: 25, rotate: 180 }],
         },
         content: [
           {
@@ -381,7 +381,7 @@ export const decorationMax = {
           motion: "fade-in",
           width: 60,
           stickers: [
-            { id: "rattle", x: 0, y: 0, size: 30, rotate: -90 },
+            { id: "rattle", x: 0, y: 0, size: 22, rotate: -90 },
             { id: "pacifier", x: 100, y: 100, size: 25, rotate: 90 },
           ],
         },
@@ -395,7 +395,7 @@ export const decorationMax = {
           width: 80,
           stickers: [
             { id: "foot-coral", x: -10, y: 110, size: 12, rotate: -45 },
-            { id: "foot-mint", x: 110, y: -10, size: 40, rotate: 135 },
+            { id: "foot-mint", x: 110, y: -10, size: 20, rotate: 135 },
           ],
         },
       },
@@ -435,8 +435,8 @@ export const decorationMax = {
           motion: "fade-in",
           stickers: [
             { id: "star-coral", x: 5, y: 5, size: 5, rotate: 0 },
-            { id: "heart", x: 95, y: 95, size: 45, rotate: 170 },
-            { id: "cloud", x: -20, y: 115, size: 33, rotate: -30 },
+            { id: "heart", x: 95, y: 95, size: 25, rotate: 170 },
+            { id: "cloud", x: -20, y: 115, size: 18, rotate: -30 },
           ],
         },
         content: [

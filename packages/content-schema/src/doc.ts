@@ -31,7 +31,7 @@ export const WIDTH_RANGE = { min: 25, max: 100 } as const;
 export const STICKER_RANGES = {
   x: { min: -25, max: 125 },
   y: { min: -25, max: 125 },
-  size: { min: 5, max: 50 },
+  size: { min: 5, max: 25 },
   rotate: { min: -180, max: 180 },
 } as const;
 
