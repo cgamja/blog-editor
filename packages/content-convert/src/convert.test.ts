@@ -465,6 +465,19 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
       },
     },
     {
+      name: "쓰인 참조 링크는 인라인 링크와 같은 link 마크가 된다",
+      markdown: "[글][r]\n\n[r]: https://a.com",
+      check: (doc) => {
+        expect(doc.content).toHaveLength(1);
+        const paragraph = doc.content[0] as ParagraphNode | undefined;
+        if (paragraph?.type !== "paragraph") throw new Error("paragraph가 아니다");
+        const text = paragraph.content?.[0];
+        if (text?.type !== "text") throw new Error("text가 아니다");
+        expect(text.text).toBe("글");
+        expect(text.marks).toEqual([{ type: "link", attrs: { href: "https://a.com" } }]);
+      },
+    },
+    {
       name: "굵게 안 code 마크가 살아남는다",
       markdown: "**a `x` b**",
       check: (doc) => {
