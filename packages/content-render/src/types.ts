@@ -1,37 +1,23 @@
-import type { DecorationAttrs, TextNode } from "@blog-editor/content-schema";
+import type { Block, DecorationAttrs } from "@blog-editor/content-schema";
 
 /** 이미지 · 스티커 경로 앞에 붙는 도메인(plan 3-8). 문서에는 경로만 있다. */
 export interface RenderOptions {
   imageBaseUrl: string;
 }
 
-/** 렌더 한 번 동안 고정되는 값 — 끝 슬래시를 정리한 imageBaseUrl. */
+/** 렌더 한 번 동안 고정되는 값 — 끝 슬래시를 정리하고 이스케이프한 imageBaseUrl. */
 export interface RenderContext {
   imageBaseUrl: string;
 }
 
 // ── 안쪽 노드(blockquote · callout · listItem 안) — attrs 자리가 없다(spec: html-render) ──
-// content-schema는 이 모양을 내부 타입으로만 쓰고 export하지 않는다. 구조적으로 같은 모양을
-// 다시 선언해 쓴다 — z.infer 결과가 구조적으로 일치하므로 그대로 대입되고, 어긋나면 typecheck가 잡는다.
+// content-schema는 이 모양을 내부 타입으로만 쓰고 export하지 않는다. 다시 선언하지 않고 Block에서
+// 파생한다 — 스키마 쪽 안쪽 노드에 필드가 더해지거나 바뀌면 여기도 그대로 따라온다.
 
-export interface InnerParagraph {
-  type: "paragraph";
-  content?: TextNode[] | undefined;
-}
-export interface InnerListItem {
-  type: "listItem";
-  content: [InnerParagraph, ...InnerList[]];
-}
-export interface InnerBulletList {
-  type: "bulletList";
-  content: InnerListItem[];
-}
-export interface InnerOrderedList {
-  type: "orderedList";
-  content: InnerListItem[];
-}
-export type InnerList = InnerBulletList | InnerOrderedList;
-export type CalloutChild = InnerParagraph | InnerList;
+export type InnerParagraph = Extract<Block, { type: "blockquote" }>["content"][number];
+export type InnerListItem = Extract<Block, { type: "bulletList" }>["content"][number];
+export type CalloutChild = Extract<Block, { type: "callout" }>["content"][number];
+export type InnerList = Exclude<CalloutChild, InnerParagraph>;
 
 /**
  * 최상위 블록 attrs 중 꾸미기 필드만 뽑은 모양 — DecorationAttrs(Partial)를 그대로 쓰지 않는다.

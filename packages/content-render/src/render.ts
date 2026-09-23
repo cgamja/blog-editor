@@ -19,8 +19,6 @@ import type {
   RenderOptions,
 } from "./types";
 
-export type { RenderOptions } from "./types";
-
 // ── 진입점 ────────────────────────────────────────────────────────────
 
 /**
@@ -28,7 +26,10 @@ export type { RenderOptions } from "./types";
  * 공백 · 줄바꿈 없이 이어 붙인다.
  */
 export function renderHtml(file: Pick<PostFile, "doc">, options: RenderOptions): string {
-  const ctx: RenderContext = { imageBaseUrl: stripOneTrailingSlash(options.imageBaseUrl) };
+  // 설정값이라 신뢰 입력이지만 속성에 들어가는 값은 예외 없이 이스케이프한다(spec: render-safety)
+  const ctx: RenderContext = {
+    imageBaseUrl: escapeHtml(stripOneTrailingSlash(options.imageBaseUrl)),
+  };
   const blocksHtml = file.doc.content.map((block) => renderTopLevelBlock(block, ctx)).join("");
   return `<div class="post-body">${blocksHtml}</div>`;
 }
@@ -212,13 +213,12 @@ function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderConte
 }
 
 function renderSticker(sticker: Sticker, ctx: RenderContext): string {
-  const size = STICKER_SIZES[sticker.id];
+  const size = Object.hasOwn(STICKER_SIZES, sticker.id) ? STICKER_SIZES[sticker.id] : undefined;
   if (size === undefined)
     throw new RangeError(`renderHtml: 알 수 없는 스티커 id — ${String(sticker.id)}`);
   const { width, height } = size;
-  const style = [sticker.x, sticker.y, sticker.size, sticker.rotate]
-    .map((value, i) => `${["--x", "--y", "--s", "--r"][i]}:${escapeHtml(String(value))}`)
-    .join(";");
+  const e = (value: number) => escapeHtml(String(value));
+  const style = `--x:${e(sticker.x)};--y:${e(sticker.y)};--s:${e(sticker.size)};--r:${e(sticker.rotate)}`;
   const id = escapeHtml(sticker.id);
   return (
     `<img class="post-sticker" src="${ctx.imageBaseUrl}/stickers/${id}.png" alt="" ` +
@@ -229,7 +229,8 @@ function renderSticker(sticker: Sticker, ctx: RenderContext): string {
 // ── 작은 조립 헬퍼 ────────────────────────────────────────────────────────
 
 function headingTag(level: (typeof HEADING_LEVELS)[number]): string {
-  const name = HEADING_TAGS[level];
+  // 일반 객체는 "toString" 같은 프로토타입 키도 값을 돌려준다 — 자기 키만 표로 본다
+  const name = Object.hasOwn(HEADING_TAGS, level) ? HEADING_TAGS[level] : undefined;
   if (name === undefined)
     throw new RangeError(`renderHtml: 허용되지 않는 heading level — ${String(level)}`);
   return name;
