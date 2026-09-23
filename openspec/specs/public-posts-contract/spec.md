@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change public-posts-contract. Update Purpose after archive.
+에디터와 사이트 사이의 유일한 계약인 공개 조회 API(`GET /public/posts`)의 응답 모양. 메타 + 렌더된 HTML + 본문용 CSS 주소만 나가고 초안은 절대 나가지 않는다(adr-001). 계약 픽스처(`contract/public-api/`)가 두 레포의 테스트 원천이다.
 
 ## Requirements
 
