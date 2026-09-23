@@ -79,6 +79,9 @@ const record = { type: "feeding", at: Date.now() };
 | `font`   | `pretendard` · `jua` · `gaegu`                               | 문단 · 제목 · 목록 · 인용 · 콜아웃 |
 | `motion` | `fade-in` · `fade-up` · `slide-left` · `slide-right` · `pop` | 모든 블록                          |
 | `width`  | `%` 없는 정수 `25`~`100`                                     | 이미지 · 앱 스크린샷               |
+| `size`   | `<가로>x<세로>` 픽셀 정수 `1`~`1600` (예: `1200x800`)        | 이미지 · 앱 스크린샷               |
+
+`size`는 이미지 원본 크기다 — 받은 글(`get_post`)에 있으면 그대로 두고, 모르면 쓰지 않는다.
 
 ```example
 {font=jua motion=fade-up}

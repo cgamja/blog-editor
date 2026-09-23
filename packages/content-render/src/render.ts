@@ -103,21 +103,38 @@ function renderCodeBlock(
   return `<pre>${tag("code", languageAttr, text)}</pre>`;
 }
 
-function renderImageFigure(attrs: { src: string; alt: string }, ctx: RenderContext): string {
-  return tag("figure", ' class="post-image"', renderImg(attrs.src, attrs.alt, ctx));
+/** 원본 픽셀 크기 — 스키마가 짝으로만 둔다(document-schema). */
+interface NaturalSize {
+  naturalWidth?: number | undefined;
+  naturalHeight?: number | undefined;
+}
+
+function renderImageFigure(
+  attrs: { src: string; alt: string } & NaturalSize,
+  ctx: RenderContext,
+): string {
+  return tag("figure", ' class="post-image"', renderImg(attrs.src, attrs.alt, attrs, ctx));
 }
 
 function renderScreenshotFigure(
-  attrs: { src: string; caption: string },
+  attrs: { src: string; caption: string } & NaturalSize,
   ctx: RenderContext,
 ): string {
-  const img = renderImg(attrs.src, "", ctx);
+  const img = renderImg(attrs.src, "", attrs, ctx);
   const figcaption = tag("figcaption", "", escapeHtml(attrs.caption));
   return tag("figure", ' class="post-screenshot"', `${img}${figcaption}`);
 }
 
-function renderImg(src: string, alt: string, ctx: RenderContext): string {
-  return `<img src="${ctx.imageBaseUrl}${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async">`;
+/**
+ * 크기가 있으면 width · height를 낸다 — 본문용 CSS가 `width: 100%; height: auto`로 그리므로
+ * 크기를 고정하지 않고 이미지가 오기 전에 비율 자리만 잡는다(레이아웃 밀림 방지, html-render).
+ */
+function renderImg(src: string, alt: string, size: NaturalSize, ctx: RenderContext): string {
+  const sizeAttrs =
+    size.naturalWidth !== undefined && size.naturalHeight !== undefined
+      ? ` width="${size.naturalWidth}" height="${size.naturalHeight}"`
+      : "";
+  return `<img src="${ctx.imageBaseUrl}${escapeHtml(src)}" alt="${escapeHtml(alt)}"${sizeAttrs} loading="lazy" decoding="async">`;
 }
 
 // ── 인라인(텍스트 + 마크) ────────────────────────────────────────────────

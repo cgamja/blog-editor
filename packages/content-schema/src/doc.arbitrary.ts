@@ -6,6 +6,7 @@ import {
   STICKER_IDS,
   CALLOUT_TONES,
   WIDTH_RANGE,
+  NATURAL_SIZE_RANGE,
   STICKER_RANGES,
   MAX_STICKERS_PER_DOC,
 } from "./doc";
@@ -173,14 +174,26 @@ function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
   }));
 }
 
+/** 원본 크기는 짝으로만 있거나 없다(document-schema). */
+const naturalSizeArb = fc
+  .option(
+    fc.tuple(
+      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
+      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
+    ),
+    { nil: undefined },
+  )
+  .map((size) => (size === undefined ? {} : { naturalWidth: size[0], naturalHeight: size[1] }));
+
 const imageArb = fc.record({
   type: fc.constant("image" as const),
   attrs: fc
     .tuple(
       fc.constantFrom("/images/a1.webp", "/images/b2.png"),
+      naturalSizeArb,
       decorationArb({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
     )
-    .map(([src, deco]) => ({ src, alt: "", ...deco })),
+    .map(([src, size, deco]) => ({ src, alt: "", ...size, ...deco })),
 });
 
 /** callout 안 bulletList/orderedList — 안쪽 노드라 attrs 자리가 없다(listArb depth 0과 다르다). */
@@ -219,9 +232,10 @@ const appScreenshotArb = fc.record({
   attrs: fc
     .tuple(
       fc.constant("/images/shot1.webp"),
+      naturalSizeArb,
       decorationArb({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
     )
-    .map(([src, deco]) => ({ src, caption: "", ...deco })),
+    .map(([src, size, deco]) => ({ src, caption: "", ...size, ...deco })),
 });
 
 const topLevelBlockArb = fc.oneof(
