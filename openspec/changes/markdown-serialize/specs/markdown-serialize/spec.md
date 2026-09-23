@@ -2,7 +2,7 @@
 
 ### Requirement: `serializeMarkdown`은 markdown과 빠진 것 목록을 돌려주는 순수 함수다
 
-`@blog-editor/content-convert`는 SHALL `serializeMarkdown(doc: Doc)`을 export하고 `{ markdown, losses }`를 돌려준다. `markdown`은 markdown-format · markdown-callout · markdown-directive의 입력 문법만 쓰고, 블록이 하나 이상 남으면 `convertMarkdown`이 항상 성공한다(모든 블록이 빠지면 빈 문자열). 블록 사이는 빈 줄 하나, 끝은 줄바꿈 하나다. 콜아웃은 `tone`을 늘 적고, 꾸미기 값은 지시어 줄(`frame` · `font` · `motion` · `width` 순)로 쓴다. markdown으로 나를 수 없는 것은 조용히 버리지 않고 `losses`에 최상위 블록 번호(1부터, 원래 doc 기준)와 함께 적는다 — `{ block, kind: "stickers", count }`(스티커 개수) · `{ block, kind: "emptyParagraph", count }`(빈 문단 개수 — 그 문단이 빠지고, 그래서 비는 목록 항목 · 목록 · 인용 · 콜아웃도 빠진다) · `{ block, kind: "codeMark", count }`(줄 첫 링크 안 코드 마크 글자의 `]:`가 참조 정의로 읽히는 경우 — 그 텍스트의 코드 마크를 빼고 글자로 쓴 수). 순서는 블록 번호순, 같은 블록이면 `stickers` · `emptyParagraph` · `codeMark` 순이다. 같은 입력은 같은 결과이고 입력을 바꾸지 않는다.
+`@blog-editor/content-convert`는 SHALL `serializeMarkdown(doc: Doc)`을 export하고 `{ markdown, losses }`를 돌려준다. `markdown`은 markdown-format · markdown-callout · markdown-directive의 입력 문법만 쓰고, 블록이 하나 이상 남으면 `convertMarkdown`이 항상 성공한다(모든 블록이 빠지면 빈 문자열). 블록 사이는 빈 줄 하나, 끝은 줄바꿈 하나다. 콜아웃은 `tone`을 늘 적고, 꾸미기 값은 지시어 줄(`frame` · `font` · `motion` · `width` 순)로 쓴다. markdown으로 나를 수 없는 것은 조용히 버리지 않고 `losses`에 최상위 블록 번호(1부터, 원래 doc 기준)와 함께 적는다 — `{ block, kind: "stickers", count }`(스티커 개수) · `{ block, kind: "emptyParagraph", count }`(빈 문단 개수 — 그 문단이 빠지고, 그래서 비는 인용 · 콜아웃도 빠진다. 목록 항목의 첫 문단이 비면 그 항목은 빠지되 안쪽 목록은 버리지 않고 한 단계 위로 올린다 — 원래 목록은 그 자리에서 나뉘고, 올라간 목록이 그 사이에 이웃 목록으로 남는다) · `{ block, kind: "codeMark", count }`(줄 첫 링크 안 코드 마크 글자의 `]:`가 참조 정의로 읽히는 경우 — 그 텍스트의 코드 마크를 빼고 글자로 쓴 수). 순서는 블록 번호순, 같은 블록이면 `stickers` · `emptyParagraph` · `codeMark` 순이다. 같은 입력은 같은 결과이고 입력을 바꾸지 않는다.
 
 #### Scenario: 블록마다 입력 문법 그대로 쓴다
 
@@ -25,7 +25,7 @@
 
 ### Requirement: losses가 없는 doc는 왕복해도 같다
 
-`serializeMarkdown`은 SHALL `losses`가 비는 모든 유효 doc(스티커 · 빈 문단 · 참조 정의로 읽히는 코드 마크가 없음)에서 `convertMarkdown(serializeMarkdown(doc).markdown)`이 성공하고 그 doc가 `normalize(doc)`와 같게 한다. 예제가 아니라 생성된 doc 전체에 대해 성립해야 하므로 속성 기반 테스트(fast-check, adr-012)로 검사한다.
+`serializeMarkdown`은 SHALL `losses`가 비는 모든 유효 doc(스티커 · 빈 문단 · 참조 정의로 읽히는 코드 마크가 없음)에서 `convertMarkdown(serializeMarkdown(doc).markdown)`이 성공하고 그 doc가 `normalize(doc)`와 같게 한다. 링크 href만 예외다 — 변환이 markdown-it `normalizeLink`(mdurl)로 퍼센트 인코딩하는 글자(보존 집합 — 영숫자 · `;/?:@&=+$,-_.!~*'()#` · 유효한 `%XX` — 밖의 모든 글자: 비ASCII · `[` `]` `` ` `` `"` `^` `{` `|` `}` 등, 그리고 punycode로 바뀌는 호스트 이름)가 든 주소는 같은 뜻의 인코딩된 문자열로 돌아오며, 이는 losses가 아니다. 예제가 아니라 생성된 doc 전체에 대해 성립해야 하므로 속성 기반 테스트(fast-check, adr-012)로 검사한다.
 
 #### Scenario: 임의의 doc가 왕복해도 같다
 
@@ -36,6 +36,16 @@
 
 - **WHEN** 문단 하나가 `]:`(code · link `/x`) + `뒤`인 doc을 직렬화한다
 - **THEN** `markdown`이 `[\]:](/x)뒤\n`이고 `losses`가 `[{ block: 1, kind: "codeMark", count: 1 }]`이며 다시 변환하면 성공한다
+
+#### Scenario: 링크 주소의 `&`는 글자 그대로 돌아온다
+
+- **WHEN** 문단 "가"(link `/a&amp;b`) · 문단 "나"(link `/&#x2F;evil.com`)를 직렬화한 뒤 다시 변환한다
+- **THEN** 변환이 성공하고 두 href가 `/a&amp;b` · `/&#x2F;evil.com` 그대로다(문자 참조로 풀리지 않는다)
+
+#### Scenario: 첫 문단이 빈 항목의 안쪽 목록은 한 단계 위로 올라간다
+
+- **WHEN** 글머리 목록 항목 셋 — "가" · (빈 문단 + 안쪽 글머리 목록 "나") · "다" — 을 직렬화한다
+- **THEN** `markdown`이 `- 가\n\n* 나\n\n- 다\n`이고 `losses`가 `[{ block: 1, kind: "emptyParagraph", count: 1 }]`이며, 다시 변환하면 글머리 목록 셋("가" · "나" · "다")이 된다
 
 #### Scenario: 스티커와 빈 문단은 빠지고 목록에 남는다
 
