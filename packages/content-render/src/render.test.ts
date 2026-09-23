@@ -12,11 +12,14 @@ function paragraph(text: string, attrs?: Extract<Block, { type: "paragraph" }>["
   return { type: "paragraph", ...(attrs ? { attrs } : {}), content: [{ type: "text", text }] };
 }
 
-/** 태그 안의 `속성명=` 만 모은다 — 텍스트에 있는 `=`는 세지 않는다(render-safety). */
+/**
+ * 태그 안의 속성 이름만 모은다 — `이름="값"` 단위로 읽어 값 안의 글자(이스케이프된 `onload=` 등)는
+ * 속성으로 세지 않는다. 텍스트 노드의 `=`도 세지 않는다(render-safety).
+ */
 function attributeNames(html: string): Set<string> {
   const names = new Set<string>();
   for (const [, inside] of html.matchAll(/<[a-z0-9]+(\s[^>]*)?>/g)) {
-    for (const [, name] of (inside ?? "").matchAll(/\s([a-z-]+)=/g)) names.add(name!);
+    for (const [, name] of (inside ?? "").matchAll(/\s([a-z-]+)="[^"]*"/g)) names.add(name!);
   }
   return names;
 }
@@ -76,9 +79,13 @@ describe("html-render", () => {
 
 describe("render-safety", () => {
   const HOSTILE = ["<script>alert(1)</script>", '" onload="x', "javascript:alert(1)"];
-  const FORBIDDEN = [/<script/i, /\son[a-z]+=/i, /javascript:/i];
 
-  it("WHEN 픽스처 3개와 적대적 문서를 렌더하면 THEN 어디에도 script · on* · javascript: 가 없다", () => {
+  /** href · src 속성값만 모은다 — 스킴 검사는 속성값에 대한 것이고 본문 글자에 대한 것이 아니다. */
+  function urlAttributeValues(html: string): string[] {
+    return [...html.matchAll(/\s(?:href|src)="([^"]*)"/g)].map((m) => m[1]!);
+  }
+
+  it("WHEN 픽스처 3개와 적대적 문서를 렌더하면 THEN script 태그 · on* 속성 · javascript: 스킴 속성이 없다", () => {
     const hostile = docOf(
       ...HOSTILE.map((text) => paragraph(text)),
       ...HOSTILE.map((alt): Block => ({ type: "image", attrs: { src: "/images/a.webp", alt } })),
@@ -92,9 +99,15 @@ describe("render-safety", () => {
       renderHtml(file, { imageBaseUrl: BASE }),
     );
     for (const html of outputs) {
-      for (const pattern of FORBIDDEN) expect(html).not.toMatch(pattern);
+      expect(html).not.toMatch(/<script/i);
+      for (const name of attributeNames(html)) expect(name).not.toMatch(/^on/i);
+      for (const value of urlAttributeValues(html)) expect(value).not.toMatch(/^\s*javascript:/i);
     }
-    expect(outputs.at(-1)).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    // 적대적 문자열은 이스케이프된 글자로만 남는다 — 태그 · 속성 · 스킴이 되지 않는다
+    const hostileHtml = outputs.at(-1)!;
+    expect(hostileHtml).toContain("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
+    expect(hostileHtml).toContain('alt="&quot; onload=&quot;x"');
+    expect(hostileHtml).toContain("<p>javascript:alert(1)</p>");
   });
 
   it("WHEN decorationMax를 렌더하면 THEN 속성 이름이 닫힌 목록의 부분집합이다", () => {
