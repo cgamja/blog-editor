@@ -80,6 +80,12 @@ function decorationArb(opts: { font: boolean; width: boolean; maxStickers: numbe
     });
 }
 
+/** 인용 · 콜아웃 · listItem 안쪽 문단 — 꾸미기 자리가 없다(decoration-schema: 안쪽 노드에는 attrs 없음) */
+const innerParagraphArb = fc.record({
+  type: fc.constant("paragraph" as const),
+  content: fc.array(inlineArb, { maxLength: 2 }),
+});
+
 const paragraphArb = fc.record({
   type: fc.constant("paragraph" as const),
   attrs: decorationArb({ font: true, width: false, maxStickers: 3 }),
@@ -102,7 +108,7 @@ const headingArb = fc
 const blockquoteArb = fc.record({
   type: fc.constant("blockquote" as const),
   attrs: decorationArb({ font: true, width: false, maxStickers: 2 }),
-  content: fc.array(paragraphArb, { minLength: 1, maxLength: 2 }),
+  content: fc.array(innerParagraphArb, { minLength: 1, maxLength: 2 }),
 });
 
 const codeBlockArb = fc.record({
@@ -137,10 +143,7 @@ function listArb(
 }
 
 function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
-  const paragraph = fc.record({
-    type: fc.constant("paragraph" as const),
-    content: fc.array(inlineArb, { maxLength: 2 }),
-  });
+  const paragraph = innerParagraphArb;
   const nested =
     depth < 2
       ? fc.array(fc.oneof(listArb("bulletList", depth + 1), listArb("orderedList", depth + 1)), {
@@ -171,7 +174,7 @@ const calloutArb = fc.record({
       decorationArb({ font: true, width: false, maxStickers: 2 }),
     )
     .map(([tone, deco]) => ({ tone, ...deco })),
-  content: fc.array(paragraphArb, { minLength: 1, maxLength: 2 }),
+  content: fc.array(innerParagraphArb, { minLength: 1, maxLength: 2 }),
 });
 
 const appScreenshotArb = fc.record({
