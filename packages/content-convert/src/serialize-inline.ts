@@ -15,8 +15,10 @@ const { isWhiteSpace, isMdAsciiPunct, isPunctCharCode } = createMarkdownIt().uti
 type Emphasis = "bold" | "italic";
 type DelimChar = "*" | "_";
 
+type CharMode = "plain" | "escape" | "entity";
+
 type Piece =
-  | { kind: "char"; cp: string; mode: "plain" | "escape" | "entity" }
+  | { kind: "char"; cp: string; mode: CharMode }
   /** 코드 스팬 · 링크 괄호 — 양 끝 글자가 늘 구두점(`` ` `` · `[` · `]` · `)`)이다. */
   | { kind: "raw"; text: string; code?: TextNode }
   | { kind: "delim"; ch: DelimChar; mark: Emphasis; role: "open" | "close" };
@@ -31,13 +33,15 @@ const EDGE_TRIMMED = /^\s$/u;
 const LINE_BREAKS = new Set(["\n", "\r"]);
 /** 순서 목록 표지로 읽히는 줄 첫 숫자의 최대 길이(CommonMark). */
 const MAX_LIST_NUMBER_DIGITS = 9;
+/** 줄 끝 · 줄 처음은 공백으로 친다(markdown-it `scanDelims`와 같다). */
+const SPACE_CODE_POINT = 0x20;
 
 const MARK_DELIM: Record<Emphasis, number> = { bold: 2, italic: 1 };
 
 type CharClass = "space" | "punct" | "word";
 
 function classifyCodePoint(cp: string): CharClass {
-  const code = cp.codePointAt(0) ?? 0x20;
+  const code = cp.codePointAt(0) ?? SPACE_CODE_POINT;
   if (isWhiteSpace(code)) return "space";
   if (isMdAsciiPunct(code) || isPunctCharCode(code)) return "punct";
   return "word";
@@ -50,12 +54,14 @@ function sideClass(piece: Piece | undefined): CharClass {
   return "punct";
 }
 
-function charPieces(text: string, mode: "plain" | "escape" = "plain"): Piece[] {
-  return Array.from(text, (cp) => ({
-    kind: "char" as const,
-    cp,
-    mode: LINE_BREAKS.has(cp) ? ("entity" as const) : ALWAYS_ESCAPE.has(cp) ? "escape" : mode,
-  }));
+function charMode(cp: string): CharMode {
+  if (LINE_BREAKS.has(cp)) return "entity";
+  if (ALWAYS_ESCAPE.has(cp)) return "escape";
+  return "plain";
+}
+
+function charPieces(text: string): Piece[] {
+  return Array.from(text, (cp) => ({ kind: "char" as const, cp, mode: charMode(cp) }));
 }
 
 function codeSpan(text: string): string {
@@ -68,8 +74,9 @@ function codeSpan(text: string): string {
   return `${fence}${pad}${text}${pad}${fence}`;
 }
 
+/** `&`까지 — 그냥 두면 `&amp;` · `&#x2F;`가 문자 참조로 풀려 다른 주소가 된다(design.md 4번). */
 function escapeHref(href: string): string {
-  return href.replace(/[()<>]/g, (ch) => `\\${ch}`);
+  return href.replace(/[()<>&]/g, (ch) => `\\${ch}`);
 }
 
 function emphasisOf(node: TextNode): Set<Emphasis> {
@@ -224,6 +231,12 @@ function fixRun(
   return false;
 }
 
+/** 제목 끝의 `#`은 닫는 표지(`## 제목 #`)로 읽혀 사라진다. */
+function escapeHeadingTrailingHash(pieces: Piece[]): void {
+  const last = pieces[pieces.length - 1];
+  if (last?.kind === "char" && last.mode === "plain" && last.cp === "#") last.mode = "escape";
+}
+
 function escapeLineStart(pieces: Piece[]): void {
   const first = pieces[0];
   if (first?.kind === "char" && first.mode === "plain" && LINE_START_ESCAPE.has(first.cp)) {
@@ -336,10 +349,7 @@ function buildPieces(
   const pieces = toPieces(nodes, plainCode);
   encodeEdgeWhitespace(pieces);
   if (place === "paragraph") escapeLineStart(pieces);
-  if (place === "heading") {
-    const last = pieces[pieces.length - 1];
-    if (last?.kind === "char" && last.mode === "plain" && last.cp === "#") last.mode = "escape";
-  }
+  if (place === "heading") escapeHeadingTrailingHash(pieces);
   escapeBangBeforeLink(pieces);
   fixFlanking(pieces);
   return pieces;

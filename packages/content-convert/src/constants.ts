@@ -19,7 +19,13 @@ export const CONTAINER_LABEL: Record<ContainerKind, string> = {
   callout: "콜아웃",
 };
 
-export const KNOWN_KEYS = new Set(["font", "motion", "width", "frame"]);
+/** 지시어 키 — 이 순서가 직렬화(serialize.ts)가 지시어 줄에 쓰는 순서다. */
+export const DIRECTIVE_KEYS = ["frame", "font", "motion", "width"] as const;
+
+export const KNOWN_KEYS: ReadonlySet<string> = new Set(DIRECTIVE_KEYS);
+
+/** `frame`의 유일한 값 — 앱 스크린샷(appScreenshot). */
+export const APP_FRAME = "app";
 
 /** 콜아웃 tone을 생략했을 때의 값 — pm-schema.ts(스키마 기본값) · check.ts(파싱) · parser.ts(doc
  * 조립)가 같은 값을 써야 한다. */

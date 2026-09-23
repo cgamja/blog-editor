@@ -1,5 +1,5 @@
 import { CAPTION_MAX_LENGTH, FONTS, MOTIONS, WIDTH_RANGE } from "@blog-editor/content-schema";
-import { KNOWN_KEYS } from "./constants";
+import { APP_FRAME, KNOWN_KEYS } from "./constants";
 import { computeFenceMask } from "./fence";
 import {
   blockMessage,
@@ -220,7 +220,7 @@ function validateDirective(
         break;
       }
       case "frame":
-        if (value !== "app") {
+        if (value !== APP_FRAME) {
           issues.push({
             rule: DIRECTIVE_FRAME_VALUE_RULE,
             received: value,

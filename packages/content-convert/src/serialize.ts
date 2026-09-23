@@ -1,5 +1,6 @@
 import { normalize } from "@blog-editor/content-schema";
 import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
+import { APP_FRAME, DIRECTIVE_KEYS } from "./constants";
 import { CALLOUT_CONTAINER_NAME } from "./tokens";
 import { serializeInline, serializePlainLabel } from "./serialize-inline";
 
@@ -7,7 +8,7 @@ import { serializeInline, serializePlainLabel } from "./serialize-inline";
  * doc → markdown(spec: markdown-serialize) — `get_post`가 AI에게 주는 글. 정답은 "다시 변환하면 같은
  * doc" 하나이고, 문법은 입력 스펙(markdown-format · markdown-callout · markdown-directive)을 그대로
  * 쓴다. markdown에 자리가 없는 것(스티커 · 빈 문단 · 참조 정의로 읽히는 코드 마크)은 조용히 버리지
- * 않고 losses로 돌려준다(design.md 1 · 2 · 7번).
+ * 않고 losses로 돌려준다(design.md 1 · 2 · 2-b · 7번).
  */
 
 export interface SerializeLoss {
@@ -83,49 +84,88 @@ function listMarker(type: ListLike["type"], index: number, alternate: boolean): 
   return `${index + 1}${alternate ? ")" : "."}`;
 }
 
-/** 빈 문단으로 시작하는 항목은 안쪽 목록째 빠진다(design.md 2번). 남는 항목이 없으면 undefined. */
-function serializeList(
-  list: ListLike,
-  dropped: BlockLosses,
-  alternate: boolean,
-): string | undefined {
-  const items: string[] = [];
-  for (const item of list.content) {
-    const [paragraph, ...nested] = item.content;
-    const inline = inlineOf(paragraph, dropped);
-    if (inline === undefined) continue;
-    const marker = listMarker(list.type, items.length, alternate);
-    const indent = " ".repeat(marker.length + 1);
-    const lines = [`${marker} ${inline}`];
-    const markers = new ListMarkers();
-    for (const child of nested) {
-      const text = serializeListAmong(child, dropped, markers);
-      if (text !== undefined) lines.push(...text.split("\n").map((line) => `${indent}${line}`));
-    }
-    items.push(lines.join("\n"));
-  }
-  return items.length > 0 ? items.join("\n") : undefined;
+function isEmptyParagraph(paragraph: ParagraphLike): boolean {
+  return paragraph.content === undefined || paragraph.content.length === 0;
 }
 
-/** 다른 블록 · 목록과 이웃한 자리의 목록 — 바로 앞에 쓴 것이 같은 종류 목록이면 표지를 바꾼다. */
+/**
+ * 첫 문단이 빈 항목은 빼되 그 안쪽 목록은 버리지 않고 한 단계 위로 올린다(design.md 2-b) — 목록을
+ * 그 자리에서 나누고 올라간 목록을 사이에 둔다. 결과 목록들의 모든 항목은 첫 문단이 비지 않는다.
+ */
+function liftEmptyItems(list: ListLike, dropped: BlockLosses): ListLike[] {
+  const lists: ListLike[] = [];
+  let items: ListItemLike[] = [];
+  const flush = (): void => {
+    if (items.length > 0) lists.push({ type: list.type, content: items });
+    items = [];
+  };
+  for (const item of list.content) {
+    const [paragraph, ...nested] = item.content;
+    const liftedNested = nested.flatMap((child) => liftEmptyItems(child, dropped));
+    if (isEmptyParagraph(paragraph)) {
+      dropped.emptyParagraph += 1;
+      flush();
+      lists.push(...liftedNested);
+    } else {
+      items.push({ type: "listItem", content: [paragraph, ...liftedNested] });
+    }
+  }
+  flush();
+  return lists;
+}
+
+/** 이웃한 목록들 — 바로 앞에 쓴 것이 같은 종류 목록이면 표지를 바꾼다. 쓸 목록이 없으면 undefined. */
+function renderLists(
+  lists: readonly ListLike[],
+  dropped: BlockLosses,
+  markers: ListMarkers,
+  separator: string,
+): string | undefined {
+  const texts = lists.map((list) => {
+    const alternate = markers.alternateFor(list.type);
+    markers.wroteList(list.type, alternate);
+    return renderList(list, dropped, alternate);
+  });
+  return texts.length > 0 ? texts.join(separator) : undefined;
+}
+
+/** liftEmptyItems를 거친 목록 하나 — 안쪽 목록은 항목 들여쓰기 아래 빈 줄 없이 잇는다. */
+function renderList(list: ListLike, dropped: BlockLosses, alternate: boolean): string {
+  return list.content
+    .map((item, index) => {
+      const [paragraph, ...nested] = item.content;
+      const marker = listMarker(list.type, index, alternate);
+      const indent = " ".repeat(marker.length + 1);
+      // liftEmptyItems가 첫 문단이 빈 항목을 이미 뺐으므로 inlineOf는 늘 글자를 돌려준다.
+      const lines = [`${marker} ${inlineOf(paragraph, dropped) ?? ""}`];
+      const nestedText = renderLists(nested, dropped, new ListMarkers(), "\n");
+      if (nestedText !== undefined) {
+        lines.push(...nestedText.split("\n").map((line) => `${indent}${line}`));
+      }
+      return lines.join("\n");
+    })
+    .join("\n");
+}
+
+/** 최상위 · 콜아웃처럼 블록이 빈 줄로 이어지는 자리의 목록. 올라간 목록도 이웃 블록으로 쓴다. */
 function serializeListAmong(
   list: ListLike,
   dropped: BlockLosses,
   markers: ListMarkers,
 ): string | undefined {
-  const alternate = markers.alternateFor(list.type);
-  const text = serializeList(list, dropped, alternate);
-  if (text !== undefined) markers.wroteList(list.type, alternate);
-  return text;
+  return renderLists(liftEmptyItems(list, dropped), dropped, markers, BLOCK_SEPARATOR);
+}
+
+function directiveValue(block: Block, key: (typeof DIRECTIVE_KEYS)[number]): unknown {
+  if (key === "frame") return block.type === "appScreenshot" ? APP_FRAME : undefined;
+  return (block.attrs as Record<string, unknown> | undefined)?.[key];
 }
 
 function directiveLine(block: Block): string | undefined {
-  const attrs = (block.attrs ?? {}) as Record<string, unknown>;
-  const parts: string[] = [];
-  if (block.type === "appScreenshot") parts.push("frame=app");
-  for (const key of ["font", "motion", "width"] as const) {
-    if (attrs[key] !== undefined) parts.push(`${key}=${String(attrs[key])}`);
-  }
+  const parts = DIRECTIVE_KEYS.flatMap((key) => {
+    const value = directiveValue(block, key);
+    return value === undefined ? [] : [`${key}=${String(value)}`];
+  });
   return parts.length > 0 ? `{${parts.join(" ")}}` : undefined;
 }
 
