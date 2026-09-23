@@ -343,6 +343,37 @@ describe("markdown-directive", () => {
     expect(result.messages.join("\n")).toContain("size");
   });
 
+  it.each([
+    ["frame", ["{frame=}", "![a](/images/a.webp)"]],
+    ["font", ["{font=}", "문단"]],
+    ["motion", ["{motion=}", "문단"]],
+    ["width", ["{width=}", "![a](/images/a.webp)"]],
+    ["size", ["{size=}", "![a](/images/a.webp)"]],
+  ])("WHEN 알려진 키 %s의 빈 값을 변환하면 THEN 실패하고 메시지에 그 키가 있다", (key, lines) => {
+    const result = convertMarkdown(lines.join("\n"));
+    expectFail(result);
+    const text = result.messages.join("\n");
+    expect(text).toContain(key);
+    // 키 불가 · 자리 밖 같은 다른 규칙이 아니라 빈 값을 받은 값 오류여야 한다
+    expect(text).toContain('(받음: "")');
+  });
+
+  it("WHEN 알 수 없는 키의 빈 값 {foo=}를 문단 앞 줄에 쓰면 THEN 성공하고 글자로 남는다", () => {
+    const result = convertMarkdown(["{foo=}", "문단"].join("\n"));
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "paragraph", content: [{ type: "text", text: "{foo=} 문단" }] },
+    ]);
+  });
+
+  it("WHEN 토큰 모양이 다른 {size=1200 x800}를 쓰면 THEN 지시어가 아니라 글자로 남는다", () => {
+    const result = convertMarkdown(["{size=1200 x800}", "문단"].join("\n"));
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "paragraph", content: [{ type: "text", text: "{size=1200 x800} 문단" }] },
+    ]);
+  });
+
   const directiveRejectCases: Array<{ name: string; markdown: string; exactMessage?: string }> = [
     { name: "정의 밖 키 stickers", markdown: ["{stickers=heart}", "문단"].join("\n") },
     { name: "정의 밖 키 color", markdown: ["{color=red}", "문단"].join("\n") },

@@ -75,9 +75,18 @@ function isNaturalSize(n: number): boolean {
   return n >= NATURAL_SIZE_RANGE.min && n <= NATURAL_SIZE_RANGE.max;
 }
 
+/**
+ * 알려진 키의 `키=`(빈 값)도 지시어로 받는다 — 문단으로 흘려보내면 값 오류 메시지 없이 `{width=}`가
+ * 본문 글자로 남는다(MCP에서 AI가 고칠 단서가 없다). 모르는 키의 빈 값은 우연한 글자일 수 있어 그대로 둔다.
+ */
+function isDirectiveToken(token: string): boolean {
+  if (PAIR.test(token)) return true;
+  return token.endsWith("=") && KNOWN_KEYS.has(token.slice(0, -1));
+}
+
 function isDirectiveBody(body: string): boolean {
   const tokens = body.trim().split(/\s+/);
-  return tokens.length > 0 && tokens.every((t) => PAIR.test(t));
+  return tokens.length > 0 && tokens.every(isDirectiveToken);
 }
 
 export interface StripResult {
