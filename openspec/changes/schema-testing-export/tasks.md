@@ -4,10 +4,10 @@
 
 ## 1. 테스트 (빨강)
 
-- [ ] 1.1 `naturalSizeOf` 시나리오 1개(`doc.test.ts`) · testing 진입점 경계 시나리오 2개(`eslint.boundaries.test.ts`) → verify: 빨강 원문 보고
+- [x] 1.1 `naturalSizeOf` 시나리오 1개(`doc.test.ts`) · testing 진입점 경계 시나리오 2개(`eslint.boundaries.test.ts`) → verify: 빨강 원문 보고
 
 ## 2. 구현
 
-- [ ] 2.1 `naturalSizeOf` export, parser · serialize · render가 사용 → verify: 1.1의 `naturalSizeOf` 초록, 스냅샷 불변
-- [ ] 2.2 `src/testing.ts` + `exports["./testing"]`, convert 생성기 중복 제거 → verify: 왕복 · 멱등 property 초록
-- [ ] 2.3 ESLint testing 진입점 규칙 → verify: 1.1 경계 시나리오 초록, `pnpm verify` 초록
+- [x] 2.1 `naturalSizeOf` export, parser · serialize · render가 사용 → verify: 1.1의 `naturalSizeOf` 초록, 스냅샷 불변
+- [x] 2.2 `exports["./testing"]` → `src/doc.arbitrary.ts`, convert 생성기 중복 제거 → verify: 왕복 · 멱등 property 초록
+- [x] 2.3 ESLint testing 진입점 규칙 → verify: 1.1 경계 시나리오 초록, `pnpm verify` 초록
