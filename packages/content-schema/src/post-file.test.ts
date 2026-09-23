@@ -62,6 +62,8 @@ describe("post-file — migrate는 옛 버전 파일을 현재 버전으로 올�
     ],
     ["버전 없음", { meta: validMeta, doc: minimalDoc() }, "undefined"],
     ["버전이 문자열", { ...validPostFile, schemaVersion: "1" }, "1"],
+    // JSON.stringify(1n)은 TypeError — 메시지 조립이 오류 계약을 깨지 않아야 한다(CodeRabbit PR #11)
+    ["버전이 BigInt", { ...validPostFile, schemaVersion: 1n }, "1"],
   ])(
     "WHEN %s THEN MigrationError를 던지고 메시지에 받은 값이 들어 있다",
     (_label, input, expectedInMessage) => {

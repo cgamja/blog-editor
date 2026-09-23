@@ -8,7 +8,7 @@
 
 ### Requirement: normalize는 검증된 문서를 정규형으로 만든다
 
-`normalize(doc)`는 SHALL `docSchema`를 통과한 문서를 받아 새 객체를 돌려주며(입력 불변) 다음을 보장한다: ① 각 `text`의 `marks`는 `type` 이름의 사전순(`bold` < `code` < `italic` < `link`)이고 `marks: []`는 키 자체를 지운다 ② 같은 부모 안에서 인접한 `text` 노드의 마크가 deep-equal이면 하나로 합친다(순서 ①을 먼저 적용한 뒤 비교) ③ 모든 객체의 키 순서는 `type` · `attrs` · `content` · `marks` · `text`이고 `attrs` 안의 키는 사전순, `attrs: {}`는 키 자체를 지운다 ④ `content: []`는 키 자체를 지운다(ProseMirror `toJSON`과 같은 모양이 정규형). 노드의 종류 · 개수 · 텍스트 내용은 바꾸지 않는다.
+`normalize(doc)`는 SHALL `docSchema`를 통과한 문서를 받아 새 객체를 돌려주며(입력 불변) 다음을 보장한다: ① 각 `text`의 `marks`는 `type` 이름의 사전순(`bold` < `code` < `italic` < `link`)이고 `marks: []`는 키 자체를 지운다 ② 같은 부모 안에서 인접한 `text` 노드의 마크가 deep-equal이면 하나로 합친다(순서 ①을 먼저 적용한 뒤 비교) ③ 모든 객체의 키 순서는 `type` · `attrs` · `content` · `marks` · `text`이고 `attrs` 안의 키는 사전순, `attrs: {}`는 키 자체를 지운다 ④ `content: []`는 키 자체를 지운다(ProseMirror `toJSON`과 같은 모양이 정규형). 블록 노드의 종류 · 개수 · 순서와 이어 붙인 텍스트 내용은 보존한다(②로 `text` 노드 개수는 줄 수 있다).
 
 #### Scenario: 마크 순서가 다른 두 입력이 같은 출력이 된다
 

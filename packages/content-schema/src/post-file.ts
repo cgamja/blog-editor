@@ -24,10 +24,13 @@ export type PostFile = z.infer<ReturnType<typeof createPostFileSchema>>;
  */
 export const migrations: ReadonlyArray<(file: unknown) => unknown> = [];
 
-/** migrate가 미래 버전 · 버전 없음 · 버전 형식 오류에서 던지는 에러(spec: post-file). */
+/**
+ * migrate가 미래 버전 · 버전 없음 · 버전 형식 오류에서 던지는 에러(spec: post-file).
+ * 메시지는 String()으로 만든다 — JSON.stringify는 BigInt에서 TypeError를 던져 오류 계약을 깬다.
+ */
 export class MigrationError extends Error {
   constructor(received: unknown) {
-    super(`migrate: 지원하지 않는 schemaVersion — 받은 값: ${JSON.stringify(received)}`);
+    super(`migrate: 지원하지 않는 schemaVersion — 받은 값: ${String(received)}`);
     this.name = "MigrationError";
   }
 }

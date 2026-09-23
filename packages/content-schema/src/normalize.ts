@@ -102,7 +102,8 @@ function normalizeNode(node: Node): Node {
 /**
  * 문서를 정규형으로 만든다(spec: document-normalize) — 마크 사전순 · 인접 텍스트 병합 ·
  * 키 순서 고정 · 빈 marks/attrs/content 삭제. 입력은 바꾸지 않고(재귀 내내 새 객체만 만든다) 항상 새
- * 객체를 돌려준다. 노드 종류 · 개수 · 텍스트 내용은 바뀌지 않는다.
+ * 객체를 돌려준다. 블록 노드의 종류 · 개수 · 순서와 이어 붙인 텍스트 내용은 보존한다(인접 병합으로
+ * `text` 노드 개수는 줄 수 있다).
  */
 export function normalize(doc: Doc): Doc {
   return normalizeNode(doc as unknown as Node) as unknown as Doc;
