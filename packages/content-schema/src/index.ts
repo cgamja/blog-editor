@@ -30,5 +30,8 @@ export type { PostFile } from "./post-file";
 
 export { normalize } from "./normalize";
 
+export { createPublicPostsResponseSchema } from "./public-api";
+export type { PublicPostsResponse } from "./public-api";
+
 export { fixtures, invalidFixtures } from "./fixtures";
 export type { Fixtures, InvalidFixture } from "./fixtures";
