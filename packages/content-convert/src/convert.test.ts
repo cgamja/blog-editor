@@ -568,6 +568,25 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
         expect(hasFontAttr).toBe(false);
       },
     },
+    {
+      name: "이미지 alt는 라벨 원문이 아니라 보이는 글자다",
+      markdown: "![*강조* a\\*b](/images/a.webp)",
+      check: (doc) => {
+        const image = doc.content[0];
+        if (image?.type !== "image") throw new Error("image가 아니다");
+        expect(image.attrs.alt).toBe("강조 a*b");
+      },
+    },
+    {
+      // alt와 다른 경로(지시어 귀속 → caption)라 따로 본다
+      name: "앱 스크린샷 caption도 보이는 글자다",
+      markdown: ["{frame=app}", "![**굵은** 캡션](/images/a.webp)"].join("\n"),
+      check: (doc) => {
+        const screenshot = doc.content[0];
+        if (screenshot?.type !== "appScreenshot") throw new Error("appScreenshot이 아니다");
+        expect(screenshot.attrs.caption).toBe("굵은 캡션");
+      },
+    },
   ];
 
   it.each(preservationCases)(
@@ -603,6 +622,9 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
       name: "중복 라벨 정의",
       markdown: ["[t][r]", "", "[r]: https://a.com", "[r]: https://b.com"].join("\n"),
     },
+    { name: "인용 표시 앞 공백 뒤 지시어", markdown: ["> 글", " > {font=jua}", "> 둘"].join("\n") },
+    { name: "인용 표시 뒤 공백 둘 지시어", markdown: ["> 글", ">  {font=jua}", "> 둘"].join("\n") },
+    { name: "여러 줄에 걸친 링크 title", markdown: ['[a](https://a.com "첫', '둘")'].join("\n") },
   ];
 
   it.each(ruleMessageRejectCases)(
@@ -630,6 +652,12 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
         "\n",
       ),
       expectedLines: [7],
+    },
+    {
+      // 토큰 안의 줄바꿈도 줄 번호에 센다 — 받음 값도 한 줄로 접혀야 한다(ruleMessageRejectCases가 본다)
+      name: "여러 줄에 걸친 인라인 HTML 뒤 태그",
+      markdown: ["글 <b", 'class="x">x</b>'].join("\n"),
+      expectedLines: [1, 2],
     },
   ];
 
