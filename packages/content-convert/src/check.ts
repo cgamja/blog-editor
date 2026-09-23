@@ -36,7 +36,7 @@ import {
   taskListMessage,
   type FoundMessage,
 } from "./message";
-import { CALLOUT_CONTAINER_NAME } from "./tokens";
+import { CALLOUT_CONTAINER_NAME, imageAltText } from "./tokens";
 import type { BlockRecord, ContainerKind, SemanticType } from "./types";
 
 const FOOTNOTE_INLINE = /\[\^[^\]\s]+\]/;
@@ -280,7 +280,7 @@ function checkParagraphOpen(
   const semantic: SemanticType = soleChild?.type === "image" ? "image" : "paragraph";
   const [start, end] = mapOf(tok);
   const record = openBlockRecord(semantic, start, end);
-  if (semantic === "image" && soleChild) record.imageAlt = soleChild.content;
+  if (semantic === "image" && soleChild) record.imageAlt = imageAltText(soleChild);
   checkPlacement(record);
   return record;
 }
@@ -412,6 +412,12 @@ function checkInline(
   let activeLinkTextLength: number | null = null;
 
   children.forEach((child, index) => {
+    checkInlineChild(child, index, block);
+    // 토큰 안에 든 줄바꿈(여러 줄 HTML · title 등)도 다음 토큰의 줄 번호에 센다
+    currentLine += embeddedLineBreaks(child);
+  });
+
+  function checkInlineChild(child: Token, index: number, block: BlockRecord): void {
     const lineText = sourceLines[currentLine - 1] ?? "";
 
     switch (child.type) {
@@ -459,7 +465,12 @@ function checkInline(
       default:
         if (activeLinkTextLength !== null) activeLinkTextLength += child.content.length;
     }
-  });
+  }
+}
+
+function embeddedLineBreaks(child: Token): number {
+  const raw = child.content + (child.attrGet("title") ?? "");
+  return raw.split("\n").length - 1;
 }
 
 function checkInlineText(
@@ -505,7 +516,7 @@ function checkImage(
   titledReferenceHrefs: ReadonlySet<string>,
 ): void {
   const src = child.attrGet("src") ?? "";
-  const alt = child.content;
+  const alt = imageAltText(child);
   const title = child.attrGet("title");
   if (title !== null && !titledReferenceHrefs.has(src)) {
     messages.push(imageTitleMessage(block.topLevel, line, title));

@@ -1,5 +1,6 @@
 import MarkdownIt, { type PluginWithParams } from "markdown-it";
 import container from "markdown-it-container";
+import type Token from "markdown-it/lib/token.mjs";
 
 export const CALLOUT_CONTAINER_NAME = "callout";
 
@@ -37,4 +38,28 @@ export function createMarkdownIt(): MarkdownIt {
   // 어차피 여기서 못 걸러 containerOptions 변수 선언에서 미리 걸러 둔다.
   md.use(container as unknown as PluginWithParams, CALLOUT_CONTAINER_NAME, containerOptions);
   return md;
+}
+
+/**
+ * image 토큰의 보이는 글자. markdown-it은 `content`에 라벨 원문(`*강조*` · `\\*` 그대로)을 넣고
+ * 렌더된 글자는 children에 둔다 — 저장(alt · caption)과 길이 검사가 같은 값을 보도록 여기 하나로 모은다.
+ */
+export function imageAltText(tok: Token): string {
+  return (tok.children ?? [])
+    .map((child) => {
+      switch (child.type) {
+        case "text":
+        case "text_special": // `\\*` 같은 이스케이프 글자
+        case "code_inline":
+          return child.content;
+        case "image":
+          return imageAltText(child);
+        case "softbreak":
+        case "hardbreak":
+          return " ";
+        default:
+          return "";
+      }
+    })
+    .join("");
 }

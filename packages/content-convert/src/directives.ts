@@ -56,7 +56,8 @@ const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
 };
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
-const PREFIXED_LINE = /^(?:[ \t]+|(?:>[ \t]?)+)\{([^{}]+)\}[ \t]*$/;
+// CLEAN_LINE을 먼저 보므로 여기 걸리는 줄은 늘 접두사가 있다. `>` 앞 공백 · 뒤 여러 칸도 CommonMark 인용이다.
+const PREFIXED_LINE = /^(?:[ \t]*>)*[ \t]*\{([^{}]+)\}[ \t]*$/;
 const PAIR = /^[^\s{}=]+=[^\s{}]+$/;
 const FOOTNOTE_DEFINITION_LINE = /^ {0,3}\[\^([^\]]+)\]:/;
 

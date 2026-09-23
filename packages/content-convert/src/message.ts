@@ -25,6 +25,11 @@ export interface FoundMessage {
   text: string;
 }
 
+/** 받은 값이 여러 줄이면 한 줄로 접는다 — 메시지는 항목마다 한 줄이다(markdown-validation-message). */
+function toOneLine(value: string): string {
+  return value.replace(/\s*\n\s*/g, " ");
+}
+
 export function blockMessage(
   n: number,
   line: number,
@@ -32,7 +37,7 @@ export function blockMessage(
   received: string,
   fix: string,
 ): FoundMessage {
-  return { line, text: `블록 ${n} (${line}줄): ${rule}(받음: "${received}") → ${fix}` };
+  return { line, text: `블록 ${n} (${line}줄): ${rule}(받음: "${toOneLine(received)}") → ${fix}` };
 }
 
 export function docMessage(
@@ -41,7 +46,7 @@ export function docMessage(
   received: string,
   fix: string,
 ): FoundMessage {
-  return { line, text: `문서 (${line}줄): ${rule}(받음: "${received}") → ${fix}` };
+  return { line, text: `문서 (${line}줄): ${rule}(받음: "${toOneLine(received)}") → ${fix}` };
 }
 
 /** 줄 번호 순으로 정렬한다 — 같은 줄이면 Array#sort의 안정성에 기대 발견 순을 지킨다(spec). */

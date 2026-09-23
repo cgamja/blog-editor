@@ -2,7 +2,7 @@ import { MarkdownParser } from "prosemirror-markdown";
 import { parseCalloutTone } from "./check";
 import { DEFAULT_CALLOUT_TONE } from "./constants";
 import { pmSchema } from "./pm-schema";
-import { createMarkdownIt } from "./tokens";
+import { createMarkdownIt, imageAltText } from "./tokens";
 import type { BlockRecord, ResolvedDirective } from "./types";
 
 /**
@@ -30,7 +30,7 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   hr: { node: "horizontalRule" },
   image: {
     node: "image",
-    getAttrs: (tok) => ({ src: tok.attrGet("src") ?? "", alt: tok.content }),
+    getAttrs: (tok) => ({ src: tok.attrGet("src") ?? "", alt: imageAltText(tok) }),
   },
   container_callout: {
     block: "callout",
