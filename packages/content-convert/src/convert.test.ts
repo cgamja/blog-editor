@@ -551,6 +551,23 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
         ]);
       },
     },
+    {
+      name: "들여쓰기 코드 블록은 지시어 모양 줄도 코드 글자로 남긴다",
+      markdown: ["문단", "", "    const a = 1", "    {font=jua}"].join("\n"),
+      check: (doc) => {
+        const codeBlock = doc.content.find(
+          (node): node is CodeBlockNode => node.type === "codeBlock",
+        );
+        if (!codeBlock) throw new Error("codeBlock이 없다");
+        const text = (codeBlock.content ?? []).map((t) => t.text).join("");
+        expect(text).toContain("{font=jua}");
+        const hasFontAttr = doc.content.some((node) => {
+          const attrs = (node as { attrs?: Record<string, unknown> }).attrs;
+          return attrs !== undefined && "font" in attrs;
+        });
+        expect(hasFontAttr).toBe(false);
+      },
+    },
   ];
 
   it.each(preservationCases)(
@@ -570,6 +587,22 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
     },
     { name: "빈 링크 글자", markdown: "[](https://a.com)" },
     { name: "문단 없이 시작하는 목록 항목", markdown: "- - a" },
+    { name: "인라인 각주만", markdown: "글[^1]" },
+    { name: "각주 정의만", markdown: ["글", "", "[^1]: 설명"].join("\n") },
+    {
+      name: "인용 안의 각주",
+      markdown: ["> 글[^1]", ">", "> [^1]: https://x.com"].join("\n"),
+    },
+    { name: "체크된 할 일 목록([x])", markdown: "- [x] 끝" },
+    { name: "체크된 할 일 목록([X])", markdown: "- [X] 끝" },
+    {
+      name: "인라인 링크와 href를 공유하는 안 쓴 정의",
+      markdown: ["[t](https://a.com)", "", "[z]: https://a.com"].join("\n"),
+    },
+    {
+      name: "중복 라벨 정의",
+      markdown: ["[t][r]", "", "[r]: https://a.com", "[r]: https://b.com"].join("\n"),
+    },
   ];
 
   it.each(ruleMessageRejectCases)(
@@ -582,6 +615,35 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
         expect(message).not.toContain("\n");
         expect(message).toMatch(/^(블록 \d+|문서) \(\d+줄\): .+\(받음: ".*"\) → .+$/);
       }
+    },
+  );
+
+  const exactLineCases: Array<{ name: string; markdown: string; expectedLines: number[] }> = [
+    {
+      name: "title 있는 참조 링크가 쓰였다",
+      markdown: ["[t][r]", "", '[r]: https://a.com "T"'].join("\n"),
+      expectedLines: [3],
+    },
+    {
+      name: "펜스 코드 뒤 인용 안의 안 쓴 정의",
+      markdown: ["```", "[z]: https://q.com", "```", "", "문단", "", "> [z]: https://q.com"].join(
+        "\n",
+      ),
+      expectedLines: [7],
+    },
+  ];
+
+  it.each(exactLineCases)(
+    "WHEN $name 이면 THEN 메시지 줄 번호가 정확히 그 줄을 가리킨다",
+    ({ markdown, expectedLines }) => {
+      const result = convertMarkdown(markdown);
+      expectFail(result);
+      const lineNumbers = result.messages.map((message) => {
+        const match = /\((\d+)줄\)/.exec(message);
+        if (!match) throw new Error(`메시지에서 줄 번호를 못 찾았다: ${message}`);
+        return Number(match[1]);
+      });
+      expect(lineNumbers).toEqual(expectedLines);
     },
   );
 
