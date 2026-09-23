@@ -15,14 +15,22 @@ python3 -m http.server 4010 --directory contract/public-api
 BLOG_API_URL=http://localhost:4010 pnpm build
 ```
 
-## 다시 만들기
-
-손으로 고치지 않는다. 렌더러나 CSS가 바뀌면 `packages/content-render/src/contract.test.ts`가 실패한다. 아래 명령으로 다시 만들고 diff를 사람이 본다.
+실제 API로 띄우려면(M1, 이슈 #19) 로컬 Hono 서버를 쓴다. 저장 루트의 `workspaces/default/posts/*.json` 중 발행된 글만 나온다.
 
 ```bash
-pnpm vitest run packages/content-render/src/contract.test.ts -u
+PORT=8787 pnpm --filter @blog-editor/api dev   # POST_STORE_ROOT 기본 .data
+# 사이트 레포에서
+BLOG_API_URL=http://localhost:8787 pnpm build
 ```
 
-파일이 **없으면** 로컬 실행은 새로 만들고 통과한다. CI(`CI=true`)에서만 실패하므로 새로 생긴 파일은 커밋한다. M1에서 API 핸들러가 생기면 테스트 안의 응답 조립 대신 핸들러 출력을 비교한다.
+## 다시 만들기
+
+손으로 고치지 않는다. 렌더러나 CSS가 바뀌면 API 핸들러 출력을 비교하는 `apps/editor/api/src/public.test.ts`가 실패한다(M0의 `packages/content-render/src/contract.test.ts`도 같은 파일을 본다 — 정리는 후속). 아래 명령으로 다시 만들고 diff를 사람이 본다.
+
+```bash
+pnpm vitest run apps/editor/api/src/public.test.ts packages/content-render/src/contract.test.ts -u
+```
+
+파일이 **없으면** 로컬 실행은 새로 만들고 통과한다. CI(`CI=true`)에서만 실패하므로 새로 생긴 파일은 커밋한다.
 
 이미지 주소(본문 `imageBaseUrl`과 `image`)는 `https://simsimeestudio.com` 기준이다. 스티커(`/stickers/*.png`)는 사이트에 있고, 본문 이미지(`/images/*`)는 없는 경로라 깨져 보이는 것이 정상이다.

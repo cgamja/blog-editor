@@ -9,7 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "dev": "node --experimental-strip-types src/serve.ts"
+    "dev": "node src/serve.ts"
   },
   "dependencies": {
     "@blog-editor/content-render": "workspace:*",
