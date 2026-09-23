@@ -1,0 +1,247 @@
+/*
+ * 본문용 CSS — 렌더된 HTML의 닫힌 어휘(클래스 · data-* · CSS 변수)에 모양을 입힌다(adr-008).
+ * 색 · 글꼴 토큰은 사이트 globals.css의 이름을 그대로 참조만 한다(수동 복사, plan 09) — 여기서 정의하지 않는다.
+ * 기본 본문 값(제목 · 링크 · 목록 · 인용 · 코드 · 이미지 · 구분선)은 사이트 .prose와 같다.
+ */
+
+.post-body {
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  word-break: keep-all;
+}
+.post-body > * + * {
+  margin-top: 1.1em;
+}
+.post-body h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  margin-top: 2.2em;
+  color: var(--brand-ink);
+}
+.post-body h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-top: 1.8em;
+}
+.post-body a {
+  color: var(--brand-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.post-body ul,
+.post-body ol {
+  padding-left: 1.4em;
+}
+.post-body ul {
+  list-style: disc;
+}
+.post-body ol {
+  list-style: decimal;
+}
+.post-body li + li {
+  margin-top: 0.35em;
+}
+.post-body li > ul,
+.post-body li > ol {
+  margin-top: 0.35em;
+}
+.post-body blockquote {
+  border-left: 3px solid var(--brand);
+  padding-left: 1em;
+  color: var(--ink-soft);
+}
+.post-body code {
+  background: var(--surface-2);
+  padding: 0.1em 0.4em;
+  border-radius: 0.4em;
+  font-size: 0.92em;
+}
+.post-body pre {
+  background: #2e2420;
+  color: #fff;
+  padding: 1em 1.2em;
+  border-radius: 1rem;
+  overflow-x: auto;
+}
+.post-body pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+.post-body hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2.5em 0;
+}
+
+/* ---------- 이미지 · 앱 스크린샷 프레임 ---------- */
+
+.post-body figure {
+  margin: 0;
+}
+.post-body figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.post-image img {
+  border-radius: 1rem;
+}
+/* 앱 화면은 기기 프레임처럼 — 둥근 모서리와 얇은 선으로 본문 사진과 구분한다 */
+.post-screenshot img {
+  border-radius: 1.5rem;
+  border: 1px solid var(--line);
+}
+.post-screenshot figcaption {
+  margin-top: 0.6em;
+  text-align: center;
+  font-size: 0.9em;
+  color: var(--ink-soft);
+}
+
+/* ---------- 콜아웃 ---------- */
+
+.post-callout {
+  padding: 1em 1.2em;
+  border-radius: 1rem;
+  border-left: 4px solid;
+}
+.post-callout > * + * {
+  margin-top: 0.6em;
+}
+.post-callout[data-tone="note"] {
+  background: var(--surface-2);
+  border-color: var(--line);
+}
+.post-callout[data-tone="tip"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-ink);
+}
+.post-callout[data-tone="warning"] {
+  background: var(--brand-soft);
+  border-color: var(--brand-ink);
+}
+
+/* ---------- 글씨체 (블록 단위, 제목의 기본 글꼴도 덮는다) ---------- */
+
+.post-body [data-font="pretendard"],
+.post-body [data-font="pretendard"] :is(h2, h3) {
+  font-family: var(--font-sans);
+}
+.post-body [data-font="jua"],
+.post-body [data-font="jua"] :is(h2, h3) {
+  font-family: var(--font-display);
+}
+.post-body [data-font="gaegu"],
+.post-body [data-font="gaegu"] :is(h2, h3) {
+  font-family: var(--font-hand);
+}
+
+/* ---------- 꾸미기 래퍼 · 스티커 ---------- */
+
+/* --w는 단위 없는 정수(25~100). 스티커의 % 기준이 되도록 position: relative */
+.post-block {
+  position: relative;
+  width: calc(var(--w, 100) * 1%);
+  margin-inline: auto;
+}
+/* x · y는 스티커 중심의 블록 기준 %, s는 블록 폭 기준 %, r은 도. 블록이 옮겨지면 같이 간다(adr-008) */
+.post-sticker {
+  position: absolute;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  width: calc(var(--s) * 1%);
+  height: auto;
+  transform: translate(-50%, -50%) rotate(calc(var(--r) * 1deg));
+  pointer-events: none;
+  user-select: none;
+}
+/* 좁은 화면에서는 본문 밖으로 나간 스티커를 안으로 당겨 넣는다 */
+@media (max-width: 48rem) {
+  .post-sticker {
+    left: clamp(0%, calc(var(--x) * 1%), 100%);
+    top: clamp(0%, calc(var(--y) * 1%), 100%);
+  }
+}
+
+/* ---------- 움직임 ---------- */
+
+/*
+ * JS 0: 스크롤 진입 효과는 CSS 스크롤 타임라인만 쓴다. 두 조건 밖(움직임 줄이기 · 미지원 브라우저)에서는
+ * 이 블록이 통째로 무시되어 내용이 그냥 보인다 — 초기 상태(투명 · 이동)를 밖에 두지 않는 이유다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .post-body [data-motion] {
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+      animation-fill-mode: both;
+      animation-timing-function: ease-out;
+    }
+    .post-body [data-motion="fade-in"] {
+      animation-name: post-fade-in;
+    }
+    .post-body [data-motion="fade-up"] {
+      animation-name: post-fade-up;
+    }
+    .post-body [data-motion="slide-left"] {
+      animation-name: post-slide-left;
+    }
+    .post-body [data-motion="slide-right"] {
+      animation-name: post-slide-right;
+    }
+    .post-body [data-motion="pop"] {
+      animation-name: post-pop;
+    }
+    @keyframes post-fade-in {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    @keyframes post-fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes post-slide-left {
+      from {
+        opacity: 0;
+        transform: translateX(-32px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes post-slide-right {
+      from {
+        opacity: 0;
+        transform: translateX(32px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes post-pop {
+      from {
+        opacity: 0;
+        transform: scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  }
+}
