@@ -273,7 +273,7 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
           attrs: {
             level: 2,
             motion: "fade-up",
-            stickers: [sticker({ x: 125, y: -25, size: 50, rotate: 180 })],
+            stickers: [sticker({ x: 125, y: -25, size: 25, rotate: 180 })],
           },
           content: [{ type: "text", text: "제목" }],
         },
@@ -326,6 +326,10 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
     [
       "sticker.size: 4",
       minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ size: 4 })] } } }),
+    ],
+    [
+      "sticker.size: 26",
+      minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ size: 26 })] } } }),
     ],
     [
       "sticker.rotate: 181",
