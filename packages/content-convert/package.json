@@ -1,0 +1,25 @@
+{
+  "name": "@blog-editor/content-convert",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "md → doc 변환 코어 + 형식 가이드. MCP 도구와 에디터 가져오기가 같은 것을 쓴다(adr-003 · adr-013). TipTap을 모른다.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./guide/format.md": "./guide/format.md"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@blog-editor/content-schema": "workspace:*",
+    "markdown-it": "^14.1.0",
+    "markdown-it-container": "^4.0.0",
+    "prosemirror-markdown": "^1.13.8",
+    "prosemirror-model": "^1.25.12"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/markdown-it-container": "^4.0.1"
+  }
+}
