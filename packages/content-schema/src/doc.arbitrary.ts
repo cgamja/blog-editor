@@ -13,8 +13,9 @@ import {
 
 /**
  * property test 전용 — docSchema를 통과하는 임의 문서와 그 속성 생성기를 만든다.
- * 런타임 진입점(index.ts)이 아니라 `./testing` 진입점(package.json exports)으로만 나간다 — fast-check가 런타임으로
- * 새지 않게(document-fixtures, eslint.config.mjs가 막는다). 닫힌 집합 상수는 doc.ts에서
+ * 런타임 진입점(index.ts)이 아니라 `./testing` 진입점(package.json exports)으로만 나간다(adr-015).
+ * 이 파일 · `./testing` · fast-check는 *.test.ts와 *.arbitrary.ts에서만 import할 수 있고, 그 밖의
+ * 파일에서는 eslint.config.mjs의 GENERATORS 규칙이 막는다. 닫힌 집합 상수는 doc.ts에서
  * 그대로 가져온다 — 값이 늘어나면 여기도 자동으로 따라오지만, 새 노드 종류가 생기면 이 생성기를
  * 손으로 갱신해야 하고 지금은 그 누락을 잡는 것이 없다(adr-012 참고).
  */
