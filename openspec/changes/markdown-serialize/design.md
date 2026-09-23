@@ -1,0 +1,41 @@
+# Design — markdown-serialize (이슈 #20)
+
+`get_post`가 돌려주는 markdown을 만든다. 정답의 정의는 하나 — **다시 변환하면 같은 doc**(`convertMarkdown ∘ serializeMarkdown = normalize`). 문법 자체는 새로 만들지 않고 입력 스펙(markdown-format · markdown-callout · markdown-directive)을 그대로 쓴다. 새 의존성 없음: prosemirror-markdown의 `MarkdownSerializer`는 쓰지 않는다 — 마크 가장자리 공백을 마크 밖으로 밀어내(`expelEnclosingWhitespace`) 왕복이 깨지고, 이스케이프가 휴리스틱이라 flanking 경계를 못 맞춘다. 인라인은 직접 쓰고, 글자 분류(공백 · 구두점)는 markdown-it의 `utils`를 그대로 쓴다(파서와 같은 판정).
+
+## 결정
+
+### 1. 못 나르는 것의 결과 모양
+
+- 가정: `{ markdown, losses }` — `losses`는 `{ block, kind: "stickers" | "emptyParagraph", count }` 배열. 메시지 문장은 만들지 않는다
+- 근거: 스티커 보존 병합은 MCP 이슈에서 정한다(#20 "하지 않는 것"). 그쪽이 블록 번호로 병합하든 문장으로 알리든 구조화된 값이 재료가 된다
+- 되돌리는 비용: 필드 이름 · 모양 변경 — 호출자가 아직 없어 테스트 한 파일
+
+### 2. 빈 문단은 빠진다
+
+- 가정: 빈 문단(내용 없음)은 markdown에 자리가 없어 빼고 `emptyParagraph`로 센다. 그래서 비는 목록 항목(안쪽 목록째) · 목록 · 인용 · 콜아웃도 빠진다. 빈 제목(`##`)과 빈 코드 블록(빈 펜스)은 문법이 있어 그대로 나른다
+- 근거: `- ` · `>`만 있는 줄은 변환에서 거부되거나 다른 doc가 된다. 공백 문자 참조로 채우면 글자가 생겨 doc가 달라진다
+- 되돌리는 비용: 빈 문단 문법을 입력 스펙에 새로 넣는 change(변환기 + 가이드)
+
+### 3. 이스케이프 — 백슬래시 먼저, 안 되면 숫자 문자 참조
+
+- 가정: 문법 글자는 백슬래시(읽기 쉬움). 블록 앞뒤 공백 · 줄바꿈 · flanking을 깨는 경계 글자는 `&#N;`. 강조는 `**`(굵게) · `*`(기울임)이 기본이고, 한 구분자 묶음에서 닫고 다시 여는 기울임만 `_`로 바꾼다(`*` 끼리 붙어 한 묶음이 되면 짝이 어긋난다)
+- 근거: CommonMark는 `**"인용"**했다`를 강조로 안 읽는다(구두점 안쪽 + 글자 바깥). 문자 참조의 `&` · `;`는 구두점이라 flanking을 맞춘다. 한국어는 조사가 붙어 이 경계가 흔하다
+- 되돌리는 비용: 직렬화기 인라인 부분. 입력 쪽 변화 없음
+
+### 4. 링크 주소
+
+- 가정: href는 `(` `)` `<` `>`만 백슬래시로 쓴다. 비ASCII 주소는 markdown-it `normalizeLink`가 퍼센트 인코딩하므로 왕복 뒤 같은 뜻의 다른 문자열이 될 수 있다 — losses에 넣지 않는다
+- 근거: 뜻이 같은 주소이고 `hrefSchema`를 그대로 통과한다. 변환(입력) 쪽 동작이라 직렬화에서 못 막는다
+- 되돌리는 비용: 변환기의 링크 정규화 규칙 change
+
+### 5. 속성 테스트 생성기는 content-convert에 따로 둔다
+
+- 가정: content-schema의 `docArbitrary`를 재사용하지 않고 `src/serialize.arbitrary.ts`(테스트 전용, export 안 함)를 둔다
+- 근거: `docArbitrary`는 content-schema `exports`(`"."`만)에 없어 패키지 경계 밖에서 import할 수 없고, index로 내보내면 fast-check가 런타임 import에 끌려온다. 게다가 그 생성기의 글자는 ASCII뿐이라 한글 경계 · 줄바꿈을 못 만든다
+- 되돌리는 비용: content-schema에 `./testing` export를 추가(매니페스트 — 사람 승인)하면 합칠 수 있다
+
+### 6. 코드 마크 안 줄바꿈
+
+- 가정: 코드 마크 글자의 줄바꿈은 CommonMark 코드 스팬에서 공백이 된다 — 문자 참조도 안 먹는다. 생성기는 만들지 않고, 에디터에 줄바꿈 입력(hardBreak)이 없으므로 losses에 넣지 않는다
+- 근거: M2 스파이크 결과 hardBreak는 스키마 밖(#2)
+- 되돌리는 비용: 해당 텍스트를 losses로 알리는 분기 하나
