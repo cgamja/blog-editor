@@ -43,6 +43,25 @@ describe("public-posts-api — 초안 없음 (보호 대상 — 고쳐서 통과
   });
 });
 
+describe("public-posts-api — 초안 없음: 저장소가 검증 없이 돌려준 파일 (리뷰 재현)", () => {
+  it("WHEN 저장된 파일의 meta.draft가 빠져 있으면 THEN 발행 글로 보지 않고 공개 조회에 없다", async () => {
+    const { store, app } = setup();
+    const metaWithoutDraft: Record<string, unknown> = { ...fixtures.minimal.meta };
+    delete metaWithoutDraft.draft;
+    // 손으로 고친 파일처럼 저장소가 스키마 밖 모양을 돌려주는 경우 — 저장소는 읽을 때 검증하지 않는다
+    await store.put(
+      "no-draft-field",
+      { ...fixtures.minimal, meta: metaWithoutDraft } as PostFile,
+      null,
+    );
+
+    const res = await app.request("/public/posts");
+
+    expect(res.status).toBe(200);
+    expect((await res.json()) as unknown).toEqual({ postCssUrl: "/public/post.css", posts: [] });
+  });
+});
+
 describe("public-posts-contract — 핸들러 출력이 계약 픽스처다", () => {
   // 계약 픽스처를 다시 만드는 법은 contract/public-api/README.md — 손으로 고치지 않는다
   it("WHEN 대표 픽스처 3개를 계약 slug로 발행해 공개 조회하면 THEN 응답 · post.css가 계약 픽스처와 같다", async () => {
