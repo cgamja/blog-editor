@@ -2,10 +2,15 @@ import { docSchema, normalize } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import { analyzeTokens } from "./check";
 import { resolveDirectives, stripDirectiveLines } from "./directives";
-import { emptyDocumentMessage, internalErrorMessage, sortMessages } from "./message";
+import { docMessage, emptyDocumentMessage, internalErrorMessage, sortMessages } from "./message";
 import { buildDoc } from "./parser";
-import { checkReferenceDefinitions, type MarkdownEnv } from "./references";
+import {
+  attachReferenceUsageTracking,
+  checkReferenceDefinitions,
+  referencedTitledHrefs,
+} from "./references";
 import { createMarkdownIt } from "./tokens";
+import type { MarkdownEnv } from "./types";
 
 export type ConvertResult =
   { ok: true; doc: Doc; messages: [] } | { ok: false; messages: [string, ...string[]] };
@@ -16,13 +21,14 @@ function fail(messages: string[]): ConvertResult {
     // 호출자가 항상 메시지를 하나 이상 모아 부르므로 실제로는 닿지 않는다 — 타입만 지킨다.
     return {
       ok: false,
-      messages: ['문서 (1줄): 알 수 없는 오류로 변환에 실패했다(받음: "") → 다시 시도한다'],
+      messages: [docMessage(1, "알 수 없는 오류로 변환에 실패했다", "", "다시 시도한다").text],
     };
   }
   return { ok: false, messages: [first, ...rest] };
 }
 
 const markdownIt = createMarkdownIt();
+attachReferenceUsageTracking(markdownIt);
 
 /** 선행 BOM을 지우고 `\r\n`·`\r`을 `\n`으로 맞춘다 — 그 뒤 모든 줄 번호 계산이 이 기준이다. */
 function normalizeInput(markdown: string): string {
@@ -41,7 +47,12 @@ export function convertMarkdown(markdown: string): ConvertResult {
     const { strippedText, lines, candidates, footnoteMessages } = stripDirectiveLines(normalized);
     const env: MarkdownEnv = {};
     const tokens = markdownIt.parse(strippedText, env);
-    const { registry, messages: structuralMessages, usedHrefs } = analyzeTokens(tokens, lines);
+    const titledReferenceHrefs = referencedTitledHrefs(env);
+    const { registry, messages: structuralMessages } = analyzeTokens(
+      tokens,
+      lines,
+      titledReferenceHrefs,
+    );
     const { resolvedByMapStart, messages: directiveMessages } = resolveDirectives(
       candidates,
       lines,
@@ -50,7 +61,6 @@ export function convertMarkdown(markdown: string): ConvertResult {
     const referenceMessages = checkReferenceDefinitions(
       lines,
       env,
-      usedHrefs,
       markdownIt.utils.normalizeReference,
     );
 

@@ -1,5 +1,6 @@
 import { MarkdownParser } from "prosemirror-markdown";
 import { parseCalloutTone } from "./check";
+import { DEFAULT_CALLOUT_TONE } from "./constants";
 import { pmSchema } from "./pm-schema";
 import { createMarkdownIt } from "./tokens";
 import type { BlockRecord, ResolvedDirective } from "./types";
@@ -35,7 +36,7 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
     block: "callout",
     getAttrs: (tok) => {
       const tone = parseCalloutTone(tok.info);
-      return { tone: tone.ok ? tone.tone : "note" };
+      return { tone: tone.ok ? tone.tone : DEFAULT_CALLOUT_TONE };
     },
   },
   em: { mark: "italic" },
@@ -83,7 +84,6 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
   };
 }
 
-/** font · motion 지시어 값을 block.attrs에 얹는다(이미지가 아닌 최상위 블록). */
 function withDecoration(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
   if (!directive) return block;
   const attrs: Record<string, unknown> = { ...(block.attrs ?? {}) };

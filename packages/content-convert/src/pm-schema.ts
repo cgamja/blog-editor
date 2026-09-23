@@ -1,4 +1,5 @@
 import { Schema } from "prosemirror-model";
+import { DEFAULT_CALLOUT_TONE } from "./constants";
 
 /**
  * markdown → doc 변환 전용 ProseMirror 스키마(adr-013). content-schema는 ProseMirror를 모르므로
@@ -32,7 +33,7 @@ export const pmSchema = new Schema({
     callout: {
       group: "block",
       content: "(paragraph | bulletList | orderedList)+",
-      attrs: { tone: { default: "note" } },
+      attrs: { tone: { default: DEFAULT_CALLOUT_TONE } },
     },
     bulletList: { group: "block", content: "listItem+" },
     orderedList: { group: "block", content: "listItem+" },

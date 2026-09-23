@@ -7,13 +7,32 @@ import {
   hrefSchema,
   imagePathSchema,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, CONTAINER_LABEL } from "./constants";
+import { ALLOWED_IN, DEFAULT_CALLOUT_TONE } from "./constants";
 import {
-  blockMessage,
-  docMessage,
+  calloutContainerNameMessage,
+  calloutEmptyMessage,
+  calloutNotClosedMessage,
+  calloutToneMessage,
+  codeLanguageMessage,
+  containerNotAllowedMessage,
   emptyLinkTextMessage,
   footnoteInlineMessage,
+  hardBreakMessage,
+  headingLevelMessage,
   htmlNotAllowedMessage,
+  imageAltLengthMessage,
+  imageInContainerMessage,
+  imageInHeadingMessage,
+  imageMixedWithTextMessage,
+  imagePathMessage,
+  imageTitleMessage,
+  linkSchemeMessage,
+  linkTitleMessage,
+  listItemMustStartWithParagraphMessage,
+  listItemRepeatedBlockMessage,
+  orderedListStartMessage,
+  strikethroughMessage,
+  tableNotAllowedMessage,
   taskListMessage,
   type FoundMessage,
 } from "./message";
@@ -37,12 +56,20 @@ export function parseCalloutTone(
     .trim()
     .replace(/^callout\s*/, "")
     .trim();
-  if (rest === "") return { ok: true, tone: "note" };
+  if (rest === "") return { ok: true, tone: DEFAULT_CALLOUT_TONE };
   const match = /^tone=(\S+)$/.exec(rest);
   if (!match) return { ok: false, received: rest };
   const tone = match[1]!;
-  if (!(CALLOUT_TONES as readonly string[]).includes(tone)) return { ok: false, received: tone };
+  if (!(CALLOUT_TONES as readonly string[]).includes(tone)) {
+    return { ok: false, received: tone };
+  }
   return { ok: true, tone };
+}
+
+/** ALLOWED_IN[parentKind]에 semantic이 들어 있는지 — check.ts의 유일한 진짜 로직이고, message.ts는
+ * 같은 집합에서 "문단만" 같은 문장만 파생시킨다(로직과 문장이 서로 다른 파일에서 같은 값을 본다). */
+function isAllowedInContainer(parentKind: ContainerKind, semantic: SemanticType): boolean {
+  return ALLOWED_IN[parentKind].has(semantic);
 }
 
 function mapOf(tok: Token): [number, number] {
@@ -58,22 +85,24 @@ interface ListItemState {
 export interface AnalyzeResult {
   registry: BlockRecord[];
   messages: FoundMessage[];
-  /** link_open · image 토큰에서 실제로 쓰인 href/src — 안 쓰인 링크 참조 정의를 찾는 데 쓴다. */
-  usedHrefs: Set<string>;
 }
 
 /**
- * 토큰을 한 번 훑어 (1) 최상위 · 안쪽 블록 레지스트리, (2) 정의 밖 · 자리 밖 오류 메시지, (3) 실제로
- * 쓰인 링크 href를 같이 만든다(adr-013 ①). 여기서 오류가 하나라도 나오면 prosemirror-markdown은
- * 절대 부르지 않는다 — 스키마에 안 맞는 토큰을 오류 없이 버리기 때문이다(스파이크 #2).
+ * 토큰을 한 번 훑어 (1) 최상위 · 안쪽 블록 레지스트리, (2) 정의 밖 · 자리 밖 오류 메시지를 같이
+ * 만든다(adr-013 ①). 여기서 오류가 하나라도 나오면 prosemirror-markdown은 절대 부르지 않는다 —
+ * 스키마에 안 맞는 토큰을 오류 없이 버리기 때문이다(스파이크 #2).
+ *
+ * `titledReferenceHrefs`는 references.ts가 참조 정의에서 이미 title을 거부한 href들이다 — 참조로
+ * resolve된 링크도 title 속성을 그대로 갖고 있어(markdown-it), 여기서 또 거부하면 같은 오류가
+ * 두 군데(정의 줄 · 사용 줄)에서 중복 보고된다. 원인은 정의 줄이니 거기서만 한 번 알린다.
  */
 export function analyzeTokens(
   tokens: readonly Token[],
   sourceLines: readonly string[],
+  titledReferenceHrefs: ReadonlySet<string>,
 ): AnalyzeResult {
   const registry: BlockRecord[] = [];
   const messages: FoundMessage[] = [];
-  const usedHrefs = new Set<string>();
   const stack: ContainerKind[] = [];
   const listItemStates: ListItemState[] = [];
   let topLevel = 0;
@@ -82,59 +111,82 @@ export function analyzeTokens(
   const container = (): "top" | ContainerKind =>
     stack.length === 0 ? "top" : stack[stack.length - 1]!;
 
-  function openRecord(semantic: SemanticType, mapStart0: number, mapEnd0: number): BlockRecord {
+  /** 레지스트리에 블록 한 칸을 더한다 — 배치가 맞는지는 검사하지 않는다(checkPlacement가 한다). */
+  function openBlockRecord(
+    semantic: SemanticType,
+    mapStart0: number,
+    mapEnd0: number,
+  ): BlockRecord {
     const parentKind = container();
     if (parentKind === "top") topLevel += 1;
     const record: BlockRecord = { mapStart0, mapEnd0, semantic, container: parentKind, topLevel };
     registry.push(record);
+    return record;
+  }
 
-    if (parentKind !== "top" && !ALLOWED_IN[parentKind].has(semantic)) {
-      const allowedText = parentKind === "blockquote" ? "문단만" : "문단 · 목록만";
+  /** openBlockRecord가 만든 칸이 그 컨테이너 안에 올 수 있는 의미인지 본다(닫힌 집합: ALLOWED_IN,
+   * message.ts가 파생시킨다). 목록 항목 안이면 "문단 하나 다음에 안쪽 목록만" 모양도 같이 본다. */
+  function checkPlacement(record: BlockRecord): void {
+    const parentKind = record.container;
+    if (parentKind !== "top" && !isAllowedInContainer(parentKind, record.semantic)) {
       messages.push(
-        blockMessage(
+        containerNotAllowedMessage(
           record.topLevel,
-          mapStart0 + 1,
-          `${CONTAINER_LABEL[parentKind]} 안에는 ${allowedText} 쓴다`,
-          sourceLines[mapStart0] ?? "",
-          `${CONTAINER_LABEL[parentKind]} 밖으로 옮긴다`,
+          record.mapStart0 + 1,
+          parentKind,
+          sourceLines[record.mapStart0] ?? "",
         ),
       );
-    } else if (
+      return;
+    }
+    if (
       parentKind === "listItem" &&
-      (semantic === "paragraph" || semantic === "bulletList" || semantic === "orderedList")
+      (record.semantic === "paragraph" ||
+        record.semantic === "bulletList" ||
+        record.semantic === "orderedList")
     ) {
       checkListItemShape(
         record,
-        semantic,
+        record.semantic,
         listItemStates[listItemStates.length - 1],
         sourceLines,
         messages,
       );
     }
-    return record;
   }
 
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i]!;
     switch (tok.type) {
       case "paragraph_open":
-        currentBlock = checkParagraphOpen(tok, tokens[i + 1], openRecord);
+        currentBlock = checkParagraphOpen(tok, tokens[i + 1], openBlockRecord, checkPlacement);
         break;
       case "heading_open":
-        currentBlock = checkHeadingOpen(tok, tokens[i + 1], openRecord, sourceLines, messages);
+        currentBlock = checkHeadingOpen(
+          tok,
+          tokens[i + 1],
+          openBlockRecord,
+          checkPlacement,
+          sourceLines,
+          messages,
+        );
         break;
-      case "blockquote_open":
-        openRecord("blockquote", mapOf(tok)[0], mapOf(tok)[1]);
+      case "blockquote_open": {
+        const record = openBlockRecord("blockquote", ...mapOf(tok));
+        checkPlacement(record);
         stack.push("blockquote");
         break;
+      }
       case "blockquote_close":
         stack.pop();
         break;
-      case "bullet_list_open":
-        openRecord("bulletList", mapOf(tok)[0], mapOf(tok)[1]);
+      case "bullet_list_open": {
+        const record = openBlockRecord("bulletList", ...mapOf(tok));
+        checkPlacement(record);
         break;
+      }
       case "ordered_list_open":
-        checkOrderedListOpen(tok, openRecord, sourceLines, messages);
+        checkOrderedListOpen(tok, openBlockRecord, checkPlacement, sourceLines, messages);
         break;
       case "list_item_open":
         stack.push("listItem");
@@ -146,20 +198,22 @@ export function analyzeTokens(
         break;
       case "fence":
       case "code_block":
-        checkFenceOrCodeBlock(tok, openRecord, messages);
+        checkFenceOrCodeBlock(tok, openBlockRecord, checkPlacement, messages);
         break;
-      case "hr":
-        openRecord("horizontalRule", mapOf(tok)[0], mapOf(tok)[1]);
+      case "hr": {
+        const record = openBlockRecord("horizontalRule", ...mapOf(tok));
+        checkPlacement(record);
         break;
+      }
       case "table_open":
-        checkTableOpen(tok, openRecord, sourceLines, messages);
+        checkTableOpen(tok, openBlockRecord, checkPlacement, sourceLines, messages);
         break;
       case "html_block":
-        checkHtmlBlock(tok, openRecord, sourceLines, messages);
+        checkHtmlBlock(tok, openBlockRecord, checkPlacement, sourceLines, messages);
         break;
       case "container_callout_open": {
         const isEmpty = tokens[i + 1]?.type === "container_callout_close";
-        checkCalloutOpen(tok, isEmpty, openRecord, sourceLines, messages);
+        checkCalloutOpen(tok, isEmpty, openBlockRecord, checkPlacement, sourceLines, messages);
         stack.push("callout");
         break;
       }
@@ -167,17 +221,18 @@ export function analyzeTokens(
         stack.pop();
         break;
       case "inline":
-        checkInline(tok, currentBlock, sourceLines, messages, usedHrefs);
+        checkInline(tok, currentBlock, sourceLines, messages, titledReferenceHrefs);
         break;
       default:
         break;
     }
   }
 
-  return { registry, messages, usedHrefs };
+  return { registry, messages };
 }
 
-type OpenRecord = (semantic: SemanticType, mapStart0: number, mapEnd0: number) => BlockRecord;
+type OpenBlockRecord = (semantic: SemanticType, mapStart0: number, mapEnd0: number) => BlockRecord;
+type CheckPlacement = (record: BlockRecord) => void;
 
 function checkListItemShape(
   record: BlockRecord,
@@ -190,12 +245,10 @@ function checkListItemShape(
   if (semantic === "paragraph") {
     if (state.sawParagraph || state.sawListAfterParagraph) {
       messages.push(
-        blockMessage(
+        listItemRepeatedBlockMessage(
           record.topLevel,
           record.mapStart0 + 1,
-          "목록 항목은 문단 하나 다음에 안쪽 목록만 온다",
           sourceLines[record.mapStart0] ?? "",
-          "문단 하나로 시작하고 그 아래에 안쪽 목록만 둔다",
         ),
       );
       return;
@@ -205,12 +258,10 @@ function checkListItemShape(
   }
   if (!state.sawParagraph) {
     messages.push(
-      blockMessage(
+      listItemMustStartWithParagraphMessage(
         record.topLevel,
         record.mapStart0 + 1,
-        "목록 항목은 문단 하나로 시작한다",
         sourceLines[record.mapStart0] ?? "",
-        "문단 하나로 시작하고 그 아래에 안쪽 목록을 둔다",
       ),
     );
     return;
@@ -221,164 +272,131 @@ function checkListItemShape(
 function checkParagraphOpen(
   tok: Token,
   next: Token | undefined,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
 ): BlockRecord {
   const soleChild =
     next?.type === "inline" && next.children?.length === 1 ? next.children[0] : undefined;
   const semantic: SemanticType = soleChild?.type === "image" ? "image" : "paragraph";
   const [start, end] = mapOf(tok);
-  const record = openRecord(semantic, start, end);
+  const record = openBlockRecord(semantic, start, end);
   if (semantic === "image" && soleChild) record.imageAlt = soleChild.content;
+  checkPlacement(record);
   return record;
 }
 
 function checkHeadingOpen(
   tok: Token,
   next: Token | undefined,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
   sourceLines: readonly string[],
   messages: FoundMessage[],
 ): BlockRecord {
   const [start, end] = mapOf(tok);
-  const record = openRecord("heading", start, end);
+  const record = openBlockRecord("heading", start, end);
+  checkPlacement(record);
   const level = Number(tok.tag.slice(1));
   if (!(HEADING_LEVELS as readonly number[]).includes(level)) {
     const text = next?.content ?? "";
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        "제목은 ##·###만 쓴다",
-        sourceLines[start] ?? "",
-        `"## ${text}"`,
-      ),
-    );
+    messages.push(headingLevelMessage(record.topLevel, start + 1, sourceLines[start] ?? "", text));
   }
   return record;
 }
 
 function checkOrderedListOpen(
   tok: Token,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
   sourceLines: readonly string[],
   messages: FoundMessage[],
-): void {
+): BlockRecord {
   const [start, end] = mapOf(tok);
-  const record = openRecord("orderedList", start, end);
+  const record = openBlockRecord("orderedList", start, end);
+  checkPlacement(record);
   const startAttr = tok.attrGet("start");
   if (startAttr !== null && Number(startAttr) !== 1) {
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        "순서 목록은 1부터 시작한다",
-        sourceLines[start] ?? "",
-        "번호를 1부터 다시 매긴다",
-      ),
-    );
+    messages.push(orderedListStartMessage(record.topLevel, start + 1, sourceLines[start] ?? ""));
   }
+  return record;
 }
 
-function checkFenceOrCodeBlock(tok: Token, openRecord: OpenRecord, messages: FoundMessage[]): void {
+function checkFenceOrCodeBlock(
+  tok: Token,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
+  messages: FoundMessage[],
+): BlockRecord {
   const [start, end] = mapOf(tok);
-  const record = openRecord("codeBlock", start, end);
+  const record = openBlockRecord("codeBlock", start, end);
+  checkPlacement(record);
   const lang = tok.type === "fence" ? tok.info.trim() : "";
   if (lang !== "" && !CODE_LANGUAGE_PATTERN.test(lang)) {
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        "코드 언어는 소문자로 시작하는 소문자 · 숫자 · +#.만 쓴다(-는 안 된다)",
-        lang,
-        "ts",
-      ),
-    );
+    messages.push(codeLanguageMessage(record.topLevel, start + 1, lang));
   }
+  return record;
 }
 
 function checkTableOpen(
   tok: Token,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
   sourceLines: readonly string[],
   messages: FoundMessage[],
-): void {
+): BlockRecord {
   const [start, end] = mapOf(tok);
-  const record = openRecord("paragraph", start, end);
-  messages.push(
-    blockMessage(
-      record.topLevel,
-      start + 1,
-      "표는 정의 밖이다",
-      sourceLines[start] ?? "",
-      "표 대신 목록이나 문단으로 쓴다",
-    ),
-  );
+  const record = openBlockRecord("paragraph", start, end);
+  checkPlacement(record);
+  messages.push(tableNotAllowedMessage(record.topLevel, start + 1, sourceLines[start] ?? ""));
+  return record;
 }
 
 function checkHtmlBlock(
   tok: Token,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
   sourceLines: readonly string[],
   messages: FoundMessage[],
-): void {
+): BlockRecord {
   const [start, end] = mapOf(tok);
-  const record = openRecord("paragraph", start, end);
+  const record = openBlockRecord("paragraph", start, end);
+  checkPlacement(record);
   messages.push(htmlNotAllowedMessage(record.topLevel, start + 1, sourceLines[start] ?? ""));
+  return record;
 }
 
 function checkCalloutOpen(
   tok: Token,
   isEmpty: boolean,
-  openRecord: OpenRecord,
+  openBlockRecord: OpenBlockRecord,
+  checkPlacement: CheckPlacement,
   sourceLines: readonly string[],
   messages: FoundMessage[],
-): void {
+): BlockRecord {
   const [start, end] = mapOf(tok);
   const raw = sourceLines[start] ?? "";
-  const record = openRecord("callout", start, end);
+  const record = openBlockRecord("callout", start, end);
+  checkPlacement(record);
 
   const containerName = tok.info.trim().split(/\s+/)[0] ?? "";
   if (containerName !== CALLOUT_CONTAINER_NAME) {
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        `컨테이너는 :::${CALLOUT_CONTAINER_NAME}만 쓴다`,
-        containerName,
-        `:::${CALLOUT_CONTAINER_NAME}`,
-      ),
-    );
-    return;
+    messages.push(calloutContainerNameMessage(record.topLevel, start + 1, containerName));
+    return record;
   }
 
   const closed = isClosingLine(sourceLines[end]);
   if (!closed) {
-    messages.push(docMessage(start + 1, "콜아웃이 닫히지 않았다", raw, '끝에 ":::" 줄 추가'));
+    messages.push(calloutNotClosedMessage(start + 1, raw));
   }
   if (isEmpty && closed) {
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        "콜아웃 안에는 내용이 있어야 한다",
-        raw,
-        "문단이나 목록을 하나 이상 쓴다",
-      ),
-    );
+    messages.push(calloutEmptyMessage(record.topLevel, start + 1, raw));
   }
 
   const tone = parseCalloutTone(tok.info);
   if (!tone.ok) {
-    messages.push(
-      blockMessage(
-        record.topLevel,
-        start + 1,
-        `콜아웃 tone은 ${CALLOUT_TONES.join(" · ")}만 쓴다`,
-        tone.received,
-        ":::callout tone=tip",
-      ),
-    );
+    messages.push(calloutToneMessage(record.topLevel, start + 1, tone.received));
   }
+  return record;
 }
 
 function checkInline(
@@ -386,7 +404,7 @@ function checkInline(
   block: BlockRecord | undefined,
   sourceLines: readonly string[],
   messages: FoundMessage[],
-  usedHrefs: Set<string>,
+  titledReferenceHrefs: ReadonlySet<string>,
 ): void {
   if (!block) return;
   const children = tok.children ?? [];
@@ -401,27 +419,11 @@ function checkInline(
         currentLine += 1;
         return;
       case "hardbreak":
-        messages.push(
-          blockMessage(
-            block.topLevel,
-            currentLine,
-            "줄 끝 공백 둘이나 \\로 강제 줄바꿈은 쓸 수 없다",
-            lineText,
-            "문단을 그대로 잇거나(공백 하나) 새 문단으로 나눈다",
-          ),
-        );
+        messages.push(hardBreakMessage(block.topLevel, currentLine, lineText));
         currentLine += 1;
         return;
       case "s_open":
-        messages.push(
-          blockMessage(
-            block.topLevel,
-            currentLine,
-            "취소선(~~)은 정의 밖이다",
-            lineText,
-            "취소선을 지운다",
-          ),
-        );
+        messages.push(strikethroughMessage(block.topLevel, currentLine, lineText));
         return;
       case "html_inline":
         messages.push(htmlNotAllowedMessage(block.topLevel, currentLine, child.content));
@@ -432,7 +434,7 @@ function checkInline(
         return;
       case "link_open":
         activeLinkTextLength = 0;
-        checkLinkOpen(child, block, currentLine, messages, usedHrefs);
+        checkLinkOpen(child, block, currentLine, messages, titledReferenceHrefs);
         return;
       case "link_close":
         if (activeLinkTextLength === 0) {
@@ -444,7 +446,15 @@ function checkInline(
         if (activeLinkTextLength !== null) activeLinkTextLength += child.content.length;
         return;
       case "image":
-        checkImage(child, block, currentLine, lineText, children.length, messages, usedHrefs);
+        checkImage(
+          child,
+          block,
+          currentLine,
+          lineText,
+          children.length,
+          messages,
+          titledReferenceHrefs,
+        );
         return;
       default:
         if (activeLinkTextLength !== null) activeLinkTextLength += child.content.length;
@@ -452,7 +462,6 @@ function checkInline(
   });
 }
 
-/** 첫 자식이면 할 일 목록 모양(`[ ]`/`[x]`/`[X]`)을, 어디든 각주 모양(`[^label]`)을 찾는다. */
 function checkInlineText(
   child: Token,
   block: BlockRecord,
@@ -474,26 +483,15 @@ function checkLinkOpen(
   block: BlockRecord,
   line: number,
   messages: FoundMessage[],
-  usedHrefs: Set<string>,
+  titledReferenceHrefs: ReadonlySet<string>,
 ): void {
   const href = child.attrGet("href") ?? "";
-  usedHrefs.add(href);
   const title = child.attrGet("title");
-  if (title !== null) {
-    messages.push(
-      blockMessage(block.topLevel, line, "링크의 title은 쓸 수 없다", title, "title을 지운다"),
-    );
+  if (title !== null && !titledReferenceHrefs.has(href)) {
+    messages.push(linkTitleMessage(block.topLevel, line, title));
   }
   if (!hrefSchema.safeParse(href).success) {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        "링크는 http(s) · mailto · 내부 경로만",
-        href,
-        '"[글자](https://example.com)"',
-      ),
-    );
+    messages.push(linkSchemeMessage(block.topLevel, line, href));
   }
 }
 
@@ -504,69 +502,26 @@ function checkImage(
   raw: string,
   siblingCount: number,
   messages: FoundMessage[],
-  usedHrefs: Set<string>,
+  titledReferenceHrefs: ReadonlySet<string>,
 ): void {
   const src = child.attrGet("src") ?? "";
-  usedHrefs.add(src);
   const alt = child.content;
   const title = child.attrGet("title");
-  if (title !== null) {
-    messages.push(
-      blockMessage(block.topLevel, line, "이미지의 title은 쓸 수 없다", title, "title을 지운다"),
-    );
+  if (title !== null && !titledReferenceHrefs.has(src)) {
+    messages.push(imageTitleMessage(block.topLevel, line, title));
   }
   if (!imagePathSchema.safeParse(src).success) {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        "이미지는 /images/<이름>.<확장자> 경로만",
-        src,
-        '이미지 줄을 지우고 사람에게 업로드를 요청한다. 이미 올린 "/images/…" 경로만 쓸 수 있다',
-      ),
-    );
+    messages.push(imagePathMessage(block.topLevel, line, src));
   }
   if (alt.length > ALT_MAX_LENGTH) {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        `대체 글자는 ${ALT_MAX_LENGTH}자 이내로 쓴다`,
-        alt,
-        "대체 글자를 줄인다",
-      ),
-    );
+    messages.push(imageAltLengthMessage(block.topLevel, line, alt));
   }
 
   if (block.semantic === "heading") {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        "이미지는 최상위 블록에서만 쓴다",
-        raw,
-        "이미지만 있는 문단으로 따로 쓴다(제목 밖으로 옮긴다)",
-      ),
-    );
+    messages.push(imageInHeadingMessage(block.topLevel, line, raw));
   } else if (siblingCount !== 1) {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        "이미지는 글자와 섞을 수 없다",
-        raw,
-        "이미지만 있는 문단으로 따로 쓴다",
-      ),
-    );
+    messages.push(imageMixedWithTextMessage(block.topLevel, line, raw));
   } else if (block.container !== "top") {
-    messages.push(
-      blockMessage(
-        block.topLevel,
-        line,
-        "이미지는 최상위 블록에서만 쓴다",
-        raw,
-        "인용 · 목록 · 콜아웃 밖으로 옮긴다",
-      ),
-    );
+    messages.push(imageInContainerMessage(block.topLevel, line, raw));
   }
 }

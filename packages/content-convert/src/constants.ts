@@ -1,8 +1,9 @@
 import type { ContainerKind, SemanticType } from "./types";
 
 /**
- * 닫힌 집합 허용표 — check.ts(구조) · directives.ts(지시어)가 나눠 쓴다. 한 곳에 모아 두는 이유는
- * 검사와 지시어 귀속이 서로 다른 규칙을 쓰면 조용히 어긋나기 때문이다.
+ * 닫힌 집합 — check.ts · directives.ts의 검사 로직과 message.ts의 문장 생성이 같은 값을 봐야
+ * 조용히 어긋나지 않는다(문장은 이 값에서 파생시킨다). 각 블록에서만 쓰는 값(예: directives.ts의
+ * KEY_ALLOW)은 여기 두지 않고 그 파일에 둔다 — 여기 남은 건 두 곳 이상이 참조하는 것뿐이다.
  */
 
 /** 인용 · 목록 항목 · 콜아웃 안에 바로 올 수 있는 블록 의미. */
@@ -18,18 +19,8 @@ export const CONTAINER_LABEL: Record<ContainerKind, string> = {
   callout: "콜아웃",
 };
 
-/** 지시어 키 전체 집합. */
 export const KNOWN_KEYS = new Set(["font", "motion", "width", "frame"]);
 
-/** 블록 의미별로 허용하는 지시어 키(frame은 image에서 따로 검사한다). */
-export const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
-  paragraph: new Set(["font", "motion"]),
-  heading: new Set(["font", "motion"]),
-  bulletList: new Set(["font", "motion"]),
-  orderedList: new Set(["font", "motion"]),
-  blockquote: new Set(["font", "motion"]),
-  callout: new Set(["font", "motion"]),
-  codeBlock: new Set(["motion"]),
-  horizontalRule: new Set(["motion"]),
-  image: new Set(["motion", "width", "frame"]),
-};
+/** 콜아웃 tone을 생략했을 때의 값 — pm-schema.ts(스키마 기본값) · check.ts(파싱) · parser.ts(doc
+ * 조립)가 같은 값을 써야 한다. */
+export const DEFAULT_CALLOUT_TONE = "note";
