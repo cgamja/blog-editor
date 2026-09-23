@@ -26,13 +26,29 @@ const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
 
 const DEFAULT_PORT = 8787;
+// 세션(다음 이슈) 전까지 /api/*에 인증이 없다 — 같은 네트워크의 다른 기기가 못 부르게 루프백에만 연다
+const HOSTNAME = "127.0.0.1";
+const MAX_PORT = 65535;
 const DEFAULT_ROOT = ".data";
 const DEFAULT_WORKSPACE_ID = "default";
 // 1단계 워크스페이스 설정의 초깃값 — 사이트 BLOG_CATEGORIES와 같다(설정 API는 다음 이슈)
 const DEFAULT_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const DEFAULT_IMAGE_BASE_URL = "https://simsimeestudio.com";
 
-const port = Number(process.env.PORT ?? DEFAULT_PORT);
+/**
+ * 병렬 worktree마다 PORT를 따로 준다(CLAUDE.md strictPort 가정). 빈 값 · 숫자 아님을 0(임의 포트)이나
+ * NaN으로 흘려보내면 조용히 다른 포트에 뜨거나 알 수 없는 오류가 나므로 여기서 멈춘다.
+ */
+function readPort(raw: string | undefined): number {
+  if (raw === undefined) return DEFAULT_PORT;
+  const port = Number(raw);
+  if (raw.trim() === "" || !Number.isInteger(port) || port < 1 || port > MAX_PORT) {
+    throw new Error(`PORT는 1~${MAX_PORT} 정수여야 한다 — 받은 값: "${raw}"`);
+  }
+  return port;
+}
+
+const port = readPort(process.env.PORT);
 const root = process.env.POST_STORE_ROOT ?? DEFAULT_ROOT;
 
 const app = createApp({
@@ -41,6 +57,6 @@ const app = createApp({
   imageBaseUrl: process.env.IMAGE_BASE_URL ?? DEFAULT_IMAGE_BASE_URL,
 });
 
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`api: http://localhost:${info.port} (저장 루트 ${root})`);
+serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
+  console.log(`api: http://${HOSTNAME}:${info.port} (저장 루트 ${root})`);
 });
