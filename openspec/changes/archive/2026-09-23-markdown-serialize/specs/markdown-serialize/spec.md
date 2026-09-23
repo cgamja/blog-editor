@@ -1,0 +1,55 @@
+## ADDED Requirements
+
+### Requirement: `serializeMarkdown`은 markdown과 빠진 것 목록을 돌려주는 순수 함수다
+
+`@blog-editor/content-convert`는 SHALL `serializeMarkdown(doc: Doc)`을 export하고 `{ markdown, losses }`를 돌려준다. `markdown`은 markdown-format · markdown-callout · markdown-directive의 입력 문법만 쓰고, 블록이 하나 이상 남으면 `convertMarkdown`이 항상 성공한다(모든 블록이 빠지면 빈 문자열). 블록 사이는 빈 줄 하나, 끝은 줄바꿈 하나다. 콜아웃은 `tone`을 늘 적고, 꾸미기 값은 지시어 줄(`frame` · `font` · `motion` · `width` 순)로 쓴다. markdown으로 나를 수 없는 것은 조용히 버리지 않고 `losses`에 최상위 블록 번호(1부터, 원래 doc 기준)와 함께 적는다 — `{ block, kind: "stickers", count }`(스티커 개수) · `{ block, kind: "emptyParagraph", count }`(빈 문단 개수 — 그 문단이 빠지고, 그래서 비는 인용 · 콜아웃도 빠진다. 목록 항목의 첫 문단이 비면 그 항목은 빠지되 안쪽 목록은 버리지 않고 한 단계 위로 올린다 — 원래 목록은 그 자리에서 나뉘고, 올라간 목록이 그 사이에 이웃 목록으로 남는다) · `{ block, kind: "codeMark", count }`(줄 첫 링크 안 코드 마크 글자의 `]:`가 참조 정의로 읽히는 경우 — 그 텍스트의 코드 마크를 빼고 글자로 쓴 수). 순서는 블록 번호순, 같은 블록이면 `stickers` · `emptyParagraph` · `codeMark` 순이다. 같은 입력은 같은 결과이고 입력을 바꾸지 않는다.
+
+#### Scenario: 블록마다 입력 문법 그대로 쓴다
+
+- **WHEN** 제목(level 2 · font jua · motion fade-up · "시작") · 문단("굵게" bold · " 그리고 " · "링크" link `/blog/`) · 콜아웃(tone tip · 문단 "팁" · 글머리 목록 "하나") · 이미지(`/images/a.webp` · alt "그림" · width 60) · 앱 스크린샷(`/images/b.webp` · caption "화면") · 코드 블록(language ts · "let a = 1") · 구분선(motion pop) · 순서 목록(항목 "첫째" 안에 글머리 목록 "안")을 직렬화한다
+- **THEN** 블록이 차례로 `{font=jua motion=fade-up}`+`## 시작` · `**굵게** 그리고 [링크](/blog/)` · `:::callout tone=tip`+`팁`+빈 줄+`- 하나`+`:::` · `{width=60}`+`![그림](/images/a.webp)` · `{frame=app}`+`![화면](/images/b.webp)` · 펜스 ` ```ts `+`let a = 1`+` ``` ` · `{motion=pop}`+`---` · `1. 첫째`+`   - 안` 줄들로 나오고(블록 사이 빈 줄 하나, 끝 줄바꿈 하나) `losses`는 `[]`다
+
+#### Scenario: 이웃한 같은 종류 목록은 표지를 바꿔 따로 남긴다
+
+- **WHEN** 글머리 목록 두 개("가" · "나")를 이웃해 직렬화한 뒤 다시 변환한다
+- **THEN** `markdown`이 `- 가\n\n* 나\n`이고 변환 결과도 `bulletList` 두 개다
+
+### Requirement: 글자는 다시 읽어도 같은 글자가 되게 이스케이프한다
+
+직렬화는 SHALL 글자 속 문법 글자를 백슬래시로 이스케이프하고(`\` `*` `_` `` ` `` `[` `]` `<` `&` `~`는 늘, 줄 첫 글자의 `#` `>` `-` `+` `=` `{` `:` · 줄 첫 숫자 뒤 `.`/`)` · 링크 바로 앞 `!` · 제목 끝 `#`), 백슬래시로 못 나르는 것은 숫자 문자 참조(`&#N;`)로 쓴다 — 블록 글자의 앞뒤 공백 · 줄바꿈 · 마크 경계에서 강조가 성립하지 않게 하는 글자(CommonMark flanking 규칙). 코드 마크는 안 글자보다 긴 백틱으로, 코드 블록은 안 글자보다 긴 펜스로 감싼다.
+
+#### Scenario: 문법처럼 보이는 글자는 글자로 돌아온다
+
+- **WHEN** 문단 `1. {a=b} *별* [x]` · 문단 ` 앞 공백` · 문단 `"인용"`(bold) + `했다`를 직렬화한다
+- **THEN** 세 줄이 `1\. {a=b} \*별\* \[x\]` · `&#32;앞 공백` · `**"인용"**&#54664;다`이고, 다시 변환하면 원래 doc와 같다
+
+### Requirement: losses가 없는 doc는 왕복해도 같다
+
+`serializeMarkdown`은 SHALL `losses`가 비는 모든 유효 doc(스티커 · 빈 문단 · 참조 정의로 읽히는 코드 마크가 없음)에서 `convertMarkdown(serializeMarkdown(doc).markdown)`이 성공하고 그 doc가 `normalize(doc)`와 같게 한다. 링크 href만 예외다 — 변환이 markdown-it `normalizeLink`(mdurl)로 퍼센트 인코딩하는 글자(보존 집합 — 영숫자 · `;/?:@&=+$,-_.!~*'()#` · 유효한 `%XX` — 밖의 모든 글자: 비ASCII · `[` `]` `` ` `` `"` `^` `{` `|` `}` 등, 그리고 punycode로 바뀌는 호스트 이름)가 든 주소는 같은 뜻의 인코딩된 문자열로 돌아오며, 이는 losses가 아니다. 예제가 아니라 생성된 doc 전체에 대해 성립해야 하므로 속성 기반 테스트(fast-check, adr-012)로 검사한다.
+
+#### Scenario: 임의의 doc가 왕복해도 같다
+
+- **WHEN** 문법 글자 · 한글 · 공백 · 줄바꿈이 섞인 글자와 마크 조합을 가진 임의의 유효 doc(스티커 · 빈 문단 · 코드 마크 속 `]:` 없음)을 생성해 직렬화한 뒤 변환한다
+- **THEN** 매번 `losses`가 비고, 변환이 성공하고, 결과가 `normalize(doc)`와 깊은 비교로 같다
+
+#### Scenario: 참조 정의로 읽히는 코드 마크는 빠지고 목록에 남는다
+
+- **WHEN** 문단 하나가 `]:`(code · link `/x`) + `뒤`인 doc을 직렬화한다
+- **THEN** `markdown`이 `[\]:](/x)뒤\n`이고 `losses`가 `[{ block: 1, kind: "codeMark", count: 1 }]`이며 다시 변환하면 성공한다
+
+#### Scenario: 링크 주소의 `&`는 글자 그대로 돌아온다
+
+- **WHEN** 문단 "가"(link `/a&amp;b`) · 문단 "나"(link `/&#x2F;evil.com`)를 직렬화한 뒤 다시 변환한다
+- **THEN** 변환이 성공하고 두 href가 `/a&amp;b` · `/&#x2F;evil.com` 그대로다(문자 참조로 풀리지 않는다)
+
+#### Scenario: 첫 문단이 빈 항목의 안쪽 목록은 한 단계 위로 올라간다
+
+- **WHEN** 글머리 목록 항목 셋 — "가" · (빈 문단 + 안쪽 글머리 목록 "나") · "다" — 을 직렬화한다
+- **THEN** `markdown`이 `- 가\n\n* 나\n\n- 다\n`이고 `losses`가 `[{ block: 1, kind: "emptyParagraph", count: 1 }]`이며, 다시 변환하면 글머리 목록 셋("가" · "나" · "다")이 된다
+
+#### Scenario: 스티커와 빈 문단은 빠지고 목록에 남는다
+
+- **WHEN** 스티커 2개가 붙은 문단 "가"(블록 1) · 빈 문단(블록 2) · 항목 문단이 빈 글머리 목록(블록 3)을 직렬화한다
+- **THEN** `markdown`이 `가\n`이고 `losses`가 `[{ block: 1, kind: "stickers", count: 2 }, { block: 2, kind: "emptyParagraph", count: 1 }, { block: 3, kind: "emptyParagraph", count: 1 }]`다
+
+실패 의미론: 해당 없음 — 순수 변환(서버 상태 없음).
