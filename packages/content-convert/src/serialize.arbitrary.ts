@@ -42,7 +42,12 @@ const TEXT_UNITS = [
   "|",
 ] as const;
 
-const CODE_TEXT_UNITS = TEXT_UNITS.filter((unit) => unit !== "\n");
+/**
+ * 코드 마크 글자 — 줄바꿈은 코드 스팬에서 공백이 되고(design.md 6번), `:`를 빼 `]:`가 생기지 않게
+ * 한다: 줄 첫 링크 안 코드의 `]:`는 참조 정의로 읽혀 losses(codeMark)가 된다(design.md 7번). 이웃
+ * 코드 노드는 normalize에서 합쳐지므로 노드마다 거르는 것으로는 부족하다.
+ */
+const CODE_TEXT_UNITS = TEXT_UNITS.filter((unit) => unit !== "\n" && unit !== ":");
 
 const LINK_HREFS = [
   "/blog/",

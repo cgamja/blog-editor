@@ -129,6 +129,17 @@ describe("serializeMarkdown", () => {
     );
   });
 
+  it("참조 정의로 읽히는 코드 마크는 빠지고 목록에 남는다", () => {
+    const link = { type: "link", attrs: { href: "/x" } };
+    const input = doc(paragraph(text("]:", { type: "code" }, link), text("뒤")));
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("[\\]:](/x)뒤\n");
+    expect(result.losses).toEqual([{ block: 1, kind: "codeMark", count: 1 }]);
+    expect(convertMarkdown(result.markdown).ok).toBe(true);
+  });
+
   it("스티커와 빈 문단은 빠지고 목록에 남는다", () => {
     const sticker = { id: "heart", x: 10, y: 10, size: 10, rotate: 0 };
     const input = doc(
