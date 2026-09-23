@@ -9,7 +9,7 @@
 
 ## 2. 테스트 (red)
 
-- [ ] 2.1 `src/post-store.contract.ts`(공용 스위트) + `memory-store.test.ts` · `file-store.test.ts` — post-store 시나리오 6개. `src/posts.test.ts` — posts-api 6개. `src/public.test.ts` — public-posts-api 3개(계약 픽스처 비교를 content-render `contract.test.ts`에서 옮겨 온다 — 계약 README "M1 핸들러 출력 비교"). 보호 테스트(409 · 초안 없음 · `javascript:`)는 고쳐서 통과시키지 않는다 → verify: 빨강 · 실패 원문 보고 · `test(api):` 커밋
+- [x] 2.1 `src/post-store.contract.ts`(공용 스위트) + `memory-store.test.ts` · `file-store.test.ts` — post-store 시나리오 6개. `src/posts.test.ts` — posts-api 6개. `src/public.test.ts` — public-posts-api 3개(계약 픽스처를 핸들러 출력과 비교 — 계약 README "M1 핸들러 출력 비교". content-render `contract.test.ts`는 커밋된 테스트라 훅이 쉘 삭제를 막아 남김, 같은 스냅샷을 봐서 어긋날 수 없다 — 정리는 후속). 보호 테스트(409 · 초안 없음 · `javascript:`)는 고쳐서 통과시키지 않는다 → verify: 빨강 · 실패 원문 보고 · `test(api):` 커밋
 
 ## 3. 구현
 
