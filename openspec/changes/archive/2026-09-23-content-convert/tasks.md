@@ -14,4 +14,10 @@
 
 ## 3. Converge
 
-- [ ] 3.1 스펙 시나리오 20개 ↔ 테스트 대조, 빠진 것은 여기 append. 보안 테스트(`javascript:` 링크 · 절대 URL 이미지 · HTML)는 고쳐서 통과시키지 않는다 → verify: `pnpm verify` 초록 출력
+- [x] 3.1 스펙 시나리오 20개 ↔ 테스트 대조, 빠진 것은 여기 append. 보안 테스트(`javascript:` 링크 · 절대 URL 이미지 · HTML)는 고쳐서 통과시키지 않는다 → verify: `pnpm verify` 초록 출력
+
+## 4. 리뷰 반영 (2축 · 재검사 1회 + 사용자 결정으로 추가 1회)
+
+- [x] 4.1 거부 목록 보강 스펙(각주 · 할 일 · 쓰이지 않는 참조 정의 · 항목 모양 · `:::callout` 외 이름) + 쓰인 참조 링크 수용(사용자 결정) → verify: `openspec validate content-convert --strict`
+- [x] 4.2 리뷰 재현 테스트(조용히 사라지는 입력 · 줄 번호 · 메시지 한 줄) → verify: red 관찰 후 `test(convert):`
+- [x] 4.3 수정 패스 — 버그 확정분 전부 + review-cgamja should 전부 → verify: `pnpm verify` 243/243
