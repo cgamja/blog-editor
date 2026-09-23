@@ -35,7 +35,7 @@ MCP 입력(`check_draft` · `create_draft` · `update_draft`)이 쓰는 markdown
 
 #### Scenario: 정의 밖 markdown은 거부한다
 
-- **WHEN** `# 제목` · `| 표 |` · `~~취소~~` · `<div>` · `<br>` · `![x](https://a.com/x.png)` · 인용 안의 `## 제목` · 목록 항목 안의 ``` 펜스 · `[x](javascript:alert(1))`를 각각 넣는다
+- **WHEN** `# 제목` · 표(`| a | b |` 다음 줄 `|---|---|`) · `~~취소~~` · `<div>` · `<br>` · `![x](https://a.com/x.png)` · 인용 안의 `## 제목` · 목록 항목 안의 ``` 펜스 · `[x](javascript:alert(1))`를 각각 넣는다
 - **THEN** 아홉 경우 모두 변환이 실패하고 markdown-validation-message 형식의 메시지가 나온다
 
 ### Requirement: 형식 가이드는 문법마다 예시 하나를 싣고 그 예시는 전부 유효하다
