@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { docSchema, normalize } from "@blog-editor/content-schema";
-import type { Doc } from "@blog-editor/content-schema";
+import type { Block, Doc } from "@blog-editor/content-schema";
 import { convertMarkdown } from "./convert";
 import type { ConvertResult } from "./convert";
 
@@ -149,6 +149,10 @@ describe("markdown-format", () => {
     ["인용 안의 제목", "> ## 제목"],
     ["목록 항목 안의 코드 펜스", ["- 항목", "", "  ```", "  code", "  ```"].join("\n")],
     ["javascript 링크", "[x](javascript:alert(1))"],
+    ["각주", ["글[^1]", "", "[^1]: 설명"].join("\n")],
+    ["할 일 목록", "- [ ] 할 일"],
+    ["링크 참조 정의", ["글", "", "[r]: https://a.com"].join("\n")],
+    ["목록 항목 안 두 번째 문단", ["- a", "", "  b"].join("\n")],
   ];
 
   it.each(outOfDefinitionCases)(
@@ -218,6 +222,7 @@ describe("markdown-callout", () => {
       name: "콜아웃 안의 코드 펜스",
       markdown: [":::callout", "```ts", "code", "```", ":::"].join("\n"),
     },
+    { name: "callout이 아닌 컨테이너 이름", markdown: [":::note", "글", ":::"].join("\n") },
   ];
 
   it.each(calloutBoundaryCases)(
@@ -433,5 +438,149 @@ describe("markdown-convert", () => {
     expect(result.messages).toEqual([
       '블록 1 (1줄): 제목은 ##·###만 쓴다(받음: "# 제목") → "## 제목"',
     ]);
+  });
+});
+
+// ── 리뷰 재현 — 조용히 사라지거나 바뀌지 않는다 ─────────────────────────
+
+type ParagraphNode = Extract<Block, { type: "paragraph" }>;
+type CalloutNode = Extract<Block, { type: "callout" }>;
+type CodeBlockNode = Extract<Block, { type: "codeBlock" }>;
+
+describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () => {
+  const preservationCases: Array<{ name: string; markdown: string; check: (doc: Doc) => void }> = [
+    {
+      name: "링크 글자 안 code 마크가 살아남는다",
+      markdown: "[`x`](https://a.com)",
+      check: (doc) => {
+        const paragraph = doc.content[0] as ParagraphNode | undefined;
+        if (paragraph?.type !== "paragraph") throw new Error("paragraph가 아니다");
+        const text = paragraph.content?.[0];
+        if (text?.type !== "text") throw new Error("text가 아니다");
+        expect(text.text).toBe("x");
+        expect(text.marks).toEqual([
+          { type: "code" },
+          { type: "link", attrs: { href: "https://a.com" } },
+        ]);
+      },
+    },
+    {
+      name: "굵게 안 code 마크가 살아남는다",
+      markdown: "**a `x` b**",
+      check: (doc) => {
+        const paragraph = doc.content[0] as ParagraphNode | undefined;
+        if (paragraph?.type !== "paragraph") throw new Error("paragraph가 아니다");
+        const text = paragraph.content?.[1];
+        if (text?.type !== "text") throw new Error("text가 아니다");
+        expect(text.text).toBe("x");
+        expect(text.marks).toEqual([{ type: "bold" }, { type: "code" }]);
+      },
+    },
+    {
+      name: "frame=app 뒤 motion이 attrs에서 사라지지 않는다",
+      markdown: ["{frame=app motion=fade-up width=60}", "![캡션](/images/a.png)"].join("\n"),
+      check: (doc) => {
+        expect(doc.content[0]).toEqual({
+          type: "appScreenshot",
+          attrs: { src: "/images/a.png", caption: "캡션", motion: "fade-up", width: 60 },
+        });
+      },
+    },
+    {
+      name: "CRLF 지시어 줄도 다음 문단에 attrs로 붙는다",
+      markdown: "{font=jua}\r\n문단\r\n",
+      check: (doc) => {
+        expect(doc.content).toEqual([
+          { type: "paragraph", attrs: { font: "jua" }, content: [{ type: "text", text: "문단" }] },
+        ]);
+      },
+    },
+    {
+      name: "BOM 뒤 지시어 줄도 다음 문단에 attrs로 붙는다",
+      markdown: "﻿{font=jua}\n문단",
+      check: (doc) => {
+        expect(doc.content).toEqual([
+          { type: "paragraph", attrs: { font: "jua" }, content: [{ type: "text", text: "문단" }] },
+        ]);
+      },
+    },
+    {
+      name: "콜아웃의 CRLF 닫는 줄도 닫힘으로 인식된다",
+      markdown: ":::callout\r\n글\r\n:::\r\n",
+      check: (doc) => {
+        const callout = doc.content[0] as CalloutNode | undefined;
+        if (callout?.type !== "callout") throw new Error("callout이 아니다");
+        expect(callout.attrs.tone).toBe("note");
+        expect(callout.content.map((node) => node.type)).toEqual(["paragraph"]);
+      },
+    },
+    {
+      name: "정보 문자열이 있는 펜스 줄은 닫는 줄이 아니다",
+      markdown: ["```", "code", "```js", "{font=jua}", "```", "```"].join("\n"),
+      check: (doc) => {
+        const codeBlocks = doc.content.filter(
+          (node): node is CodeBlockNode => node.type === "codeBlock",
+        );
+        const combinedText = codeBlocks
+          .flatMap((block) => block.content ?? [])
+          .map((text) => text.text)
+          .join("\n");
+        expect(combinedText).toContain("{font=jua}");
+      },
+    },
+    {
+      name: "백틱 있는 정보 문자열은 펜스가 아니라 지시어가 살아난다",
+      markdown: ["``` a`b", "{font=jua}", "문단"].join("\n"),
+      check: (doc) => {
+        expect(doc.content).toEqual([
+          { type: "paragraph", content: [{ type: "text", text: "``` a`b" }] },
+          { type: "paragraph", attrs: { font: "jua" }, content: [{ type: "text", text: "문단" }] },
+        ]);
+      },
+    },
+  ];
+
+  it.each(preservationCases)(
+    "WHEN $name 이면 THEN 성공하고 내용이 그대로 남는다",
+    ({ markdown, check }) => {
+      const result = convertMarkdown(markdown);
+      expectOk(result);
+      check(result.doc);
+    },
+  );
+
+  const ruleMessageRejectCases: Array<{ name: string; markdown: string }> = [
+    { name: "제목 안 이미지", markdown: "## ![a](/images/a.png)" },
+    {
+      name: "캡션 120자 초과",
+      markdown: ["{frame=app}", `![${"가".repeat(150)}](/images/a.png)`].join("\n"),
+    },
+    { name: "빈 링크 글자", markdown: "[](https://a.com)" },
+    { name: "문단 없이 시작하는 목록 항목", markdown: "- - a" },
+  ];
+
+  it.each(ruleMessageRejectCases)(
+    "WHEN $name 이면 THEN 조용히 성공하지 않고 규칙 메시지로 거부된다",
+    ({ markdown }) => {
+      const result = convertMarkdown(markdown);
+      expectFail(result);
+      for (const message of result.messages) {
+        expect(message).not.toContain("내부 오류");
+        expect(message).not.toContain("\n");
+        expect(message).toMatch(/^(블록 \d+|문서) \(\d+줄\): .+\(받음: ".*"\) → .+$/);
+      }
+    },
+  );
+
+  it("WHEN 한 문단 안 서로 다른 줄에서 인라인 오류가 나면 THEN 메시지의 줄 번호가 실제 줄을 가리킨다", () => {
+    const markdown = ["첫 줄", "둘째 <b>x</b>", "셋째 [x](javascript:a)"].join("\n");
+    const result = convertMarkdown(markdown);
+    expectFail(result);
+    const lineNumbers = result.messages.map((message) => {
+      const match = /\((\d+)줄\)/.exec(message);
+      if (!match) throw new Error(`메시지에서 줄 번호를 못 찾았다: ${message}`);
+      return Number(match[1]);
+    });
+    expect(lineNumbers).toEqual([2, 2, 3]);
   });
 });
