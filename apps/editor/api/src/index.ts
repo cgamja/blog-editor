@@ -4,3 +4,7 @@ export { ConflictError } from "./store";
 export type { PostStore, PostSummary } from "./store";
 export { createMemoryPostStore } from "./memory-store";
 export { createFilePostStore } from "./file-store";
+export { createMemoryAccountStore } from "./accounts";
+export type { Account, AccountStore } from "./accounts";
+export { hashPassword, verifyPassword } from "./password";
+export type { SessionOptions } from "./session";

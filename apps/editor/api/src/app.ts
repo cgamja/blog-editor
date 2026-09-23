@@ -18,10 +18,12 @@ import {
   PRECONDITION_REQUIRED_MESSAGE,
   SCHEMA_MISMATCH_MESSAGE,
 } from "./messages";
+import { registerSession } from "./session";
+import type { SessionOptions } from "./session";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 
-export interface AppOptions {
+export interface AppOptions extends SessionOptions {
   store: PostStore;
   /** 워크스페이스 설정의 카테고리 목록 — 저장 검증과 공개 응답이 같은 것을 쓴다 */
   categories: readonly [string, ...string[]];
@@ -73,6 +75,8 @@ export function createApp(options: AppOptions): Hono {
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
   const postCss = readPostCss();
   const app = new Hono();
+  // 세션 검사 미들웨어가 글 라우트보다 앞서야 한다
+  registerSession(app, options);
 
   app.get("/api/posts", async (c) => {
     const summaries = (await store.list()).map(({ slug, meta }) => summaryOf(slug, meta));
