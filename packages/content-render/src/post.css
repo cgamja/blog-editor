@@ -158,8 +158,11 @@
   pointer-events: none;
   user-select: none;
 }
-/* 좁은 화면에서는 본문 밖으로 나간 스티커를 안으로 당겨 넣는다 */
+/* 좁은 화면에서는 본문 밖으로 나간 스티커를 안으로 당겨 넣고, 남는 반쪽이 가로 스크롤을 만들지 않게 자른다 */
 @media (max-width: 48rem) {
+  .post-body {
+    overflow-x: clip;
+  }
   .post-sticker {
     left: clamp(0%, calc(var(--x) * 1%), 100%);
     top: clamp(0%, calc(var(--y) * 1%), 100%);
