@@ -302,6 +302,47 @@ describe("markdown-directive", () => {
     ]);
   });
 
+  it("WHEN size 지시어 뒤에 이미지를 쓰면 THEN 원본 크기가 된다", () => {
+    const result = convertMarkdown(
+      ["{frame=app size=1179x1600}", "![화면](/images/s.webp)"].join("\n"),
+    );
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      {
+        type: "appScreenshot",
+        attrs: {
+          src: "/images/s.webp",
+          caption: "화면",
+          naturalWidth: 1179,
+          naturalHeight: 1600,
+        },
+      },
+    ]);
+  });
+
+  it("WHEN 상한 그대로인 size=1600x1600을 쓰면 THEN 원본 크기가 된다", () => {
+    const result = convertMarkdown(["{size=1600x1600}", "![a](/images/a.webp)"].join("\n"));
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      {
+        type: "image",
+        attrs: { src: "/images/a.webp", alt: "a", naturalWidth: 1600, naturalHeight: 1600 },
+      },
+    ]);
+  });
+
+  it.each([
+    ["모양이 틀린 size=1200", ["{size=1200}", "![a](/images/a.webp)"]],
+    ["범위 밖 size=0x10", ["{size=0x10}", "![a](/images/a.webp)"]],
+    ["범위 밖 size=1601x10", ["{size=1601x10}", "![a](/images/a.webp)"]],
+    ["앞자리 0 size=01x10", ["{size=01x10}", "![a](/images/a.webp)"]],
+    ["문단의 size", ["{size=10x10}", "문단"]],
+  ])("WHEN 틀린 size(%s)를 변환하면 THEN 실패하고 메시지에 size가 있다", (_name, lines) => {
+    const result = convertMarkdown(lines.join("\n"));
+    expectFail(result);
+    expect(result.messages.join("\n")).toContain("size");
+  });
+
   const directiveRejectCases: Array<{ name: string; markdown: string; exactMessage?: string }> = [
     { name: "정의 밖 키 stickers", markdown: ["{stickers=heart}", "문단"].join("\n") },
     { name: "정의 밖 키 color", markdown: ["{color=red}", "문단"].join("\n") },

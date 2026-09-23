@@ -78,6 +78,22 @@ describe("html-render", () => {
     expect(html).toContain('alt="&quot;&gt;&lt;img src=x onerror=1&gt;"');
     expect(html).not.toMatch(/<b\b|<img src=x/);
   });
+
+  it("WHEN 원본 크기가 있는 이미지를 렌더하면 THEN img에 width · height가 나오고 --w와 공존한다", () => {
+    const file = docOf({
+      type: "image",
+      attrs: {
+        src: "/images/a.webp",
+        alt: "그림",
+        naturalWidth: 1200,
+        naturalHeight: 800,
+        width: 60,
+      },
+    });
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toBe(
+      `<div class="post-body"><div class="post-block" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="그림" width="1200" height="800" loading="lazy" decoding="async"></figure></div></div>`,
+    );
+  });
 });
 
 // ── render-safety (보호 대상 — 고쳐서 통과시키지 않는다) ─────────────────────
