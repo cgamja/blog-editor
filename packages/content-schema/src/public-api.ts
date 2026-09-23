@@ -19,7 +19,8 @@ export function createPublicPostsResponseSchema(options: {
     category: meta.category,
     // 보호 대상 — 초안은 공개 조회에 나오지 않는다. 필드를 빼지 않고 false를 명시해 사이트도 검사한다
     draft: z.literal(false),
-    image: z.url({ protocol: /^https$/ }).optional(),
+    // 호스트까지 강제한다 — protocol만 보면 `https:foo`도 통과한다
+    image: z.url({ protocol: /^https$/, hostname: z.regexes.domain }).optional(),
     html: z.string().startsWith('<div class="post-body">'),
   });
   return z.strictObject({
