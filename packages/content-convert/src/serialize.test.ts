@@ -140,6 +140,37 @@ describe("serializeMarkdown", () => {
     expect(convertMarkdown(result.markdown).ok).toBe(true);
   });
 
+  it("링크 주소의 &는 글자 그대로 돌아온다", () => {
+    const linked = (value: string, href: string) =>
+      paragraph(text(value, { type: "link", attrs: { href } }));
+    const input = doc(linked("가", "/a&amp;b"), linked("나", "/&#x2F;evil.com"));
+
+    const back = convertMarkdown(serializeMarkdown(input).markdown);
+
+    expect(back).toEqual({ ok: true, doc: normalize(input), messages: [] });
+  });
+
+  it("첫 문단이 빈 항목의 안쪽 목록은 한 단계 위로 올라간다", () => {
+    const input = doc({
+      type: "bulletList",
+      content: [
+        { type: "listItem", content: [paragraph(text("가"))] },
+        { type: "listItem", content: [{ type: "paragraph" }, bulletList("나")] },
+        { type: "listItem", content: [paragraph(text("다"))] },
+      ],
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("- 가\n\n* 나\n\n- 다\n");
+    expect(result.losses).toEqual([{ block: 1, kind: "emptyParagraph", count: 1 }]);
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: doc(bulletList("가"), bulletList("나"), bulletList("다")),
+      messages: [],
+    });
+  });
+
   it("스티커와 빈 문단은 빠지고 목록에 남는다", () => {
     const sticker = { id: "heart", x: 10, y: 10, size: 10, rotate: 0 };
     const input = doc(

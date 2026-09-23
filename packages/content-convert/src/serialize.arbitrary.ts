@@ -54,6 +54,7 @@ const LINK_HREFS = [
   "/x(y)",
   "https://example.com/a_b*c?d=1",
   "mailto:hi@example.com",
+  "/a&amp;b",
 ] as const;
 
 const textArb = fc.string({ unit: fc.constantFrom(...TEXT_UNITS), minLength: 1, maxLength: 6 });
