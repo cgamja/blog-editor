@@ -1,6 +1,6 @@
 import { normalize } from "@blog-editor/content-schema";
 import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
-import { APP_FRAME, DIRECTIVE_KEYS } from "./constants";
+import { APP_FRAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
 import { CALLOUT_CONTAINER_NAME } from "./tokens";
 import { serializeInline, serializePlainLabel } from "./serialize-inline";
 
@@ -158,7 +158,14 @@ function serializeListAmong(
 
 function directiveValue(block: Block, key: (typeof DIRECTIVE_KEYS)[number]): unknown {
   if (key === "frame") return block.type === "appScreenshot" ? APP_FRAME : undefined;
-  return (block.attrs as Record<string, unknown> | undefined)?.[key];
+  const attrs = block.attrs as Record<string, unknown> | undefined;
+  if (key === "size") {
+    const { naturalWidth, naturalHeight } = attrs ?? {};
+    return naturalWidth === undefined || naturalHeight === undefined
+      ? undefined
+      : `${String(naturalWidth)}${SIZE_SEPARATOR}${String(naturalHeight)}`;
+  }
+  return attrs?.[key];
 }
 
 function directiveLine(block: Block): string | undefined {

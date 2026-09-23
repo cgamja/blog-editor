@@ -39,6 +39,8 @@ export interface ResolvedDirective {
   font?: (typeof FONTS)[number];
   motion?: (typeof MOTIONS)[number];
   width?: number;
+  naturalWidth?: number;
+  naturalHeight?: number;
   isAppScreenshot?: boolean;
 }
 

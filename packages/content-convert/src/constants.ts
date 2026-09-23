@@ -20,9 +20,12 @@ export const CONTAINER_LABEL: Record<ContainerKind, string> = {
 };
 
 /** 지시어 키 — 이 순서가 직렬화(serialize.ts)가 지시어 줄에 쓰는 순서다. */
-export const DIRECTIVE_KEYS = ["frame", "font", "motion", "width"] as const;
+export const DIRECTIVE_KEYS = ["frame", "font", "motion", "width", "size"] as const;
 
 export const KNOWN_KEYS: ReadonlySet<string> = new Set(DIRECTIVE_KEYS);
+
+/** `size=<가로>x<세로>`의 가로 · 세로 구분자 — directives.ts(읽기)와 serialize.ts(쓰기)가 같이 쓴다. */
+export const SIZE_SEPARATOR = "x";
 
 /** `frame`의 유일한 값 — 앱 스크린샷(appScreenshot). */
 export const APP_FRAME = "app";

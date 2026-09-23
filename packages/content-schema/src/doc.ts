@@ -35,12 +35,16 @@ export const STICKER_RANGES = {
   rotate: { min: -180, max: 180 },
 } as const;
 
+/** 원본 이미지 픽셀 크기(plan 3-8) — 업로드가 긴 변을 1600px로 줄이므로 그보다 큰 값은 자리가 없다. */
+export const NATURAL_SIZE_RANGE = { min: 1, max: 1600 } as const;
+
 export const ALT_MAX_LENGTH = 200;
 export const CAPTION_MAX_LENGTH = 120;
 
 const intInRange = (min: number, max: number) => z.number().int().min(min).max(max);
 
 const widthSchema = intInRange(WIDTH_RANGE.min, WIDTH_RANGE.max);
+const naturalSizeSchema = intInRange(NATURAL_SIZE_RANGE.min, NATURAL_SIZE_RANGE.max);
 
 /**
  * 호스트 필수 http(s) · mailto:<주소> · `//`로 시작하지 않는 내부 경로만 — 스킴 우회 방지(보호 대상).
@@ -139,21 +143,36 @@ const codeBlockAttrsSchema = z.strictObject({
   stickers: z.array(stickerSchema).optional(),
 });
 
-const imageAttrsSchema = z.strictObject({
-  src: imagePathSchema,
-  alt: z.string().max(ALT_MAX_LENGTH),
-  motion: z.enum(MOTIONS).optional(),
-  width: widthSchema.optional(),
-  stickers: z.array(stickerSchema).optional(),
-});
+/** 한쪽만 있으면 비율을 만들 수 없다 — 원본 크기는 짝으로만 둔다. */
+const hasNaturalSizePair = (attrs: {
+  naturalWidth?: number | undefined;
+  naturalHeight?: number | undefined;
+}) => (attrs.naturalWidth === undefined) === (attrs.naturalHeight === undefined);
+const NATURAL_SIZE_PAIR_MESSAGE = "naturalWidth와 naturalHeight는 함께 쓴다";
 
-const appScreenshotAttrsSchema = z.strictObject({
-  src: imagePathSchema,
-  caption: z.string().max(CAPTION_MAX_LENGTH),
-  motion: z.enum(MOTIONS).optional(),
-  width: widthSchema.optional(),
-  stickers: z.array(stickerSchema).optional(),
-});
+const imageAttrsSchema = z
+  .strictObject({
+    src: imagePathSchema,
+    alt: z.string().max(ALT_MAX_LENGTH),
+    naturalWidth: naturalSizeSchema.optional(),
+    naturalHeight: naturalSizeSchema.optional(),
+    motion: z.enum(MOTIONS).optional(),
+    width: widthSchema.optional(),
+    stickers: z.array(stickerSchema).optional(),
+  })
+  .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
+
+const appScreenshotAttrsSchema = z
+  .strictObject({
+    src: imagePathSchema,
+    caption: z.string().max(CAPTION_MAX_LENGTH),
+    naturalWidth: naturalSizeSchema.optional(),
+    naturalHeight: naturalSizeSchema.optional(),
+    motion: z.enum(MOTIONS).optional(),
+    width: widthSchema.optional(),
+    stickers: z.array(stickerSchema).optional(),
+  })
+  .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
 
 // ── 4. 안쪽 노드 — 꾸미기 자리가 없다(blockquote/callout/listItem 안의 paragraph/list) ──
 

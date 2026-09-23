@@ -1,5 +1,11 @@
-import { CAPTION_MAX_LENGTH, FONTS, MOTIONS, WIDTH_RANGE } from "@blog-editor/content-schema";
-import { APP_FRAME, KNOWN_KEYS } from "./constants";
+import {
+  CAPTION_MAX_LENGTH,
+  FONTS,
+  MOTIONS,
+  NATURAL_SIZE_RANGE,
+  WIDTH_RANGE,
+} from "@blog-editor/content-schema";
+import { APP_FRAME, KNOWN_KEYS, SIZE_SEPARATOR } from "./constants";
 import { computeFenceMask } from "./fence";
 import {
   blockMessage,
@@ -14,6 +20,7 @@ import {
   DIRECTIVE_MOTION_VALUE_FIX,
   DIRECTIVE_UNKNOWN_KEY_FIX,
   DIRECTIVE_WIDTH_VALUE_FIX,
+  DIRECTIVE_SIZE_VALUE_FIX,
   DIRECTIVE_FONT_VALUE_FIX,
   directiveCaptionLengthRule,
   directiveFontValueRule,
@@ -25,6 +32,7 @@ import {
   directiveRepeatedMessage,
   directiveUnknownKeyRule,
   directiveWidthValueRule,
+  directiveSizeValueRule,
   footnoteDefinitionMessage,
   type FoundMessage,
 } from "./message";
@@ -52,13 +60,19 @@ const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
   callout: new Set(["font", "motion"]),
   codeBlock: new Set(["motion"]),
   horizontalRule: new Set(["motion"]),
-  image: new Set(["motion", "width", "frame"]),
+  image: new Set(["motion", "width", "size", "frame"]),
 };
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
 // CLEAN_LINE을 먼저 보므로 여기 걸리는 줄은 늘 접두사가 있다. `>` 앞 공백 · 뒤 여러 칸도 CommonMark 인용이다.
 const PREFIXED_LINE = /^(?:[ \t]*>)*[ \t]*\{([^{}]+)\}[ \t]*$/;
 const PAIR = /^[^\s{}=]+=[^\s{}]+$/;
+// 앞자리 0 없는 양의 정수 둘 — 범위는 NATURAL_SIZE_RANGE로 따로 본다
+const SIZE_VALUE = new RegExp(`^([1-9]\\d*)${SIZE_SEPARATOR}([1-9]\\d*)$`);
+
+function isNaturalSize(n: number): boolean {
+  return n >= NATURAL_SIZE_RANGE.min && n <= NATURAL_SIZE_RANGE.max;
+}
 const FOOTNOTE_DEFINITION_LINE = /^ {0,3}\[\^([^\]]+)\]:/;
 
 function isDirectiveBody(body: string): boolean {
@@ -216,6 +230,22 @@ function validateDirective(
           });
         } else {
           resolved.width = n;
+        }
+        break;
+      }
+      case "size": {
+        const match = SIZE_VALUE.exec(value);
+        const w = match ? Number(match[1]) : NaN;
+        const h = match ? Number(match[2]) : NaN;
+        if (!isNaturalSize(w) || !isNaturalSize(h)) {
+          issues.push({
+            rule: directiveSizeValueRule(),
+            received: value,
+            fix: DIRECTIVE_SIZE_VALUE_FIX,
+          });
+        } else {
+          resolved.naturalWidth = w;
+          resolved.naturalHeight = h;
         }
         break;
       }
