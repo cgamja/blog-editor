@@ -8,7 +8,19 @@ export {
 } from "./meta";
 export type { PostMeta, PostSource } from "./meta";
 
-export { docSchema } from "./doc";
+export {
+  docSchema,
+  hrefSchema,
+  markSchema,
+  FONTS,
+  MOTIONS,
+  STICKER_IDS,
+  CALLOUT_TONES,
+  HEADING_LEVELS,
+  MAX_STICKERS_PER_DOC,
+  WIDTH_RANGE,
+  STICKER_RANGES,
+} from "./doc";
 export type { Doc, Block, Mark, TextNode, DecorationAttrs, Sticker } from "./doc";
 
 export { createPostFileSchema, migrations, migrate, MigrationError } from "./post-file";
