@@ -67,13 +67,13 @@ const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
 // CLEAN_LINE을 먼저 보므로 여기 걸리는 줄은 늘 접두사가 있다. `>` 앞 공백 · 뒤 여러 칸도 CommonMark 인용이다.
 const PREFIXED_LINE = /^(?:[ \t]*>)*[ \t]*\{([^{}]+)\}[ \t]*$/;
 const PAIR = /^[^\s{}=]+=[^\s{}]+$/;
-// 앞자리 0 없는 양의 정수 둘 — 범위는 NATURAL_SIZE_RANGE로 따로 본다
+// 범위는 NATURAL_SIZE_RANGE 한 곳에서 본다 — 정규식에 상한을 박으면 상수와 어긋난다
 const SIZE_VALUE = new RegExp(`^([1-9]\\d*)${SIZE_SEPARATOR}([1-9]\\d*)$`);
+const FOOTNOTE_DEFINITION_LINE = /^ {0,3}\[\^([^\]]+)\]:/;
 
 function isNaturalSize(n: number): boolean {
   return n >= NATURAL_SIZE_RANGE.min && n <= NATURAL_SIZE_RANGE.max;
 }
-const FOOTNOTE_DEFINITION_LINE = /^ {0,3}\[\^([^\]]+)\]:/;
 
 function isDirectiveBody(body: string): boolean {
   const tokens = body.trim().split(/\s+/);
@@ -235,9 +235,10 @@ function validateDirective(
       }
       case "size": {
         const match = SIZE_VALUE.exec(value);
-        const w = match ? Number(match[1]) : NaN;
-        const h = match ? Number(match[2]) : NaN;
-        if (!isNaturalSize(w) || !isNaturalSize(h)) {
+        const w = Number(match?.[1]);
+        const h = Number(match?.[2]);
+        const isValidSize = match !== null && isNaturalSize(w) && isNaturalSize(h);
+        if (!isValidSize) {
           issues.push({
             rule: directiveSizeValueRule(),
             received: value,
