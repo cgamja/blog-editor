@@ -8,7 +8,7 @@
 
 ### Requirement: 콜아웃은 `:::callout` 컨테이너다
 
-변환은 SHALL `:::callout tone=<note|tip|warning>` 줄로 열고 `:::` 줄로 닫는 최상위 컨테이너를 `callout` 노드로 만든다. `tone` 생략 = `note`. 안에는 문단 · 목록만 온다(document-schema의 callout 내용 규칙). 스파이크 #2가 실패하면 ` ```callout ` 펜스로 바꾸고 이 요구를 수정한다.
+변환은 SHALL `:::callout tone=<note|tip|warning>` 줄로 열고 `:::` 줄로 닫는 최상위 컨테이너를 `callout` 노드로 만든다. `tone` 생략 = `note`. 안에는 문단 · 목록만 온다(document-schema의 callout 내용 규칙). 파서는 markdown-it-container로 확인했다(스파이크 #2, 2026-09-23). prosemirror-markdown은 스키마에 안 맞는 토큰을 오류 없이 버리므로 아래 경계 검사는 토큰 단계에서 한다.
 
 #### Scenario: 컨테이너가 tone을 가진 callout이 된다
 
