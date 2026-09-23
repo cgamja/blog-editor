@@ -15,6 +15,10 @@ import { BLOG_CATEGORIES } from "./test-helpers";
 
 const schema = createPostFileSchema({ categories: BLOG_CATEGORIES });
 
+function isSamePath(actual: readonly PropertyKey[], expected: readonly (string | number)[]) {
+  return actual.length === expected.length && expected.every((seg, i) => actual[i] === seg);
+}
+
 const ALL_NODE_TYPES = [
   "paragraph",
   "heading",
@@ -88,9 +92,8 @@ describe("document-fixtures — 잘못된 문서 픽스처는 이유와 함께 �
       expect(result.success).toBe(false);
       if (result.success) continue;
       const at = fixture.at;
-      expect(result.error.issues.some((issue) => at.every((seg, i) => issue.path[i] === seg))).toBe(
-        true,
-      );
+      // 접두어 일치면 스티커 상한 refine 대신 다른 원인(예: size 범위)으로 실패해도 초록이 된다 — 정확 일치
+      expect(result.error.issues.some((issue) => isSamePath(issue.path, at))).toBe(true);
     }
   });
 });
