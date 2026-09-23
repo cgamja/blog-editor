@@ -1,7 +1,9 @@
+import { naturalSizeOf } from "@blog-editor/content-schema";
 import type {
   Block,
   HEADING_LEVELS,
   Mark,
+  NaturalSizeAttrs,
   PostFile,
   Sticker,
   TextNode,
@@ -103,21 +105,15 @@ function renderCodeBlock(
   return `<pre>${tag("code", languageAttr, text)}</pre>`;
 }
 
-/** 원본 픽셀 크기 — 스키마가 짝으로만 둔다(document-schema). */
-interface NaturalSize {
-  naturalWidth?: number | undefined;
-  naturalHeight?: number | undefined;
-}
-
 function renderImageFigure(
-  attrs: { src: string; alt: string } & NaturalSize,
+  attrs: { src: string; alt: string } & NaturalSizeAttrs,
   ctx: RenderContext,
 ): string {
   return tag("figure", ' class="post-image"', renderImg(attrs.src, attrs.alt, attrs, ctx));
 }
 
 function renderScreenshotFigure(
-  attrs: { src: string; caption: string } & NaturalSize,
+  attrs: { src: string; caption: string } & NaturalSizeAttrs,
   ctx: RenderContext,
 ): string {
   const img = renderImg(attrs.src, "", attrs, ctx);
@@ -129,11 +125,9 @@ function renderScreenshotFigure(
  * 크기가 있으면 width · height를 낸다 — 본문용 CSS가 `width: 100%; height: auto`로 그리므로
  * 크기를 고정하지 않고 이미지가 오기 전에 비율 자리만 잡는다(레이아웃 밀림 방지, html-render).
  */
-function renderImg(src: string, alt: string, size: NaturalSize, ctx: RenderContext): string {
-  const sizeAttrs =
-    size.naturalWidth !== undefined && size.naturalHeight !== undefined
-      ? ` width="${size.naturalWidth}" height="${size.naturalHeight}"`
-      : "";
+function renderImg(src: string, alt: string, attrs: NaturalSizeAttrs, ctx: RenderContext): string {
+  const size = naturalSizeOf(attrs);
+  const sizeAttrs = size === null ? "" : ` width="${size.width}" height="${size.height}"`;
   return `<img src="${ctx.imageBaseUrl}${escapeHtml(src)}" alt="${escapeHtml(alt)}"${sizeAttrs} loading="lazy" decoding="async">`;
 }
 

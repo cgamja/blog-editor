@@ -1,3 +1,4 @@
+import { naturalSizeOf } from "@blog-editor/content-schema";
 import { MarkdownParser } from "prosemirror-markdown";
 import { parseCalloutTone } from "./check";
 import { DEFAULT_CALLOUT_TONE } from "./constants";
@@ -70,7 +71,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
         caption: alt,
         ...(directive.motion !== undefined ? { motion: directive.motion } : {}),
         ...(directive.width !== undefined ? { width: directive.width } : {}),
-        ...naturalSizeOf(directive),
+        ...naturalSizeAttrs(directive),
       },
     };
   }
@@ -81,15 +82,14 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
       alt,
       ...(directive?.motion !== undefined ? { motion: directive.motion } : {}),
       ...(directive?.width !== undefined ? { width: directive.width } : {}),
-      ...naturalSizeOf(directive),
+      ...naturalSizeAttrs(directive),
     },
   };
 }
 
-/** size 지시어는 두 값을 함께 채운다(directives.ts) — 한쪽만 옮기는 경로는 없다. */
-function naturalSizeOf(directive: ResolvedDirective | undefined): Record<string, number> {
-  if (directive?.naturalWidth === undefined || directive.naturalHeight === undefined) return {};
-  return { naturalWidth: directive.naturalWidth, naturalHeight: directive.naturalHeight };
+function naturalSizeAttrs(directive: ResolvedDirective | undefined): Record<string, number> {
+  const size = naturalSizeOf(directive ?? {});
+  return size === null ? {} : { naturalWidth: size.width, naturalHeight: size.height };
 }
 
 function withDecoration(block: RawNode, directive: ResolvedDirective | undefined): RawNode {

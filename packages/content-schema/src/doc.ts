@@ -143,12 +143,25 @@ const codeBlockAttrsSchema = z.strictObject({
   stickers: z.array(stickerSchema).optional(),
 });
 
-/** 한쪽만 있으면 비율을 만들 수 없다 — 원본 크기는 짝으로만 둔다. */
-const hasNaturalSizePair = (attrs: {
+export interface NaturalSizeAttrs {
   naturalWidth?: number | undefined;
   naturalHeight?: number | undefined;
-}) => (attrs.naturalWidth === undefined) === (attrs.naturalHeight === undefined);
+}
+
+/** 한쪽만 있으면 비율을 만들 수 없다 — 원본 크기는 짝으로만 둔다. */
+const hasNaturalSizePair = (attrs: NaturalSizeAttrs) =>
+  (attrs.naturalWidth === undefined) === (attrs.naturalHeight === undefined);
 const NATURAL_SIZE_PAIR_MESSAGE = "naturalWidth와 naturalHeight는 함께 쓴다";
+
+/**
+ * 원본 크기를 읽는 유일한 길 — 변환 · 직렬화 · 렌더가 짝 규칙을 각자 다시 적지 않게 한다.
+ * @returns 둘 다 있으면 `{ width, height }`, 아니면 `null`
+ */
+export function naturalSizeOf(attrs: NaturalSizeAttrs): { width: number; height: number } | null {
+  const { naturalWidth, naturalHeight } = attrs;
+  if (naturalWidth === undefined || naturalHeight === undefined) return null;
+  return { width: naturalWidth, height: naturalHeight };
+}
 
 const imageAttrsSchema = z
   .strictObject({
