@@ -1,5 +1,6 @@
 import type { PostFile } from "./post-file";
 import { minimal, allBlocks, decorationMax } from "./fixtures.posts";
+import { MAX_STICKERS_PER_DOC } from "./doc";
 
 /** render · convert · API · 사이트 · Lighthouse 기준선이 같이 쓰는 대표 문서 3개(spec: document-fixtures). */
 export type Fixtures = {
@@ -8,7 +9,13 @@ export type Fixtures = {
   decorationMax: PostFile;
 };
 
-export type InvalidFixture = { name: string; file: unknown; reason: string };
+/** at — 기대 실패 위치. zod issue path 배열(접두어로 일치) 또는 migrate가 던지는 경우 "migrate". */
+export type InvalidFixture = {
+  name: string;
+  file: unknown;
+  reason: string;
+  at: readonly (string | number)[] | "migrate";
+};
 
 export const fixtures: Fixtures = { minimal, allBlocks, decorationMax };
 
@@ -54,12 +61,12 @@ const unknownAttrFixture = cloneMinimal();
   block.attrs = { color: "red" };
 }
 
-// too-many-stickers — 문서 전체 스티커 합계가 13개(상한 12 초과).
+// too-many-stickers — 문서 전체 스티커 합계가 상한을 하나 넘는다.
 const tooManyStickersFixture = cloneMinimal();
 {
   const block = firstBlock(tooManyStickersFixture);
   block.attrs = {
-    stickers: Array.from({ length: 13 }, () => ({
+    stickers: Array.from({ length: MAX_STICKERS_PER_DOC + 1 }, () => ({
       id: "star-coral",
       x: 0,
       y: 0,
@@ -78,25 +85,30 @@ export const invalidFixtures: ReadonlyArray<InvalidFixture> = [
     name: "javascript-link",
     file: javascriptLinkFixture,
     reason: "javascript-link",
+    at: ["doc", "content", 0, "content", 0, "marks", 0, "attrs", "href"],
   },
   {
     name: "absolute-image",
     file: absoluteImageFixture,
     reason: "absolute-image",
+    at: ["doc", "content", 1, "attrs", "src"],
   },
   {
     name: "unknown-attr",
     file: unknownAttrFixture,
     reason: "unknown-attr",
+    at: ["doc", "content", 0, "attrs"],
   },
   {
     name: "too-many-stickers",
     file: tooManyStickersFixture,
     reason: "too-many-stickers",
+    at: ["doc", "content"],
   },
   {
     name: "future-version",
     file: futureVersionFixture,
     reason: "future-version",
+    at: "migrate",
   },
 ];

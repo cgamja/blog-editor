@@ -35,14 +35,24 @@ export const STICKER_RANGES = {
   rotate: { min: -180, max: 180 },
 } as const;
 
+export const ALT_MAX_LENGTH = 200;
+export const CAPTION_MAX_LENGTH = 120;
+
 const intInRange = (min: number, max: number) => z.number().int().min(min).max(max);
 
 const widthSchema = intInRange(WIDTH_RANGE.min, WIDTH_RANGE.max);
 
-/** 호스트 필수 http(s) · mailto:<주소> · `//`로 시작하지 않는 내부 경로만 — 스킴 우회 방지(보호 대상). */
-const HREF_HTTP_PATTERN = /^https?:\/\/[^\s/?#]+[^\s]*$/;
-const HREF_MAILTO_PATTERN = /^mailto:[^\s@]+@[^\s@]+$/;
-const HREF_INTERNAL_PATH_PATTERN = /^\/(?!\/)[^\s]*$/;
+/**
+ * 호스트 필수 http(s) · mailto:<주소> · `//`로 시작하지 않는 내부 경로만 — 스킴 우회 방지(보호 대상).
+ * 백슬래시와 C0 제어 문자는 어디에도 못 온다 — WHATWG URL 파서가 특수 스킴에서 `\`를 `/`로 읽어
+ * `/\evil.com`이 외부로 나가고, 제어 문자는 스킴 검사를 우회하는 데 쓰일 수 있다.
+ */
+// eslint-disable-next-line no-control-regex -- \x00-\x1f/\x7f는 의도적으로 막는 대상이다(위 설명).
+const HREF_HTTP_PATTERN = /^https?:\/\/[^\s\\\x00-\x1f\x7f/?#]+[^\s\\\x00-\x1f\x7f]*$/;
+// eslint-disable-next-line no-control-regex -- 위와 같은 이유.
+const HREF_MAILTO_PATTERN = /^mailto:[^\s\\\x00-\x1f\x7f@]+@[^\s\\\x00-\x1f\x7f@]+$/;
+// eslint-disable-next-line no-control-regex -- 위와 같은 이유.
+const HREF_INTERNAL_PATH_PATTERN = /^\/(?![/\\])[^\s\\\x00-\x1f\x7f]*$/;
 
 export const hrefSchema = z
   .string()
@@ -66,11 +76,18 @@ export const markSchema = z.union([
   z.strictObject({ type: z.literal("link"), attrs: z.strictObject({ href: hrefSchema }) }),
 ]);
 
+/** ProseMirror 마크 집합 규칙과 같다 — 한 텍스트에 같은 type이 두 번 올 수 없다. */
+const marksArraySchema = z
+  .array(markSchema)
+  .refine((marks) => new Set(marks.map((mark) => mark.type)).size === marks.length, {
+    message: "마크 type 중복",
+  });
+
 /** 최상위 인라인 텍스트 — bold/italic/code/link 마크만. */
 const textSchema = z.strictObject({
   type: z.literal("text"),
   text: z.string().min(1),
-  marks: z.array(markSchema).optional(),
+  marks: marksArraySchema.optional(),
 });
 
 /** codeBlock 안 텍스트 — "마크 없는 text"라 marks 자리 자체가 없다. */
@@ -124,7 +141,7 @@ const codeBlockAttrsSchema = z.strictObject({
 
 const imageAttrsSchema = z.strictObject({
   src: imagePathSchema,
-  alt: z.string().max(200),
+  alt: z.string().max(ALT_MAX_LENGTH),
   motion: z.enum(MOTIONS).optional(),
   width: widthSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
@@ -132,31 +149,77 @@ const imageAttrsSchema = z.strictObject({
 
 const appScreenshotAttrsSchema = z.strictObject({
   src: imagePathSchema,
-  caption: z.string().max(120),
+  caption: z.string().max(CAPTION_MAX_LENGTH),
   motion: z.enum(MOTIONS).optional(),
   width: widthSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
-// ── 4. 안쪽 노드 — 꾸미기 자리가 없다(blockquote/callout/listItem 안의 paragraph) ──
+// ── 4. 안쪽 노드 — 꾸미기 자리가 없다(blockquote/callout/listItem 안의 paragraph/list) ──
 
 const innerParagraphSchema = z.strictObject({
   type: z.literal("paragraph"),
-  content: z.array(textSchema),
+  content: z.array(textSchema).optional(),
 });
+
+type InnerParagraphNode = z.infer<typeof innerParagraphSchema>;
+
+interface ListItemNode {
+  type: "listItem";
+  content: [InnerParagraphNode, ...InnerListNode[]];
+}
+interface InnerBulletListNode {
+  type: "bulletList";
+  content: ListItemNode[];
+}
+interface InnerOrderedListNode {
+  type: "orderedList";
+  content: ListItemNode[];
+}
+type InnerListNode = InnerBulletListNode | InnerOrderedListNode;
+
+/**
+ * listItem ↔ 안쪽 list(bulletList/orderedList) 상호 재귀 — z.lazy로 순환을 끊는다.
+ * 안쪽 리스트에는 attrs 자리가 없다(꾸미기는 doc.content 바로 아래 최상위 블록에만, 스티커 상한이
+ * 안쪽 노드로 우회되지 않게 — decoration-schema).
+ */
+const listItemSchema: z.ZodType<ListItemNode> = z.lazy(() =>
+  z.strictObject({
+    type: z.literal("listItem"),
+    content: z.tuple([innerParagraphSchema], innerListSchema),
+  }),
+);
+
+const innerBulletListSchema: z.ZodType<InnerBulletListNode> = z.lazy(() =>
+  z.strictObject({
+    type: z.literal("bulletList"),
+    content: z.array(listItemSchema).min(1),
+  }),
+);
+
+const innerOrderedListSchema: z.ZodType<InnerOrderedListNode> = z.lazy(() =>
+  z.strictObject({
+    type: z.literal("orderedList"),
+    content: z.array(listItemSchema).min(1),
+  }),
+);
+
+const innerListSchema: z.ZodType<InnerListNode> = z.lazy(() =>
+  z.union([innerBulletListSchema, innerOrderedListSchema]),
+);
 
 // ── 5. 최상위 블록 ─────────────────────────────────────────────────────
 
 const paragraphSchema = z.strictObject({
   type: z.literal("paragraph"),
   attrs: textDecorationAttrsSchema.optional(),
-  content: z.array(textSchema),
+  content: z.array(textSchema).optional(),
 });
 
 const headingSchema = z.strictObject({
   type: z.literal("heading"),
   attrs: headingAttrsSchema,
-  content: z.array(textSchema),
+  content: z.array(textSchema).optional(),
 });
 
 const blockquoteSchema = z.strictObject({
@@ -168,7 +231,7 @@ const blockquoteSchema = z.strictObject({
 const codeBlockSchema = z.strictObject({
   type: z.literal("codeBlock"),
   attrs: codeBlockAttrsSchema.optional(),
-  content: z.array(codeBlockTextSchema),
+  content: z.array(codeBlockTextSchema).optional(),
 });
 
 const horizontalRuleSchema = z.strictObject({
@@ -186,37 +249,25 @@ const appScreenshotSchema = z.strictObject({
   attrs: appScreenshotAttrsSchema,
 });
 
-/** listItem ↔ list(bulletList/orderedList) 상호 재귀 — z.lazy로 순환을 끊는다. */
-const bulletListSchema: z.ZodType = z.lazy(() =>
-  z.strictObject({
-    type: z.literal("bulletList"),
-    attrs: textDecorationAttrsSchema.optional(),
-    content: z.array(listItemSchema).min(1),
-  }),
-);
+/** doc.content에 바로 있을 때만 attrs(꾸미기)가 있다 — listItem/callout 안 리스트는 innerBulletList/innerOrderedList를 쓴다. */
+const bulletListSchema = z.strictObject({
+  type: z.literal("bulletList"),
+  attrs: textDecorationAttrsSchema.optional(),
+  content: z.array(listItemSchema).min(1),
+});
 
-const orderedListSchema: z.ZodType = z.lazy(() =>
-  z.strictObject({
-    type: z.literal("orderedList"),
-    attrs: textDecorationAttrsSchema.optional(),
-    content: z.array(listItemSchema).min(1),
-  }),
-);
-
-const listSchema: z.ZodType = z.lazy(() => z.union([bulletListSchema, orderedListSchema]));
-
-/** listItem에는 attrs 자리가 없다(꾸미기 대상 아님) — content는 paragraph 1개 + list 0개 이상. */
-const listItemSchema: z.ZodType = z.lazy(() =>
-  z.strictObject({
-    type: z.literal("listItem"),
-    content: z.tuple([innerParagraphSchema], listSchema),
-  }),
-);
+const orderedListSchema = z.strictObject({
+  type: z.literal("orderedList"),
+  attrs: textDecorationAttrsSchema.optional(),
+  content: z.array(listItemSchema).min(1),
+});
 
 const calloutSchema = z.strictObject({
   type: z.literal("callout"),
   attrs: calloutAttrsSchema,
-  content: z.array(z.union([innerParagraphSchema, bulletListSchema, orderedListSchema])).min(1),
+  content: z
+    .array(z.union([innerParagraphSchema, innerBulletListSchema, innerOrderedListSchema]))
+    .min(1),
 });
 
 const topLevelBlockSchema = z.union([
@@ -234,6 +285,7 @@ const topLevelBlockSchema = z.union([
 
 // ── 6. doc 루트 + 스티커 합계 12개 refine(보호 대상) ───────────────────────
 
+/** 안쪽 노드에는 attrs 자리가 없으므로 최상위 블록(doc.content)만 합산하면 충분하다. */
 function countStickers(blocks: readonly unknown[]): number {
   return blocks.reduce((sum: number, block) => {
     const attrs = (block as { attrs?: { stickers?: unknown[] } }).attrs;
@@ -262,11 +314,15 @@ export const docSchema = z
 export type Mark = z.infer<typeof markSchema>;
 export type TextNode = z.infer<typeof textSchema>;
 export type Sticker = z.infer<typeof stickerSchema>;
-export type DecorationAttrs = {
-  font?: (typeof FONTS)[number];
-  motion?: (typeof MOTIONS)[number];
-  width?: number;
-  stickers?: Sticker[];
-};
+/**
+ * 꾸미기 속성의 합집합 타입 — 실제 노드는 각자의 좁은 attrs 스키마를 쓴다(font는 글자 블록만,
+ * width는 image/appScreenshot만). 상수·스키마에서 파생하므로 FONTS/MOTIONS/범위가 바뀌면 따라온다.
+ */
+export type DecorationAttrs = Partial<{
+  font: (typeof FONTS)[number];
+  motion: (typeof MOTIONS)[number];
+  width: z.infer<typeof widthSchema>;
+  stickers: Sticker[];
+}>;
 export type Block = z.infer<typeof topLevelBlockSchema>;
 export type Doc = z.infer<typeof docSchema>;

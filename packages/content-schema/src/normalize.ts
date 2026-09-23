@@ -4,7 +4,6 @@ import type { Doc, Mark } from "./doc";
 type Node = Record<string, unknown>;
 
 const KEY_ORDER = ["type", "attrs", "content", "marks", "text"] as const;
-const MARK_ORDER: Record<string, number> = { bold: 0, code: 1, italic: 2, link: 3 };
 
 /** 값이 undefined인 키를 지우고, 정해진 순서로만 담은 새 객체를 만든다(spec 키 순서 ③). */
 function orderKeys(fields: Partial<Record<(typeof KEY_ORDER)[number], unknown>>): Node {
@@ -15,7 +14,6 @@ function orderKeys(fields: Partial<Record<(typeof KEY_ORDER)[number], unknown>>)
   return ordered;
 }
 
-/** 객체 키를 사전순으로 정렬한 새 객체 — undefined 값 키는 지운다. */
 function sortObjectKeys(obj: Node): Node {
   const sorted: Node = {};
   for (const key of Object.keys(obj).sort()) {
@@ -24,7 +22,7 @@ function sortObjectKeys(obj: Node): Node {
   return sorted;
 }
 
-/** attrs 안 키를 사전순 정렬하고, stickers[] 항목도 키를 정렬한다. 빈 객체는 undefined(키 삭제). */
+/** attrs: {}는 키 자체를 지운다(spec ③) — stickers[] 항목도 재귀적으로 키를 정렬한다. */
 function normalizeAttrs(attrs: unknown): Node | undefined {
   if (typeof attrs !== "object" || attrs === null) return undefined;
   const source = attrs as Node;
@@ -41,7 +39,6 @@ function normalizeAttrs(attrs: unknown): Node | undefined {
   return Object.keys(sorted).length === 0 ? undefined : sorted;
 }
 
-/** 마크 하나의 키 순서(type · attrs)를 맞춘다. */
 function normalizeMark(mark: Node): Node {
   return orderKeys({ type: mark.type, attrs: normalizeAttrs(mark.attrs) });
 }
@@ -50,10 +47,13 @@ function normalizeMark(mark: Node): Node {
 function sortMarks(marks: unknown): Mark[] | undefined {
   if (!Array.isArray(marks) || marks.length === 0) return undefined;
   const normalized = (marks as Node[]).map(normalizeMark);
-  // markSchema가 이미 네 종류로 닫혀 있어 실제로는 항상 찾는다 — noUncheckedIndexedAccess 때문에
-  // 타입상으로만 기본값 0이 필요하다.
-  const rank = (m: Node) => MARK_ORDER[m.type as string] ?? 0;
-  normalized.sort((a, b) => rank(a) - rank(b));
+  // 정규형의 정렬 기준은 type 문자열의 코드 포인트 순(로케일 무관) — spec ①
+  normalized.sort((a, b) => {
+    const left = a.type as string;
+    const right = b.type as string;
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  });
   return normalized as unknown as Mark[];
 }
 
@@ -65,14 +65,16 @@ function marksEqual(a: unknown, b: unknown): boolean {
 function mergeAdjacentText(nodes: Node[]): Node[] {
   const merged: Node[] = [];
   for (const node of nodes) {
-    const prev = merged.at(-1);
+    const prevIndex = merged.length - 1;
+    const prev = merged[prevIndex];
     if (
       prev !== undefined &&
       prev.type === "text" &&
       node.type === "text" &&
       marksEqual(prev.marks, node.marks)
     ) {
-      prev.text = `${prev.text as string}${node.text as string}`;
+      // prev는 이미 merged에 들어간 객체라 직접 고치지 않고 새 객체로 바꿔 끼운다(입력 불변 계약).
+      merged[prevIndex] = { ...prev, text: `${prev.text as string}${node.text as string}` };
       continue;
     }
     merged.push(node);
@@ -81,9 +83,12 @@ function mergeAdjacentText(nodes: Node[]): Node[] {
 }
 
 function normalizeNode(node: Node): Node {
-  const content = Array.isArray(node.content)
+  const mergedContent = Array.isArray(node.content)
     ? mergeAdjacentText((node.content as Node[]).map((child) => normalizeNode(child)))
     : undefined;
+  // content: []는 키 자체를 지운다(spec ④) — ProseMirror toJSON과 같은 모양이 정규형이다.
+  const content =
+    mergedContent !== undefined && mergedContent.length > 0 ? mergedContent : undefined;
 
   return orderKeys({
     type: node.type,
@@ -96,7 +101,7 @@ function normalizeNode(node: Node): Node {
 
 /**
  * 문서를 정규형으로 만든다(spec: document-normalize) — 마크 사전순 · 인접 텍스트 병합 ·
- * 키 순서 고정 · 빈 marks/attrs 삭제. 입력은 바꾸지 않고(재귀 내내 새 객체만 만든다) 항상 새
+ * 키 순서 고정 · 빈 marks/attrs/content 삭제. 입력은 바꾸지 않고(재귀 내내 새 객체만 만든다) 항상 새
  * 객체를 돌려준다. 노드 종류 · 개수 · 텍스트 내용은 바뀌지 않는다.
  */
 export function normalize(doc: Doc): Doc {

@@ -20,6 +20,8 @@ export {
   MAX_STICKERS_PER_DOC,
   WIDTH_RANGE,
   STICKER_RANGES,
+  ALT_MAX_LENGTH,
+  CAPTION_MAX_LENGTH,
 } from "./doc";
 export type { Doc, Block, Mark, TextNode, DecorationAttrs, Sticker } from "./doc";
 
