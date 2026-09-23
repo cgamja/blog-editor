@@ -210,6 +210,8 @@ export const allBlocks = {
         type: "image",
         attrs: {
           src: "/images/parenting-assistant-dashboard.webp",
+          naturalWidth: 1600,
+          naturalHeight: 1000,
           alt: "육아비서 앱 대시보드에서 아이 성장 기록을 보여주는 화면",
         },
       },
@@ -232,6 +234,8 @@ export const allBlocks = {
         type: "appScreenshot",
         attrs: {
           src: "/images/parenting-assistant-schedule-screen.webp",
+          naturalWidth: 738,
+          naturalHeight: 1600,
           caption: "일정 탭에서 다가오는 예방접종을 확인하는 화면",
         },
       },
@@ -377,6 +381,8 @@ export const decorationMax = {
         type: "image",
         attrs: {
           src: "/images/parenting-assistant-notification-list.webp",
+          naturalWidth: 1600,
+          naturalHeight: 1200,
           alt: "육아비서 앱의 알림 목록 화면",
           motion: "fade-in",
           width: 60,
@@ -390,6 +396,8 @@ export const decorationMax = {
         type: "appScreenshot",
         attrs: {
           src: "/images/parenting-assistant-notification-detail.webp",
+          naturalWidth: 738,
+          naturalHeight: 1600,
           caption: "알림 상세 설정 화면",
           motion: "fade-up",
           width: 80,

@@ -1,5 +1,12 @@
 import fc from "fast-check";
-import { CALLOUT_TONES, FONTS, MOTIONS, WIDTH_RANGE, docSchema } from "@blog-editor/content-schema";
+import {
+  CALLOUT_TONES,
+  FONTS,
+  MOTIONS,
+  NATURAL_SIZE_RANGE,
+  WIDTH_RANGE,
+  docSchema,
+} from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 
 /**
@@ -176,15 +183,29 @@ const horizontalRule = decoration({ font: false, width: false }).map((attrs) =>
 
 const altArb = fc.string({ unit: fc.constantFrom(...TEXT_UNITS), maxLength: 8 });
 
+/** 원본 크기는 짝으로만 있거나 없다 — size 지시어로 왕복한다. */
+const naturalSize = fc
+  .option(
+    fc.tuple(
+      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
+      fc.integer({ min: NATURAL_SIZE_RANGE.min, max: NATURAL_SIZE_RANGE.max }),
+    ),
+    { nil: undefined },
+  )
+  .map((size) => (size === undefined ? {} : { naturalWidth: size[0], naturalHeight: size[1] }));
+
 const image = fc
-  .tuple(altArb, decoration({ font: false, width: true }))
-  .map(([alt, attrs]) => ({ type: "image", attrs: { src: "/images/a-1.webp", alt, ...attrs } }));
+  .tuple(altArb, naturalSize, decoration({ font: false, width: true }))
+  .map(([alt, size, attrs]) => ({
+    type: "image",
+    attrs: { src: "/images/a-1.webp", alt, ...size, ...attrs },
+  }));
 
 const appScreenshot = fc
-  .tuple(altArb, decoration({ font: false, width: true }))
-  .map(([caption, attrs]) => ({
+  .tuple(altArb, naturalSize, decoration({ font: false, width: true }))
+  .map(([caption, size, attrs]) => ({
     type: "appScreenshot",
-    attrs: { src: "/images/shot.png", caption, ...attrs },
+    attrs: { src: "/images/shot.png", caption, ...size, ...attrs },
   }));
 
 const calloutList = fc

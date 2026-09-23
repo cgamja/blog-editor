@@ -13,9 +13,10 @@ import {
   CAPTION_MAX_LENGTH,
   FONTS,
   MOTIONS,
+  NATURAL_SIZE_RANGE,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, APP_FRAME, CONTAINER_LABEL, KNOWN_KEYS } from "./constants";
+import { ALLOWED_IN, APP_FRAME, CONTAINER_LABEL, KNOWN_KEYS, SIZE_SEPARATOR } from "./constants";
 import { CALLOUT_CONTAINER_NAME } from "./tokens";
 import type { ContainerKind, SemanticType } from "./types";
 
@@ -439,6 +440,11 @@ export function directiveWidthValueRule(): string {
   return `width는 %없는 정수 ${WIDTH_RANGE.min}~${WIDTH_RANGE.max}만 쓴다`;
 }
 export const DIRECTIVE_WIDTH_VALUE_FIX = "60";
+
+export function directiveSizeValueRule(): string {
+  return `size는 <가로>${SIZE_SEPARATOR}<세로> 픽셀 정수 ${NATURAL_SIZE_RANGE.min}~${NATURAL_SIZE_RANGE.max}만 쓴다`;
+}
+export const DIRECTIVE_SIZE_VALUE_FIX = `1200${SIZE_SEPARATOR}800`;
 
 export const DIRECTIVE_FRAME_VALUE_RULE = "frame 값은 app만 쓴다";
 export const DIRECTIVE_FRAME_VALUE_FIX = APP_FRAME;

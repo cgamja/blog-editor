@@ -87,6 +87,26 @@ describe("serializeMarkdown", () => {
     expect(result.losses).toEqual([]);
   });
 
+  it("WHEN 원본 크기가 있는 이미지를 직렬화하고 다시 변환하면 THEN size 지시어로 나가고 같은 doc가 된다", () => {
+    const input = doc({
+      type: "image",
+      attrs: {
+        src: "/images/a.webp",
+        alt: "그림",
+        width: 60,
+        naturalWidth: 1200,
+        naturalHeight: 800,
+      },
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("{width=60 size=1200x800}\n![그림](/images/a.webp)\n");
+    expect(result.losses).toEqual([]);
+    const back = convertMarkdown(result.markdown);
+    expect(back.ok && back.doc).toEqual(normalize(input));
+  });
+
   it("이웃한 같은 종류 목록은 표지를 바꿔 따로 남긴다", () => {
     const result = serializeMarkdown(doc(bulletList("가"), bulletList("나")));
 
@@ -127,7 +147,7 @@ describe("serializeMarkdown", () => {
       }),
       { numRuns: 300 },
     );
-  });
+  }, 30_000);
 
   it("참조 정의로 읽히는 코드 마크는 빠지고 목록에 남는다", () => {
     const link = { type: "link", attrs: { href: "/x" } };

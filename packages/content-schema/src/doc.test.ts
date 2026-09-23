@@ -435,3 +435,39 @@ describe("decoration-schema — 스티커는 글 하나에 최대 12개다 (보�
     expect(docSchema.safeParse(docWithStickerCounts(counts)).success).toBe(true);
   });
 });
+
+describe("document-schema — 이미지는 원본 픽셀 크기를 선택으로 가진다", () => {
+  const imageDoc = (attrs: Record<string, unknown>) => ({
+    type: "doc",
+    content: [{ type: "image", attrs: { src: "/images/a.webp", alt: "", ...attrs } }],
+  });
+
+  it("WHEN 크기가 있는 image와 크기 없는 appScreenshot을 파싱하면 THEN success는 true다", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "image",
+          attrs: {
+            src: "/images/a.webp",
+            alt: "",
+            naturalWidth: 1200,
+            naturalHeight: 800,
+            width: 60,
+          },
+        },
+        { type: "appScreenshot", attrs: { src: "/images/s.webp", caption: "" } },
+      ],
+    };
+    expect(docSchema.safeParse(doc).success).toBe(true);
+  });
+
+  it.each([
+    ["naturalWidth만", imageDoc({ naturalWidth: 1200 })],
+    ["naturalWidth: 0", imageDoc({ naturalWidth: 0, naturalHeight: 800 })],
+    ["naturalHeight: 1601", imageDoc({ naturalWidth: 1200, naturalHeight: 1601 })],
+    ["naturalWidth: 10.5", imageDoc({ naturalWidth: 10.5, naturalHeight: 800 })],
+  ])("WHEN %s THEN success는 false다", (_label, input) => {
+    expect(docSchema.safeParse(input).success).toBe(false);
+  });
+});
