@@ -15,7 +15,7 @@
 
 ## 3. Converge
 
-- [x] 3.1 스펙 `#### Scenario` 17개 ↔ 가이드 절 대조 — 시나리오의 입력 문법이 가이드 예시에 전부 있는지, 가이드에만 있는 문법이 없는지 → verify: `pnpm verify` 초록(docs:check 포함)
+- [x] 3.1 스펙 `#### Scenario` 18개 ↔ 가이드 절 대조 — 시나리오의 입력 문법이 가이드 예시에 전부 있는지, 가이드에만 있는 문법이 없는지 → verify: `pnpm verify` 초록(docs:check 포함)
 
 ## 4. 보류
 
