@@ -1,13 +1,12 @@
 import type { Hono } from "hono";
 import { convertMarkdown } from "@blog-editor/content-convert";
+import { DESCRIPTION_MAX_LENGTH, TITLE_MAX_LENGTH } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
 import { importPreviewRequestSchema } from "./contract/api-schemas";
 import { IMPORT_BODY_MESSAGE } from "./messages";
 
 const IMPORT_PREVIEW_PATH = "/api/import/preview";
-/** 글 메타 description 상한(content-schema meta)과 같다 — 제안이 그대로 저장 규칙을 통과하게 */
-const SUGGESTED_DESCRIPTION_LENGTH = 160;
 
 type Block = Doc["content"][number];
 
@@ -19,16 +18,16 @@ function plainTextOf(block: Block): string {
     .trim();
 }
 
-/** 첫 제목 블록 · 첫 문단의 글자 — 대화상자가 제목 · 설명 입력의 처음 값으로 쓴다 */
+/** 첫 제목 블록 · 첫 문단의 글자 — 대화상자가 제목 · 설명 입력의 처음 값으로 쓴다(메타 상한까지 자른다) */
 function suggestionsOf(doc: Doc): { title: string; description: string } {
   const heading = doc.content.find((block) => block.type === "heading");
   const paragraph = doc.content.find(
     (block) => block.type === "paragraph" && plainTextOf(block) !== "",
   );
   return {
-    title: heading === undefined ? "" : plainTextOf(heading),
+    title: heading === undefined ? "" : plainTextOf(heading).slice(0, TITLE_MAX_LENGTH),
     description:
-      paragraph === undefined ? "" : plainTextOf(paragraph).slice(0, SUGGESTED_DESCRIPTION_LENGTH),
+      paragraph === undefined ? "" : plainTextOf(paragraph).slice(0, DESCRIPTION_MAX_LENGTH),
   };
 }
 
