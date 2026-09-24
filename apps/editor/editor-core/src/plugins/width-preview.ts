@@ -4,12 +4,14 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { WidthPreviewState } from "../commands/block-controls.types";
 import { canHoldDecoration } from "../commands/decoration";
 import { widthOrNull } from "../closed-values";
+import { WRAPPER_CLASS } from "../dom";
 
 /**
  * 폭 손잡이를 끄는 동안의 폭 미리보기 — spec: editor-block-resize, block-controls design.md 6.
  * 블록 DOM은 ProseMirror가 그린 것이라 style을 직접 고치면 DOMObserver가 다시 읽는다. 대신 노드 장식으로
  * `style="--w:N"`을 단다 — 장식 style은 노드 자신의 style 뒤에 붙어 이긴다
- * (https://prosemirror.net/docs/ref/#view.Decoration^node). 문서는 바꾸지 않는다(메타만).
+ * (https://prosemirror.net/docs/ref/#view.Decoration^node). 폭이 없는 그림은 래퍼 없이 figure만 그려지므로
+ * 본문 CSS의 `.post-block` 폭 규칙이 먹게 래퍼 클래스도 함께 단다. 문서는 바꾸지 않는다(메타만).
  */
 
 /** 플러그인 상태 = 미리 보일 블록과 폭, 없으면 null */
@@ -35,6 +37,7 @@ export function widthPreview(): Plugin<WidthPreviewState | null> {
         if (node === null || !canHoldDecoration(node, "width")) return null;
         return DecorationSet.create(state.doc, [
           Decoration.node(preview.pos, preview.pos + node.nodeSize, {
+            class: WRAPPER_CLASS,
             style: `--w:${preview.width}`,
           }),
         ]);

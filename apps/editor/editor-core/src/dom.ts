@@ -23,7 +23,7 @@ export interface ElementLike {
 export type DecorationKey = "font" | "motion" | "width";
 
 // content-render의 꾸밈 래퍼와 같은 어휘(spec: render-decoration) — 에디터 DOM도 같은 구조로 낸다
-const WRAPPER_CLASS = "post-block";
+export const WRAPPER_CLASS = "post-block";
 const WRAPPER_TAG = `div.${WRAPPER_CLASS}`;
 const STICKER_CLASS = "post-sticker";
 // 에디터 출처 기준 경로 — 배포(M4)에서는 같은 CloudFront 배포가 `/stickers/*`를 자산 버킷으로 라우팅한다
