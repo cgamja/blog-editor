@@ -80,8 +80,10 @@
   min-width: 11rem;
   padding: 0.25rem;
   border: 1px solid var(--line, currentColor);
-  border-radius: 0.75rem;
+  /* radius-card 14px */
+  border-radius: 0.875rem;
   background: var(--surface);
+  /* 그림자 토큰이 없다 — 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다 */
   box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
 }
 
@@ -94,7 +96,8 @@
   background: transparent;
   color: var(--ink, currentColor);
   font: inherit;
-  font-size: 0.875rem;
+  /* ui 15px */
+  font-size: 0.9375rem;
   text-align: start;
 }
 
