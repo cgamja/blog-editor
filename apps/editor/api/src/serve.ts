@@ -4,11 +4,17 @@
  * 의존성을 더하지 않고 해석 훅 하나로 `.ts`를 붙인다. Lambda 진입점(M4)은 번들되므로 이 훅이 필요 없다.
  * 훅이 먼저 걸려야 하므로 앱 모듈은 정적 import가 아니라 훅 등록 뒤 동적 import로 불러온다.
  *
- * 필수 env(없으면 시작하지 않는다):
- *   SESSION_SECRET       세션 쿠키 HMAC 키, 32바이트 이상 — `openssl rand -base64 48`
- *   ADMIN_EMAIL          시드 계정 email
- *   ADMIN_PASSWORD_HASH  `node apps/editor/api/src/hash-password.ts`에 비밀번호를 표준 입력으로 넣어 만든 값
+ * env — 레포 루트 `.env`(gitignore됨)가 있으면 읽고, 셸에 이미 있는 값이 이긴다:
+ *   ADMIN_PASSWORD       시드 계정 비밀번호(평문, 시작할 때 해시) — 필수, 기본값 없음
+ *   ADMIN_PASSWORD_HASH  또는 해시(`hash-password.ts`로 만든 값) — ADMIN_PASSWORD와 둘 중 하나만
+ *   ADMIN_USERNAME       시드 계정 아이디, 없으면 admin
+ *   SESSION_SECRET       세션 쿠키 HMAC 키(32바이트 이상), 없으면 시작할 때 만든다(재시작하면 세션이 끊긴다)
+ *   PORT · POST_STORE_ROOT · IMAGE_BASE_URL
+ * `.env`에서 `#` · 공백이 든 값은 큰따옴표로 감싼다 — 따옴표 없으면 `#` 뒤가 주석으로 잘린다
+ * (Node 26 실측: `ADMIN_PASSWORD=12#34` → "12").
+ * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
  */
+import { fileURLToPath } from "node:url";
 import { registerHooks } from "node:module";
 
 const RELATIVE = /^\.{1,2}\//;
@@ -30,7 +36,7 @@ const { serve } = await import("@hono/node-server");
 const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
-const { isValidPasswordHash } = await import("./password");
+const { readLocalConfig } = await import("./local-config");
 
 const DEFAULT_PORT = 8787;
 // TLS 없는 로컬 개발 서버다 — 로그인 비밀번호와 세션 쿠키가 평문으로 오가므로 같은 네트워크의 다른 기기에 열지 않는다
@@ -42,8 +48,17 @@ const DEFAULT_WORKSPACE_ID = "default";
 const DEFAULT_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const DEFAULT_IMAGE_BASE_URL = "https://simsimeestudio.com";
 const SEED_ACCOUNT_ID = "owner";
-/** 1단계 계정 시드(adr-007) · 세션 서명 키. 해시는 `node apps/editor/api/src/hash-password.ts`로 만든다 */
-const REQUIRED_ENV = ["SESSION_SECRET", "ADMIN_EMAIL", "ADMIN_PASSWORD_HASH"] as const;
+// dev 스크립트는 apps/editor/api에서 돌므로 작업 디렉터리가 아니라 이 파일 기준으로 레포 루트를 찾는다
+const ENV_FILE = fileURLToPath(new URL("../../../../.env", import.meta.url));
+
+/** `.env`는 선택이다 — 없으면 셸 env만으로 뜬다. 파일이 있는데 못 읽는 것은 숨기지 않는다 */
+function loadEnvFileIfPresent(path: string): void {
+  try {
+    process.loadEnvFile(path);
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ENOENT") throw error;
+  }
+}
 
 /**
  * 병렬 worktree마다 PORT를 따로 준다(CLAUDE.md strictPort 가정). 빈 값 · 숫자 아님을 0(임의 포트)이나
@@ -58,25 +73,8 @@ function readPort(raw: string | undefined): number {
   return port;
 }
 
-/** 빠진 값이 있으면 기본값으로 뜨지 않는다 — 비밀이 빈 채로 도는 서버는 로그인이 없는 서버와 같다 */
-function readRequiredEnv(): Record<(typeof REQUIRED_ENV)[number], string> {
-  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
-  if (missing.length > 0) {
-    throw new Error(
-      `환경 변수가 없다: ${missing.join(", ")} — apps/editor/api/src/serve.ts 머리 주석 참고`,
-    );
-  }
-  const env = Object.fromEntries(
-    REQUIRED_ENV.map((name) => [name, process.env[name] ?? ""]),
-  ) as Record<(typeof REQUIRED_ENV)[number], string>;
-  // 틀린 해시로 뜨면 로그인만 영원히 401이다 — 원인이 보이는 시작 시점에 멈춘다
-  if (!isValidPasswordHash(env.ADMIN_PASSWORD_HASH)) {
-    throw new Error("ADMIN_PASSWORD_HASH 형식이 틀렸다 — hash-password.ts로 다시 만든다");
-  }
-  return env;
-}
-
-const env = readRequiredEnv();
+loadEnvFileIfPresent(ENV_FILE);
+const config = await readLocalConfig(process.env);
 const port = readPort(process.env.PORT);
 const root = process.env.POST_STORE_ROOT ?? DEFAULT_ROOT;
 
@@ -87,14 +85,19 @@ const app = createApp({
   accounts: createMemoryAccountStore([
     {
       id: SEED_ACCOUNT_ID,
-      email: env.ADMIN_EMAIL,
-      passwordHash: env.ADMIN_PASSWORD_HASH,
+      username: config.username,
+      passwordHash: config.passwordHash,
       workspaceId: DEFAULT_WORKSPACE_ID,
     },
   ]),
-  sessionSecret: env.SESSION_SECRET,
+  sessionSecret: config.sessionSecret,
 });
 
 serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
-  console.log(`api: http://${HOSTNAME}:${info.port} (저장 루트 ${root})`);
+  console.log(
+    `api: http://${HOSTNAME}:${info.port} (저장 루트 ${root}, 아이디 ${config.username})`,
+  );
+  if (config.generatedSecret) {
+    console.log("SESSION_SECRET이 없어 새로 만들었다 — 재시작하면 로그인이 끊긴다");
+  }
 });

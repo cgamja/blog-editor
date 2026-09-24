@@ -4,13 +4,13 @@
  */
 export interface Account {
   id: string;
-  email: string;
+  username: string;
   /** `hashPassword`가 만든 문자열 — 원문 비밀번호는 어디에도 두지 않는다 */
   passwordHash: string;
   workspaceId: string;
 }
 
 export interface AccountStore {
-  /** email은 대소문자 · 앞뒤 공백을 무시하고 찾는다 */
-  findByEmail(email: string): Promise<Account | null>;
+  /** 아이디는 대소문자 · 앞뒤 공백을 무시하고 찾는다 */
+  findByUsername(username: string): Promise<Account | null>;
 }

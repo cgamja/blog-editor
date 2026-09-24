@@ -7,7 +7,7 @@ import type { Hono } from "hono";
 import { hashPassword } from "./password";
 
 export const TEST_ACCOUNT = {
-  email: "me@simsimeestudio.com",
+  username: "admin",
   password: "test-password-long-random",
 };
 
@@ -18,7 +18,7 @@ export const testAuthOptions = {
   accounts: createMemoryAccountStore([
     {
       id: "account-1",
-      email: TEST_ACCOUNT.email,
+      username: TEST_ACCOUNT.username,
       passwordHash: await hashPassword(TEST_ACCOUNT.password, TEST_HASH_PARAMS),
       workspaceId: "default",
     },
@@ -27,11 +27,11 @@ export const testAuthOptions = {
   loginFailureDelayMs: 0,
 };
 
-export function loginRequest(app: Hono, email: string, password: string) {
+export function loginRequest(app: Hono, username: string, password: string) {
   return app.request("/api/session", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ username, password }),
   });
 }
 
@@ -47,9 +47,9 @@ export function withSession(app: Hono) {
   return {
     async request(path: string, init: RequestInit = {}) {
       // app.request는 Response | Promise<Response> 타입이라 Promise.resolve로 한 번 감싼다
-      cookie ??= Promise.resolve(loginRequest(app, TEST_ACCOUNT.email, TEST_ACCOUNT.password)).then(
-        cookieOf,
-      );
+      cookie ??= Promise.resolve(
+        loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password),
+      ).then(cookieOf);
       const sessionCookie = await cookie;
       const headers = new Headers(init.headers);
       headers.set("Cookie", sessionCookie);
