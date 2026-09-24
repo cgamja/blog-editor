@@ -8,8 +8,11 @@
   --surface: #ffffff;
   --surface-2: #fbf3ee;
   --line: #e4d9cf;
+  --paper-deep: #f3eee7;
   --ink: #3a2b26;
+  --ink-mid: #5f514b;
   --ink-soft: #7b6b64;
+  --toolbar: #3a2b26;
   --brand: #b0552f;
   --brand-ink: #b0552f;
   --brand-soft: #ffede6;
@@ -31,9 +34,11 @@ body {
 
 .playground {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  /* 디자인 69:2: 본문 옆 오른쪽 패널 320px(tokens side-panel-width) */
+  grid-template-columns: minmax(0, 1fr) 20rem;
   gap: 1.5rem;
   padding: 1.5rem;
+  align-items: start;
 }
 
 .playground-toolbar {
@@ -44,10 +49,12 @@ body {
 }
 
 .playground-page {
+  /* 폭 도구줄(WidthToolbar)이 이 상자 기준으로 위치를 잰다 */
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 0.875rem;
-  padding: 2rem;
+  padding: 2rem 2rem 2rem 5rem;
 }
 
 .playground-json {
@@ -62,4 +69,16 @@ body {
 
 .playground-error {
   color: var(--brand-ink);
+}
+
+.playground-doc {
+  margin-top: 1rem;
+}
+
+.decoration-panel {
+  /* 본문을 내려도 패널이 보이게 */
+  position: sticky;
+  top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
 }

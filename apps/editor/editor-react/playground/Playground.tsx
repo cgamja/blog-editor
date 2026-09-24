@@ -9,13 +9,24 @@ import {
   moveBlockUp,
   setCalloutTone,
 } from "@blog-editor/editor-core";
-import { BlogEditor, readDoc, useBlogEditor } from "../src";
+import {
+  BlogEditor,
+  DecorationPanel,
+  WidthToolbar,
+  readDoc,
+  useBlogEditor,
+  useCommandRunner,
+  type StickerId,
+} from "../src";
 
 type FixtureName = keyof typeof fixtures;
 const FIXTURE_NAMES = Object.keys(fixtures) as FixtureName[];
 
 // 스크린샷 넣기 버튼이 쓰는 저장 경로 모양의 예시 — 실제 파일은 없다(이미지 업로드는 M5)
 const SAMPLE_SCREENSHOT = { src: "/images/playground-sample.webp", caption: "플레이그라운드 예시" };
+
+/** 스티커 원본은 vite publicDir(content-render assets)가 `/stickers/{id}.png`로 서빙한다 — 에디터 DOM과 같은 주소 */
+const stickerSrc = (id: StickerId) => `/stickers/${id}.png`;
 
 type DocView = { ok: true; text: string } | { ok: false; text: string };
 
@@ -36,13 +47,8 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
     selector: ({ editor: current }) => describeDoc(() => readDoc(current.state.doc)),
   });
 
-  const run = (command: Command) => () => {
-    editor
-      .chain()
-      .focus()
-      .command(({ state, dispatch }) => command(state, dispatch))
-      .run();
-  };
+  const runCommand = useCommandRunner(editor);
+  const run = (command: Command) => () => runCommand(command);
 
   return (
     <div className="playground">
@@ -70,13 +76,16 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
         </div>
         <div className="playground-page">
           <BlogEditor editor={editor} />
+          <WidthToolbar editor={editor} />
         </div>
+        <details className="playground-doc">
+          <summary>현재 문서(JSON)</summary>
+          <pre className={view.ok ? "playground-json" : "playground-json playground-error"}>
+            {view.text}
+          </pre>
+        </details>
       </section>
-      <section aria-label="현재 문서">
-        <pre className={view.ok ? "playground-json" : "playground-json playground-error"}>
-          {view.text}
-        </pre>
-      </section>
+      <DecorationPanel editor={editor} stickerSrc={stickerSrc} />
     </div>
   );
 }

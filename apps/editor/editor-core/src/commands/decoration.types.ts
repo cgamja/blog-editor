@@ -1,3 +1,5 @@
+import type { Node } from "@tiptap/pm/model";
+
 /** 꾸미기 커맨드의 공개 타입 — spec: editor-decoration. 커맨드는 decoration.ts */
 
 export interface StickerPlacement {
@@ -21,4 +23,10 @@ export interface BlockRect {
   top: number;
   width: number;
   height: number;
+}
+
+/** 선택이 걸친 최상위 블록 하나 — 시작 위치와 노드 */
+export interface TopBlock {
+  pos: number;
+  node: Node;
 }

@@ -134,7 +134,7 @@ function candidateOn(
 }
 
 /**
- * 놓은 스티커 중심(px) → 붙을 블록과 % 좌표(design.md 3). 좌표 정의는 placeOnNearestBlock과 같다.
+ * 놓은 스티커 중심(px) → 붙을 블록과 % 좌표(design.md 3). x · y는 중심의 블록 폭 · 높이 기준 %, size는 폭 기준 %(post.css).
  * (스냅 거리, 블록까지 거리, 문서 순서)로 고르고, 24px보다 멀리 옮겨야 하면 놓을 수 없는 자리라 null이다.
  */
 export function placeStickerNear(
