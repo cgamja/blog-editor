@@ -14,5 +14,8 @@
     "@blog-editor/content-schema": "workspace:*",
     "@tiptap/core": "3.31.3",
     "@tiptap/pm": "3.31.3"
+  },
+  "devDependencies": {
+    "@blog-editor/content-convert": "workspace:*"
   }
 }
