@@ -1,10 +1,4 @@
-# editor-image-insert Specification
-
-## Purpose
-
-에디터에서 이미지를 넣는 길(「+」 메뉴의 파일 고르기 · 붙여넣기 · 끌어다 놓기)과 브라우저 줄이기(ADR-021), 올리는 동안의 자리 표시(문서가 아닌 장식), 대체 텍스트 입력 · 누락 알림을 정한다. 서버 쪽 검사 · 저장은 image-upload-api가 맡는다(이슈 #92).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 올리는 동안의 자리 표시는 문서가 아니라 장식이다
 
@@ -92,21 +86,7 @@ editor-react는 SHALL 서버 주소 · 인증을 모르고 `ImageUploader(blob, 
 - **WHEN** 413(`message` 있음) · 401 · 500을 문장으로 바꾼다
 - **THEN** API 문장 그대로 · "로그인이 필요해요" · 일반 실패 문장이다
 
-### Requirement: 그림의 대체 텍스트를 넣을 수 있고 비어 있으면 알린다
-
-`setImageAlt(pos, alt)`는 SHALL 그 위치의 image 노드 alt만 바꾼다. `ALT_MAX_LENGTH`를 넘거나 image가 아니면 false, 같은 값이면 dispatch하지 않고 true다. `imageAltReminder` 플러그인은 alt가 빈 image 노드에 `data-alt-missing` 장식을 단다.
-
-#### Scenario: 대체 텍스트를 넣으면 경고 장식이 사라진다
-
-- **WHEN** alt가 빈 그림에 `setImageAlt(pos, "낮잠 자는 아기")`
-- **THEN** alt가 바뀌고, 적용 전에는 그 노드에 `data-alt-missing` 장식이 있고 적용 뒤에는 없다
-
-#### Scenario: 한도를 넘으면 거절한다
-
-- **WHEN** `ALT_MAX_LENGTH + 1`자를 넣는다
-- **THEN** false이고 문서는 그대로다
-
-실패 의미론: 해당 없음 — 서버 상태는 이미지 올리기 API(#83)가 맡고, 이 capability는 에디터 상태만 바꾼다.
+## ADDED Requirements
 
 ### Requirement: 붙여넣기 · 끌어다 놓기는 이미지 파일만 가로챈다
 
