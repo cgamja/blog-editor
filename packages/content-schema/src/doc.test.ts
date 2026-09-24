@@ -3,7 +3,19 @@ import { docSchema, naturalSizeOf } from "./doc";
 const allBlocksDoc = {
   type: "doc",
   content: [
-    { type: "paragraph", content: [{ type: "text", text: "안녕", marks: [{ type: "bold" }] }] },
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "안녕", marks: [{ type: "bold" }] },
+        { type: "text", text: "취소", marks: [{ type: "strike" }] },
+        { type: "text", text: "밑줄", marks: [{ type: "underline" }] },
+        {
+          type: "text",
+          text: "스타일",
+          marks: [{ type: "textStyle", attrs: { color: "brand", size: "lg" } }],
+        },
+      ],
+    },
     {
       type: "heading",
       attrs: { level: 2 },
@@ -137,13 +149,13 @@ describe("document-schema — 1차 블록과 마크만 통과한다", () => {
       { type: "doc", content: [{ type: "heading", attrs: { level: 1 }, content: [] }] },
     ],
     [
-      "text에 marks underline",
+      "text에 marks highlight",
       {
         type: "doc",
         content: [
           {
             type: "paragraph",
-            content: [{ type: "text", text: "x", marks: [{ type: "underline" }] }],
+            content: [{ type: "text", text: "x", marks: [{ type: "highlight" }] }],
           },
         ],
       },
@@ -265,7 +277,11 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
       content: [
         {
           type: "paragraph",
-          attrs: { font: "jua", stickers: [sticker({ x: -25, y: 125, size: 5, rotate: -180 })] },
+          attrs: {
+            font: "jua",
+            align: "center",
+            stickers: [sticker({ x: -25, y: 125, size: 2, rotate: -180 })],
+          },
           content: [{ type: "text", text: "문단" }],
         },
         {
@@ -283,6 +299,7 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
             src: "/images/a1.webp",
             alt: "",
             width: 60,
+            align: "right",
             stickers: Array.from({ length: 10 }, () => sticker()),
           },
         },
@@ -324,13 +341,14 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
       minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ x: 126 })] } } }),
     ],
     [
-      "sticker.size: 4",
-      minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ size: 4 })] } } }),
+      "sticker.size: 1",
+      minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ size: 1 })] } } }),
     ],
     [
       "sticker.rotate: 181",
       minimalParagraphDoc({ paragraph: { attrs: { stickers: [sticker({ rotate: 181 })] } } }),
     ],
+    ["align: justify", minimalParagraphDoc({ paragraph: { attrs: { align: "justify" } } })],
   ])("WHEN 집합·범위 밖 값 — %s THEN success는 false다", (_label, input) => {
     expect(docSchema.safeParse(input).success).toBe(false);
   });
@@ -341,6 +359,19 @@ describe("decoration-schema — 꾸미기 속성은 최상위 블록의 attrs에
       { type: "doc", content: [{ type: "codeBlock", attrs: { font: "jua" }, content: [] }] },
     ],
     ["paragraph에 width", minimalParagraphDoc({ paragraph: { attrs: { width: 60 } } })],
+    [
+      "bulletList에 align",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "bulletList",
+            attrs: { align: "center" },
+            content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }],
+          },
+        ],
+      },
+    ],
     [
       "listItem에 stickers",
       {
@@ -477,5 +508,31 @@ describe("document-schema — 이미지는 원본 픽셀 크기를 선택으로 
       naturalSizeOf({}),
       naturalSizeOf({ naturalWidth: 1200 }),
     ]).toEqual([{ width: 1200, height: 800 }, null, null]);
+  });
+});
+
+function docWithTextStyle(attrs: unknown) {
+  return minimalParagraphDoc({ text: { marks: [{ type: "textStyle", attrs }] } });
+}
+
+describe("decoration-schema — 글자 스타일 마크는 이름 붙은 값과 hex만 받는다", () => {
+  it.each([
+    ["프리셋 색 + 크기", { color: "brand", size: "lg" }],
+    ["hex 배경", { highlight: "#ffeecc" }],
+    ["Gaegu light", { font: "gaegu", weight: "light" }],
+    ["글꼴 없이 heavy(Pretendard 기준)", { weight: "heavy" }],
+  ])("WHEN textStyle %s THEN success는 true다", (_label, attrs) => {
+    expect(docSchema.safeParse(docWithTextStyle(attrs)).success).toBe(true);
+  });
+
+  it.each([
+    ["빈 스타일", {}],
+    ["대문자 · 3자리 hex", { color: "#FFF" }],
+    ["CSS 주입 시도", { color: "red; background:url(x)" }],
+    ["정의 밖 크기", { size: "3xl" }],
+    ["Jua에 없는 두께", { font: "jua", weight: "light" }],
+    ["정의 밖 키", { style: "color:red" }],
+  ])("WHEN textStyle %s THEN success는 false다", (_label, attrs) => {
+    expect(docSchema.safeParse(docWithTextStyle(attrs)).success).toBe(false);
   });
 });

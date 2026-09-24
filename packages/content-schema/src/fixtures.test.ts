@@ -33,7 +33,7 @@ const ALL_NODE_TYPES = [
   "listItem",
   "text",
 ];
-const ALL_MARK_TYPES = ["bold", "italic", "code", "link"];
+const ALL_MARK_TYPES = ["bold", "italic", "code", "link", "strike", "underline", "textStyle"];
 
 function collectTypes(node: unknown, nodeTypes: Set<string>, markTypes: Set<string>) {
   if (node === null || typeof node !== "object") return;
