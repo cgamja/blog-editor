@@ -2,6 +2,7 @@ import type { Node } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
 import type { EditorState } from "@tiptap/pm/state";
 import {
+  ALIGNS,
   FONTS,
   MAX_STICKERS_PER_DOC,
   MOTIONS,
@@ -10,8 +11,10 @@ import {
 } from "@blog-editor/content-schema";
 import {
   addSticker,
+  alignOf,
   canHoldDecoration,
   selectedTopBlocks,
+  setBlockAlign,
   setBlockFont,
   setBlockMotion,
   setBlockWidth,
@@ -20,7 +23,7 @@ import {
 import type { TopBlock } from "@blog-editor/editor-core";
 import { BLOCK_LABELS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
-import type { Availability, DecorationPanelState, Font, Motion } from "./decoration-types";
+import type { Align, Availability, DecorationPanelState, Font, Motion } from "./decoration-types";
 
 /**
  * 꾸미기 패널이 보여 주는 값 — spec: decoration-panel, design.md 1 · 2.
@@ -62,6 +65,13 @@ function stickerAvailability(state: EditorState, hasTarget: boolean, count: numb
   return blocked(decorationMessages.noTarget);
 }
 
+/** 대상 블록이 모두 같은 모양이면 그 정렬, 다르거나 대상이 없으면 null — 섞인 선택에서 버튼 하나만 눌려 보이지 않게 */
+function sharedAlignOf(blocks: readonly TopBlock[]): Align | null {
+  const aligns = new Set(blocks.map(({ node }) => alignOf(node)));
+  const [only] = aligns;
+  return aligns.size === 1 && only !== undefined ? only : null;
+}
+
 /** 최상위 그림 · 스크린샷 노드 선택이면 폭 도구줄 대상. 폭이 없으면 렌더러 기본값(100)이다 */
 export function widthTargetOf(state: EditorState): DecorationPanelState["width"] {
   const { selection } = state;
@@ -93,6 +103,12 @@ export function decorationPanelStateOf(state: EditorState): DecorationPanelState
       availability: setBlockMotion(MOTIONS[0])(state)
         ? ENABLED
         : blockedBy(blocks, "motion", decorationMessages.cannotHoldMotion),
+    },
+    align: {
+      value: sharedAlignOf(blocks),
+      availability: setBlockAlign(ALIGNS[0])(state)
+        ? ENABLED
+        : blockedBy(blocks, "align", decorationMessages.cannotHoldAlign),
     },
     sticker: { count, availability: stickerAvailability(state, first !== undefined, count) },
     width: widthTargetOf(state),

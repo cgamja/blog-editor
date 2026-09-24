@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import { normalize } from "./normalize";
+import { defaultAlignOf, normalize } from "./normalize";
 import { docSchema } from "./doc";
 import type { Doc } from "./doc";
 import { docArbitrary } from "./doc.arbitrary";
@@ -99,6 +99,46 @@ describe("normalize — 검증된 문서를 정규형으로 만든다", () => {
     expect(json.startsWith('{"type":"doc"')).toBe(true);
     // rule ④ — content: [] 인 노드는 content 키 자체가 사라진다(ProseMirror toJSON과 같은 모양).
     expect(json).toContain('{"type":"paragraph","attrs":{"font":"jua","motion":"pop"}}');
+  });
+});
+
+describe("normalize — 기본 모양과 같은 정렬은 지운다(adr-020)", () => {
+  const image = (align: string) => ({
+    type: "image",
+    attrs: { src: "/images/a.webp", alt: "그림", align },
+  });
+  const paragraph = (align: string) => ({
+    type: "paragraph",
+    attrs: { align },
+    content: [{ type: "text", text: "가" }],
+  });
+
+  it("WHEN 그림 align center · 문단 align left를 normalize하면 THEN 두 블록 모두 align이 없다", () => {
+    const result = normalize(asDoc({ type: "doc", content: [image("center"), paragraph("left")] }));
+
+    expect(result.content.map((block) => (block.attrs as Record<string, unknown>)?.align)).toEqual([
+      undefined,
+      undefined,
+    ]);
+    expect(result.content[1]).not.toHaveProperty("attrs");
+  });
+
+  it("WHEN 그림 align left · 문단 align center를 normalize하면 THEN 값이 그대로 남는다", () => {
+    const result = normalize(asDoc({ type: "doc", content: [image("left"), paragraph("center")] }));
+
+    expect(result.content.map((block) => (block.attrs as Record<string, unknown>)?.align)).toEqual([
+      "left",
+      "center",
+    ]);
+  });
+
+  it("WHEN 블록 종류별 defaultAlignOf를 보면 THEN 그림 · 앱 스크린샷은 center, 문단 · 제목은 left다", () => {
+    expect(["image", "appScreenshot", "paragraph", "heading"].map(defaultAlignOf)).toEqual([
+      "center",
+      "center",
+      "left",
+      "left",
+    ]);
   });
 });
 
