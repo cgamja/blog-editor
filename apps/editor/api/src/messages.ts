@@ -1,4 +1,5 @@
 import { IMAGE_MAX_BYTES, NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
+import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "./input-limits";
 
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -18,3 +19,5 @@ export const IMAGE_FORMAT_MESSAGE = "JPEG · PNG · WebP · GIF 이미지만 올
 export const IMAGE_TOO_WIDE_MESSAGE = `긴 변을 ${NATURAL_SIZE_RANGE.max}px 이하로 줄여서 올린다`;
 export const IMAGE_ROTATED_MESSAGE =
   "사진 방향(EXIF)이 돌아가 있다 — 방향을 적용해 다시 그린 뒤 올린다";
+export const SETTINGS_BODY_MESSAGE = `설정은 { guide } 하나만 — 가이드는 ${MAX_GUIDE_LENGTH.toLocaleString("ko-KR")}자까지`;
+export const IMPORT_BODY_MESSAGE = `markdown 문자열이 필요하다 — ${MAX_MARKDOWN_LENGTH.toLocaleString("ko-KR")}자까지`;

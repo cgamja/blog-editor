@@ -14,3 +14,11 @@ export interface SettingsStore {
 }
 
 export const EMPTY_SETTINGS: WorkspaceSettings = { guide: "" };
+
+/** 설정 응답의 연결 정보 — 저장하지 않고 앱 설정(`/mcp` · OAuth)에서 나온다 */
+export interface ConnectorInfo {
+  /** `/mcp`가 열렸는가 */
+  enabled: boolean;
+  /** claude.ai가 닿는 커넥터 주소 — OAuth 발급자가 있을 때만(연결용 토큰만 있는 로컬 `/mcp`는 null) */
+  url: string | null;
+}

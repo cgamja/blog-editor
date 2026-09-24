@@ -26,7 +26,7 @@ export const MCP_TOOL_TEXT = {
   get_writing_guide: {
     title: "글쓰기 가이드",
     description:
-      "초안을 쓰기 전에 가장 먼저 읽는다. 블록 문법 · 콜아웃 · 꾸미기 지시어 · 이미지 규칙을 담은 형식 가이드다.",
+      "초안을 쓰기 전에 가장 먼저 읽는다. 블록 문법 · 콜아웃 · 꾸미기 지시어 · 이미지 규칙을 담은 형식 가이드와, 이 블로그 주인이 정한 글쓰기 가이드(말투 · 독자 · 구성)다.",
   },
   list_posts: {
     title: "글 목록",
@@ -52,3 +52,6 @@ export const MCP_TOOL_TEXT = {
       "get_post로 받은 revision으로 초안을 고쳐 쓴다. 그사이 바뀌었으면 충돌이다. 발행된 글은 고치지 못한다.",
   },
 } as const;
+
+/** get_writing_guide에서 워크스페이스 글쓰기 가이드 앞에 붙는 제목 */
+export const MCP_WORKSPACE_GUIDE_HEADING = "## 이 블로그의 글쓰기 가이드";

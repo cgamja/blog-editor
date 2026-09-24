@@ -8,11 +8,15 @@ import {
 } from "@blog-editor/content-schema";
 import {
   createPostListSchema,
+  createSettingsSchema,
   imageUploadResultSchema,
+  importPreviewRequestSchema,
+  importPreviewResultSchema,
   loginBodySchema,
   messageBodySchema,
   saveResultSchema,
   schemaErrorBodySchema,
+  settingsUpdateSchema,
 } from "./api-schemas";
 import { CONTENT_TYPE_OF } from "../images";
 import {
@@ -20,6 +24,8 @@ import {
   IMAGE_ROTATED_MESSAGE,
   IMAGE_TOO_LARGE_MESSAGE,
   IMAGE_TOO_WIDE_MESSAGE,
+  IMPORT_BODY_MESSAGE,
+  SETTINGS_BODY_MESSAGE,
 } from "../messages";
 import { SESSION_COOKIE_NAME } from "../session";
 import type {
@@ -63,6 +69,10 @@ function contractSchemas(categories: Categories) {
     MessageBody: messageBodySchema,
     SchemaErrorBody: schemaErrorBodySchema,
     SaveBadRequestBody: z.union([schemaErrorBodySchema, messageBodySchema]),
+    Settings: createSettingsSchema({ categories }),
+    SettingsUpdate: settingsUpdateSchema,
+    ImportPreviewRequest: importPreviewRequestSchema,
+    ImportPreviewResult: importPreviewResultSchema,
   } satisfies Record<string, z.ZodType>;
 }
 
@@ -208,6 +218,51 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
           description: `${IMAGE_TOO_WIDE_MESSAGE} · ${IMAGE_ROTATED_MESSAGE}`,
           schema: schemas.MessageBody,
         },
+      },
+    },
+    {
+      method: "get",
+      path: "/api/settings",
+      operationId: "getSettings",
+      tag: "settings",
+      summary: "워크스페이스 설정",
+      description:
+        "글쓰기 가이드(MCP get_writing_guide가 형식 가이드 뒤에 붙인다) · 카테고리 · 연결 정보. 카테고리와 연결 정보는 서버 설정이라 읽기만 한다.",
+      requiresSession: true,
+      responses: {
+        200: { description: "설정", schema: schemas.Settings },
+        401: unauthorized,
+      },
+    },
+    {
+      method: "put",
+      path: "/api/settings",
+      operationId: "saveSettings",
+      tag: "settings",
+      summary: "글쓰기 가이드 저장",
+      description: "마지막 쓰기가 이긴다(revision 없음 — 1단계는 사용자 한 명).",
+      requiresSession: true,
+      requestBody: { description: "고칠 수 있는 설정", schema: schemas.SettingsUpdate },
+      responses: {
+        200: { description: "저장한 뒤의 설정", schema: schemas.Settings },
+        400: { description: SETTINGS_BODY_MESSAGE, schema: schemas.MessageBody },
+        401: unauthorized,
+      },
+    },
+    {
+      method: "post",
+      path: "/api/import/preview",
+      operationId: "previewImport",
+      tag: "import",
+      summary: "마크다운 가져오기 미리보기",
+      description:
+        "markdown을 변환만 하고 저장하지 않는다. 변환하지 못하면 ok: false와 줄 번호가 든 메시지(막는 오류)다. 초안은 이어서 savePost(If-None-Match: *)로 만든다.",
+      requiresSession: true,
+      requestBody: { description: "가져올 markdown", schema: schemas.ImportPreviewRequest },
+      responses: {
+        200: { description: "변환 결과 또는 메시지", schema: schemas.ImportPreviewResult },
+        400: { description: IMPORT_BODY_MESSAGE, schema: schemas.MessageBody },
+        401: unauthorized,
       },
     },
     {
