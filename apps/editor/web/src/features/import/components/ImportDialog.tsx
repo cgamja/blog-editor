@@ -2,16 +2,20 @@ import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { generatePath, useNavigate } from "react-router";
-import { HTTP_CONFLICT } from "../../../shared/api/constants";
-import { ApiError } from "../../../shared/api/errors";
+import { ApiError, ConflictError } from "../../../shared/api/errors";
 import { ROUTES } from "../../../shared/routes/constants";
 import { ModalDialog } from "../../../shared/ui/ModalDialog";
 import { createDraft } from "../api";
 import { BLOG_DATE_FORMAT, MARKDOWN_FILE_ACCEPT } from "../constants";
 import { useImportPreview } from "../hooks/use-import-preview";
-import { buildImportedPost, canCreateDraft, suggestSlug } from "../import-draft";
+import {
+  buildImportedPost,
+  canCreateDraft,
+  markdownFileProblem,
+  suggestSlug,
+} from "../import-draft";
 import { IMPORT_MESSAGES as M } from "../messages";
-import type { DraftInput, EditableDraftField } from "../types";
+import type { DraftInput, EditableDraftField, ImportPreview, MarkdownFileProblem } from "../types";
 import { ImportMetaFields } from "./ImportMetaFields";
 import { ImportPreviewPane } from "./ImportPreviewPane";
 import "../import.css";
@@ -23,32 +27,60 @@ interface ImportDialogProps {
   categories: readonly string[];
 }
 
-function createErrorMessage(error: Error | null): string | null {
+const FILE_PROBLEM_MESSAGE: Record<MarkdownFileProblem, string> = {
+  extension: M.fileExtension,
+  size: M.fileSize,
+};
+const NO_SUGGESTION = { title: "", description: "" };
+
+function apiErrorMessage(error: Error | null, fallback: string): string | null {
   if (error === null) return null;
-  if (error instanceof ApiError && error.status === HTTP_CONFLICT) return M.slugTaken;
   if (error instanceof ApiError && error.userMessage !== null) return error.userMessage;
-  return M.createFailed;
+  return fallback;
+}
+
+function createErrorMessage(error: Error | null): string | null {
+  if (error instanceof ConflictError) return M.slugTaken;
+  return apiErrorMessage(error, M.createFailed);
+}
+
+/** 마지막으로 성공한 변환의 제안 — 입력 중(자리 표시 결과)에도 칸이 비지 않게 한다 */
+function suggestionOf(result: ImportPreview | undefined) {
+  return result?.ok === true ? result.suggested : NO_SUGGESTION;
 }
 
 /**
  * 마크다운 가져오기(결정 A) — 원문 | 미리보기, 막는 메시지, 초안으로 만들기. 변환은 서버(`/api/import/preview`),
  * 저장은 기존 `PUT` + `If-None-Match: *`. 만들면 편집 화면으로 간다.
+ * 본문은 열려 있을 때만 그려진다(ModalDialog) — 닫았다 다시 열면 입력 · 오류가 처음 상태다.
  */
 export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
   const titleId = useId();
+  return (
+    <ModalDialog open={open} onClose={onClose} labelledBy={titleId} className="import-dialog">
+      <ImportDialogBody titleId={titleId} onClose={onClose} categories={categories} />
+    </ModalDialog>
+  );
+}
+
+function ImportDialogBody({
+  titleId,
+  onClose,
+  categories,
+}: Omit<ImportDialogProps, "open"> & { titleId: string }) {
   const sourceId = useId();
   const fileId = useId();
   const errorId = useId();
   const navigate = useNavigate();
   const [markdown, setMarkdown] = useState("");
-  const [fileError, setFileError] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   // 사람이 고친 칸만 기억한다 — 고치지 않은 칸은 미리보기 제안을 따라간다
   const [edited, setEdited] = useState<Partial<Record<EditableDraftField, string>>>({});
   const preview = useImportPreview(markdown);
 
-  // 지금 원문의 결과만 만들기에 쓴다 — 앞 입력의 결과(자리 표시)로 초안을 만들지 않는다
+  // 만들기 · 저장은 지금 원문의 결과만 — 앞 입력의 결과(자리 표시)로 초안을 만들지 않는다
   const current = preview.isSettled && !preview.isPlaceholderData ? (preview.data ?? null) : null;
-  const suggested = current?.ok === true ? current.suggested : { title: "", description: "" };
+  const suggested = suggestionOf(preview.data);
   const title = edited.title ?? suggested.title;
   const input: DraftInput = {
     title,
@@ -74,11 +106,16 @@ export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (file === undefined) return;
+    const problem = markdownFileProblem(file);
+    if (problem !== null) {
+      setFileError(FILE_PROBLEM_MESSAGE[problem]);
+      return;
+    }
     try {
       setMarkdown(await file.text());
-      setFileError(false);
+      setFileError(null);
     } catch {
-      setFileError(true);
+      setFileError(M.fileFailed);
     }
   };
 
@@ -93,78 +130,76 @@ export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
   const errorMessage = createErrorMessage(create.error);
 
   return (
-    <ModalDialog open={open} onClose={onClose} labelledBy={titleId} className="import-dialog">
-      <form className="import-body" onSubmit={handleSubmit}>
-        <header className="import-header">
-          <h2 id={titleId} className="modal-dialog-title">
-            {M.title}
-          </h2>
-          <p className="modal-dialog-lede">{M.lede}</p>
-        </header>
+    <form className="import-body" onSubmit={handleSubmit}>
+      <header className="import-header">
+        <h2 id={titleId} className="modal-dialog-title">
+          {M.title}
+        </h2>
+        <p className="modal-dialog-lede">{M.lede}</p>
+      </header>
 
-        <div className="import-panes">
-          <div className="import-pane">
-            <div className="import-pane-head">
-              <label htmlFor={sourceId} className="modal-dialog-label">
-                {M.source}
-              </label>
-            </div>
-            {/* 원문이 첫 포커스 자리다 — showModal()은 대화상자 안 첫 포커스 가능 요소로 옮긴다 */}
-            <textarea
-              id={sourceId}
-              className="import-source"
-              value={markdown}
-              placeholder={M.sourcePlaceholder}
-              onChange={(event) => setMarkdown(event.target.value)}
-              spellCheck={false}
-            />
-            <div className="import-file-row">
-              <input
-                id={fileId}
-                className="import-file-input"
-                type="file"
-                accept={MARKDOWN_FILE_ACCEPT}
-                onChange={handleFile}
-              />
-              <label htmlFor={fileId} className="import-file">
-                {M.pickFile}
-              </label>
-            </div>
-            {fileError ? (
-              <p className="import-error" role="alert">
-                {M.fileFailed}
-              </p>
-            ) : null}
+      <div className="import-panes">
+        <div className="import-pane">
+          <div className="import-pane-head">
+            <label htmlFor={sourceId} className="modal-dialog-label">
+              {M.source}
+            </label>
           </div>
-          <ImportPreviewPane
-            hasText={preview.hasText}
-            isPending={preview.isFetching || !preview.isSettled}
-            isError={preview.isError}
-            result={preview.hasText ? (preview.data ?? null) : null}
+          {/* 원문이 첫 포커스 자리다 — showModal()은 대화상자 안 첫 포커스 가능 요소로 옮긴다 */}
+          <textarea
+            id={sourceId}
+            className="import-source"
+            value={markdown}
+            placeholder={M.sourcePlaceholder}
+            onChange={(event) => setMarkdown(event.target.value)}
+            spellCheck={false}
           />
+          <div className="import-file-row">
+            <input
+              id={fileId}
+              className="import-file-input"
+              type="file"
+              accept={MARKDOWN_FILE_ACCEPT}
+              onChange={handleFile}
+            />
+            <label htmlFor={fileId} className="import-file">
+              {M.pickFile}
+            </label>
+          </div>
+          {fileError !== null ? (
+            <p className="import-error" role="alert">
+              {fileError}
+            </p>
+          ) : null}
         </div>
+        <ImportPreviewPane
+          hasText={preview.hasText}
+          isPending={preview.isFetching || !preview.isSettled}
+          errorMessage={apiErrorMessage(preview.error, M.previewFailed)}
+          result={preview.hasText ? (preview.data ?? null) : null}
+        />
+      </div>
 
-        <ImportMetaFields input={input} categories={categories} onEdit={handleEdit} />
+      <ImportMetaFields input={input} categories={categories} onEdit={handleEdit} />
 
-        {errorMessage !== null ? (
-          <p id={errorId} className="import-error" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
-        <div className="modal-dialog-actions">
-          <button type="button" className="modal-dialog-button" onClick={onClose}>
-            {M.cancel}
-          </button>
-          <button
-            type="submit"
-            className="modal-dialog-button modal-dialog-button-primary"
-            disabled={!isReady || create.isPending}
-            aria-describedby={errorMessage !== null ? errorId : undefined}
-          >
-            {create.isPending ? M.creating : M.create}
-          </button>
-        </div>
-      </form>
-    </ModalDialog>
+      {errorMessage !== null ? (
+        <p id={errorId} className="import-error" role="alert">
+          {errorMessage}
+        </p>
+      ) : null}
+      <div className="modal-dialog-actions">
+        <button type="button" className="modal-dialog-button" onClick={onClose}>
+          {M.cancel}
+        </button>
+        <button
+          type="submit"
+          className="modal-dialog-button modal-dialog-button-primary"
+          disabled={!isReady || create.isPending}
+          aria-describedby={errorMessage !== null ? errorId : undefined}
+        >
+          {create.isPending ? M.creating : M.create}
+        </button>
+      </div>
+    </form>
   );
 }

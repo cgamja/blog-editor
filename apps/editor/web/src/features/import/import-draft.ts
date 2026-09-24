@@ -5,7 +5,7 @@ import {
   slugSchema,
 } from "@blog-editor/content-schema";
 import type { Doc, PostFile } from "@blog-editor/content-schema";
-import { IMPORTED_SOURCE } from "./constants";
+import { IMPORTED_SOURCE, MARKDOWN_FILE_EXTENSIONS, MARKDOWN_FILE_MAX_BYTES } from "./constants";
 import type { DraftInput, ImportPreview, MarkdownFileProblem } from "./types";
 
 /** 미리보기로 바꾼 doc과 대화상자 입력으로 새 초안 파일을 만든다 — 저장 검증은 서버 zod가 한 번 더 한다 */
@@ -29,7 +29,10 @@ export function markdownFileProblem(file: {
   name: string;
   size: number;
 }): MarkdownFileProblem | null {
-  throw new Error(`미구현: ${file.name}`);
+  const name = file.name.toLowerCase();
+  if (!MARKDOWN_FILE_EXTENSIONS.some((extension) => name.endsWith(extension))) return "extension";
+  if (file.size > MARKDOWN_FILE_MAX_BYTES) return "size";
+  return null;
 }
 
 /** 제목이 영문이면 주소를 제안한다 — 한글 제목은 번역하지 않고 비운다(사람이 채운다) */

@@ -2,7 +2,7 @@
 
 ## 1. 테스트
 
-- [x] 1.1 api `settings.test.ts` · `file-settings-store.test.ts` · `import-preview.test.ts` · `mcp.test.ts`(추가) · `openapi.test.ts`(추가), web `import-draft.test.ts` · `ai-write.test.ts` · `connector.test.ts` → verify: 빨강 · 실패 원문 보고
+- [x] 1.1 api `settings.test.ts` · `file-settings-store.test.ts` · `import-preview.test.ts` · `mcp.test.ts`(추가) · `openapi.test.ts`(추가), web `import-draft.test.ts` · `prompt.test.ts` · `connector.test.ts` → verify: 빨강 · 실패 원문 보고
 
 ## 2. 구현
 

@@ -36,6 +36,10 @@
   min-height: var(--space-24);
 }
 
+/*
+ * 두 칸 높이 18rem — 디자인(결정 A 스케치)에 값이 없다. 1360×860 화면에서 제목 · 두 칸 · 메타 · 버튼이
+ * 스크롤 없이 한 번에 보이는 가장 큰 값(원문 13px × 1.6 줄 간격으로 약 13줄)으로 정했다. 원문은 세로로 늘릴 수 있다.
+ */
 .import-source,
 .import-frame,
 .import-placeholder,

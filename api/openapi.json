@@ -482,6 +482,16 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "요청 본문이 너무 크다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
           }
         }
       }
@@ -531,6 +541,16 @@
           },
           "401": {
             "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "요청 본문이 너무 크다",
             "content": {
               "application/json": {
                 "schema": {

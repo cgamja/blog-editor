@@ -25,6 +25,7 @@ import {
   IMAGE_TOO_LARGE_MESSAGE,
   IMAGE_TOO_WIDE_MESSAGE,
   IMPORT_BODY_MESSAGE,
+  REQUEST_TOO_LARGE_MESSAGE,
   SETTINGS_BODY_MESSAGE,
 } from "../messages";
 import { SESSION_COOKIE_NAME } from "../session";
@@ -247,6 +248,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
         200: { description: "저장한 뒤의 설정", schema: schemas.Settings },
         400: { description: SETTINGS_BODY_MESSAGE, schema: schemas.MessageBody },
         401: unauthorized,
+        413: { description: REQUEST_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
       },
     },
     {
@@ -263,6 +265,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
         200: { description: "변환 결과 또는 메시지", schema: schemas.ImportPreviewResult },
         400: { description: IMPORT_BODY_MESSAGE, schema: schemas.MessageBody },
         401: unauthorized,
+        413: { description: REQUEST_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
       },
     },
     {

@@ -26,11 +26,15 @@ export class UnauthorizedError extends ApiError {
 
 /**
  * 조건부 저장이 어긋났다(409) — 고치기면 다른 곳에서 먼저 저장했고, 새 글이면 그 주소에 글이 있다.
- * 화면은 `instanceof ConflictError`로 가른다(.claude/rules/state.md).
+ * 화면은 `instanceof ConflictError`로 가르고, 더 나눌 때는 `body`(API가 보낸 JSON 본문, 없으면 null)를 본다
+ * (.claude/rules/state.md).
  */
 export class ConflictError extends ApiError {
-  constructor(userMessage: string | null = null) {
+  readonly body: unknown;
+
+  constructor(userMessage: string | null = null, body: unknown = null) {
     super(HTTP_CONFLICT, userMessage);
     this.name = "ConflictError";
+    this.body = body;
   }
 }

@@ -1,6 +1,8 @@
 import type { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { settingsUpdateSchema } from "./contract/api-schemas";
-import { SETTINGS_BODY_MESSAGE } from "./messages";
+import { MAX_SETTINGS_BODY_BYTES } from "./input-limits";
+import { REQUEST_TOO_LARGE_MESSAGE, SETTINGS_BODY_MESSAGE } from "./messages";
 import type { ConnectorInfo, SettingsStore } from "./settings-store";
 
 const SETTINGS_PATH = "/api/settings";
@@ -23,16 +25,23 @@ export function registerSettingsRoutes(
 
   app.get(SETTINGS_PATH, async (c) => c.json(await respond()));
 
-  app.put(SETTINGS_PATH, async (c) => {
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      return c.json({ message: SETTINGS_BODY_MESSAGE }, 400);
-    }
-    const parsed = settingsUpdateSchema.safeParse(body);
-    if (!parsed.success) return c.json({ message: SETTINGS_BODY_MESSAGE }, 400);
-    await settings.put(parsed.data);
-    return c.json(await respond());
-  });
+  app.put(
+    SETTINGS_PATH,
+    bodyLimit({
+      maxSize: MAX_SETTINGS_BODY_BYTES,
+      onError: (c) => c.json({ message: REQUEST_TOO_LARGE_MESSAGE }, 413),
+    }),
+    async (c) => {
+      let body: unknown;
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ message: SETTINGS_BODY_MESSAGE }, 400);
+      }
+      const parsed = settingsUpdateSchema.safeParse(body);
+      if (!parsed.success) return c.json({ message: SETTINGS_BODY_MESSAGE }, 400);
+      await settings.put(parsed.data);
+      return c.json(await respond());
+    },
+  );
 }

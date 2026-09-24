@@ -6,7 +6,8 @@ import type { ImportPreview } from "../types";
 interface ImportPreviewPaneProps {
   hasText: boolean;
   isPending: boolean;
-  isError: boolean;
+  /** 미리보기 요청이 실패했을 때 보일 문장 — 없으면 null */
+  errorMessage: string | null;
   result: ImportPreview | null;
 }
 
@@ -19,8 +20,48 @@ function previewDocument(html: string): string {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${tokensCss}body{margin:0;padding:var(--space-16);background:var(--surface)}</style><link rel="stylesheet" href="${POST_CSS_PATH}"></head><body>${html}</body></html>`;
 }
 
+function Blocked({ messages }: { messages: readonly string[] }) {
+  return (
+    <div className="import-blocked" role="alert">
+      <p className="import-blocked-title">{M.blocked(messages.length)}</p>
+      <ul>
+        {messages.map((message) => (
+          <li key={message}>{message}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** 지금 상태 하나만 그린다 — 빈 원문 · 요청 실패 · 기다림 · 미리보기 · 막는 메시지 */
+function PreviewBody({ hasText, errorMessage, result }: Omit<ImportPreviewPaneProps, "isPending">) {
+  if (!hasText) return <p className="import-placeholder">{M.previewEmpty}</p>;
+  if (errorMessage !== null) {
+    return (
+      <p className="import-error" role="alert">
+        {errorMessage}
+      </p>
+    );
+  }
+  if (result === null) return <p className="import-placeholder">{M.previewLoading}</p>;
+  if (!result.ok) return <Blocked messages={result.messages} />;
+  return (
+    <iframe
+      className="import-frame"
+      title={M.previewFrameTitle}
+      sandbox=""
+      srcDoc={previewDocument(result.html)}
+    />
+  );
+}
+
 /** 오른쪽 칸 — 미리보기 또는 막는 메시지(줄 번호 · 이유) */
-export function ImportPreviewPane({ hasText, isPending, isError, result }: ImportPreviewPaneProps) {
+export function ImportPreviewPane({
+  hasText,
+  isPending,
+  errorMessage,
+  result,
+}: ImportPreviewPaneProps) {
   return (
     <div className="import-pane" aria-busy={isPending}>
       <div className="import-pane-head">
@@ -31,31 +72,7 @@ export function ImportPreviewPane({ hasText, isPending, isError, result }: Impor
           </span>
         ) : null}
       </div>
-      {!hasText ? (
-        <p className="import-placeholder">{M.previewEmpty}</p>
-      ) : isError ? (
-        <p className="import-error" role="alert">
-          {M.previewFailed}
-        </p>
-      ) : result === null ? (
-        <p className="import-placeholder">{M.previewLoading}</p>
-      ) : result.ok ? (
-        <iframe
-          className="import-frame"
-          title={M.previewFrameTitle}
-          sandbox=""
-          srcDoc={previewDocument(result.html)}
-        />
-      ) : (
-        <div className="import-blocked" role="alert">
-          <p className="import-blocked-title">{M.blocked(result.messages.length)}</p>
-          <ul>
-            {result.messages.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <PreviewBody hasText={hasText} errorMessage={errorMessage} result={result} />
     </div>
   );
 }

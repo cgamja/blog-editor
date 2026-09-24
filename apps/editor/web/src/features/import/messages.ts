@@ -6,6 +6,8 @@ export const IMPORT_MESSAGES = {
   sourcePlaceholder: "여기에 마크다운을 붙여 넣으세요.",
   pickFile: ".md 파일 고르기",
   fileFailed: "파일을 읽지 못했어요.",
+  fileExtension: ".md · .markdown 파일만 가져올 수 있어요.",
+  fileSize: "파일이 너무 커요. 한 편씩 나눠 가져와 주세요.",
   preview: "미리보기",
   previewEmpty: "원문을 넣으면 공개 페이지 모양으로 보여요.",
   previewLoading: "바꾸는 중…",

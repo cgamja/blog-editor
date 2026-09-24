@@ -21,3 +21,4 @@ export const IMAGE_ROTATED_MESSAGE =
   "사진 방향(EXIF)이 돌아가 있다 — 방향을 적용해 다시 그린 뒤 올린다";
 export const SETTINGS_BODY_MESSAGE = `설정은 { guide } 하나만 — 가이드는 ${MAX_GUIDE_LENGTH.toLocaleString("ko-KR")}자까지`;
 export const IMPORT_BODY_MESSAGE = `markdown 문자열이 필요하다 — ${MAX_MARKDOWN_LENGTH.toLocaleString("ko-KR")}자까지`;
+export const REQUEST_TOO_LARGE_MESSAGE = "요청 본문이 너무 크다";
