@@ -255,4 +255,54 @@ describe("api-contract — 응답 적합성", () => {
     expect(css.status).toBe(200);
     await expectConforms("get", "/public/post.css", css);
   });
+
+  it("WHEN 설정을 세션 없이 · 읽고 · 저장하고 · 모르는 키로 저장하고, 미리보기를 맞는 · 틀린 markdown · JSON 아닌 본문으로 부르면 THEN 선언된 상태와 스키마를 따른다", async () => {
+    const { app, client } = setup();
+    const settings = "/api/settings";
+    const preview = "/api/import/preview";
+    const postJson = (body: string): RequestInit => ({
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    const putJson = (body: unknown): RequestInit => ({
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const anonymous = await app.request(settings);
+    expect(anonymous.status).toBe(401);
+    await expectConforms("get", settings, anonymous);
+
+    const read = await client.request(settings);
+    expect(read.status).toBe(200);
+    await expectConforms("get", settings, read);
+
+    const saved = await client.request(settings, putJson({ guide: "가이드" }));
+    expect(saved.status).toBe(200);
+    await expectConforms("put", settings, saved);
+
+    const unknownKey = await client.request(settings, putJson({ guide: "", categories: [] }));
+    expect(unknownKey.status).toBe(400);
+    await expectConforms("put", settings, unknownKey);
+
+    const converted = await client.request(
+      preview,
+      postJson(JSON.stringify({ markdown: "## 제목\n\n문단" })),
+    );
+    expect(converted.status).toBe(200);
+    await expectConforms("post", preview, converted);
+
+    const blocked = await client.request(
+      preview,
+      postJson(JSON.stringify({ markdown: "| 표 |\n| --- |\n| a |" })),
+    );
+    expect(blocked.status).toBe(200);
+    await expectConforms("post", preview, blocked);
+
+    const notJson = await client.request(preview, postJson("{"));
+    expect(notJson.status).toBe(400);
+    await expectConforms("post", preview, notJson);
+  });
 });

@@ -1,0 +1,78 @@
+/* AI로 쓰기(Figma 71:2) — 틀과 버튼은 shared/ui/modal-dialog.css */
+.ai-write-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+}
+
+.ai-write-header,
+.ai-write-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.ai-write-apps {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.ai-write-app-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  padding-top: var(--space-6);
+}
+
+.ai-write-app {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-height: var(--dialog-button-height);
+  padding: 0 var(--space-16);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.ai-write-app:has(input:checked) {
+  border-color: var(--brand-ink);
+  background: var(--brand-soft);
+  font-weight: 600;
+}
+
+.ai-write-app input {
+  accent-color: var(--brand-ink);
+  margin: 0;
+}
+
+.ai-write-prompt {
+  margin: 0;
+  padding: var(--space-14) var(--space-16);
+  border: var(--border-width) dashed var(--line);
+  border-radius: var(--radius-button);
+  background: var(--paper);
+  color: var(--ink-mid);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.ai-write-copy-state {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--ink-mid);
+}
+
+/* 화면에는 없고 읽기 도구만 읽는 글(새 탭 안내) */
+.ai-write-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -41,7 +41,7 @@ AI(채팅 앱)가 MCP 도구 6개로 블로그 **초안만** 읽고 쓴다(adr-0
 
 ### Requirement: 읽기 도구는 markdown과 revision을 준다
 
-`get_post`는 SHALL 글 하나를 `serializeMarkdown`의 `markdown` · `losses`와 메타 · `revision`으로 돌려준다. `list_posts`는 초안 · 발행 글의 요약(slug · 제목 · 상태 · 날짜)을, `get_writing_guide`는 형식 가이드(content-convert `guide/format.md`)를 돌려준다 — 사용자 글쓰기 가이드는 설정 API가 생기면 합친다.
+`get_post`는 SHALL 글 하나를 `serializeMarkdown`의 `markdown` · `losses`와 메타 · `revision`으로 돌려준다. `list_posts`는 초안 · 발행 글의 요약(slug · 제목 · 상태 · 날짜)을, `get_writing_guide`는 형식 가이드(content-convert `guide/format.md`)를 돌려준다 — 워크스페이스 글쓰기 가이드를 붙이는 규칙은 "get_writing_guide는 워크스페이스 글쓰기 가이드를 함께 준다"가 정한다.
 
 #### Scenario: get_post는 직렬화 결과와 revision을 준다
 
@@ -84,3 +84,12 @@ AI(채팅 앱)가 MCP 도구 6개로 블로그 **초안만** 읽고 쓴다(adr-0
 
 - **WHEN** 저장소가 내부 경로가 담긴 예외를 던지는 상태에서 `list_posts`를 부른다
 - **THEN** 도구 오류이고 본문에 그 경로가 없다
+
+### Requirement: get_writing_guide는 워크스페이스 글쓰기 가이드를 함께 준다
+
+`get_writing_guide`는 SHALL 형식 가이드 뒤에 워크스페이스 설정의 글쓰기 가이드를 붙여 돌려준다. 가이드가 비어 있으면 형식 가이드만이다.
+
+#### Scenario: 저장한 가이드가 형식 가이드 뒤에 붙는다
+
+- **WHEN** 설정에 가이드를 저장한 뒤 `get_writing_guide`를 부른다
+- **THEN** 응답이 형식 가이드로 시작하고 저장한 가이드를 담는다

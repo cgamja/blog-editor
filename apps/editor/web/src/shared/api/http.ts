@@ -1,27 +1,34 @@
-import { HTTP_UNAUTHORIZED } from "./constants";
-import { ApiError, UnauthorizedError } from "./errors";
+import { HTTP_CONFLICT, HTTP_UNAUTHORIZED } from "./constants";
+import { ApiError, ConflictError, UnauthorizedError } from "./errors";
 
 /**
- * 같은 출처 API 요청 — 401은 `UnauthorizedError`, 그 밖의 실패는 `ApiError`로 던진다(design.md 1).
+ * 같은 출처 API 요청 — 401은 `UnauthorizedError`, 409는 `ConflictError`, 그 밖의 실패는 `ApiError`로 던진다(design.md 1).
  * 화면의 쿼리 · mutation은 모두 이것을 거쳐야 401이 세션 만료로 이어진다.
  */
 export async function apiRequest(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, init);
   if (response.ok) return response;
-  const userMessage = await messageOf(response);
+  const body = await jsonBodyOf(response);
+  const userMessage = messageOf(body);
   if (response.status === HTTP_UNAUTHORIZED) throw new UnauthorizedError(userMessage);
+  if (response.status === HTTP_CONFLICT) throw new ConflictError(userMessage, body);
   throw new ApiError(response.status, userMessage);
 }
 
-async function messageOf(response: Response): Promise<string | null> {
+/** 실패 응답의 JSON 본문 — JSON이 아니면 null */
+async function jsonBodyOf(response: Response): Promise<unknown> {
   try {
-    const body: unknown = await response.json();
-    if (typeof body === "object" && body !== null && "message" in body) {
-      const { message } = body as { message: unknown };
-      return typeof message === "string" ? message : null;
-    }
+    return (await response.json()) as unknown;
   } catch {
     // 본문이 JSON이 아니면 API 문장이 없는 것이다
+    return null;
+  }
+}
+
+function messageOf(body: unknown): string | null {
+  if (typeof body === "object" && body !== null && "message" in body) {
+    const { message } = body as { message: unknown };
+    return typeof message === "string" ? message : null;
   }
   return null;
 }

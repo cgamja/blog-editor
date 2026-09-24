@@ -327,3 +327,23 @@ describe("mcp-drafts — 쓰기 · 읽기", () => {
     expect((await store.get("beta-open"))?.file).toEqual(byEditor);
   });
 });
+
+describe("mcp-drafts — 워크스페이스 글쓰기 가이드", () => {
+  it("WHEN 설정에 가이드를 저장한 뒤 get_writing_guide를 부르면 THEN 형식 가이드로 시작하고 저장한 가이드를 담는다", async () => {
+    const { app } = setup();
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
+    const guide = "말투: 친근한 존댓말. 독자: 첫 아이를 키우는 부모.";
+    const saved = await app.request("/api/settings", {
+      method: "PUT",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ guide }),
+    });
+    expect(saved.status).toBe(200);
+
+    const result = await callTool(app, "get_writing_guide", {});
+
+    expect(result.isError).toBe(false);
+    expect(result.text.startsWith("형식 가이드")).toBe(true);
+    expect(result.text).toContain(guide);
+  });
+});
