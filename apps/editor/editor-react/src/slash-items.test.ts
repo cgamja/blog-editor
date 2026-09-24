@@ -9,4 +9,10 @@ describe("editor-slash-menu: 목록 거르기", () => {
     expect(filterSlashItems("")).toEqual(Object.keys(INSERTABLE_BLOCKS));
     expect(filterSlashItems("없는말")).toEqual([]);
   });
+
+  it("WHEN 조합 중인 한글 'ㅈ' · '젬' · '으'로 거른다 THEN 제목 둘을 포함하고, '으'는 콜아웃 · 주의를 포함한다", () => {
+    expect(filterSlashItems("ㅈ")).toEqual(expect.arrayContaining(["heading2", "heading3"]));
+    expect(filterSlashItems("젬")).toEqual(["heading2", "heading3"]);
+    expect(filterSlashItems("으")).toEqual(expect.arrayContaining(["calloutWarning"]));
+  });
 });
