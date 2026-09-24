@@ -230,6 +230,21 @@ describe("markdown-format", () => {
     },
   );
 
+  it("WHEN 괄호 span 안에 괄호 span을 겹쳐 쓰면 THEN 바깥 스타일을 조용히 잃지 않고 고치는 법과 함께 실패한다", () => {
+    const result = convertMarkdown("첫 문단\n\n[[가]{color=brand} 나]{size=lg}");
+    expectFail(result);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toContain("(3줄)");
+    expect(result.messages[0]).toContain("겹쳐 쓸 수 없");
+  });
+
+  it("WHEN 이미지 대체 글자에 괄호 span 모양을 쓰면 THEN 해석하지 않고 원문 그대로 alt가 된다", () => {
+    const result = convertMarkdown("![[강조]{color=brand} 화면](/images/a.webp)");
+    expectOk(result);
+    const [image] = result.doc.content;
+    expect(image?.type === "image" && image.attrs.alt).toBe("[강조]{color=brand} 화면");
+  });
+
   it("WHEN 가이드의 example 블록을 이어 붙여 변환하면 THEN 통과하고 docSchema를 통과한다", () => {
     const result = convertMarkdown(readGuideExamples());
     expectOk(result);

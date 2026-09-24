@@ -171,6 +171,29 @@ describe("editor-dom: 새 마크와 정렬도 공개 HTML과 같은 어휘로 �
     }
   });
 
+  it("WHEN 마크 7종이 한 글자에 겹친다 THEN 에디터의 겹침 순서가 공개 HTML과 같다(a > span.post-ts > u > s > strong > em > code)", () => {
+    const text = schema.text("가", [
+      schema.marks.code!.create(),
+      schema.marks.italic!.create(),
+      schema.marks.bold!.create(),
+      schema.marks.strike!.create(),
+      schema.marks.underline!.create(),
+      schema.marks.textStyle!.create({ color: "brand" }),
+      schema.marks.link!.create({ href: "/x" }),
+    ]);
+
+    // ProseMirror는 text.marks 순서대로 바깥부터 감싼다(DOMSerializer.serializeFragment)
+    expect(text.marks.map((mark) => mark.type.name)).toEqual([
+      "link",
+      "textStyle",
+      "underline",
+      "strike",
+      "bold",
+      "italic",
+      "code",
+    ]);
+  });
+
   it("WHEN 남의 인라인 색 span과 정의 밖 값의 post-ts span을 읽는다 THEN 둘 다 글자 스타일 마크가 되지 않는다", () => {
     const foreign = el({ tag: "span", attrs: { style: "color:red" }, children: ["가"] });
     const outOfSet = el({

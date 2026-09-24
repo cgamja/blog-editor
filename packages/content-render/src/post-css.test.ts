@@ -77,6 +77,10 @@ describe("render-css", () => {
     for (const selector of selectors) expect(css).toContain(selector);
   });
 
+  it("WHEN 두께를 지정한 글자 스타일 규칙을 찾으면 THEN 브라우저가 가짜 굵기를 만들지 않게 막는다", () => {
+    expect(css).toMatch(/\.post-ts\[data-weight\]\s*\{[^}]*font-synthesis-weight:\s*none/);
+  });
+
   it("WHEN 움직임 규칙의 위치를 찾으면 THEN 전부 reduced-motion 과 @supports 두 조건 안에만 있다", () => {
     const media = splitBlock(css, "@media (prefers-reduced-motion: no-preference)");
     expect(media).not.toBeNull();

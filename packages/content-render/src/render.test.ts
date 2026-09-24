@@ -144,6 +144,48 @@ describe("render-safety", () => {
     expect(hostileHtml).toContain('<a href="/a&quot;onmouseover=&quot;x">링크</a>');
   });
 
+  it("WHEN 검증을 건너뛴 글자 스타일 값을 렌더하면 THEN 모든 style 값이 허용된 CSS 변수 꼴뿐이고 새 태그 · on* 속성이 없다", () => {
+    const BAD_COLORS: unknown[] = [
+      "#aabbcc\n",
+      "#AABBCC",
+      "#000;x:url(a)",
+      42,
+      { toString: () => "#000;x:url(a)" },
+      // 검사할 때와 출력할 때 다른 글자를 내는 객체 — 문자열인지부터 봐야 막힌다
+      (() => {
+        let calls = 0;
+        return { toString: () => (calls++ === 0 ? "#aabbcc" : "#000;x:url(a)") };
+      })(),
+      ...HOSTILE,
+    ];
+    const styled = (attrs: Record<string, unknown>): Block =>
+      ({
+        type: "paragraph",
+        content: [{ type: "text", text: "가", marks: [{ type: "textStyle", attrs }] }],
+      }) as Block;
+    const hostile = docOf(
+      ...HOSTILE.flatMap((value) => [
+        styled({ font: value }),
+        styled({ weight: value }),
+        styled({ size: value }),
+      ]),
+      ...BAD_COLORS.flatMap((value) => [styled({ color: value }), styled({ highlight: value })]),
+    );
+    const outputs = [...Object.values(fixtures), hostile].map((file) =>
+      renderHtml(file, { imageBaseUrl: BASE }),
+    );
+    const ALLOWED_DECLARATION = /^(?:--[xysrw]:-?\d+|--ts-(?:color|highlight):#[0-9a-f]{6})$/;
+    for (const html of outputs) {
+      expect(html).not.toMatch(/<script/i);
+      for (const name of attributeNames(html)) expect(name).not.toMatch(/^on/i);
+      for (const [, style] of html.matchAll(/\sstyle="([^"]*)"/g)) {
+        for (const declaration of style!.split(";")) {
+          expect(declaration).toMatch(ALLOWED_DECLARATION);
+        }
+      }
+    }
+  });
+
   it("WHEN 표에 없는 heading level · 스티커 id를 렌더하면 THEN RangeError를 던진다", () => {
     // 검증을 건너뛴 문서를 흉내 낸다 — 태그 이름 · 파일 이름은 이스케이프로 막을 수 없어 오류가 답이다
     const heading = (level: unknown): Block =>
