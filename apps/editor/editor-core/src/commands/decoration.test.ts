@@ -12,7 +12,6 @@ import {
   docFromNode,
   docToNode,
   moveStickerToBlock,
-  placeOnNearestBlock,
   removeSticker,
   setBlockFont,
   setBlockMotion,
@@ -335,40 +334,15 @@ describe("editor-decoration: 스티커를 넣고 고치고 지우고 옮긴다",
   });
 });
 
-describe("editor-decoration: 놓은 자리에서 가장 가까운 블록과 % 좌표를 구한다", () => {
-  const upper = { pos: 0, left: 100, top: 0, width: 600, height: 100 };
-  const lower = { pos: 7, left: 100, top: 140, width: 600, height: 100 };
-
-  it("WHEN 블록 안 점 (400, 25)에 폭 90px 스티커 THEN 그 블록 기준 { x: 50, y: 25, size: 15 }", () => {
-    expect(placeOnNearestBlock([upper], { x: 400, y: 25 }, 90)).toEqual({
-      blockPos: 0,
-      x: 50,
-      y: 25,
-      size: 15,
+describe("editor-decoration: 스티커 목록이 그대로면 dispatch하지 않는다", () => {
+  it("WHEN x 10 스티커에 updateSticker(블록, 0, { x: 10 }) THEN true이고 dispatch가 없다", () => {
+    const state = stateAt(doc(paragraph("가", { stickers: [heart] })));
+    let dispatched = 0;
+    const ok = updateSticker(0, 0, { x: heart.x })(state, () => {
+      dispatched += 1;
     });
-  });
 
-  it("WHEN 두 블록 사이 y = 130에 놓는다 THEN 더 가까운 아래 블록에 음수 y %로 붙는다", () => {
-    expect(placeOnNearestBlock([upper, lower], { x: 400, y: 130 }, 90)).toEqual({
-      blockPos: 7,
-      x: 50,
-      y: -10,
-      size: 15,
-    });
-  });
-
-  it("WHEN 두 블록까지 거리가 같은 점에 놓는다 THEN 앞 블록에 붙는다", () => {
-    expect(placeOnNearestBlock([upper, lower], { x: 400, y: 120 }, 90)).toEqual({
-      blockPos: 0,
-      x: 50,
-      y: 120,
-      size: 15,
-    });
-  });
-
-  it("WHEN 멀리 떨어진 점 · 블록 폭 절반보다 큰 스티커 · 빈 목록 THEN null", () => {
-    expect(placeOnNearestBlock([upper], { x: 400, y: 900 }, 90)).toBeNull();
-    expect(placeOnNearestBlock([upper], { x: 400, y: 25 }, 400)).toBeNull();
-    expect(placeOnNearestBlock([], { x: 400, y: 25 }, 90)).toBeNull();
+    expect(ok).toBe(true);
+    expect(dispatched).toBe(0);
   });
 });

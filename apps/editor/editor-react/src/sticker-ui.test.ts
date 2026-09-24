@@ -1,10 +1,9 @@
+import { anchorLabel, stickerName } from "./sticker-messages";
 import {
-  anchorLabel,
   readStickerDrag,
   resizedSize,
   rotatedAngle,
   STICKER_DRAG_TYPE,
-  stickerName,
   writeStickerDrag,
 } from "./sticker-ui";
 import type { StickerDragData } from "./sticker-ui";

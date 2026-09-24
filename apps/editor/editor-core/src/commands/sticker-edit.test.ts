@@ -7,10 +7,13 @@ import {
   createEditorSchema,
   docFromNode,
   docToNode,
+  isStickerRemoveKey,
   mapStickerRef,
   placeStickerNear,
   removeSticker,
+  stickerCount,
   stickerKeyCommand,
+  stickersIn,
 } from "../index";
 import type { BlockRect } from "../index";
 
@@ -211,5 +214,35 @@ describe("editor-sticker-edit: 놓은 점은 붙을 수 있는 가장 가까운 
       y: 50,
       size: 10,
     });
+  });
+});
+
+describe("editor-sticker-edit: 보조키가 눌린 키는 스티커 조작이 아니다", () => {
+  it("WHEN - 를 metaKey, [ 를 ctrlKey, ArrowLeft를 altKey와 함께 찾는다 THEN 모두 null이다", () => {
+    const ref = { blockPos: 0, index: 0 };
+
+    expect([
+      stickerKeyCommand(ref, "-", { metaKey: true }),
+      stickerKeyCommand(ref, "[", { ctrlKey: true }),
+      stickerKeyCommand(ref, "ArrowLeft", { altKey: true }),
+    ]).toEqual([null, null, null]);
+  });
+
+  it("WHEN isStickerRemoveKey에 Delete, Backspace, x THEN true, true, false다", () => {
+    expect(["Delete", "Backspace", "x"].map(isStickerRemoveKey)).toEqual([true, true, false]);
+  });
+});
+
+describe("editor-sticker-edit: 스티커 개수를 문서에서 센다", () => {
+  it("WHEN 스티커 둘 · 하나인 문단에서 stickerCount, 둘째 문단 stickersIn, 경계 아닌 위치 stickersIn THEN 3, 길이 1, 빈 배열이다", () => {
+    const state = stateOf(
+      doc(withStickers(sticker(), sticker({ x: 70 })), withStickers(sticker())),
+    );
+
+    expect([
+      stickerCount(state.doc),
+      stickersIn(state.doc, blockStart(state.doc, 1)).length,
+      stickersIn(state.doc, 1),
+    ]).toEqual([3, 1, []]);
   });
 });
