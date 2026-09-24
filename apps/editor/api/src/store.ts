@@ -15,6 +15,8 @@ export interface PostStore {
   list(): Promise<PostSummary[]>;
   get(slug: string): Promise<{ file: PostFile; revision: string } | null>;
   put(slug: string, file: PostFile, revision: string | null): Promise<{ revision: string }>;
+  /** 지금 revision과 같을 때만 지운다 — 어긋나거나 없는 글이면 ConflictError(주소 바꾸기가 옛 파일을 지운다) */
+  delete(slug: string, revision: string): Promise<void>;
 }
 
 export class ConflictError extends Error {

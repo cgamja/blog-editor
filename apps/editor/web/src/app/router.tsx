@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { LoginPage, RequireSession } from "../features/auth";
+import { editorRoutes } from "../features/editor";
 import { ConnectPage } from "../features/connect";
 import { PostListPage } from "../features/posts";
 import { MESSAGES } from "../shared/messages";
@@ -35,23 +36,8 @@ export const router = createBrowserRouter([
               },
             ],
           },
-          // 편집 화면(#97)이 채운다 — 메뉴 없는 전체 화면이라 AppShell 밖이다
-          {
-            path: ROUTES.newPost,
-            element: (
-              <main className="app-page">
-                <PlaceholderPage title={MESSAGES.pages.newPost} />
-              </main>
-            ),
-          },
-          {
-            path: ROUTES.editPost,
-            element: (
-              <main className="app-page">
-                <PlaceholderPage title={MESSAGES.pages.editPost} />
-              </main>
-            ),
-          },
+          // 편집 화면 — 메뉴 없는 전체 화면이라 AppShell 밖이다
+          ...editorRoutes,
         ],
       },
       { path: "*", element: <NotFoundPage /> },

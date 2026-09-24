@@ -1,0 +1,330 @@
+/*
+ * 편집 화면(디자인 68:2 글 정보 · 67:2 충돌 · 디자인 결정 4-A)의 web 쪽 모양.
+ * 틀(머리줄 · 종이 · 옆 패널)은 editor-react editor-screen.css가 맡고, 여기는 web이 채운 칸만 그린다.
+ * 값은 tokens.css의 토큰만 쓴다 — 간격 --space-<px>, 선 --border-width, 포커스 --focus-ring-*.
+ */
+
+/*
+ * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16px은
+ * tokens.json에 아직 없어 규칙 안에 값과 출처 주석으로 둔다(토큰 추가는 후속). 대화상자는 편집 화면 틀(.editor-screen) 밖에 뜨므로 둘 다에 건다.
+ */
+.editor-screen,
+.editor-dialog {
+  /* 줄 간격 */
+  --line-height-title: 1.3; /* 68:2 제목 */
+  --line-height-postit: 1.35; /* 68:2 포스트잇 */
+  --line-height-textarea: 1.6; /* 68:2 설명 칸 */
+  --line-height-hint: 1.5; /* 68:2 칸 아래 안내 */
+  --line-height-dialog-title: 1.35; /* 67:2 제목 */
+  --line-height-dialog-body: 1.75; /* 67:2 본문 */
+  /* 글자 크기 — tokens.json에 14px가 없다 */
+  --font-size-small: 0.875rem; /* 14px — 68:2 입력 칸 · 띠, 67:2 본문 · 버튼 */
+  /* 크기 · 자리 */
+  --postit-width: 11.875rem; /* 68:2 포스트잇 190px */
+  --postit-offset-top: -3.5rem; /* 68:2 종이 위로 14px 걸침(종이 위 여백 64px 안쪽 기준) */
+  --postit-offset-right: -2.25rem; /* 68:2 종이 오른쪽에서 44px(좌우 여백 80px 안쪽 기준) */
+  --mini-button-height: 1.875rem; /* 디자인 결정 4-A 작은 버튼 30px */
+  --dialog-gutter: 2rem; /* 좁은 화면에서 대화상자 둘레 — 디자인에 없음 */
+  --preview-width: 56rem; /* 종이 760px + 대화상자 여백 — 디자인에 없는 화면 */
+  --preview-height: 48rem; /* 1360×860 화면에 들어가는 높이 — 디자인에 없는 화면 */
+}
+
+/* ---------- 종이 위 제목 ---------- */
+
+.post-title {
+  position: relative;
+  margin-bottom: var(--space-22);
+}
+
+.post-title-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 2.25rem; /* 68:2 제목 36px */
+  line-height: var(--line-height-title);
+  resize: none;
+  /* 글 길이만큼 자란다 — 제목이 두 줄이어도 스크롤이 생기지 않는다 */
+  field-sizing: content;
+}
+
+.post-title-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.post-title-input::placeholder {
+  color: var(--ink-soft);
+}
+
+/* AI가 올린 초안 포스트잇(디자인 68:2 — 종이 오른쪽 위에 걸친다) */
+.post-title-note {
+  position: absolute;
+  top: var(--postit-offset-top);
+  right: var(--postit-offset-right);
+  width: var(--postit-width);
+  margin: 0;
+  padding: var(--space-14) var(--space-16) var(--space-16);
+  background: var(--postit);
+  color: var(--postit-ink);
+  font-family: var(--font-hand);
+  font-size: 1.125rem; /* 68:2 포스트잇 18px */
+  line-height: var(--line-height-postit);
+  transform: rotate(2deg);
+  /* 68:2 포스트잇 그림자 */
+  box-shadow: var(--shadow-note);
+}
+
+/* ---------- 머리줄 저장 문구 ---------- */
+
+.editor-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.editor-save-status-failed {
+  color: var(--danger-ink);
+}
+
+.editor-save-retry {
+  min-height: var(--mini-button-height);
+  padding: 0 var(--space-10);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ---------- 세션 만료 띠 ---------- */
+
+.editor-expired {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-28);
+  background: var(--brand-soft);
+  color: var(--ink);
+  font-size: var(--font-size-small);
+  border-bottom: var(--border-width) solid var(--line);
+}
+
+.editor-expired-action {
+  min-height: var(--mini-button-height);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--brand-ink);
+  border-radius: var(--radius-button);
+  background: var(--brand-ink);
+  color: var(--surface);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- 글 정보 탭(디자인 68:2) ---------- */
+
+.post-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18);
+}
+
+.post-info-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.post-info-heading {
+  flex-grow: 1;
+  margin: 0;
+  font-size: 1rem; /* 68:2 「글 정보」 16px */
+  font-weight: 600;
+}
+
+.post-info-badge {
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--paper-deep);
+  color: var(--ink-mid);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+}
+
+.post-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.post-info-field label {
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  color: var(--ink-mid);
+}
+
+.post-info-field input,
+.post-info-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--font-size-small);
+}
+
+.post-info-field textarea {
+  padding: var(--space-10) var(--space-12);
+  line-height: var(--line-height-textarea);
+  resize: none;
+}
+
+.post-info-field input[readonly] {
+  background: var(--paper-deep);
+  color: var(--ink-mid);
+}
+
+.post-info-field input[aria-invalid="true"] {
+  border-color: var(--danger-ink);
+}
+
+.post-info-hint,
+.post-info-error {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-hint);
+  color: var(--ink-soft);
+}
+
+.post-info-error {
+  color: var(--danger-ink);
+}
+
+.post-info-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  margin-top: var(--space-8);
+}
+
+.post-info-button {
+  min-height: var(--control-height);
+  padding: 0 var(--space-18);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.post-info-button[aria-disabled="true"] {
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.post-info :focus-visible,
+.editor-dialog :focus-visible,
+.editor-expired :focus-visible,
+.editor-save-retry:focus-visible {
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* ---------- 대화상자(충돌 67:2 · 발행 확인 · 미리보기) — 틀은 shared/ui modal-dialog.css ---------- */
+
+.editor-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18);
+}
+
+.editor-dialog-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.625rem; /* 67:2 제목 26px */
+  font-weight: 400;
+  line-height: var(--line-height-dialog-title);
+}
+
+.editor-dialog-body {
+  margin: 0;
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-dialog-body);
+  color: var(--ink-mid);
+}
+
+.editor-dialog-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+
+.editor-dialog-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.editor-dialog-primary,
+.editor-dialog-secondary,
+.editor-dialog-danger {
+  min-height: var(--control-height);
+  padding: 0 var(--space-22);
+  border-radius: var(--radius-button);
+  font: inherit;
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.editor-dialog-primary {
+  border: var(--border-width) solid var(--brand-ink);
+  background: var(--brand-ink);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.editor-dialog-secondary {
+  border: var(--border-width) solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.editor-dialog-danger {
+  border: 0;
+  background: transparent;
+  color: var(--danger-ink);
+  font-weight: 500;
+}
+
+.editor-dialog-stack .editor-dialog-primary,
+.editor-dialog-stack .editor-dialog-secondary {
+  min-height: var(--dialog-button-height);
+}
+
+.modal-dialog.editor-dialog-preview {
+  /* 미리보기는 종이 폭(760px)에 여백을 더한 넓이 — 디자인에 없는 화면 */
+  width: min(var(--preview-width), calc(100vw - var(--dialog-gutter)));
+  height: min(var(--preview-height), calc(100dvh - var(--dialog-gutter)));
+}
+
+.editor-preview-frame {
+  flex-grow: 1;
+  width: 100%;
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+}

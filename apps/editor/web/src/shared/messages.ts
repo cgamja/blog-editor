@@ -9,8 +9,6 @@ export const MESSAGES = {
     settings: "설정",
   },
   pages: {
-    newPost: "새 글",
-    editPost: "글 편집",
     connect: "AI 연결",
     settings: "설정",
   },

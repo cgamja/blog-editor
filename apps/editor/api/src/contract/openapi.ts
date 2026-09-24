@@ -14,16 +14,22 @@ import {
   importPreviewResultSchema,
   loginBodySchema,
   messageBodySchema,
+  previewResultSchema,
+  renameConflictBodySchema,
+  renameResultSchema,
   saveResultSchema,
   schemaErrorBodySchema,
   settingsUpdateSchema,
 } from "./api-schemas";
 import { CONTENT_TYPE_OF } from "../images";
+import { previewBodySchema } from "../post-preview";
+import { renameBodySchema } from "../post-rename";
 import {
   IMAGE_FORMAT_MESSAGE,
   IMAGE_ROTATED_MESSAGE,
   IMAGE_TOO_LARGE_MESSAGE,
   IMAGE_TOO_WIDE_MESSAGE,
+  PREVIEW_TOO_LARGE_MESSAGE,
   IMPORT_BODY_MESSAGE,
   REQUEST_TOO_LARGE_MESSAGE,
   SETTINGS_BODY_MESSAGE,
@@ -66,6 +72,11 @@ function contractSchemas(categories: Categories) {
     PublicPosts: createPublicPostsResponseSchema({ categories }),
     LoginBody: loginBodySchema,
     SaveResult: saveResultSchema,
+    RenameBody: renameBodySchema,
+    RenameResult: renameResultSchema,
+    RenameConflictBody: renameConflictBodySchema,
+    PreviewBody: previewBodySchema,
+    PreviewResult: previewResultSchema,
     ImageUploadResult: imageUploadResultSchema,
     MessageBody: messageBodySchema,
     SchemaErrorBody: schemaErrorBodySchema,
@@ -210,6 +221,65 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
           schema: schemas.MessageBody,
         },
         428: { description: "If-None-Match · If-Match가 둘 다 없다", schema: schemas.MessageBody },
+      },
+    },
+    {
+      method: "post",
+      path: "/api/posts/{slug}/rename",
+      operationId: "renamePost",
+      tag: "posts",
+      summary: "초안 주소 바꾸기",
+      description:
+        "새 주소에 쓰고 옛 주소를 지운다. 발행한 글은 주소가 URL이라 잠겨 있다. 옛 주소의 글은 없어진다.",
+      requiresSession: true,
+      parameters: [
+        slugParameter,
+        {
+          name: "If-Match",
+          in: "header",
+          required: true,
+          description: "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤으면 409",
+        },
+      ],
+      requestBody: { description: "새 주소", schema: schemas.RenameBody },
+      responses: {
+        200: {
+          description: "옮겼다",
+          schema: schemas.RenameResult,
+          headers: { ETag: "새 주소의 revision" },
+        },
+        400: {
+          description: "주소 모양이 틀렸거나 본문이 JSON이 아니다",
+          schema: schemas.MessageBody,
+        },
+        401: unauthorized,
+        404: { description: "글이 없다", schema: schemas.MessageBody },
+        409: {
+          description:
+            "reason — published: 발행한 글이다(주소 잠금) · stale: revision이 맞지 않는다 · taken: 새 주소에 글이 이미 있다. 어느 쪽도 바뀌지 않는다",
+          schema: schemas.RenameConflictBody,
+        },
+        428: { description: "If-Match가 없다", schema: schemas.MessageBody },
+      },
+    },
+    {
+      method: "post",
+      path: "/api/preview",
+      operationId: "previewPost",
+      tag: "posts",
+      summary: "미리보기",
+      description:
+        "공개 API와 같은 렌더러 · imageBaseUrl로 본문을 그린다. 저장하지 않는다. 스타일은 /public/post.css.",
+      requiresSession: true,
+      requestBody: { description: "그릴 문서", schema: schemas.PreviewBody },
+      responses: {
+        200: { description: "그린 본문", schema: schemas.PreviewResult },
+        413: { description: PREVIEW_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
+        400: {
+          description: "본문이 JSON이 아니거나 문서가 스키마에 맞지 않는다",
+          schema: schemas.SchemaErrorBody,
+        },
+        401: unauthorized,
       },
     },
     {

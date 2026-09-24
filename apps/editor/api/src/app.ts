@@ -18,6 +18,10 @@ import {
   PRECONDITION_REQUIRED_MESSAGE,
   SCHEMA_MISMATCH_MESSAGE,
 } from "./messages";
+import { etagOf, revisionFromEtag } from "./etag";
+import { registerPreviewRoute } from "./post-preview";
+import { registerRenameRoute } from "./post-rename";
+import { issuesOf } from "./schema-issues";
 import { registerSessionRoutes, requireSession, resolveSessionConfig } from "./session";
 import type { SessionOptions } from "./session";
 import { registerMcpRoute } from "./mcp/route";
@@ -53,14 +57,6 @@ const POST_CSS_PATH = "/public/post.css";
 function readPostCss(): string {
   const path = fileURLToPath(import.meta.resolve("@blog-editor/content-render/post.css"));
   return readFileSync(path, "utf8");
-}
-
-const etagOf = (revision: string) => `"${revision}"`;
-
-/** `If-Match: "<revision>"`에서 revision을 꺼낸다. 모양이 다르면 어떤 revision과도 맞지 않는 값이 된다. */
-function revisionFromEtag(etag: string): string {
-  const match = /^"([^"]*)"$/.exec(etag.trim());
-  return match?.[1] ?? etag;
 }
 
 function byDate(a: { date: string; slug: string }, b: { date: string; slug: string }): number {
@@ -129,11 +125,7 @@ export function createApp(options: AppOptions): Hono {
     }
     const parsed = postFileSchema.safeParse(body);
     if (!parsed.success) {
-      const issues = parsed.error.issues.map(({ path, message }) => ({
-        path: path.map((key) => (typeof key === "symbol" ? String(key) : key)),
-        message,
-      }));
-      return c.json({ message: SCHEMA_MISMATCH_MESSAGE, issues }, 400);
+      return c.json({ message: SCHEMA_MISMATCH_MESSAGE, issues: issuesOf(parsed.error) }, 400);
     }
 
     const file: PostFile = { ...parsed.data, doc: normalize(parsed.data.doc) };
@@ -148,6 +140,9 @@ export function createApp(options: AppOptions): Hono {
       throw error;
     }
   });
+
+  registerRenameRoute(app, store);
+  registerPreviewRoute(app, imageBaseUrl);
 
   app.get("/public/posts", async (c) => {
     // 저장소는 읽을 때 검증하지 않는다 — `false`로 적힌 글만 발행 글이다(빠진 값 · null은 초안 취급)

@@ -29,6 +29,22 @@ describe("createQueryClient — 어느 요청이든 401이면 세션을 로그�
     expect(client.getQueryData(SESSION_QUERY_KEY)).toBe("anonymous");
   });
 
+  it("WHEN meta.expiresSessionOnUnauthorized false인 mutation이 UnauthorizedError로 실패한다 THEN 세션은 로그인됨 그대로다", async () => {
+    const client = createQueryClient();
+    client.setQueryData(SESSION_QUERY_KEY, "authenticated");
+
+    await client
+      .getMutationCache()
+      .build(client, {
+        mutationFn: reject(new UnauthorizedError()),
+        meta: { expiresSessionOnUnauthorized: false },
+      })
+      .execute(undefined)
+      .catch(() => {});
+
+    expect(client.getQueryData(SESSION_QUERY_KEY)).toBe("authenticated");
+  });
+
   it("WHEN 401이 아닌 오류로 실패한다 THEN 세션을 건드리지 않는다", async () => {
     const client = createQueryClient();
     client.setQueryData(SESSION_QUERY_KEY, "authenticated");

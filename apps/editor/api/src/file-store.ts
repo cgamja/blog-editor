@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { slugSchema } from "@blog-editor/content-schema";
 import type { PostFile } from "@blog-editor/content-schema";
@@ -84,6 +84,16 @@ export function createFilePostStore(options: { root: string; workspaceId: string
         await writeFile(temp, text, "utf8");
         await rename(temp, path);
         return { revision: revisionOf(text) };
+      });
+    },
+    delete(slug, revision) {
+      const path = pathOf(slug);
+      return serialized(path, async () => {
+        const currentText = await readText(path);
+        if (currentText === null || revisionOf(currentText) !== revision) {
+          throw new ConflictError(slug);
+        }
+        await unlink(path);
       });
     },
   };

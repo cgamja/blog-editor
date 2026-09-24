@@ -30,5 +30,9 @@ export function createMemoryPostStore(): PostStore {
       posts.set(slug, { text, revision: next });
       return { revision: next };
     },
+    async delete(slug, revision) {
+      if (posts.get(slug)?.revision !== revision) throw new ConflictError(slug);
+      posts.delete(slug);
+    },
   };
 }
