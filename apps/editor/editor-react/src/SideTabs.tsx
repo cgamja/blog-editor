@@ -1,0 +1,76 @@
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { screenMessages } from "./screen-messages";
+import { tabIndexAfterKey } from "./screen-tabs";
+import type { SideTab } from "./screen-types";
+
+export interface SideTabsProps {
+  postInfo: ReactNode;
+  decorate: ReactNode;
+  initialTab: SideTab;
+}
+
+const TABS: readonly SideTab[] = ["postInfo", "decorate"];
+const TAB_LABELS: Record<SideTab, string> = {
+  postInfo: screenMessages.postInfoTab,
+  decorate: screenMessages.decorateTab,
+};
+
+/**
+ * 옆 패널 탭 「글 정보」 | 「꾸미기」(디자인 69:2). 자동 활성화 · 로빙 tabindex(WAI-ARIA APG Tabs,
+ * https://www.w3.org/WAI/ARIA/apg/patterns/tabs/). 두 패널 모두 마운트해 두고 hidden으로 가린다 —
+ * 탭을 바꿔도 꾸미기 패널의 미리 보기 상태가 끊기지 않는다.
+ */
+export function SideTabs({ postInfo, decorate, initialTab }: SideTabsProps) {
+  const [active, setActive] = useState<SideTab>(initialTab);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const baseId = useId();
+  const tabId = (tab: SideTab) => `${baseId}-tab-${tab}`;
+  const panelId = (tab: SideTab) => `${baseId}-panel-${tab}`;
+  const panels: Record<SideTab, ReactNode> = { postInfo, decorate };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const next = tabIndexAfterKey(TABS.indexOf(active), event.key, TABS.length);
+    if (next === null) return;
+    event.preventDefault();
+    setActive(TABS[next]!);
+    tabRefs.current[next]?.focus();
+  };
+
+  return (
+    <div className="editor-screen-side">
+      <div className="editor-screen-tabs" role="tablist" aria-label={screenMessages.sideLabel}>
+        {TABS.map((tab, index) => (
+          <button
+            key={tab}
+            ref={(element) => {
+              tabRefs.current[index] = element;
+            }}
+            type="button"
+            role="tab"
+            id={tabId(tab)}
+            aria-selected={active === tab}
+            aria-controls={panelId(tab)}
+            tabIndex={active === tab ? 0 : -1}
+            className="editor-screen-tab"
+            onClick={() => setActive(tab)}
+            onKeyDown={handleKeyDown}
+          >
+            {TAB_LABELS[tab]}
+          </button>
+        ))}
+      </div>
+      {TABS.map((tab) => (
+        <div
+          key={tab}
+          role="tabpanel"
+          id={panelId(tab)}
+          aria-labelledby={tabId(tab)}
+          hidden={active !== tab}
+          className="editor-screen-panel"
+        >
+          {panels[tab]}
+        </div>
+      ))}
+    </div>
+  );
+}

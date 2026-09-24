@@ -1,0 +1,190 @@
+/*
+ * 편집 화면 틀(디자인 02 · 03, Figma 68:2 · 69:2, spec: editor-screen). 값의 원천은 design/tokens.json이고,
+ * 토큰에 없는 값은 옆에 디자인 출처를 적는다. 색은 토큰 이름을 참조만 한다 — 정의는 화면(web) · 플레이그라운드.
+ */
+
+.editor-screen {
+  display: grid;
+  /* 머리줄 68px(디자인 68:2 header height) · 본문 | 옆 패널 320px(tokens side-panel-width) */
+  grid-template-rows: 4.25rem minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  grid-template-areas:
+    "header header"
+    "body side";
+  height: 100dvh;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* ---------- 머리줄 ---------- */
+
+.editor-screen-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  /* 좌우 28px(디자인 68:2) */
+  padding: 0 1.75rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.editor-screen-back,
+.editor-screen-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* tokens control-height 44px · ui 15px · radius-button 10px */
+  height: 2.75rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  border-radius: 0.625rem;
+  cursor: pointer;
+}
+
+.editor-screen-back {
+  padding: 0 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink-mid);
+}
+
+.editor-screen-button {
+  padding: 0 1.125rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.editor-screen-button-primary {
+  border-color: var(--brand-ink);
+  background: var(--brand-ink);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.editor-screen-header [aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.editor-screen-header :focus-visible,
+.editor-screen-tab:focus-visible {
+  /* tokens focus-ring */
+  outline: 2px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
+.editor-screen-status {
+  flex-grow: 1;
+  margin: 0;
+  padding-right: 0.5rem;
+  text-align: right;
+  /* tokens caption 13px */
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- 본문 · 종이 ---------- */
+
+.editor-screen-body {
+  grid-area: body;
+  display: flex;
+  justify-content: center;
+  /* stretch면 종이 높이가 이 상자 높이에 묶여 긴 글이 종이 밖으로 넘친다 — 글 길이만큼 자라게 */
+  align-items: flex-start;
+  /* 종이 위 36px(디자인 68:2) · 아래는 스크롤 여유 */
+  padding: 2.25rem 1.5rem 4rem;
+  overflow: auto;
+}
+
+.editor-screen-paper {
+  /* 폭 도구줄(WidthToolbar)이 offsetParent인 이 상자 기준으로 위치를 잰다 */
+  position: relative;
+  box-sizing: border-box;
+  /* tokens article-width 760px · article-padding-x 80px, 위 64px(디자인 68:2) */
+  width: min(47.5rem, 100%);
+  min-height: 100%;
+  padding: 4rem 5rem 4rem;
+  background: var(--surface);
+  border-radius: 0.25rem 0.25rem 0 0;
+  /* 디자인 68:2 종이 그림자 — 토큰 없음 */
+  box-shadow:
+    0 18px 40px -18px color-mix(in srgb, var(--ink) 35%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* ---------- 옆 패널 ---------- */
+
+.editor-screen-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  /* 디자인 69:2 aside padding 20px 24px 24px */
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: var(--paper);
+  border-left: 1px solid var(--line);
+  overflow: auto;
+}
+
+.editor-screen-tabs {
+  display: flex;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.editor-screen-tab {
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.editor-screen-tab[aria-selected="true"] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--brand-ink);
+}
+
+/* 꾸미기 패널은 옆 패널 여백 안에 들어간다 */
+.editor-screen-panel .decoration-panel {
+  padding: 0;
+  background: transparent;
+}
+
+.editor-screen-placeholder {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* 1100px 미만: 옆 패널이 본문 아래로 내려가고 화면 전체가 스크롤한다(design.md 3 — 768은 깨지지만 않게) */
+@media (max-width: 68.75rem) {
+  .editor-screen {
+    grid-template-rows: 4.25rem auto auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "body"
+      "side";
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .editor-screen-body {
+    overflow: visible;
+  }
+
+  .editor-screen-side {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+}

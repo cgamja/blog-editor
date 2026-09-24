@@ -6,7 +6,8 @@
   "description": "useEditor 마운트 · NodeView · 툴바 · 꾸미기 패널. 개발용 플레이그라운드(playground/) 포함(adr-006 · adr-019).",
   "exports": {
     ".": "./src/index.ts",
-    "./editor.css": "./src/editor.css"
+    "./editor.css": "./src/editor.css",
+    "./editor-screen.css": "./src/editor-screen.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
