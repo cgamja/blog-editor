@@ -1,6 +1,6 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-### Requirement: 놓은 점은 붙을 수 있는 가장 가까운 자리에 붙는다
+### Requirement: 놓은 점은 거리와 상관없이 가장 가까운 허용 자리에 붙는다
 
 editor-core는 SHALL `placeStickerNear(blocks, point, stickerWidth)`를 export한다.
 
@@ -38,8 +38,6 @@ editor-core는 SHALL `placeStickerNear(blocks, point, stickerWidth)`를 export�
 - **WHEN** 폭 100 블록 하나뿐인 곳에 폭 60 스티커를 놓는다
 - **THEN** null이다
 
-## ADDED Requirements
-
 ### Requirement: 끄는 동안 원래 자리의 스티커를 숨긴다
 
 editor-core는 SHALL `stickerHiding()` 플러그인과 `hideSticker(ref | null)` 커맨드를 export한다. 숨긴 스티커가 있으면 그 최상위 블록에 노드 장식 속성 `data-sticker-hidden`(값은 순번)을 단다 — ProseMirror가 그린 DOM을 직접 고치지 않는 공식 경로다. 문서는 바꾸지 않고, 문서가 바뀌면(놓기 · 다른 편집) 숨김이 풀린다.
@@ -53,3 +51,11 @@ editor-core는 SHALL `stickerHiding()` 플러그인과 `hideSticker(ref | null)`
 
 - **WHEN** 스티커를 숨긴 상태에서 그 스티커를 다른 블록으로 옮기는 트랜잭션을 적용한다
 - **THEN** 장식이 없다
+
+## REMOVED Requirements
+
+### Requirement: 놓은 점은 붙을 수 있는 가장 가까운 자리에 붙는다
+
+**Reason**: 이슈 #71 — 24px 스냅 한도 때문에 여백에 놓은 스티커가 거절돼 "잘 안 옮겨진다"는 피드백이 나왔다(sticker-polish design.md 1).
+
+**Migration**: 「놓은 점은 거리와 상관없이 가장 가까운 허용 자리에 붙는다」가 대신한다. 함수 이름 · 좌표 정의는 같고, null은 크기가 맞는 블록이 없을 때뿐이다.

@@ -56,12 +56,12 @@ editor-core는 SHALL `setBlockWidth(percent)` 커맨드를 export한다. 대상�
 
 ### Requirement: 스티커를 넣고 고치고 지우고 옮긴다
 
-editor-core는 SHALL `addSticker` · `updateSticker` · `removeSticker` · `moveStickerToBlock` 커맨드를 export한다. 스티커는 (최상위 블록 시작 위치, 순번)으로 가리킨다. 값은 `STICKER_IDS` · `STICKER_RANGES` 안의 정수여야 하고, 글 전체 스티커는 `MAX_STICKERS_PER_DOC`개를 넘지 않는다. 어기면 자르지 않고 `false`다.
+editor-core는 SHALL `addSticker` · `updateSticker` · `removeSticker` · `moveStickerToBlock` 커맨드를 export한다. 스티커는 (최상위 블록 시작 위치, 순번)으로 가리킨다. 값은 `STICKER_IDS` · `STICKER_RANGES` 안의 정수여야 하고, 글 전체 스티커는 `MAX_STICKERS_PER_DOC`개를 넘지 않는다. 어기면 자르지 않고 `false`다. 자리를 주지 않으면 블록 오른쪽 위에 블록 폭의 8%로 붙는다(이슈 #71 — 15%는 본문 폭에서 128px라 너무 컸다).
 
 #### Scenario: 자리를 주지 않으면 커서 블록의 기본 자리에 붙는다
 
 - **WHEN** 문단에 커서를 두고 `addSticker("heart")`를 실행한다
-- **THEN** 그 문단의 스티커가 `{ id: "heart", x: 95, y: 5, size: 15, rotate: 0 }` 하나다
+- **THEN** 그 문단의 스티커가 `{ id: "heart", x: 95, y: 5, size: 8, rotate: 0 }` 하나다
 
 #### Scenario: 자리를 주면 그 블록 그 좌표에 붙는다
 
