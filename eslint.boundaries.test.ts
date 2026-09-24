@@ -1,4 +1,7 @@
+import { readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { ESLint } from "eslint";
+import { WEB_FEATURE_MAX_DEPTH } from "./eslint.config.mjs";
 
 /**
  * eslint.config.mjs의 import 경계가 실제로 막는지 — 설정이 회귀해도 verify가 빨강이 되게 한다.
@@ -194,7 +197,7 @@ describe("import 경계: web 안의 층(app → features → shared)", () => {
   it.each([
     [`${WEB}/app/__probe__.ts`, "../features/auth/session-cache"],
     [`${WEB}/app/__probe__.test.ts`, "../features/auth/components/RequireSession"],
-    [`${WEB}/pages/__probe__.tsx`, "../features/auth/pages/LoginPage"],
+    [`${WEB}/app/pages/__probe__.tsx`, "../../features/auth/pages/LoginPage"],
   ])(
     "WHEN 기능 밖(%s)에서 기능 안쪽 경로를 import하면(%s) THEN 막힌다",
     async (filePath, specifier) => {
@@ -205,13 +208,66 @@ describe("import 경계: web 안의 층(app → features → shared)", () => {
   it("WHEN 기능 밖에서 기능의 index · shared를 import하고 기능 안에서 자기 파일을 import하면 THEN 통과한다", async () => {
     const results = await Promise.all([
       restrictedImports(`${WEB}/app/__probe__.ts`, ["../features/auth", "../shared/messages"]),
-      restrictedImports(`${WEB}/pages/__probe__.tsx`, ["../shared/routes/constants"]),
+      restrictedImports(`${WEB}/app/pages/__probe__.tsx`, ["../../shared/routes/constants"]),
       restrictedImports(`${WEB}/features/auth/pages/__probe__.tsx`, [
         "../session-cache",
         "../../../shared/api/errors",
       ]),
     ]);
     expect(results).toEqual([[], [], []]);
+  });
+
+  it.each([
+    [`${WEB}/features/posts/__probe__.ts`, "../../app/router"],
+    [`${WEB}/features/posts/pages/__probe__.tsx`, "../../../app/query-client"],
+    [`${WEB}/features/posts/__probe__.ts`, "../auth"],
+    [`${WEB}/features/posts/components/__probe__.tsx`, "../../auth/session-cache"],
+    [`${WEB}/features/posts/hooks/__probe__.test.ts`, "../../auth"],
+    // src까지 올라갔다가 features · app으로 다시 내려오는 우회
+    [`${WEB}/features/posts/__probe__.ts`, "../../features/auth"],
+    [`${WEB}/features/posts/__probe__.ts`, "../../features/auth/session-cache"],
+    [`${WEB}/features/posts/pages/__probe__.tsx`, "../../../features/auth"],
+    [`${WEB}/features/posts/__probe__.ts`, "../../../src/app/router"],
+    // 앞에 ./를 붙인 모양 · 자기 폴더로 내려갔다 다시 올라오는 모양
+    [`${WEB}/features/posts/__probe__.ts`, "./../auth"],
+    [`${WEB}/features/posts/pages/__probe__.tsx`, "./../../auth"],
+    [`${WEB}/features/posts/pages/__probe__.tsx`, "../components/../../auth"],
+  ])(
+    "WHEN 기능(%s)이 app이나 다른 기능을 import하면(%s) THEN 막힌다",
+    async (filePath, specifier) => {
+      expect((await restrictedImports(filePath, [specifier])).length).toBeGreaterThanOrEqual(1);
+    },
+  );
+
+  it("WHEN 기능이 shared와 자기 파일을 import하면 THEN 통과한다", async () => {
+    expect(
+      await restrictedImports(`${WEB}/features/posts/pages/__probe__.tsx`, [
+        "../../../shared/routes/constants",
+        "../components/PostTable",
+        "../constants",
+      ]),
+    ).toEqual([]);
+  });
+
+  // 화면 자리를 층 밖에 따로 두지 않는다 — 기능의 화면은 features/<이름>/pages, 기능에 속하지 않는
+  // 화면(404 · 오류 · 앱 틀)은 app 아래. 최상위 pages/는 어느 층인지 모호해 import 방향 규칙이 걸리지 않는다
+  // 기능 층 규칙은 파일 깊이마다 블록을 둔다 — 그보다 깊은 파일은 규칙 밖이라 아예 만들지 않는다
+  it("WHEN web 기능 폴더의 파일 깊이를 잰다 THEN 모두 WEB_FEATURE_MAX_DEPTH 이하다", () => {
+    const featuresDir = join(import.meta.dirname, WEB, "features");
+    const depths = readdirSync(featuresDir, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map(
+        (entry) => relative(featuresDir, join(entry.parentPath, entry.name)).split(sep).length - 2,
+      );
+    expect(Math.max(...depths)).toBeLessThanOrEqual(WEB_FEATURE_MAX_DEPTH);
+  });
+
+  it("WHEN web src 최상위 폴더를 읽으면 THEN app · features · shared · styles뿐이다", () => {
+    const top = readdirSync(join(import.meta.dirname, WEB), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    expect(top).toEqual(["app", "features", "shared", "styles"]);
   });
 });
 

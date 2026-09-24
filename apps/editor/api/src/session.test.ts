@@ -178,3 +178,24 @@ describe("api-session — 로그아웃", () => {
     expect(logout.headers.get("Set-Cookie")).toMatch(/Max-Age=0/);
   });
 });
+
+describe("api-session — 세션 확인", () => {
+  it("WHEN 로그인한 쿠키로 GET /api/session을 부르면 THEN 204이고 본문이 비어 있다", async () => {
+    const { app } = setup();
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
+
+    const res = await app.request("/api/session", { headers: { Cookie: cookie } });
+
+    expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
+  });
+
+  it("WHEN 세션 쿠키 없이 GET /api/session을 부르면 THEN 401이고 message가 있다", async () => {
+    const { app } = setup();
+
+    const res = await app.request("/api/session");
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ message: expect.any(String) });
+  });
+});
