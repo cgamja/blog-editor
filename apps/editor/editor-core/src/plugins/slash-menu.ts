@@ -121,12 +121,17 @@ declare module "@tiptap/core" {
   }
 }
 
+// 메뉴가 열려 있을 때의 Enter · Tab · 방향키는 다른 키맵보다 먼저 받아야 한다 —
+// 입력 규칙 되돌리기(1100) · 목록 키(1050) · 스티커 분할(1000)보다 위. 닫혀 있으면 false라 다음으로 넘어간다
+const SLASH_MENU_PRIORITY = 1200;
+
 /**
  * 조립하는 쪽이 고른다. 등록만 한다(adr-002). 키 처리기는 React가 `editor.storage.slashMenu.onKey`에 꽂는다.
  * https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension#storage
  */
 export const SlashMenu = Extension.create<object, SlashMenuStorage>({
   name: "slashMenu",
+  priority: SLASH_MENU_PRIORITY,
   addStorage: () => ({ onKey: null }),
   addProseMirrorPlugins() {
     return [slashMenu({ onKey: (key) => this.storage.onKey?.(key) ?? false })];
