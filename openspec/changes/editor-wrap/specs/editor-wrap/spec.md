@@ -14,6 +14,16 @@ editor-core는 SHALL `wrapInBlockquote` · `wrapInBulletList` · `wrapInOrderedL
 - **WHEN** 스티커가 붙은 문단 둘을 선택해 `wrapInBulletList` 또는 `wrapInOrderedList`를 실행한다
 - **THEN** 바깥 목록이 두 문단의 스티커를 순서대로 모두 가지고, `font`는 값이 있는 첫 문단의 것이다
 
+#### Scenario: 꾸민 문단 하나를 목록으로 감싸면 항목 하나가 된다
+
+- **WHEN** `font` · 스티커가 붙은 최상위 문단 하나에서 `wrapInBulletList`를 실행한다
+- **THEN** 항목 하나짜리 목록이 되고, 목록이 그 `font`와 스티커를 가진다
+
+#### Scenario: 문단 여럿을 목록으로 감싸도 선택이 같은 글자 위에 남는다
+
+- **WHEN** 문단 둘에 걸친 선택에서 `wrapInBulletList`를 실행한다
+- **THEN** 선택된 글자가 감싸기 전과 같다
+
 #### Scenario: 콜아웃으로 감싸면 종류와 꾸미기가 콜아웃에 있다
 
 - **WHEN** `motion`이 붙은 최상위 문단에서 `wrapInCallout("tip")`을 실행한다
@@ -31,5 +41,5 @@ editor-core는 SHALL `wrapInBlockquote` · `wrapInBulletList` · `wrapInOrderedL
 
 #### Scenario: 감쌀 수 없으면 문서를 바꾸지 않는다
 
-- **WHEN** 제목을 `wrapInBlockquote`로 감싸거나, 콜아웃 안에서 `wrapInCallout("tip")`을, 또는 `wrapInCallout("bogus")`를 실행한다
+- **WHEN** 제목을 `wrapInBlockquote`로 감싸거나, 콜아웃 안에서 `wrapInCallout("tip")`을, `wrapInCallout("bogus")`를, 문서 끝 틈(gap cursor)에서 `wrapInBlockquote`를, 또는 제목이 섞인 전체 선택에서 `wrapInBulletList`를 실행한다
 - **THEN** 커맨드가 `false`이고, dispatch 없이 물어도 `false`이며, 문서가 그대로다
