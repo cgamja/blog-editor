@@ -27,10 +27,12 @@
   --tab-gap: 1.25rem; /* 탭 사이 20px */
 
   display: grid;
-  grid-template-rows: var(--header-height) minmax(0, 1fr);
+  /* 알림 띠 줄은 띠가 없으면 0 높이다 */
+  grid-template-rows: var(--header-height) auto minmax(0, 1fr);
   grid-template-columns: minmax(0, 1fr) var(--side-panel-width);
   grid-template-areas:
     "header header"
+    "banner banner"
     "body side";
   height: 100dvh;
   background: var(--paper-deep);
@@ -120,6 +122,13 @@
   color: var(--ink-soft);
 }
 
+/* ---------- 알림 띠 ---------- */
+
+/* 모양(색 · 버튼)은 띠를 넣는 화면이 정한다 — 틀은 자리만 둔다 */
+.editor-screen-banner {
+  grid-area: banner;
+}
+
 /* ---------- 본문 · 종이 ---------- */
 
 .editor-screen-body {
@@ -203,10 +212,11 @@
 /* 1100px 미만: 옆 패널이 본문 아래로 내려가고 화면 전체가 스크롤한다(768 · 375는 깨지지만 않게, design/map.md) */
 @media (max-width: 68.75rem) {
   .editor-screen {
-    grid-template-rows: var(--header-height) auto auto;
+    grid-template-rows: var(--header-height) auto auto auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "header"
+      "banner"
       "body"
       "side";
     height: auto;
