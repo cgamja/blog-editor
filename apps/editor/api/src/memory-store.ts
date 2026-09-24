@@ -30,5 +30,8 @@ export function createMemoryPostStore(): PostStore {
       posts.set(slug, { text, revision: next });
       return { revision: next };
     },
+    async delete(slug, revision) {
+      throw new Error(`미구현: ${slug} ${revision}`);
+    },
   };
 }

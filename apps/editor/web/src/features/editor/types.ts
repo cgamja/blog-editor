@@ -1,0 +1,37 @@
+import type { Doc, PostMeta } from "@blog-editor/content-schema";
+
+/** 저장을 막을 수 있는 「글 정보」 칸 — `missingForSave`가 이 순서로 돌려준다 */
+export type MetaField = "title" | "description" | "category" | "slug";
+
+/** 머리줄 저장 상태(디자인 결정 4-A) */
+export type SaveStatus =
+  | { kind: "idle" }
+  | { kind: "incomplete"; missing: readonly MetaField[] }
+  | { kind: "saving" }
+  | { kind: "saved"; at: Date; isPublished: boolean }
+  | { kind: "published" }
+  | { kind: "failed"; message: string | null };
+
+/** 저장 실패를 화면이 할 일로 나눈 것 */
+export type SaveErrorKind = "expired" | "slugTaken" | "conflict" | "rejected" | "failed";
+
+/**
+ * 브라우저에 남긴 쓰던 글(localDraft). `baseRevision`은 이 글을 쓰기 시작한 서버 revision —
+ * 아직 서버에 없는 새 글이면 null.
+ */
+export interface LocalDraft {
+  baseRevision: string | null;
+  slug: string;
+  meta: PostMeta;
+  doc: Doc;
+  savedAt: string;
+}
+
+export type RestoreDecision = "none" | "restore" | "conflict";
+
+/** 편집 세션 — 화면이 스스로 옮긴 주소(adopted)에서는 `sessionKey`를 이어 간다 */
+export interface EditingSession {
+  routeKey: string;
+  sessionKey: string;
+  adopted: string | null;
+}

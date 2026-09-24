@@ -86,5 +86,8 @@ export function createFilePostStore(options: { root: string; workspaceId: string
         return { revision: revisionOf(text) };
       });
     },
+    async delete(slug, revision) {
+      throw new Error(`미구현: ${slug} ${revision}`);
+    },
   };
 }
