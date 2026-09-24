@@ -1,9 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { WriteWithAIDialog } from "../features/ai-write";
+import { AI_WRITE_DIALOG_TITLE, WriteWithAIDialog } from "../features/ai-write";
 import { useWorkspaceSettings } from "../features/connect";
-import { ImportDialog } from "../features/import";
-import { POSTS_QUERY_KEY } from "../features/posts";
+import { IMPORT_DIALOG_TITLE, ImportDialog } from "../features/import";
+import { PostListPage, POSTS_QUERY_KEY } from "../features/posts";
 import type { ListDialogComponents, ListDialogProps } from "../features/posts";
+import { useWarmDisplayFont } from "../shared/ui/use-warm-display-font";
+
+const LIST_DIALOG_TITLES = [IMPORT_DIALOG_TITLE, AI_WRITE_DIALOG_TITLE];
 
 /** 대화상자가 고를 카테고리 — 설정을 불러오는 동안은 빈 목록(만들기 버튼이 꺼져 있다) */
 function useCategories(): readonly string[] {
@@ -36,3 +39,9 @@ export const LIST_DIALOGS: ListDialogComponents = {
   import: ImportListDialog,
   "write-ai": WriteWithAIListDialog,
 };
+
+/** 대화상자를 꽂은 글 목록 — 대화상자는 열 때만 그려지므로 제목 글꼴 조각을 미리 받아 둔다(#107) */
+export function PostListWithDialogs() {
+  useWarmDisplayFont(LIST_DIALOG_TITLES);
+  return <PostListPage dialogs={LIST_DIALOGS} />;
+}

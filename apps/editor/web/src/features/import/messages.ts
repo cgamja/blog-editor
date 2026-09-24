@@ -25,3 +25,6 @@ export const IMPORT_MESSAGES = {
   slugTaken: "그 주소에 이미 글이 있어요. 다른 주소를 써 주세요.",
   createFailed: "초안을 만들지 못했어요. 다시 시도해 주세요.",
 } as const;
+
+/** 목록이 제목 글꼴 조각을 미리 받을 때 쓴다(#107) — 문구 원천은 위 한 곳 */
+export const IMPORT_DIALOG_TITLE = IMPORT_MESSAGES.title;
