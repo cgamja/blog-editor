@@ -10,6 +10,12 @@ describe("editor-slash-menu: 목록 거르기", () => {
     expect(filterSlashItems("없는말")).toEqual([]);
   });
 
+  it("WHEN 이름을 띄어 쓰지 않고 '큰제목' · '점목록' · '콜아웃메모'로 거른다 THEN 각각 그 항목이 맞는다", () => {
+    expect(filterSlashItems("큰제목")).toEqual(["heading2"]);
+    expect(filterSlashItems("점목록")).toEqual(["bulletList"]);
+    expect(filterSlashItems("콜아웃메모")).toEqual(["calloutNote"]);
+  });
+
   it("WHEN 조합 중인 한글 'ㅈ' · '젬' · '으'로 거른다 THEN 제목 둘을 포함하고, '으'는 콜아웃 · 주의를 포함한다", () => {
     expect(filterSlashItems("ㅈ")).toEqual(expect.arrayContaining(["heading2", "heading3"]));
     expect(filterSlashItems("젬")).toEqual(["heading2", "heading3"]);

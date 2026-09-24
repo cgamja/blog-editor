@@ -93,17 +93,26 @@ function composeInto(view: FakeView, value: string): void {
 function pressKey(
   view: FakeView,
   key: string,
-  { isComposing = false }: { isComposing?: boolean } = {},
+  {
+    isComposing = false,
+    shiftKey = false,
+    metaKey = false,
+  }: { isComposing?: boolean; shiftKey?: boolean; metaKey?: boolean } = {},
 ): boolean {
   const plugin = pluginOf(view.state);
   return (
     plugin.props.handleKeyDown?.call(
       plugin,
       view as unknown as EditorView,
-      // editor-core에는 DOM 타입이 없다 — 핸들러가 읽는 key · isComposing만 갖춘 값
-      { key, isComposing } as unknown as Parameters<
-        NonNullable<Plugin["props"]["handleKeyDown"]>
-      >[1],
+      // editor-core에는 DOM 타입이 없다 — 핸들러가 읽는 key · isComposing · 수정키만 갖춘 값
+      {
+        key,
+        isComposing,
+        shiftKey,
+        metaKey,
+        ctrlKey: false,
+        altKey: false,
+      } as unknown as Parameters<NonNullable<Plugin["props"]["handleKeyDown"]>>[1],
     ) ?? false
   );
 }
@@ -228,6 +237,21 @@ describe("editor-slash-menu: 키 넘기기", () => {
     expect(keys).toEqual(["ArrowDown", "Enter"]);
   });
 
+  it("WHEN 열린 상태에서 Shift+Enter · ⌘+Shift+↓ THEN 처리기를 부르지 않고 false", () => {
+    const keys: string[] = [];
+    const view = start([paragraph()], {
+      onKey: (key) => {
+        keys.push(key);
+        return true;
+      },
+    });
+    type(view, "/");
+    expect(pressKey(view, "Enter", { shiftKey: true })).toBe(false);
+    expect(pressKey(view, "ArrowDown", { shiftKey: true, metaKey: true })).toBe(false);
+    expect(keys).toEqual([]);
+    expect(menuOf(view)).not.toBeNull();
+  });
+
   it("WHEN 닫힌 상태에서 Enter THEN 처리기를 부르지 않는다", () => {
     const keys: string[] = [];
     const view = start([paragraph("가")], {
@@ -288,6 +312,47 @@ describe("editor-slash-menu: 항목 고르기", () => {
     expect(view.state.doc.child(0).type.name).toBe("horizontalRule");
     expect(view.state.selection.$from.parent.type.name).toBe("paragraph");
     expect(view.state.selection.$from.index(0)).toBe(1);
+  });
+
+  it("WHEN 빈 문단 '/문'에서 paragraph THEN 글자만 지워진 빈 문단이고 메뉴는 닫힌다", () => {
+    const view = start([paragraph()]);
+    type(view, "/");
+    composeInto(view, "문");
+    expect(run(view, applySlashItem("paragraph"))).toBe(true);
+    expect(saved(view)).toEqual([paragraph()]);
+    expect(menuOf(view)).toBeNull();
+  });
+
+  it("WHEN 적용 직후 글자를 친다 THEN undo 한 번은 친 글자만, 두 번째가 블록 변환을 되돌린다", () => {
+    const view = start([paragraph()]);
+    type(view, "/");
+    composeInto(view, "제목");
+    run(view, applySlashItem("heading2"));
+    type(view, "가");
+
+    undo(view.state, (tr) => view.dispatch(tr));
+    expect(view.state.doc.child(0).type.name).toBe("heading");
+    expect(view.state.doc.textContent).toBe("");
+
+    undo(view.state, (tr) => view.dispatch(tr));
+    expect(view.state.doc.child(0).type.name).toBe("paragraph");
+    expect(view.state.doc.textContent).toBe("/제목");
+  });
+
+  it("WHEN undo로 '/제목'이 되살아난다 THEN 메뉴는 열리지 않는다", () => {
+    const view = start([paragraph()]);
+    type(view, "/");
+    composeInto(view, "제목");
+    run(view, applySlashItem("heading2"));
+    undo(view.state, (tr) => view.dispatch(tr));
+    expect(view.state.doc.textContent).toBe("/제목");
+    expect(menuOf(view)).toBeNull();
+  });
+
+  it("WHEN 붙여넣기처럼 handleTextInput 없이 /가 들어온다 THEN 메뉴는 열리지 않는다", () => {
+    const view = start([paragraph()]);
+    composeInto(view, "/");
+    expect(menuOf(view)).toBeNull();
   });
 
   it("WHEN 닫힌 상태에서 applySlashItem THEN false이고 문서는 그대로", () => {
