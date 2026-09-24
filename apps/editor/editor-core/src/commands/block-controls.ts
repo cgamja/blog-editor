@@ -1,19 +1,101 @@
+/**
+ * 블록 손잡이 메뉴 · 폭 손잡이(이슈 #81, openspec block-controls)가 부르는 커맨드와 계산. 근거 문서:
+ * - Command: https://prosemirror.net/docs/ref/#state.Command
+ * - Selection.findFrom · NodeSelection.create: https://prosemirror.net/docs/ref/#state.Selection^findFrom
+ * - EditorState.apply(선택만 바꾼 상태): https://prosemirror.net/docs/ref/#state.EditorState.apply
+ * - Transform.delete · replaceWith: https://prosemirror.net/docs/ref/#transform.Transform.delete
+ */
+import { NodeSelection, Selection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
+import type { Node } from "@tiptap/pm/model";
+import { WIDTH_RANGE } from "@blog-editor/content-schema";
+import { TURN_INTO_TARGETS } from "./block-controls.constants";
 import type { TurnIntoKind } from "./block-controls.constants";
-import type { WidthDrag } from "./block-controls.types";
+import type { TurnIntoTarget, WidthDrag } from "./block-controls.types";
+import { blockStart } from "./move-block";
+import { turnIntoTextblock } from "./turn-into";
+import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "./wrap";
 
+const PERCENT = 100;
+/** 가운데 정렬 블록은 한쪽을 dx 끌면 양쪽이 함께 dx씩 — 폭은 2dx 바뀐다(design.md 6) */
+const SYMMETRIC = 2;
+
+const WRAPPERS: Record<Extract<TurnIntoTarget, { via: "wrap" }>["wrapper"], Command> = {
+  bulletList: wrapInBulletList,
+  orderedList: wrapInOrderedList,
+  blockquote: wrapInBlockquote,
+};
+
+const isTopIndex = (doc: Node, index: number) =>
+  Number.isInteger(index) && index >= 0 && index < doc.childCount;
+
+/**
+ * 최상위 `index`번째 블록을 지우고 커서를 그 자리 블록(맨 끝이었으면 앞 블록 끝)에 둔다.
+ * 문서는 블록이 하나 이상이어야 해서(doc: block+) 마지막 하나면 빈 문단으로 바꾼다.
+ */
 export function deleteTopBlock(index: number): Command {
-  throw new Error(`미구현: ${index}`);
+  return (state, dispatch) => {
+    const { doc, schema } = state;
+    if (!isTopIndex(doc, index)) return false;
+    if (dispatch === undefined) return true;
+
+    const start = blockStart(doc, index);
+    const end = start + doc.child(index).nodeSize;
+    const tr =
+      doc.childCount === 1
+        ? state.tr.replaceWith(start, end, schema.nodes.paragraph!.create())
+        : state.tr.delete(start, end);
+    const $at = tr.doc.resolve(Math.min(start, tr.doc.content.size));
+    const selection = Selection.findFrom($at, 1) ?? Selection.findFrom($at, -1);
+    if (selection !== null) tr.setSelection(selection);
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
 }
 
+/** 그 블록 안 선택 — 글자를 품으면 첫 글자 자리, atom(그림 · 구분선)이면 노드 선택 */
+function selectionInTopBlock(doc: Node, index: number): Selection {
+  const start = blockStart(doc, index);
+  const block = doc.child(index);
+  if (block.isAtom) return NodeSelection.create(doc, start);
+  return Selection.findFrom(doc.resolve(start + 1), 1, true) ?? NodeSelection.create(doc, start);
+}
+
+/**
+ * 선택을 최상위 `index`번째 블록으로 옮긴 상태로 `command`를 부른다(design.md 5). 블록 바꾸기 · 감싸기 · 복제는
+ * 선택이 든 블록에 작동하는데, 손잡이 블록은 커서와 다를 수 있다. 선택 이동은 문서를 바꾸지 않으므로
+ * command가 만든 트랜잭션은 원래 상태에도 그대로 적용된다(같은 doc). 되돌리면 커서는 원래 자리로 돌아온다.
+ */
 export function atTopBlock(index: number, command: Command): Command {
-  throw new Error(`미구현: ${index} ${typeof command}`);
+  return (state, dispatch) => {
+    if (!isTopIndex(state.doc, index)) return false;
+    const selected = state.apply(state.tr.setSelection(selectionInTopBlock(state.doc, index)));
+    return command(selected, dispatch);
+  };
 }
 
+/** 블록 메뉴 「바꾸기」 — 최상위 `index`번째 블록을 `kind`로. 바꿀 수 없으면(구분선 · 이미 그 모양 등) false */
 export function turnTopBlockInto(index: number, kind: TurnIntoKind): Command {
-  throw new Error(`미구현: ${index} ${kind}`);
+  // 타입이 막아도 실행 중에는 문자열이 올 수 있다 — 목록 밖이면 거부
+  if (!Object.hasOwn(TURN_INTO_TARGETS, kind)) return () => false;
+  const target: TurnIntoTarget = TURN_INTO_TARGETS[kind];
+  const command =
+    target.via === "textblock"
+      ? turnIntoTextblock(target.type, target.attrs ?? null)
+      : WRAPPERS[target.wrapper];
+  return atTopBlock(index, command);
 }
 
-export function resizedWidthPercent(drag: WidthDrag): number {
-  throw new Error(`미구현: ${drag.side}`);
+/** 폭 손잡이를 끈 만큼의 새 폭(%) — 반올림하고 WIDTH_RANGE 끝에서 멈춘다(UI 입력이라 잘라도 된다, design.md 6) */
+export function resizedWidthPercent({
+  startPercent,
+  startX,
+  x,
+  side,
+  containerWidth,
+}: WidthDrag): number {
+  if (containerWidth <= 0) return startPercent;
+  const direction = side === "right" ? 1 : -1;
+  const delta = (((x - startX) * direction * SYMMETRIC) / containerWidth) * PERCENT;
+  return Math.min(WIDTH_RANGE.max, Math.max(WIDTH_RANGE.min, Math.round(startPercent + delta)));
 }
