@@ -35,8 +35,7 @@ function linkExtentAt($pos: ResolvedPos, type: MarkType): Range | null {
   return run;
 }
 
-/** 고른 글자, 없으면 커서가 든 링크 전체 */
-function targetRange(state: EditorState, type: MarkType): Range | null {
+function selectedOrCursorLinkRange(state: EditorState, type: MarkType): Range | null {
   const { from, to, empty, $from } = state.selection;
   return empty ? linkExtentAt($from, type) : { from, to };
 }
@@ -50,7 +49,7 @@ export function setLink(href: string): Command {
     const valid = hrefOrNull(href);
     const type = state.schema.marks.link;
     if (valid === null || type === undefined) return false;
-    const range = targetRange(state, type);
+    const range = selectedOrCursorLinkRange(state, type);
     // https://prosemirror.net/docs/ref/#model.NodeType.allowsMarkType
     if (range === null || !state.selection.$from.parent.type.allowsMarkType(type)) return false;
     if (dispatch) {
@@ -63,21 +62,39 @@ export function setLink(href: string): Command {
   };
 }
 
+/**
+ * 지금 선택의 링크 주소 — 고른 글자면 그 안의 첫 link 마크, 커서면 커서 자리 마크. 없으면 null.
+ * 링크 글자를 정확히 고르면 $from.marks()는 앞 글자 쪽을 봐서 비므로 고른 범위를 훑는다.
+ * https://prosemirror.net/docs/ref/#model.Node.nodesBetween
+ */
 export function linkHrefAt(state: EditorState): string | null {
-  void state;
-  throw new Error("미구현");
+  const type = state.schema.marks.link;
+  if (type === undefined) return null;
+  const { from, to, empty, $from } = state.selection;
+  if (empty) {
+    const mark = type.isInSet($from.marks());
+    return mark === undefined ? null : String(mark.attrs.href);
+  }
+  let href: string | null = null;
+  state.doc.nodesBetween(from, to, (node) => {
+    const mark = href === null ? type.isInSet(node.marks) : undefined;
+    if (mark !== undefined) href = String(mark.attrs.href);
+    return href === null;
+  });
+  return href;
 }
 
+/** 링크를 걸 대상이 있나 — 고른 글자가 있거나 커서가 링크 안이다 */
 export function hasLinkTarget(state: EditorState): boolean {
-  void state;
-  throw new Error("미구현");
+  const type = state.schema.marks.link;
+  return type !== undefined && selectedOrCursorLinkRange(state, type) !== null;
 }
 
 /** 고른 글자(또는 커서가 든 링크)에서 링크를 뺀다. 링크가 없으면 false */
 export const removeLink: Command = (state, dispatch) => {
   const type = state.schema.marks.link;
   if (type === undefined) return false;
-  const range = targetRange(state, type);
+  const range = selectedOrCursorLinkRange(state, type);
   // https://prosemirror.net/docs/ref/#model.Node.rangeHasMark
   if (range === null || !state.doc.rangeHasMark(range.from, range.to, type)) return false;
   if (dispatch) dispatch(state.tr.removeMark(range.from, range.to, type).scrollIntoView());

@@ -1,6 +1,7 @@
 import { toggleMark } from "@tiptap/pm/commands";
 import { undoInputRule } from "@tiptap/pm/inputrules";
 import type { Command } from "@tiptap/pm/state";
+import { swallowing } from "../commands/move-block";
 import { duplicateTopBlock, isInTopBlock, turnIntoTextblock } from "../commands/turn-into";
 import { wrapInBulletList, wrapInOrderedList } from "../commands/wrap";
 
@@ -40,5 +41,6 @@ export const markdownShortcutKeymap: Record<string, Command> = {
   "Mod-Alt-5": onTopParagraph(wrapInBulletList),
   "Mod-Alt-6": onTopParagraph(wrapInOrderedList),
   "Mod-Alt-8": turnIntoTextblock("codeBlock"),
-  "Mod-d": duplicateTopBlock,
+  // 거절돼도 키를 삼킨다 — 빠져나가면 브라우저가 ⌘D로 북마크 창을 띄운다
+  "Mod-d": swallowing(duplicateTopBlock),
 };

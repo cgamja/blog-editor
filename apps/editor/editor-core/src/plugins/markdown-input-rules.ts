@@ -69,8 +69,9 @@ const horizontalRuleRule = new InputRule(/^---$/, (state, _match, start, end) =>
 });
 
 /**
- * `**글자**` 같은 인라인 규칙. 닫는 표시의 마지막 글자는 아직 문서에 없다(입력 중인 글자).
- * 여는 표시 앞이 같은 표시 문자면 걸지 않아 `**굵게*`에서 기울임이 먼저 걸리지 않는다(design.md 6).
+ * `**글자**` 같은 인라인 규칙(design.md 6). 입력 중인 글자는 아직 문서에 없다 — 보통은 닫는 표시의 마지막 한 글자,
+ * 조합이 끝난 뒤 다시 볼 때(compositionend)는 0글자다. 문서에 있는 글자 수(end - start)로 나머지를 센다.
+ * 고른 글자가 있으면 입력이 선택을 덮어써서 위치가 맞지 않으므로 걸지 않는다.
  * https://prosemirror.net/docs/ref/#inputrules.InputRule
  */
 function markRule(pattern: RegExp, markName: string, delimiter: string): InputRule {
@@ -80,9 +81,11 @@ function markRule(pattern: RegExp, markName: string, delimiter: string): InputRu
       const type = state.schema.marks[markName];
       const [whole, marked] = match;
       if (type === undefined || whole === undefined || marked === undefined) return null;
+      if (!state.selection.empty) return null;
       if (!state.doc.resolve(start).parent.type.allowsMarkType(type)) return null;
       const from = start + whole.length - marked.length;
-      const closeInDoc = delimiter.length - 1;
+      const typed = whole.length - (end - start);
+      const closeInDoc = delimiter.length - typed;
       const tr = state.tr
         .delete(end - closeInDoc, end)
         .delete(from, from + delimiter.length)
@@ -102,8 +105,9 @@ const inputRuleList = [
   blockRule(/^[">]\s$/, PARAGRAPH, wrapInBlockquote),
   blockRule(/^```$/, PARAGRAPH, turnIntoTextblock("codeBlock")),
   horizontalRuleRule,
-  markRule(/(?:^|[^*])(\*\*([^*\s](?:[^*]*[^*\s])?)\*\*)$/, "bold", "**"),
-  markRule(/(?:^|[^*])(\*([^*\s](?:[^*]*[^*\s])?)\*)$/, "italic", "*"),
+  // 여는 `*` 앞이 라틴 문자 · 숫자면 곱셈 · 단어 안 표시라 걸지 않는다(`2*3*`). 한글 뒤 붙여 쓰기는 건다
+  markRule(/(?:^|[^*A-Za-z0-9])(\*\*([^*\s](?:[^*]*[^*\s])?)\*\*)$/, "bold", "**"),
+  markRule(/(?:^|[^*A-Za-z0-9])(\*([^*\s](?:[^*]*[^*\s])?)\*)$/, "italic", "*"),
   markRule(/(?:^|[^`])(`([^`]+)`)$/, "code", "`"),
 ];
 

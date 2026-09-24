@@ -1,6 +1,6 @@
 import type { Attrs, Node, NodeType } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import type { Command, EditorState, Selection } from "@tiptap/pm/state";
+import type { Command, EditorState, Selection, Transaction } from "@tiptap/pm/state";
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
 import { stickerCount, stickersOf } from "./sticker-query";
 
@@ -35,6 +35,34 @@ function carriedAttrs(old: Node, type: NodeType, attrs: Attrs | null): Attrs {
   return { ...Object.fromEntries(carried), ...attrs };
 }
 
+/**
+ * 여러 줄 코드 블록을 줄마다 문단으로. 꾸미기(스티커 등)는 첫 문단에만 옮긴다 — 나누면 문서 상한을 넘는다.
+ * 커서는 원래 있던 줄 · 칸으로 옮긴다. https://prosemirror.net/docs/ref/#transform.Transform.replaceWith
+ */
+function splitIntoParagraphs(
+  state: EditorState,
+  target: { pos: number; node: Node },
+  lines: string[],
+  attrs: Attrs | null,
+): Transaction {
+  const { paragraph } = state.schema.nodes as { paragraph: NodeType };
+  const paragraphs = lines.map((line, index) =>
+    paragraph.create(
+      index === 0 ? carriedAttrs(target.node, paragraph, attrs) : attrs,
+      line === "" ? null : state.schema.text(line),
+    ),
+  );
+  const tr = state.tr.replaceWith(target.pos, target.pos + target.node.nodeSize, paragraphs);
+  let offset = state.selection.$from.parentOffset;
+  let pos = target.pos + 1;
+  for (const line of lines) {
+    if (offset <= line.length) break;
+    offset -= line.length + 1;
+    pos += line.length + 2;
+  }
+  return tr.setSelection(TextSelection.create(tr.doc, pos + offset));
+}
+
 const hasAttrs = (node: Node, attrs: Attrs | null) =>
   Object.entries(attrs ?? {}).every(([key, value]) => node.attrs[key] === value);
 
@@ -51,6 +79,13 @@ export function turnIntoTextblock(typeName: string, attrs: Attrs | null = null):
     const index = state.doc.resolve(target.pos).index();
     // https://prosemirror.net/docs/ref/#model.Node.canReplaceWith
     if (!state.doc.canReplaceWith(index, index + 1, type)) return false;
+    const lines = target.node.textContent.split("\n");
+    if (target.node.type.spec.code === true && lines.length > 1) {
+      // 여러 줄 코드는 문단이면 줄마다 하나로 나누고, 한 줄짜리 블록(제목)으로는 합치지 않는다(design.md 4)
+      if (type !== state.schema.nodes.paragraph) return false;
+      if (dispatch) dispatch(splitIntoParagraphs(state, target, lines, attrs).scrollIntoView());
+      return true;
+    }
     if (dispatch) {
       const from = target.pos + 1;
       const tr = state.tr.setBlockType(from, from + target.node.content.size, type, (old) =>
