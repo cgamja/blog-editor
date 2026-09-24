@@ -1,9 +1,9 @@
-import type { Attrs, NodeRange, NodeType } from "@tiptap/pm/model";
+import type { Attrs, Node, NodeRange, NodeType } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import type { Command, Transaction } from "@tiptap/pm/state";
 import { findWrapping } from "@tiptap/pm/transform";
 import { wrapRangeInList } from "@tiptap/pm/schema-list";
-import { toneOrNull } from "../closed-values";
+import { orderedListNumberOrNull, orderedListStartOrNull, toneOrNull } from "../closed-values";
 
 /**
  * 감싸기 커맨드 — spec: editor-wrap, design.md.
@@ -21,6 +21,10 @@ const SINGLE_VALUE_KEYS = ["font", "motion"] as const satisfies readonly Decorat
 
 const isDecorationKey = (key: string): key is DecorationKey =>
   (DECORATION_KEYS as readonly string[]).includes(key);
+
+/** 감싸는 노드가 꾸미기를 가졌나 — 감싸기가 옮겨 준 꾸미기가 있는지 볼 때 */
+export const carriesDecoration = (node: Node): boolean =>
+  DECORATION_KEYS.some((key) => node.attrs[key] != null);
 
 /** `tr`이 null이면 할 수 있는지만 답한다 — can과 실행이 같은 판정을 타게 하는 모양 */
 type WrapRange = (
@@ -159,6 +163,13 @@ const wrapInListRange: WrapRange = (tr, range, type, attrs) =>
 export const wrapInBlockquote: Command = wrapWith("blockquote", null, wrapInNode);
 export const wrapInBulletList: Command = wrapWith("bulletList", null, wrapInListRange);
 export const wrapInOrderedList: Command = wrapWith("orderedList", null, wrapInListRange);
+
+/** n부터 세는 번호 목록으로 감싼다 — 범위 밖이면 감싸지 않는다(false). 1은 정규형대로 start 없이 */
+export function wrapInOrderedListFrom(number: number): Command {
+  if (orderedListNumberOrNull(number) === null) return () => false;
+  const start = orderedListStartOrNull(number);
+  return wrapWith("orderedList", start === null ? null : { start }, wrapInListRange);
+}
 
 export function wrapInCallout(tone: string): Command {
   const validTone = toneOrNull(tone);
