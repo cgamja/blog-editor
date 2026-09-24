@@ -4,13 +4,9 @@ import type { Node } from "@tiptap/pm/model";
 import { history, undo } from "@tiptap/pm/history";
 import { fixtures } from "@blog-editor/content-schema";
 import { blockGuard, createEditorSchema, docFromNode, docToNode } from "../index";
-import {
-  INSERTABLE_BLOCKS,
-  blockIndexAt,
-  dropGapAt,
-  insertBlockAfter,
-  moveTopBlockTo,
-} from "./drag-block";
+import { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./drag-block";
+import { INSERTABLE_BLOCKS } from "./drag-block.constants";
+import type { InsertableBlockKind } from "./drag-block.constants";
 
 const schema = createEditorSchema();
 
@@ -114,7 +110,7 @@ describe("editor-block-drag: 최상위 블록을 임의의 블록 사이로 옮�
 });
 
 describe("editor-block-drag: 최상위 블록 뒤에 고른 종류의 새 블록을 넣는다", () => {
-  it.each(Object.keys(INSERTABLE_BLOCKS))(
+  it.each(Object.keys(INSERTABLE_BLOCKS) as InsertableBlockKind[])(
     "WHEN blockGuard를 단 A · B에서 insertBlockAfter(0, %s) THEN 둘째 블록이 그 종류이고 커서가 그 안이며 docFromNode를 통과한다",
     (kind) => {
       const doc = docOf(paragraph("가나"), paragraph("다라"));
@@ -124,7 +120,7 @@ describe("editor-block-drag: 최상위 블록 뒤에 고른 종류의 새 블록
 
       expect(ok).toBe(true);
       const inserted = next!.doc.child(1);
-      expect(inserted.type.name).toBe(INSERTABLE_BLOCKS[kind]!.type);
+      expect(inserted.type.name).toBe(INSERTABLE_BLOCKS[kind].type);
       const { $from } = next!.selection;
       const cursorBlock = $from.index(0);
       expect(cursorBlock).toBe(kind === "horizontalRule" ? 2 : 1);
@@ -159,13 +155,14 @@ describe("editor-block-drag: 최상위 블록 뒤에 고른 종류의 새 블록
     expect(next!.selection.$from.index(0)).toBe(2);
   });
 
+  // 타입이 막아도 UI · 저장된 설정에서 문자열이 올 수 있다 — 실행 중 거부도 지킨다
   it.each([
     [2, "paragraph"],
     [0, "image"],
   ])("WHEN insertBlockAfter(%i, %s) THEN false다", (index, kind) => {
     const state = EditorState.create({ doc: docOf(paragraph("가나"), paragraph("다라")) });
 
-    expect(run(insertBlockAfter(index, kind), state).ok).toBe(false);
+    expect(run(insertBlockAfter(index, kind as InsertableBlockKind), state).ok).toBe(false);
   });
 });
 
