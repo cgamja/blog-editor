@@ -39,3 +39,24 @@ export function dropLineTop(bands: readonly BlockBand[], gap: number, frameTop: 
   if (after === undefined) return before.bottom - frameTop;
   return (before.bottom + after.top) / 2 - frameTop;
 }
+
+const SCROLLABLE = new Set(["auto", "scroll"]);
+
+/**
+ * 틀에서 위로 올라가며 처음 만나는 세로 스크롤 상자 — 편집 화면 틀에서는 `main.editor-screen-body`다.
+ * 없으면 문서의 스크롤 요소(https://developer.mozilla.org/docs/Web/API/Document/scrollingElement).
+ */
+export function scrollContainerOf(element: HTMLElement): HTMLElement {
+  for (let node = element.parentElement; node !== null; node = node.parentElement) {
+    const scrollable = SCROLLABLE.has(getComputedStyle(node).overflowY);
+    if (scrollable && node.scrollHeight > node.clientHeight) return node;
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
+}
+
+/** 스크롤 상자가 화면에 보이는 세로 범위 — 문서 스크롤 요소면 창 전체 */
+export function visibleBoxOf(scroller: HTMLElement): { top: number; bottom: number } {
+  if (scroller === document.scrollingElement) return { top: 0, bottom: window.innerHeight };
+  const rect = scroller.getBoundingClientRect();
+  return { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, window.innerHeight) };
+}

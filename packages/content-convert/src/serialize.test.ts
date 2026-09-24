@@ -125,6 +125,17 @@ describe("serializeMarkdown", () => {
     expect(back.ok && back.doc).toEqual(normalize(input));
   });
 
+  it("WHEN 기본 모양 정렬(그림 center · 문단 left)이 든 문서를 직렬화하면 THEN align 지시어가 나가지 않는다", () => {
+    const input = doc(
+      { type: "image", attrs: { src: "/images/a.webp", alt: "그림", align: "center" } },
+      { type: "paragraph", attrs: { align: "left" }, content: [text("가")] },
+    );
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("![그림](/images/a.webp)\n\n가\n");
+  });
+
   it("이웃한 같은 종류 목록은 표지를 바꿔 따로 남긴다", () => {
     const result = serializeMarkdown(doc(bulletList("가"), bulletList("나")));
 

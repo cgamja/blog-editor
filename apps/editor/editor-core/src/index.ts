@@ -1,5 +1,6 @@
 export { createEditorSchema, editorExtensions } from "./extensions";
 export { docFromNode, docToNode } from "./doc-node";
+export { alignOf, setBlockAlign } from "./commands/align";
 export {
   backspaceAfterCustomBlock,
   insertAppScreenshot,
@@ -35,12 +36,27 @@ export {
 } from "./commands/sticker-edit";
 export type { KeyModifiers, StickerRef } from "./commands/sticker-edit";
 export { stickerCount, stickersIn } from "./commands/sticker-query";
+export {
+  atTopBlock,
+  deleteTopBlock,
+  resizedWidthPercent,
+  turnTopBlockInto,
+} from "./commands/block-controls";
+export { TURN_INTO_TARGETS } from "./commands/block-controls.constants";
+export type { TurnIntoKind } from "./commands/block-controls.constants";
+export type { TurnIntoTarget, WidthDrag, WidthPreviewState } from "./commands/block-controls.types";
 export { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./commands/drag-block";
 export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
 export type { InsertableBlockKind } from "./commands/drag-block.constants";
 export type { BlockBand, InsertableBlock } from "./commands/drag-block.types";
 export { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./commands/link";
-export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
+export {
+  blockStart,
+  MoveBlock,
+  moveBlockDown,
+  moveBlockKeymap,
+  moveBlockUp,
+} from "./commands/move-block";
 export {
   applyLastColor,
   rememberColor,
@@ -64,6 +80,7 @@ export {
   wrapInCallout,
   wrapInOrderedList,
 } from "./commands/wrap";
+export { AlignKeys, alignKeymap } from "./plugins/align-keymap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export { ListKeys, listKeymap } from "./plugins/list-keymap";
@@ -85,3 +102,4 @@ export {
 } from "./plugins/paste-normalizer";
 export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
 export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
+export { previewBlockWidth, widthPreview, widthPreviewKey } from "./plugins/width-preview";

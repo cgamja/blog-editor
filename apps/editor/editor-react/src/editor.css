@@ -196,6 +196,11 @@
   font-size: 0.75rem;
   color: var(--ink-mid);
 }
+/* 정렬 버튼은 아이콘만 — 컨트롤 높이 44px(tokens.json control-height) */
+.decoration-panel-align {
+  align-items: center;
+  min-height: 2.75rem;
+}
 .decoration-panel-sticker {
   align-items: center;
   text-align: center;
@@ -281,6 +286,19 @@
   font-size: 0.8125rem;
   color: var(--line);
 }
+.width-toolbar-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.5rem 0.125rem;
+  background: color-mix(in srgb, var(--surface) 25%, transparent);
+}
+.width-toolbar button:has(svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 0;
+}
 
 /*
  * 블록 손잡이(디자인 68:2, 이슈 #59). 값은 design/tokens.json — 컨트롤 44px, 추가 버튼 -104px · 옮기기 -56px.
@@ -293,6 +311,8 @@
    * 층: 블록 메뉴(손잡이 옆)보다 링크 팝오버(선택 아래)가 위다 — 둘이 겹치면 지금 입력 중인 팝오버가 보여야 한다.
    */
   --shadow-popover: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+  /* design/tokens.json size.radius-pill */
+  --radius-pill: 999px;
   --layer-block-menu: 1;
   --layer-link-popover: 2;
 }
@@ -340,7 +360,8 @@
   outline-offset: 2px;
 }
 
-.block-add-menu {
+.block-add-menu,
+.block-menu {
   position: absolute;
   top: 3rem;
   left: 0;
@@ -356,7 +377,20 @@
   box-shadow: var(--shadow-popover);
 }
 
-.block-handles .block-add-menu button {
+/* 블록 메뉴는 옮기기 손잡이 아래 — 추가 버튼(44px) + 틈(4px) 만큼 오른쪽 */
+.block-menu {
+  left: 3rem;
+}
+
+/* 아래로 펼치면 보이는 영역을 넘을 때는 손잡이 위로 펼친다(use-menu-placement) */
+.block-add-menu[data-placement="above"],
+.block-menu[data-placement="above"] {
+  top: auto;
+  bottom: 3rem;
+}
+
+.block-handles .block-add-menu button,
+.block-handles .block-menu button {
   justify-content: flex-start;
   width: 100%;
   padding: 0 0.75rem;
@@ -370,8 +404,53 @@
   text-align: start;
 }
 
-.block-handles .block-add-menu button:is(:hover, :focus-visible) {
+.block-handles .block-add-menu button:is(:hover, :focus-visible),
+.block-handles .block-menu button:is(:hover, :focus-visible) {
   background: var(--brand-soft, transparent);
+}
+
+/* 비활성 항목도 포커스는 받는다(APG) — 흐린 글자색으로만 구분한다 */
+.block-handles .block-menu button[aria-disabled="true"] {
+  color: var(--ink-soft, currentColor);
+  cursor: default;
+}
+
+.block-menu-heading {
+  padding: 0.375rem 0.75rem 0.25rem;
+  /* caption 13px */
+  font-size: 0.8125rem;
+  color: var(--ink-soft, currentColor);
+}
+
+.block-menu-separator {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--line, currentColor);
+}
+
+/*
+ * 끄는 블록의 잔상(block-controls design.md 3) — 블록 DOM 복제본을 반투명으로 포인터와 함께 옮긴다.
+ * 포인터를 받지 않는다. 그림자는 팝오버와 같은 값(--shadow-popover). 잔상은 `post-body`라 본문 CSS
+ * (스티커 · 그림 · 제목 모양)가 그대로 먹고, 형제 사이 여백(블록 위아래 margin)만 없앤다 —
+ * 명시도 0,2,0이 post.css의 `.post-body h2`(0,1,1)를 이긴다.
+ */
+.block-drag-ghost {
+  position: absolute;
+  z-index: var(--layer-block-menu);
+  /* 디자인에 끌기 상태가 없어 Notion의 잔상 투명도를 옮겼다 — 아래 블록 글자가 비쳐 놓일 자리를 가리지 않게 */
+  opacity: 0.5;
+  pointer-events: none;
+  background: var(--surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.block-drag-ghost.post-body > * {
+  margin-block: 0;
+}
+
+/* 잔상은 편집 영역 밖이라 위의 「편집 중 움직임 끄기」가 닿지 않는다 — 같은 규칙을 잔상에도(0,3,0) */
+.block-drag-ghost.post-body [data-motion] {
+  animation-name: none;
 }
 
 .block-drop-line {
@@ -661,4 +740,52 @@
 .link-popover :is(input, button):focus-visible {
   outline: 2px solid var(--brand-ink, currentColor);
   outline-offset: 2px;
+}
+
+/*
+ * 그림 · 앱 스크린샷 폭 손잡이(block-controls design.md 6, Notion 이미지 크기 조절). 레이어는 포인터를 통과시키고
+ * 손잡이만 받는다. 손잡이 칸은 터치 타깃 24px × 컨트롤 높이 44px, 보이는 막대는 가운데 6px.
+ */
+.width-resize {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.width-resize-handle {
+  position: absolute;
+  width: 1.5rem;
+  height: 2.75rem;
+  translate: -50% -50%;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.width-resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0.25rem 0.5625rem;
+  border: 1px solid var(--surface);
+  border-radius: var(--radius-pill);
+  background: var(--toolbar);
+}
+
+/* 끄는 동안에는 폭 도구줄(문서 값)을 숨긴다 — 숫자가 「가로 N%」(미리보기 값)와 둘로 갈리지 않게 */
+:has(> .blog-editor-frame .width-resize[data-resizing]) > .width-toolbar {
+  visibility: hidden;
+}
+
+/* 끄는 동안의 「가로 N%」 — 폭 도구줄(블록 위)과 겹치지 않게 블록 아래 가운데 */
+.width-resize-value {
+  position: absolute;
+  translate: -50% 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--toolbar);
+  color: var(--surface);
+  /* caption 13px */
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  pointer-events: none;
 }

@@ -1,5 +1,6 @@
-import { STICKER_IDS } from "@blog-editor/content-schema";
-import type { Font, Motion, StickerId } from "./decoration-types";
+import { ALIGNS, STICKER_IDS } from "@blog-editor/content-schema";
+import { decorationMessages } from "./decoration-messages";
+import type { Align, Font, Motion, StickerId } from "./decoration-types";
 import { stickerName } from "./sticker-messages";
 
 /**
@@ -26,6 +27,11 @@ export const MOTION_OPTIONS: ReadonlyArray<{ value: Motion | null; label: string
 /** 순서는 디자인 69:2 격자(STICKER_IDS 순서), 이름의 원천은 sticker-messages(스티커 오버레이와 같은 이름) */
 export const STICKER_OPTIONS: ReadonlyArray<{ id: StickerId; label: string }> = STICKER_IDS.map(
   (id) => ({ id, label: stickerName(id) }),
+);
+
+/** 정렬 버튼 — 순서는 content-schema ALIGNS(adr-020), 이름의 원천은 decoration-messages */
+export const ALIGN_OPTIONS: ReadonlyArray<{ value: Align; label: string }> = ALIGNS.map(
+  (value) => ({ value, label: decorationMessages.alignName(value) }),
 );
 
 /** 결정 2026-09-24: 작게 50 · 보통 70 · 꽉 차게 100 */

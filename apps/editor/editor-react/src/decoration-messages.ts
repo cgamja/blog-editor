@@ -1,4 +1,7 @@
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
+import type { Align } from "./decoration-types";
+
+const ALIGN_NAMES: Record<Align, string> = { left: "왼쪽", center: "가운데", right: "오른쪽" };
 
 /** 꾸미기 패널 · 폭 도구줄이 사용자에게 보이는 문장 — 한 곳에서 고친다(spec: decoration-panel design.md 2) */
 export const decorationMessages = {
@@ -13,6 +16,10 @@ export const decorationMessages = {
   stickerLimit: `스티커는 글 하나에 ${String(MAX_STICKERS_PER_DOC)}개까지예요`,
   cannotHoldFont: (block: string) => `${block}에는 글씨체를 줄 수 없어요`,
   cannotHoldMotion: (block: string) => `${block}에는 움직임을 줄 수 없어요`,
+  alignLegend: "정렬",
+  cannotHoldAlign: (block: string) => `${block}에는 정렬을 줄 수 없어요`,
+  alignName: (align: Align) => ALIGN_NAMES[align],
+  alignButton: (label: string) => `${label} 정렬`,
   multipleBlocks: (count: number) => `블록 ${String(count)}개`,
   targetLine: (label: string | null) =>
     label === null ? "고른 블록 없음" : `고른 블록 · ${label}`,
