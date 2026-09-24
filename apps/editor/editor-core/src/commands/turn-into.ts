@@ -9,11 +9,14 @@ import { stickerCount, stickersOf } from "./sticker-query";
  * 꾸미기 자리는 최상위 블록에만 있어서(adr-008) 대상은 커서가 든 최상위 블록이다.
  */
 
-/** pos가 최상위(깊이 1) 블록 안이고 그 블록 타입이 types 중 하나인가 — 목록 · 인용 · 콜아웃 안은 아니다(design.md 3) */
+/** 목록 · 인용 · 콜아웃 안은 최상위가 아니다(design.md 3) */
 export function isInTopBlock(state: EditorState, pos: number, types: readonly string[]): boolean {
   const $pos = state.doc.resolve(pos);
   return $pos.depth === 1 && types.includes($pos.parent.type.name);
 }
+
+/** 문단 하나를 닫고 다음 문단을 여는 위치 수 — 줄바꿈 한 글자 자리가 문단 경계 둘이 된다 */
+const PARAGRAPH_BOUNDARY_TOKENS = 2;
 
 /** 텍스트 블록이 가질 수 있는 꾸미기 — width는 이미지 · 스크린샷만 가진다 */
 const TEXTBLOCK_DECORATION_KEYS = ["font", "motion", "stickers"] as const;
@@ -58,10 +61,14 @@ function splitIntoParagraphs(
   for (const line of lines) {
     if (offset <= line.length) break;
     offset -= line.length + 1;
-    pos += line.length + 2;
+    pos += line.length + PARAGRAPH_BOUNDARY_TOKENS;
   }
   return tr.setSelection(TextSelection.create(tr.doc, pos + offset));
 }
+
+/** 코드 블록이면 줄 목록, 아니면 빈 목록 */
+const codeLinesOf = (node: Node): string[] =>
+  node.type.spec.code === true ? node.textContent.split("\n") : [];
 
 const hasAttrs = (node: Node, attrs: Attrs | null) =>
   Object.entries(attrs ?? {}).every(([key, value]) => node.attrs[key] === value);
@@ -79,8 +86,9 @@ export function turnIntoTextblock(typeName: string, attrs: Attrs | null = null):
     const index = state.doc.resolve(target.pos).index();
     // https://prosemirror.net/docs/ref/#model.Node.canReplaceWith
     if (!state.doc.canReplaceWith(index, index + 1, type)) return false;
-    const lines = target.node.textContent.split("\n");
-    if (target.node.type.spec.code === true && lines.length > 1) {
+    const lines = codeLinesOf(target.node);
+    const isMultilineCode = lines.length > 1;
+    if (isMultilineCode) {
       // 여러 줄 코드는 문단이면 줄마다 하나로 나누고, 한 줄짜리 블록(제목)으로는 합치지 않는다(design.md 4)
       if (type !== state.schema.nodes.paragraph) return false;
       if (dispatch) dispatch(splitIntoParagraphs(state, target, lines, attrs).scrollIntoView());

@@ -4,7 +4,7 @@ import type { Plugin } from "@tiptap/pm/state";
 import { markdownInputRules } from "./markdown-input-rules";
 import { markdownShortcutKeymap } from "./markdown-shortcut-keymap";
 
-/** 입력 규칙과 단축키를 함께 싣는다 — spec: editor-markdown-shortcuts */
+/** spec: editor-markdown-shortcuts */
 export function markdownShortcutPlugins(): Plugin[] {
   return [markdownInputRules(), keymap(markdownShortcutKeymap)];
 }
