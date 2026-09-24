@@ -2,7 +2,12 @@ import { probeImage } from "./image-probe";
 import {
   gifBytes,
   jpegBytes,
+  exifApp1,
+  jpegFrom,
   jpegWithOrientationBytes,
+  sof0,
+  sos,
+  xmpApp1,
   pngBytes,
   svgBytes,
   webpVp8Bytes,
@@ -64,5 +69,35 @@ describe("probeImage", () => {
       height: 480,
       orientation: 6,
     });
+  });
+
+  it("WHEN Exif APP1이 SOF 뒤에 있으면 THEN 크기와 방향을 함께 읽는다", () => {
+    expect(probeImage(jpegFrom(sof0(640, 480), exifApp1(6), sos()))).toEqual({
+      format: "jpeg",
+      width: 640,
+      height: 480,
+      orientation: 6,
+    });
+  });
+
+  it("WHEN 리틀엔디언 Exif · XMP 뒤의 Exif · Orientation 1~4를 넣으면 THEN 그 방향을 돌려준다", () => {
+    expect(probeImage(jpegWithOrientationBytes(640, 480, 6, "II"))?.orientation).toBe(6);
+    expect(probeImage(jpegFrom(xmpApp1(), exifApp1(6), sof0(640, 480), sos()))?.orientation).toBe(
+      6,
+    );
+    for (const orientation of [1, 2, 3, 4]) {
+      expect(probeImage(jpegWithOrientationBytes(640, 480, orientation))?.orientation).toBe(
+        orientation,
+      );
+    }
+  });
+
+  it("WHEN IFD 오프셋 · 엔트리 수가 깨진 Exif면 THEN 크래시 없이 끝나고 크기를 돌려준다", () => {
+    const size = { format: "jpeg", width: 640, height: 480 };
+    const badOffset = jpegFrom(exifApp1(6, { ifdOffset: 0xffffffff }), sof0(640, 480), sos());
+    const badCount = jpegFrom(exifApp1(6, { entryCount: 0xffff }), sof0(640, 480), sos());
+    expect(probeImage(badOffset)).toEqual(size);
+    // 엔트리 수만 부풀린 경우 첫 칸은 온전하니 방향은 읽어도 된다 — 세그먼트 밖을 읽지 않고 끝나는지가 요점
+    expect(probeImage(badCount)).toMatchObject(size);
   });
 });

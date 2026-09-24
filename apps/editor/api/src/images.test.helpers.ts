@@ -91,38 +91,86 @@ export function jpegBytes(width: number, height: number): Uint8Array {
   return out;
 }
 
+type ByteOrder = "MM" | "II";
+
+interface ExifOptions {
+  order?: ByteOrder;
+  /** IFD0 오프셋을 망가뜨려 경계 검사를 본다 */
+  ifdOffset?: number;
+  /** IFD 엔트리 수를 망가뜨려 경계 검사를 본다 */
+  entryCount?: number;
+}
+
+/** 마커 + 길이(u16 BE, 자기 2바이트 포함) + 내용 */
+function segment(marker: number, payload: Uint8Array): Uint8Array {
+  const out = bytes(4 + payload.length);
+  out.set([0xff, marker], 0);
+  view(out).setUint16(2, payload.length + 2);
+  out.set(payload, 4);
+  return out;
+}
+
 /**
- * SOI → APP1(Exif, 빅엔디언 TIFF, IFD0에 Orientation 한 칸) → SOF0. 방향 태그 0x0112 · SHORT(3) · 개수 1.
- * https://www.cipa.jp/std/documents/e/DC-X008-Translation-2019-E.pdf 4.6.4
+ * APP1 Exif — TIFF 머리(바이트 순서 · 42 · IFD0 오프셋 8) + IFD0에 Orientation 한 칸(0x0112 · SHORT · 1개).
+ * https://www.cipa.jp/std/documents/e/DC-X008-Translation-2019-E.pdf 4.5 · 4.6.4
  */
+export function exifApp1(orientation: number, options: ExifOptions = {}): Uint8Array {
+  const { order = "MM", ifdOffset = 8, entryCount = 1 } = options;
+  const little = order === "II";
+  const payload = bytes(6 + 8 + 2 + 12 + 4);
+  ascii(payload, 0, "Exif");
+  const tiff = 6;
+  const v = view(payload);
+  ascii(payload, tiff, order);
+  v.setUint16(tiff + 2, 42, little);
+  v.setUint32(tiff + 4, ifdOffset, little);
+  v.setUint16(tiff + 8, entryCount, little);
+  v.setUint16(tiff + 10, 0x0112, little);
+  v.setUint16(tiff + 12, 3, little);
+  v.setUint32(tiff + 14, 1, little);
+  v.setUint16(tiff + 18, orientation, little);
+  return segment(0xe1, payload);
+}
+
+/** APP1 XMP — Exif가 아닌 APP1(같은 마커)을 건너뛰는지 본다 */
+export function xmpApp1(): Uint8Array {
+  return segment(0xe1, new TextEncoder().encode("http://ns.adobe.com/xap/1.0/\0<x:xmpmeta/>"));
+}
+
+export function sof0(width: number, height: number): Uint8Array {
+  const payload = bytes(15);
+  payload[0] = 8;
+  view(payload).setUint16(1, height);
+  view(payload).setUint16(3, width);
+  return segment(0xc0, payload);
+}
+
+/** SOS — 뒤는 엔트로피 코딩 데이터라 헤더 판정은 여기서 멈춘다 */
+export function sos(): Uint8Array {
+  return segment(0xda, bytes(10));
+}
+
+/** SOI 뒤에 세그먼트들을 순서대로 잇고 채움 바이트를 붙인다 */
+export function jpegFrom(...segments: Uint8Array[]): Uint8Array {
+  const total = 2 + segments.reduce((sum, part) => sum + part.length, 0) + PAD;
+  const out = bytes(total);
+  out.set([0xff, 0xd8], 0);
+  let offset = 2;
+  for (const part of segments) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+/** SOI → APP1(Exif) → SOF0 → SOS */
 export function jpegWithOrientationBytes(
   width: number,
   height: number,
   orientation: number,
+  order: ByteOrder = "MM",
 ): Uint8Array {
-  const tiffLength = 8 + 2 + 12 + 4;
-  const app1Length = 2 + 6 + tiffLength;
-  const out = bytes(2 + 2 + app1Length + 19 + PAD);
-  out.set([0xff, 0xd8], 0);
-  out.set([0xff, 0xe1], 2);
-  view(out).setUint16(4, app1Length);
-  ascii(out, 6, "Exif");
-  const tiff = 12;
-  ascii(out, tiff, "MM");
-  view(out).setUint16(tiff + 2, 42);
-  view(out).setUint32(tiff + 4, 8);
-  view(out).setUint16(tiff + 8, 1);
-  view(out).setUint16(tiff + 10, 0x0112);
-  view(out).setUint16(tiff + 12, 3);
-  view(out).setUint32(tiff + 14, 1);
-  view(out).setUint16(tiff + 18, orientation);
-  const sof = 4 + app1Length;
-  out.set([0xff, 0xc0], sof);
-  view(out).setUint16(sof + 2, 17);
-  out[sof + 4] = 8;
-  view(out).setUint16(sof + 5, height);
-  view(out).setUint16(sof + 7, width);
-  return out;
+  return jpegFrom(exifApp1(orientation, { order }), sof0(width, height), sos());
 }
 
 export function svgBytes(): Uint8Array {

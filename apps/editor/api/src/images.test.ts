@@ -2,7 +2,15 @@ import { imagePathSchema } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryImageStore } from "./memory-image-store";
 import { createMemoryPostStore } from "./memory-store";
-import { jpegWithOrientationBytes, pngBytes, svgBytes } from "./images.test.helpers";
+import {
+  exifApp1,
+  jpegFrom,
+  jpegWithOrientationBytes,
+  pngBytes,
+  sof0,
+  sos,
+  svgBytes,
+} from "./images.test.helpers";
 import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
 const MIB = 1024 * 1024;
@@ -54,8 +62,23 @@ describe("POST /api/images", () => {
   it("WHEN EXIF Orientation 6인 JPEG를 올리면 THEN 422이고 저장하지 않는다", async () => {
     const { client, images } = setup();
     const res = await client.request("/api/images", upload(jpegWithOrientationBytes(640, 480, 6)));
-    expect(res.status).toBe(422);
+    const afterSof = await client.request(
+      "/api/images",
+      upload(jpegFrom(sof0(640, 480), exifApp1(6), sos())),
+    );
+    expect([res.status, afterSof.status]).toEqual([422, 422]);
     expect(await images.count()).toBe(0);
+  });
+
+  it("WHEN EXIF Orientation 1~4인 JPEG를 올리면 THEN 201로 저장된다", async () => {
+    const { client } = setup();
+    for (const orientation of [1, 2, 3, 4]) {
+      const res = await client.request(
+        "/api/images",
+        upload(jpegWithOrientationBytes(640, 480, orientation)),
+      );
+      expect(res.status).toBe(201);
+    }
   });
 });
 
