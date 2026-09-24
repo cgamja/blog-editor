@@ -56,8 +56,10 @@ type CookieOptions = NonNullable<Parameters<typeof setSignedCookie>[4]>;
  * (simsimeestudio.com)이 심은 같은 이름 쿠키가 세션 쿠키를 가리지 못한다.
  */
 const COOKIE_PREFIX = "host";
-/** 브라우저에 실제로 적히는 쿠키 이름 — Hono는 prefix "host"를 `__Host-`로 붙인다(계약 문서가 쓴다) */
-export const SESSION_COOKIE_NAME = `__Host-${SESSION_COOKIE}`;
+/** Hono `prefix` 옵션이 쿠키 이름 앞에 붙이는 문자열 */
+const COOKIE_NAME_PREFIX_OF = { host: "__Host-" } as const;
+/** 브라우저에 실제로 적히는 쿠키 이름(계약 문서가 쓴다) */
+export const SESSION_COOKIE_NAME = `${COOKIE_NAME_PREFIX_OF[COOKIE_PREFIX]}${SESSION_COOKIE}`;
 
 const COOKIE_ATTRIBUTES: CookieOptions = {
   prefix: COOKIE_PREFIX,
