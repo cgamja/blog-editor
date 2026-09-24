@@ -377,3 +377,160 @@
   background: var(--brand-ink, currentColor);
   pointer-events: none;
 }
+
+/*
+ * 스티커 오버레이(sticker-drag design.md 1) — ProseMirror DOM 밖 형제라 에디터 위에 겹쳐 둔다(.blog-editor-frame 기준).
+ * 레이어 자체는 포인터를 통과시키고, 버튼 · 조절점만 받는다. 크기 · 색은 design/tokens.json
+ * (control-height 44px = 2.75rem, focus-ring 2px brand-ink, toolbar · danger-ink)을 따른다.
+ */
+.sticker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sticker-hit {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.sticker-hit:focus-visible,
+.sticker-remove:focus-visible {
+  outline: 0.125rem solid var(--brand-ink, currentColor);
+  outline-offset: 0.125rem;
+}
+
+.sticker-frame {
+  position: absolute;
+  outline: 1px dashed var(--brand-ink, currentColor);
+  outline-offset: 0.25rem;
+  pointer-events: none;
+}
+
+/* 끄는 동안은 유령이 대신 보인다. 잡은 손잡이가 캡처를 잃지 않게 마운트는 두고 보이지만 않게 한다 */
+.sticker-frame[data-hidden] {
+  opacity: 0;
+}
+
+/* 조절점은 14px 동그라미(디자인 69:2 모서리 점)로 보이지만 누르는 자리는 44px(디자인 control-height) */
+.sticker-handle {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.sticker-handle::after {
+  content: "";
+  width: 0.875rem;
+  height: 0.875rem;
+  box-sizing: border-box;
+  border: 0.125rem solid var(--brand-ink, currentColor);
+  border-radius: 50%;
+  background: var(--surface, Canvas);
+}
+
+.sticker-handle-resize {
+  right: -1.375rem;
+  bottom: -1.375rem;
+  cursor: nwse-resize;
+}
+
+.sticker-handle-rotate {
+  top: -3.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+}
+
+.sticker-stem {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 1px;
+  height: 1.5rem;
+  background: var(--brand-ink, currentColor);
+}
+
+.sticker-remove {
+  position: absolute;
+  top: -1.375rem;
+  right: -1.375rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sticker-remove > span {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--danger-ink, currentColor);
+  color: var(--surface, Canvas);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* 「…에 붙어 있어요」 — 디자인 69:2의 어두운 알약(radius-pill). 스티커 아래 가운데 */
+.sticker-tag {
+  position: absolute;
+  transform: translate(-50%, 0.75rem);
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--toolbar, CanvasText);
+  color: var(--surface, Canvas);
+  /* 디자인 caption 13px */
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.sticker-ghost {
+  position: absolute;
+  height: auto;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.sticker-ghost[data-blocked] {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.sticker-status {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  color: var(--danger-ink, currentColor);
+  font-size: 0.8125rem;
+}
+
+.sticker-status:empty {
+  display: none;
+}
+
+.sticker-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -3,6 +3,7 @@ import { STICKER_OPTIONS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
 import { reasonOf } from "./decoration-state";
 import type { Availability, StickerId } from "./decoration-types";
+import { writeStickerDrag } from "./sticker-ui";
 
 export interface StickerFieldProps {
   count: number;
@@ -12,7 +13,12 @@ export interface StickerFieldProps {
   onAdd: (id: StickerId) => void;
 }
 
-/** 스티커 9칸(디자인 69:2). 누르면 고른 블록 기본 자리에 붙는다 — 끌어다 놓기는 #61 */
+/**
+ * 스티커 9칸(디자인 69:2). 누르면 고른 블록 기본 자리에 붙고, 글 위로 끌어다 놓으면 놓은 자리에서 가장 가까운
+ * 블록에 붙는다 — 받는 쪽은 StickerLayer의 handleDrop(sticker-drag design.md 5). 끌기는 포인터 전용이고
+ * 키보드는 누르기(onClick)로 같은 일을 한다.
+ * https://developer.mozilla.org/docs/Web/API/HTML_Drag_and_Drop_API
+ */
 export function StickerField({ count, availability, stickerSrc, onAdd }: StickerFieldProps) {
   const hintId = useId();
   const reason = reasonOf(availability);
@@ -29,9 +35,18 @@ export function StickerField({ count, availability, stickerSrc, onAdd }: Sticker
             aria-label={decorationMessages.stickerButton(label)}
             disabled={reason !== null}
             aria-describedby={reason === null ? undefined : hintId}
+            draggable={reason === null}
+            onDragStart={(event) => {
+              writeStickerDrag(event.dataTransfer, id);
+              event.dataTransfer.effectAllowed = "copy";
+            }}
             onClick={() => onAdd(id)}
           >
-            {stickerSrc === undefined ? label : <img src={stickerSrc(id)} alt="" />}
+            {stickerSrc === undefined ? (
+              label
+            ) : (
+              <img src={stickerSrc(id)} alt="" draggable={false} />
+            )}
           </button>
         ))}
       </div>
