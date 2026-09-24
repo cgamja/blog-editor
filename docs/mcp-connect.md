@@ -30,12 +30,30 @@ Claude Code에서 `/mcp`로 `connected`를 확인하고 "블로그 초안 하나
 
 claude.ai는 Anthropic 클라우드에서 서버로 접속한다 — **서버가 공개 인터넷에서 HTTPS로 닿아야 한다.** 로컬 서버라면 터널(예: Cloudflare Tunnel, ngrok)이 필요하고, M4 배포 뒤에는 `https://editor.simsimeestudio.com/mcp`를 쓰면 된다.
 
+### OAuth로 붙이기 (모든 계정)
+
+전제: 1절의 `MCP_CONNECTION_TOKEN`이 `.env`에 있어야 한다 — OAuth는 `/mcp` 위에 붙는다(없이 `PUBLIC_BASE_URL`만 넣으면 서버가 시작하지 않고 알려 준다).
+
+> **터널로 열면 로그인 화면이 인터넷에 나간다.** `ADMIN_PASSWORD`를 `1234` 같은 짧은 값으로 두지 말고 긴 무작위 값으로 바꾸고(`openssl rand -base64 24`), `ADMIN_USERNAME`도 `admin` 말고 추측하기 어려운 값으로 둔다. 연속 5번 틀리면 그 계정이 15분 잠기지만(재시작하면 풀린다), 잠금은 보조 장치다 — 비밀번호 길이가 방어의 중심이다(D8). 반대로 아이디를 아는 사람은 5번 틀려 그 계정을 15분씩 잠글 수 있다.
+
+1. 터널을 띄우고 그 주소를 레포 루트 `.env`에 넣는다 — 경로 없는 origin만:
+   ```bash
+   cloudflared tunnel --url http://127.0.0.1:8787   # → https://xxx.trycloudflare.com
+   echo "PUBLIC_BASE_URL=https://xxx.trycloudflare.com" >> .env
+   pnpm --filter @blog-editor/api dev                 # 로그에 oauth: https://xxx… 가 찍힌다
+   ```
+2. **Customize › Connectors › Add custom connector** → URL `https://xxx.trycloudflare.com/mcp`, 인증 칸(OAuth Client ID/Secret)은 **비운다** — claude.ai가 스스로 등록한다(DCR)
+3. 연결하면 로그인 · 동의 화면이 뜬다 → 에디터 아이디 · 비밀번호(`.env`의 `ADMIN_USERNAME` · `ADMIN_PASSWORD`) → **허용**
+4. 채팅의 **+ › Connectors**에서 켠다. 초안 출처는 `token:oauth-claude-ai`로 적힌다
+
+OAuth 상태(등록 · 토큰)는 메모리에 있다 — 서버를 다시 켜면 claude.ai에서 다시 연결한다. 터널 주소가 바뀌면 `PUBLIC_BASE_URL`도 바꾼다.
+
+### Request headers로 붙이기 (베타 — 일부 계정만)
+
 1. **Customize › Connectors › Add custom connector**
 2. URL: `https://<공개 주소>/mcp`
 3. Authentication: **No sign-in** → **Request headers**에 `authorization` = `Bearer <토큰>`(앞의 `Bearer `까지 입력)
 4. 채팅의 **+ › Connectors**에서 켠다
-
-Request headers는 베타라 일부 계정에만 보인다. 그 칸이 없으면 OAuth가 필요하다 — 다음 change(OAuth)에서 붙인다.
 
 ## 도구
 
