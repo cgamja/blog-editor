@@ -1,10 +1,4 @@
-# mcp-auth Specification
-
-## Purpose
-
-MCP 엔드포인트(`/mcp`)의 인증 — 연결용 토큰(Authorization: Bearer, 해시만 저장)으로만 열리고, 에디터 세션 쿠키와 서로 섞이지 않는다. 토큰의 권한은 초안 읽기 · 쓰기뿐이다(adr-007 · adr-016).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: /mcp는 연결용 토큰이 있어야 한다 (보호 대상)
 
@@ -36,6 +30,8 @@ MCP 엔드포인트(`/mcp`)의 인증 — 연결용 토큰(Authorization: Bearer
 - **THEN** 401이고 `WWW-Authenticate`에 `resource_metadata="<발급자>/.well-known/oauth-protected-resource/mcp"`가 있다
 
 실패 의미론: 토큰은 워크스페이스에 하나씩 공유되는 비밀이다. 새면 초안을 쓸 수 있지만 발행 · 삭제는 못 한다(mcp-drafts 보호 대상). 폐기는 env 교체.
+
+## ADDED Requirements
 
 ### Requirement: OAuth 액세스 토큰도 초안 권한만 연다 (보호 대상)
 
