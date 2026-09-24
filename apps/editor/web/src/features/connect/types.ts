@@ -6,3 +6,10 @@ export interface ConnectorInfo {
 
 /** ready: 주소를 복사해 연결할 수 있다 · no-public-url: `/mcp`는 켜졌지만 claude.ai가 닿는 주소가 없다 · off: `/mcp`가 꺼졌다 */
 export type ConnectorState = "ready" | "no-public-url" | "off";
+
+/** `GET /api/settings`(api/openapi.json `Settings`) */
+export interface WorkspaceSettings {
+  guide: string;
+  categories: string[];
+  connector: ConnectorInfo;
+}
