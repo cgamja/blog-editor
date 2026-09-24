@@ -10,6 +10,10 @@ export function markSignedIn(client: QueryClient): void {
   client.setQueryData<SessionState>(SESSION_QUERY_KEY, "authenticated");
 }
 
+export function markSignedOut(client: QueryClient): void {
+  throw new Error(`미구현: ${client.getQueryCache().getAll().length}`);
+}
+
 /** 어느 요청이든 401 → 세션을 로그인 필요로. 가드가 지금 경로를 `next`로 기억해 로그인 화면으로 보낸다. */
 export function markSessionExpired(client: QueryClient): void {
   client.setQueryData<SessionState>(SESSION_QUERY_KEY, "anonymous");
