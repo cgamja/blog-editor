@@ -1,0 +1,18 @@
+{
+  "name": "@blog-editor/editor-core",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "TipTap 확장 + ProseMirror 순수 함수 커맨드·플러그인. React 없음(adr-002 · adr-009).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@blog-editor/content-schema": "workspace:*",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/pm": "3.31.3"
+  }
+}

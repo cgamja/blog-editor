@@ -1,7 +1,7 @@
 # ADR-013. md → doc 변환은 prosemirror-markdown + markdown-it-container로 하고, 토큰 단계에서 먼저 검사한다
 
 - 날짜: 2026-09-23
-- 상태: 승인됨
+- 상태: 승인됨 · 트레이드오프의 속성 테스트 약속 → 이슈 #38로 이행
 - 원천: plan 3-5 라이브러리 표("Markdown 변환 — prosemirror-markdown") · plan 11 M0 스파이크 표(`:::callout` 파싱) · 이슈 #2 스파이크 결과 댓글 · 스펙 markdown-format · markdown-callout · markdown-directive · markdown-validation-message
 
 ## 문제 (맥락)
