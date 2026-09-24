@@ -13,7 +13,7 @@ import { WIDTH_RANGE } from "@blog-editor/content-schema";
 import { TURN_INTO_TARGETS } from "./block-controls.constants";
 import type { TurnIntoKind } from "./block-controls.constants";
 import type { TurnIntoTarget, WidthDrag } from "./block-controls.types";
-import { appendCommandSteps } from "./derived-command";
+import { appendCommandStepsAndSelection } from "./derived-command";
 import { blockStart } from "./move-block";
 import { turnIntoTextblock } from "./turn-into";
 import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "./wrap";
@@ -68,7 +68,7 @@ function selectionInTopBlock(doc: Node, index: number): Selection {
 /**
  * 선택을 최상위 `index`번째 블록으로 옮긴 상태로 `command`를 부른다(design.md 5). 블록 바꾸기 · 감싸기 · 복제는
  * 선택이 든 블록에 작동하는데, 손잡이 블록은 커서와 다를 수 있다.
- * 안쪽 커맨드가 만든 step은 `state.tr`에 옮겨 담아 보낸다(appendCommandSteps — TipTap 체인의 공유 트랜잭션).
+ * 안쪽 커맨드가 만든 step은 `state.tr`에 옮겨 담아 보낸다(appendCommandStepsAndSelection — TipTap 체인의 공유 트랜잭션).
  * 선택만 다른 상태라 문서가 같아 step이 그대로 맞는다.
  * 되돌리면 커서는 원래 자리로 돌아온다.
  */
@@ -84,9 +84,9 @@ export function atTopBlock(index: number, command: Command): Command {
     if (dispatch === undefined) return command(selected);
 
     const tr = state.tr;
-    if (!appendCommandSteps(tr, selected, command)) return false;
-    if (tr.selectionSet) dispatch(tr);
-    return true;
+    const outcome = appendCommandStepsAndSelection(tr, selected, command);
+    if (outcome === "applied") dispatch(tr);
+    return outcome !== "rejected";
   };
 }
 

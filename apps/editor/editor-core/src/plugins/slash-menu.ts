@@ -4,8 +4,11 @@
  * - EditorProps.handleTextInput(조합 입력에는 불리지 않는다): https://prosemirror.net/docs/ref/#view.EditorProps.handleTextInput
  * - EditorProps.handleKeyDown: https://prosemirror.net/docs/ref/#view.EditorProps.handleKeyDown
  * - Mapping.map(assoc): https://prosemirror.net/docs/ref/#transform.Mappable.map
+ * - PluginSpec.appendTransaction: https://prosemirror.net/docs/ref/#state.PluginSpec.appendTransaction
+ * - closeHistory: https://prosemirror.net/docs/ref/#history.closeHistory
  */
 import { Extension } from "@tiptap/core";
+import { closeHistory } from "@tiptap/pm/history";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Command, EditorState, Transaction } from "@tiptap/pm/state";
 
@@ -20,9 +23,11 @@ export interface SlashMenuOptions {
   onKey?: ((key: string) => boolean) | undefined;
 }
 
-type SlashMenuMeta = { open: number } | typeof CLOSE;
+type SlashMenuMeta = { open: number } | typeof CLOSE | typeof APPLIED;
 
 const CLOSE = "close";
+/** 항목을 적용해 닫음 — 바로 뒤에 되돌리기 묶음을 한 번 더 끊는다 */
+const APPLIED = "applied";
 
 /** 별칭 중 가장 긴 것보다 넉넉히 — 이보다 길면 메뉴를 찾는 중이 아니라 글을 쓰는 중이다(design.md 3) */
 const MAX_QUERY_LENGTH = 20;
@@ -64,7 +69,7 @@ function readMenu(state: EditorState, from: number): SlashMenuState | null {
 
 function nextMenu(tr: Transaction, prev: SlashMenuState | null, state: EditorState) {
   const meta = tr.getMeta(slashMenuKey) as SlashMenuMeta | undefined;
-  if (meta === CLOSE) return null;
+  if (meta === CLOSE || meta === APPLIED) return null;
   if (meta !== undefined) return readMenu(state, meta.open);
   // `/` 바로 앞에 끼어든 글자는 `/`를 뒤로 민다 — assoc 1로 같이 따라간다
   return prev === null ? null : readMenu(state, tr.mapping.map(prev.from, 1));
@@ -82,6 +87,10 @@ export function slashMenu({ onKey }: SlashMenuOptions = {}): Plugin<SlashMenuSta
       init: () => null,
       apply: (tr, prev, _old, state) => nextMenu(tr, prev, state),
     },
+    // closeHistory는 그 트랜잭션 앞만 끊는다(prosemirror-history 1.5.0 applyTransaction). 적용 직후 친 글자가
+    // 적용과 한 묶음이 되지 않게, step 없는 트랜잭션을 덧붙여 뒤도 끊는다 — step이 없어 문서는 그대로다
+    appendTransaction: (trs, _old, state) =>
+      trs.some((tr) => tr.getMeta(slashMenuKey) === APPLIED) ? closeHistory(state.tr) : null,
     props: {
       handleTextInput(view, from, to, text) {
         if (text !== SLASH || !canOpenAt(view.state, from, to)) return false;
@@ -92,6 +101,8 @@ export function slashMenu({ onKey }: SlashMenuOptions = {}): Plugin<SlashMenuSta
       handleKeyDown(view, event) {
         if (slashMenuKey.getState(view.state) == null) return false;
         if (view.composing || event.isComposing) return false;
+        // Shift+Enter(줄바꿈) · ⌘⇧↑↓(블록 옮기기) 같은 조합은 원래 키맵 몫이다
+        if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false;
         if (event.key === "Escape") return closeSlashMenu(view.state, view.dispatch);
         return FORWARDED_KEYS.has(event.key) && (onKey?.(event.key) ?? false);
       },
@@ -106,9 +117,9 @@ export const closeSlashMenu: Command = (state, dispatch) => {
   return true;
 };
 
-/** 고른 항목을 적용한 트랜잭션이 메뉴를 닫게 하는 meta */
-export const markSlashMenuClosed = (tr: Transaction): Transaction =>
-  tr.setMeta(slashMenuKey, CLOSE);
+/** 고른 항목을 적용한 트랜잭션 표시 — 메뉴를 닫고, 앞뒤로 되돌리기 묶음을 끊는다 */
+export const markSlashItemApplied = (tr: Transaction): Transaction =>
+  closeHistory(tr.setMeta(slashMenuKey, APPLIED));
 
 /** UI가 키 처리기를 꽂는 자리(extension storage) */
 export interface SlashMenuStorage {
