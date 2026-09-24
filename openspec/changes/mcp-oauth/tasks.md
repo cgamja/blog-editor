@@ -4,15 +4,15 @@
 
 ## 1. 테스트
 
-- [ ] 1.1 `src/mcp/oauth/oauth.test.ts` — 새 시나리오 14개(mcp-auth 3 · mcp-oauth-server 3 · mcp-oauth-grant 8) → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
+- [x] 1.1 `src/mcp/oauth/oauth.test.ts` — 새 시나리오 26개(mcp-auth 4 · mcp-oauth-server 6 · mcp-oauth-grant 13 · api-session 3 — 잠금은 `session.test.ts`) → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
 
 ## 2. 구현
 
-- [ ] 2.1 `oauth/store.ts` · `oauth/memory-oauth-store.ts` — 클라이언트 · 코드 · 액세스 · refresh 계약과 메모리 구현(해시만, 클라이언트 상한) → verify: 1.1의 등록 · 토큰 시나리오 초록
-- [ ] 2.2 `oauth/redirect-uris.ts` · `oauth/pkce.ts` — 허용 목록(루프백 포트 무시) · S256 → verify: 등록 · PKCE 시나리오 초록
-- [ ] 2.3 `oauth/routes.ts` · `oauth/pages.ts` · `oauth/messages.ts` — 메타데이터 · `/register` · `/authorize`(로그인 + 동의, Origin 검사) · `/token` → verify: grant 시나리오 초록
-- [ ] 2.4 `session.ts`(로그인 확인 · 세션 확인 함수로) · `mcp/route.ts`(OAuth 토큰 · `resource_metadata`) · `mcp/env.ts` · `serve.ts`(`PUBLIC_BASE_URL`) → verify: 1.1 전부 초록 + `pnpm test` PASS_TO_PASS
+- [x] 2.1 `oauth/store.ts` · `oauth/memory-oauth-store.ts` — 클라이언트 · 코드 · 액세스 · refresh 계약과 메모리 구현(해시만, 클라이언트 상한) → verify: 1.1의 등록 · 토큰 시나리오 초록
+- [x] 2.2 `oauth/redirect-uris.ts` · `oauth/pkce.ts` — 허용 목록(루프백 포트 무시) · S256 → verify: 등록 · PKCE 시나리오 초록
+- [x] 2.3 `oauth/routes.ts` · `oauth/pages.ts` · `oauth/messages.ts` — 메타데이터 · `/register` · `/authorize`(로그인 + 동의, Origin 검사) · `/token` → verify: grant 시나리오 초록
+- [x] 2.4 `session.ts`(로그인 확인 · 세션 확인 함수로) · `mcp/route.ts`(OAuth 토큰 · `resource_metadata`) · `mcp/env.ts` · `serve.ts`(`PUBLIC_BASE_URL`) → verify: 1.1 전부 초록 + `pnpm test` PASS_TO_PASS
 
 ## 3. Converge
 
-- [ ] 3.1 로컬 스모크(메타데이터 → 등록 → authorize → token → tools/list) · `docs/mcp-connect.md` 2-b 갱신 · 시나리오 ↔ 테스트 대조 → verify: `pnpm verify` 초록 출력
+- [x] 3.1 로컬 스모크(메타데이터 → 등록 → authorize → token → tools/list) · `docs/mcp-connect.md` 2-b 갱신 · 시나리오 ↔ 테스트 대조 → verify: `pnpm verify` 초록 출력
