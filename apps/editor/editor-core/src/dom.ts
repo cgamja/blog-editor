@@ -81,7 +81,8 @@ export function wrapperRule(options: {
       return own === false ? false : { ...own, ...readDecoration(element, keys) };
     },
     ...(hasContent ? { contentElement: (element: ElementLike) => element.firstElementChild } : {}),
-  } as TagParseRule;
+    // ElementLike는 HTMLElement의 부분 모양이다 — DOM lib이 있는 소비자(editor-react)에서는 직접 단언이 거부된다
+  } as unknown as TagParseRule;
 }
 
 /** `img` 한 개에서 이미지 attrs — 경로 규칙 밖이면 false(노드가 되지 않는다). */
