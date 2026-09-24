@@ -24,6 +24,7 @@ import { registerMcpRoute } from "./mcp/route";
 import type { McpOptions } from "./mcp/route";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
+import type { ImageStore } from "./image-store";
 
 export interface AppOptions extends SessionOptions {
   store: PostStore;
@@ -33,6 +34,8 @@ export interface AppOptions extends SessionOptions {
   imageBaseUrl: string;
   /** 연결용 토큰이 있을 때만 `/mcp`를 연다(mcp-auth) — 없으면 그 경로가 없다 */
   mcp?: McpOptions;
+  /** 있을 때만 이미지 올리기 · 받기를 연다(ADR-021) — 없으면 두 경로가 없다 */
+  images?: ImageStore;
 }
 
 /** 사이트 빌드가 부르는 공개 조회의 짧은 캐시(plan 3-6) */
