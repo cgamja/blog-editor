@@ -743,6 +743,42 @@
 }
 
 /*
+ * `/` 슬래시 메뉴(spec: editor-slash-menu). 모양은 블록 추가 메뉴와 같다 — radius-card 14px, ui 15px, 항목 높이
+ * control-height 44px. 포커스는 편집 영역에 있으므로 고른 항목은 aria-selected로 칠한다.
+ * 높이는 항목 여섯 개 반(44px × 6.5)까지 — 반쯤 잘린 일곱째 항목이 더 있다는 것을 보인다.
+ */
+.slash-menu {
+  position: absolute;
+  z-index: var(--layer-link-popover);
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  max-height: calc(2.75rem * 6.5);
+  overflow-y: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--line, currentColor);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.slash-menu [role="option"] {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--ink, currentColor);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.slash-menu [role="option"]:is(:hover, [aria-selected="true"]) {
+  background: var(--brand-soft, transparent);
+}
+
+/*
  * 그림 · 앱 스크린샷 폭 손잡이(block-controls design.md 6, Notion 이미지 크기 조절). 레이어는 포인터를 통과시키고
  * 손잡이만 받는다. 손잡이 칸은 터치 타깃 24px × 컨트롤 높이 44px, 보이는 막대는 가운데 6px.
  */
