@@ -20,6 +20,15 @@
 }
 
 /*
+ * 편집 중에는 움직임(post.css의 스크롤 진입 애니메이션)을 재생하지 않는다 — 쓰는 동안 블록이 스크롤마다
+ * 사라졌다 나타나면 안 된다. 미리보기 · 공개 HTML에서는 그대로다. 명시도 0,3,0이 post.css의
+ * `.post-body [data-motion="…"]`(0,2,0)를 불러오는 순서와 무관하게 이긴다(decoration-visible design.md 5).
+ */
+.blog-editor .ProseMirror [data-motion] {
+  animation-name: none;
+}
+
+/*
  * 블록 손잡이(디자인 68:2, 이슈 #59). 값은 design/tokens.json — 컨트롤 44px, 추가 버튼 -104px · 옮기기 -56px.
  * 손잡이 줄은 블록 왼쪽 가장자리까지 이어져서 버튼으로 옮겨 가는 사이에 마우스가 틀을 벗어나지 않는다.
  */
