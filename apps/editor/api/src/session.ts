@@ -183,6 +183,9 @@ export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
     return c.body(null, 204);
   });
 
+  // 세션 판정은 `/api/*` 미들웨어(requireSession)가 끝냈다 — 여기 오면 로그인됨이다
+  app.get(SESSION_PATH, (c) => c.body(null, 204));
+
   // 멱등 — 세션이 없거나 만료돼도 204다(화면이 만료된 세션에서 로그아웃을 눌러도 오류가 아니다)
   app.delete(SESSION_PATH, (c) => {
     deleteCookie(c, SESSION_COOKIE, COOKIE_ATTRIBUTES);

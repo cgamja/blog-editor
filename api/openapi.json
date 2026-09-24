@@ -69,6 +69,32 @@
             "description": "세션 쿠키를 지웠다"
           }
         }
+      },
+      "get": {
+        "operationId": "checkSession",
+        "tags": ["session"],
+        "summary": "세션 확인",
+        "description": "화면이 로그인 여부를 묻는다. 본문은 없다.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "로그인됨"
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/posts": {
