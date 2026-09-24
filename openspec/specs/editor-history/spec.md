@@ -8,7 +8,7 @@
 
 ### Requirement: 에디터에서 되돌리기 · 다시 하기가 된다
 
-editor-core는 SHALL `historyPlugins()`와 `History` 확장을 export하고, 그 단축키는 `Mod-z`가 undo, `Mod-Shift-z` · `Mod-y`가 redo다. 이 플러그인을 단 상태에서 커맨드 하나(콜아웃 넣기 · 블록 옮기기)는 undo 한 번에 되돌아간다.
+editor-core는 SHALL `historyPlugins()`와 `History` 확장을 export하고, 그 단축키는 `Mod-z`가 undo, `Mod-Shift-z` · `Mod-y`가 redo다. 이 플러그인을 단 상태에서 커맨드 하나(콜아웃 넣기 · 블록 옮기기)는 undo 한 번에 되돌아간다. 다만 500ms(`newGroupDelay` 기본값) 안에 이어진 인접 변경은 prosemirror-history가 한 묶음으로 합치므로, 빠르게 연달아 한 여러 변경이 undo 한 번에 함께 되돌아갈 수 있다.
 
 #### Scenario: 단축키 표
 
