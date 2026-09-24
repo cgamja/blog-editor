@@ -177,7 +177,9 @@ export function createApp(options: AppOptions): Hono {
     return c.body(postCss, 200, { "Content-Type": "text/css; charset=utf-8" });
   });
 
-  if (options.mcp !== undefined) registerMcpRoute(app, { ...options.mcp, store, categories });
+  if (options.mcp !== undefined) {
+    registerMcpRoute(app, { ...options.mcp, store, categories, session });
+  }
 
   return app;
 }
