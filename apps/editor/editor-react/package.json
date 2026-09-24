@@ -1,0 +1,31 @@
+{
+  "name": "@blog-editor/editor-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "useEditor 마운트 · NodeView · 툴바 · 꾸미기 패널. 개발용 플레이그라운드(playground/) 포함(adr-006 · adr-019).",
+  "exports": {
+    ".": "./src/index.ts",
+    "./editor.css": "./src/editor.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "dev": "vite --config playground/vite.config.ts"
+  },
+  "dependencies": {
+    "@blog-editor/content-schema": "workspace:*",
+    "@blog-editor/editor-core": "workspace:*",
+    "@tiptap/core": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@blog-editor/content-render": "workspace:*",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.0"
+  }
+}
