@@ -74,7 +74,7 @@ function restoreLostDecoration(
   });
 }
 
-/** 최상위 목록에서 항목을 빼낸 뒤 꾸미기를 한 번만 남긴다 */
+/** 최상위 목록에서 항목을 빼낸 뒤 — 움직임 · 스티커는 한 곳에만, 글꼴은 조각마다 남긴다 */
 function keepTopListDecoration(state: EditorState, tr: Transaction): Transaction {
   const { $from } = state.selection;
   const top = $from.node(1);
