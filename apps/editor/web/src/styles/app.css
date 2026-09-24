@@ -1,0 +1,61 @@
+/*
+ * 앱 공통 바탕 — 값은 tokens.css 변수만 쓴다. 화면별 모양은 각 화면 이슈가 채운다.
+ */
+
+body {
+  margin: 0;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  /* design/tokens.json size.focus-ring: 2px solid brand-ink, offset 2px */
+  outline: 0.125rem solid var(--brand-ink);
+  outline-offset: 0.125rem;
+}
+
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: var(--article-width);
+  margin-inline: auto;
+  padding: 2.5rem 1.5rem;
+}
+
+.app-login form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-login input,
+.app-page button {
+  min-height: var(--control-height);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.app-login input {
+  padding: 0 0.75rem;
+}
+
+.app-page button {
+  border-radius: var(--radius-button);
+  padding: 0 1.125rem;
+  cursor: pointer;
+}
+
+.app-error {
+  margin: 0;
+  color: var(--danger-ink);
+}
+
+.app-status {
+  padding: 2.5rem 1.5rem;
+  color: var(--ink-soft);
+}
