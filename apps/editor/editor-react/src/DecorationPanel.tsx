@@ -3,9 +3,11 @@ import {
   addSticker,
   motionPreviewKey,
   previewMotion,
+  setBlockAlign,
   setBlockFont,
   setBlockMotion,
 } from "@blog-editor/editor-core";
+import { AlignField } from "./AlignField";
 import { decorationMessages } from "./decoration-messages";
 import { decorationPanelStateOf } from "./decoration-state";
 import type { StickerId } from "./decoration-types";
@@ -45,6 +47,11 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
         value={panel.font.value}
         availability={panel.font.availability}
         onChange={(font) => run(setBlockFont(font))}
+      />
+      <AlignField
+        value={panel.align.value}
+        availability={panel.align.availability}
+        onChange={(align) => run(setBlockAlign(align))}
       />
       <StickerField
         count={panel.sticker.count}

@@ -196,6 +196,11 @@
   font-size: 0.75rem;
   color: var(--ink-mid);
 }
+/* 정렬 버튼은 아이콘만 — 컨트롤 높이 44px(tokens.json control-height) */
+.decoration-panel-align {
+  align-items: center;
+  min-height: 2.75rem;
+}
 .decoration-panel-sticker {
   align-items: center;
   text-align: center;
@@ -280,6 +285,19 @@
   padding: 0 0.875rem 0 0.625rem;
   font-size: 0.8125rem;
   color: var(--line);
+}
+.width-toolbar-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.5rem 0.125rem;
+  background: color-mix(in srgb, var(--surface) 25%, transparent);
+}
+.width-toolbar button:has(svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 0;
 }
 
 /*

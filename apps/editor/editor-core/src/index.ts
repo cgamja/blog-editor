@@ -1,5 +1,6 @@
 export { createEditorSchema, editorExtensions } from "./extensions";
 export { docFromNode, docToNode } from "./doc-node";
+export { alignOf, setBlockAlign } from "./commands/align";
 export {
   backspaceAfterCustomBlock,
   insertAppScreenshot,
@@ -64,6 +65,7 @@ export {
   wrapInCallout,
   wrapInOrderedList,
 } from "./commands/wrap";
+export { AlignKeys, alignKeymap } from "./plugins/align-keymap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export { ListKeys, listKeymap } from "./plugins/list-keymap";
