@@ -1,6 +1,8 @@
 import { stickerName } from "./sticker-messages";
 import {
+  cornerDistance,
   hiddenStickerRule,
+  isInsideLayer,
   readStickerDrag,
   resizeCursor,
   resizedSize,
@@ -47,10 +49,31 @@ describe("editor-sticker-layer: 크기 조절점의 커서는 화면에서 보�
 });
 
 describe("editor-sticker-layer: 끄는 동안 원래 자리의 스티커를 가리는 규칙은 순번 하나만 고른다", () => {
-  it("WHEN hiddenStickerRule(2) THEN 순번 2(셋째 .post-sticker)만 가리는 규칙이다", () => {
+  it("WHEN hiddenStickerRule(2) THEN 순번 2(블록 요소 다음 셋째 스티커 = 넷째 자식)만 가리는 규칙이다", () => {
     expect(hiddenStickerRule(2)).toContain(
-      '[data-sticker-hidden="2"] > :nth-child(3 of .post-sticker){visibility:hidden}',
+      '[data-sticker-hidden="2"] > .post-sticker:nth-child(4){visibility:hidden}',
     );
+  });
+});
+
+describe("editor-sticker-layer: 크기 조절 기준 거리는 모서리까지다", () => {
+  it("WHEN cornerDistance(60, 80), 크기 10을 그 거리에서 100까지 끈다 THEN 50이고 크기 20이다", () => {
+    const base = cornerDistance(60, 80);
+
+    expect([base, resizedSize(10, base, 100)]).toEqual([50, 20]);
+  });
+});
+
+describe("editor-sticker-layer: 끌기는 Esc나 에디터 틀 밖에 놓아 취소한다", () => {
+  it("WHEN 100×50 레이어에서 (-1,10) · (10,10) · (100,50) · (50,51) THEN false · true · true · false다", () => {
+    const size = { width: 100, height: 50 };
+
+    expect([
+      isInsideLayer({ x: -1, y: 10 }, size),
+      isInsideLayer({ x: 10, y: 10 }, size),
+      isInsideLayer({ x: 100, y: 50 }, size),
+      isInsideLayer({ x: 50, y: 51 }, size),
+    ]).toEqual([false, true, true, false]);
   });
 });
 

@@ -81,6 +81,14 @@ describe("editor-sticker-edit: 끄는 동안 원래 자리의 스티커를 숨�
     expect(hidingDecorations(shown.state)).toEqual([]);
   });
 
+  it("WHEN 숨긴 상태에서 메타 없이 선택만 옮기는 트랜잭션을 적용한다 THEN 장식이 그대로 하나 있다", () => {
+    const hidden = run(start(), hideSticker({ blockPos: SECOND, index: 1 })).state;
+
+    const moved = hidden.apply(hidden.tr.setSelection(TextSelection.create(hidden.doc, 4)));
+
+    expect(hidingDecorations(moved)).toHaveLength(1);
+  });
+
   it("WHEN 숨긴 상태에서 그 스티커를 첫 문단으로 옮기는 트랜잭션을 적용한다 THEN 장식이 없다", () => {
     const hidden = run(start(), hideSticker({ blockPos: SECOND, index: 1 })).state;
 

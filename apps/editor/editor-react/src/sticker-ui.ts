@@ -39,6 +39,17 @@ const CURSOR_SECTOR_DEGREES = 45;
 /** 180°를 네 칸으로 나눈 순서 — 0° 가로부터 시계 방향 */
 const RESIZE_CURSORS = ["ew-resize", "nwse-resize", "ns-resize", "nesw-resize"] as const;
 
+export function cornerDistance(width: number, height: number): number {
+  throw new Error(`미구현: ${width} ${height}`);
+}
+
+export function isInsideLayer(
+  point: { x: number; y: number },
+  size: { width: number; height: number },
+): boolean {
+  throw new Error(`미구현: ${point.x} ${size.width}`);
+}
+
 /**
  * 조절점은 스티커와 함께 돈다. 모서리 각도에 회전을 더한 화면 각도를 180°로 접어,
  * 가장 가까운 CSS 크기 커서를 고른다(반대 방향은 같은 커서).
