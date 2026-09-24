@@ -207,6 +207,13 @@ describe("markdown-format", () => {
     },
   );
 
+  it("WHEN 링크 글자 안에 span을 넣으면 THEN 링크가 조용히 사라지지 않고 고친 예와 함께 실패한다", () => {
+    const result = convertMarkdown("[[글자]{color=brand}](/x)");
+    expectFail(result);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toContain("[[글자](url)]{…}");
+  });
+
   it("WHEN 가이드의 example 블록을 이어 붙여 변환하면 THEN 통과하고 docSchema를 통과한다", () => {
     const result = convertMarkdown(readGuideExamples());
     expectOk(result);
