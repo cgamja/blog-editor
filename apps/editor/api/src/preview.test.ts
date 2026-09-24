@@ -2,18 +2,20 @@ import { fixtures, normalize } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
+import { MAX_PREVIEW_BODY_BYTES } from "./post-preview";
 import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
 const IMAGE_BASE_URL = "https://simsimeestudio.com";
 
 function setup() {
+  const store = createMemoryPostStore();
   const app = createApp({
-    store: createMemoryPostStore(),
+    store,
     categories: ["studio"],
     imageBaseUrl: IMAGE_BASE_URL,
     ...testAuthOptions,
   });
-  return { raw: app, app: withSession(app) };
+  return { store, raw: app, app: withSession(app) };
 }
 
 function previewInit(doc: unknown): RequestInit {
@@ -26,7 +28,7 @@ function previewInit(doc: unknown): RequestInit {
 
 describe("post-preview-api — 공개 렌더러 그대로의 미리보기", () => {
   it("WHEN 로그인한 채 꾸미기가 든 문서로 미리보기를 부르면 THEN 200이고 renderHtml과 같은 HTML이다", async () => {
-    const { app } = setup();
+    const { store, app } = setup();
     const { doc } = fixtures.decorationMax;
 
     const res = await app.request("/api/preview", previewInit(doc));
@@ -35,6 +37,25 @@ describe("post-preview-api — 공개 렌더러 그대로의 미리보기", () =
     expect(await res.json()).toEqual({
       html: renderHtml({ doc: normalize(doc) }, { imageBaseUrl: IMAGE_BASE_URL }),
     });
+    expect(await store.list()).toEqual([]);
+  });
+
+  it("WHEN 상한을 넘는 본문으로 부르면 THEN 413이다", async () => {
+    const { app } = setup();
+    const huge = "가".repeat(MAX_PREVIEW_BODY_BYTES);
+
+    const res = await app.request("/api/preview", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        doc: {
+          type: "doc",
+          content: [{ type: "paragraph", content: [{ type: "text", text: huge }] }],
+        },
+      }),
+    });
+
+    expect(res.status).toBe(413);
   });
 
   it("WHEN javascript: 링크 문서로 · 세션 없이 부르면 THEN 400(이슈 경로에 href) · 401이다", async () => {

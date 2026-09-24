@@ -2,14 +2,19 @@ export interface AutosaveOptions {
   delayMs: number;
   /** 한글 조합 중이면 true — 그 사이에는 문서를 읽어 보내지 않는다(CLAUDE.md `view.composing`) */
   isComposing: () => boolean;
-  save: () => Promise<void>;
+  save: (mode: SaveMode) => Promise<void>;
 }
+
+/** 초안 저장 · 발행 — 발행 글을 고쳐 반영하는 것도 발행이다 */
+export type SaveMode = "draft" | "publish";
 
 export interface Autosave {
   /** 바뀌었다 — 시계를 다시 맞춘다 */
   schedule: () => void;
   /** 기다리지 않고 저장한다(⌘S · 「초안 저장」) */
   flush: () => Promise<void>;
+  /** 이 방식으로 저장한다 — 자동 저장과 같은 줄에 선다(발행 · 덮어쓰기) */
+  run: (mode: SaveMode) => Promise<void>;
   dispose: () => void;
 }
 
@@ -37,7 +42,7 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
       return inFlight;
     }
     hasPendingChange = false;
-    inFlight = save().finally(() => {
+    inFlight = save("draft").finally(() => {
       inFlight = null;
       if (hasPendingChange) schedule();
     });
@@ -68,6 +73,7 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
       clearTimer();
       return run();
     },
+    run: (mode) => Promise.reject(new Error(`미구현: ${mode}`)),
     dispose: clearTimer,
   };
 }

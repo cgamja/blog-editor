@@ -4,10 +4,17 @@ const DELAY_MS = 2000;
 
 function setup(options: { composing?: () => boolean } = {}) {
   const pending: Array<() => void> = [];
-  const save = vi.fn(
+  let running = 0;
+  const overlaps: number[] = [];
+  const save = vi.fn<(mode: "draft" | "publish") => Promise<void>>(
     () =>
       new Promise<void>((resolve) => {
-        pending.push(resolve);
+        running += 1;
+        overlaps.push(running);
+        pending.push(() => {
+          running -= 1;
+          resolve();
+        });
       }),
   );
   const autosave = createAutosave({
@@ -19,7 +26,7 @@ function setup(options: { composing?: () => boolean } = {}) {
     pending.shift()?.();
     await vi.advanceTimersByTimeAsync(0);
   };
-  return { autosave, save, finishSave };
+  return { autosave, save, finishSave, overlaps };
 }
 
 beforeEach(() => {
@@ -80,6 +87,38 @@ describe("web-post-autosave — 자동 저장 시점", () => {
     expect(save).toHaveBeenCalledTimes(1);
 
     await finishSave();
+    await vi.advanceTimersByTimeAsync(DELAY_MS);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("web-post-autosave — 발행 · 덮어쓰기도 같은 줄에 선다", () => {
+  it("WHEN 자동 저장이 끝나기 전에 run('publish')하면 THEN 앞 저장이 끝난 뒤 발행 한 번이고 겹치지 않는다", async () => {
+    const { autosave, save, finishSave, overlaps } = setup();
+
+    autosave.schedule();
+    await vi.advanceTimersByTimeAsync(DELAY_MS);
+    const published = autosave.run("publish");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(save).toHaveBeenCalledTimes(1);
+
+    await finishSave();
+    expect(save).toHaveBeenLastCalledWith("publish");
+    await finishSave();
+    await published;
+    expect(save.mock.calls.map(([mode]) => mode)).toEqual(["draft", "publish"]);
+    expect(Math.max(...overlaps)).toBe(1);
+  });
+
+  it("WHEN 조합 중에 flush하면 THEN 조합이 끝날 때까지 저장하지 않는다", async () => {
+    let composing = true;
+    const { autosave, save } = setup({ composing: () => composing });
+
+    void autosave.flush();
+    await vi.advanceTimersByTimeAsync(DELAY_MS);
+    expect(save).not.toHaveBeenCalled();
+
+    composing = false;
     await vi.advanceTimersByTimeAsync(DELAY_MS);
     expect(save).toHaveBeenCalledTimes(1);
   });

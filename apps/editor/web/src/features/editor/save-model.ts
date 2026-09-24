@@ -34,6 +34,10 @@ function objectParticleOf(word: string): string {
   return (code - HANGUL_FIRST) % FINAL_COUNT === 0 ? "를" : "을";
 }
 
+export function renameErrorKindOf(error: unknown): "conflict" | "slugRejected" | SaveErrorKind {
+  throw new Error(`미구현: ${String(error)}`);
+}
+
 /** "오후 3시 42분" — 디자인 68:2 머리줄 표기(Intl의 "오후 3:42"와 다르다) */
 function clockText(at: Date): string {
   const hours = at.getHours();

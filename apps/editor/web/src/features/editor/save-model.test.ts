@@ -1,5 +1,5 @@
 import { ApiError, UnauthorizedError } from "../../shared/api/errors";
-import { saveErrorKindOf, saveHeadersOf, saveStatusText } from "./save-model";
+import { renameErrorKindOf, saveErrorKindOf, saveHeadersOf, saveStatusText } from "./save-model";
 
 describe("web-post-save — 저장 조건 헤더", () => {
   it('WHEN revision null과 abc로 헤더를 만들면 THEN If-None-Match: * · If-Match: "abc"다', () => {
@@ -23,6 +23,16 @@ describe("web-post-save — 저장 실패 나누기", () => {
   it("WHEN 502와 네트워크 TypeError를 나누면 THEN 둘 다 실패다", () => {
     expect(saveErrorKindOf(new ApiError(502, null), false)).toBe("failed");
     expect(saveErrorKindOf(new TypeError("Failed to fetch"), false)).toBe("failed");
+  });
+});
+
+describe("web-post-save — 주소 바꾸기 409 나누기", () => {
+  it("WHEN 409를 이유 stale · published · taken으로 나누면 THEN 충돌 · 주소 칸 · 주소 칸이다", () => {
+    const conflictOf = (reason: string) => new ApiError(409, "거절", reason);
+
+    expect(renameErrorKindOf(conflictOf("stale"))).toBe("conflict");
+    expect(renameErrorKindOf(conflictOf("published"))).toBe("slugRejected");
+    expect(renameErrorKindOf(conflictOf("taken"))).toBe("slugRejected");
   });
 });
 

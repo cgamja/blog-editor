@@ -58,6 +58,7 @@ describe("post-rename-api — 초안 주소 바꾸기", () => {
     const res = await rename(app, "beta-open", "new-home", { "If-Match": `"${revision}"` });
 
     expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ reason: "published" });
     expect(await store.get("beta-open")).toEqual({ file, revision });
     expect(await store.get("new-home")).toBeNull();
   });
@@ -74,6 +75,8 @@ describe("post-rename-api — 초안 주소 바꾸기", () => {
 
     expect(staleRes.status).toBe(409);
     expect(takenRes.status).toBe(409);
+    expect(await staleRes.json()).toMatchObject({ reason: "stale" });
+    expect(await takenRes.json()).toMatchObject({ reason: "taken" });
     expect(await store.get("beta-open")).toEqual({ file: updated, revision });
     expect(await store.get("taken")).toEqual({
       file: fixtures.allBlocks,

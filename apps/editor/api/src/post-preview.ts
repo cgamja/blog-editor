@@ -7,6 +7,9 @@ import { BODY_NOT_JSON_MESSAGE, SCHEMA_MISMATCH_MESSAGE } from "./messages";
 
 export const previewBodySchema = z.strictObject({ doc: docSchema });
 
+/** 미리보기 본문 상한(바이트) — 한 편의 글 문서로 충분한 양. 넘으면 읽지 않고 413 */
+export const MAX_PREVIEW_BODY_BYTES = 1024 * 1024;
+
 /**
  * 편집 화면 미리보기(edit-screen design 6) — 공개 API와 같은 렌더러 · imageBaseUrl로 그린다. web은
  * content-render를 import할 수 없어(adr-009) 서버가 그린다. 세션이 필요한 `/api` 아래라 초안이 공개 쪽에 나가지 않고,
