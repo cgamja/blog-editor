@@ -94,6 +94,22 @@ describe("html-render", () => {
       `<div class="post-body"><div class="post-block" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="그림" width="1200" height="800" loading="lazy" decoding="async"></figure></div></div>`,
     );
   });
+
+  it('WHEN start 3 번호 목록을 렌더하면 THEN <ol start="3">이 나온다', () => {
+    const file = docOf({
+      type: "orderedList",
+      attrs: { start: 3 },
+      content: [
+        {
+          type: "listItem",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "가" }] }],
+        },
+      ],
+    } as Block);
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toBe(
+      `<div class="post-body"><ol start="3"><li><p>가</p></li></ol></div>`,
+    );
+  });
 });
 
 // ── render-safety (보호 대상 — 고쳐서 통과시키지 않는다) ─────────────────────

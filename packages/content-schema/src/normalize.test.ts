@@ -155,3 +155,16 @@ describe("normalize — 멱등이다", () => {
     );
   });
 });
+
+describe("ordered-list-start — 시작 번호 1은 정규형에서 지운다", () => {
+  it("WHEN start 1 번호 목록을 normalize하면 THEN attrs에 start가 없다", () => {
+    const item = {
+      type: "listItem",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "가" }] }],
+    };
+    const list = { type: "orderedList", attrs: { start: 1 }, content: [item] };
+    const result = normalize(asDoc({ type: "doc", content: [list] }));
+
+    expect(result.content[0]).not.toHaveProperty("attrs");
+  });
+});

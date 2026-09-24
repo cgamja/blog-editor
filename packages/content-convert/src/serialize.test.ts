@@ -147,6 +147,49 @@ describe("serializeMarkdown", () => {
     ]);
   });
 
+  it("WHEN `3. 가` · `4. 나`를 변환하고 다시 직렬화하면 THEN start 3 번호 목록이 되고 markdown은 `3. 가`로 시작한다", () => {
+    const converted = convertMarkdown("3. 가\n4. 나\n");
+    if (!converted.ok) throw new Error(JSON.stringify(converted.messages));
+    expect(converted.doc.content[0]?.attrs).toEqual({ start: 3 });
+
+    expect(serializeMarkdown(converted.doc).markdown).toBe("3. 가\n4. 나\n");
+  });
+
+  it("WHEN `1. 가` 아래 start 3 안쪽 번호 목록을 직렬화하면 THEN 항목 글과 빈 줄로 띄우고 되돌아온다", () => {
+    const input = doc({
+      type: "orderedList",
+      content: [
+        {
+          type: "listItem",
+          content: [
+            paragraph(text("가")),
+            {
+              type: "orderedList",
+              attrs: { start: 3 },
+              content: [{ type: "listItem", content: [paragraph(text("나"))] }],
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("1. 가\n\n   3. 나\n");
+    expect(convertMarkdown(result.markdown)).toEqual({ ok: true, doc: input, messages: [] });
+  });
+
+  it("WHEN start 3 번호 목록의 가운데 항목 첫 문단이 비면 THEN 뒤 조각은 5부터 이어서 쓴다", () => {
+    const item = (value: string) => ({ type: "listItem", content: [paragraph(text(value))] });
+    const input = doc({
+      type: "orderedList",
+      attrs: { start: 3 },
+      content: [item("가"), { type: "listItem", content: [{ type: "paragraph" }] }, item("다")],
+    });
+
+    expect(serializeMarkdown(input).markdown).toBe("3. 가\n\n5) 다\n");
+  });
+
   it("문법처럼 보이는 글자는 글자로 돌아온다", () => {
     const input = doc(
       paragraph(text("1. {a=b} *별* [x]")),
