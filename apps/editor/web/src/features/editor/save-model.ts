@@ -1,9 +1,8 @@
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../shared/api/constants";
 import { ApiError, UnauthorizedError } from "../../shared/api/errors";
 import { EDITOR_MESSAGES } from "./messages";
-import type { SaveErrorKind, SaveStatus } from "./types";
+import type { RenameErrorKind, SaveErrorKind, SaveStatus } from "./types";
 
-const HTTP_BAD_REQUEST = 400;
-const HTTP_CONFLICT = 409;
 const HOURS_PER_HALF_DAY = 12;
 
 /** 아직 서버에 없는 글은 `If-None-Match: *`, 불러온 글은 받은 revision으로 `If-Match`(posts-api) */
@@ -34,8 +33,15 @@ function objectParticleOf(word: string): string {
   return (code - HANGUL_FIRST) % FINAL_COUNT === 0 ? "를" : "을";
 }
 
-export function renameErrorKindOf(error: unknown): "conflict" | "slugRejected" | SaveErrorKind {
-  throw new Error(`미구현: ${String(error)}`);
+/**
+ * 주소 바꾸기 실패 — 409는 본문 `reason`으로 나눈다(post-rename-api). 다른 곳에서 먼저 고쳤으면(stale) 충돌
+ * 대화상자, 발행 글 · 이미 있는 주소면 주소 칸 문장. 그 밖은 저장 실패와 같다.
+ */
+export function renameErrorKindOf(error: unknown): RenameErrorKind {
+  if (error instanceof ApiError && error.status === HTTP_CONFLICT) {
+    return error.reason === "stale" ? "conflict" : "slugRejected";
+  }
+  return saveErrorKindOf(error, false);
 }
 
 /** "오후 3시 42분" — 디자인 68:2 머리줄 표기(Intl의 "오후 3:42"와 다르다) */

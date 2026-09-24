@@ -1,12 +1,11 @@
+import type { SaveMode } from "./types";
+
 export interface AutosaveOptions {
   delayMs: number;
   /** 한글 조합 중이면 true — 그 사이에는 문서를 읽어 보내지 않는다(CLAUDE.md `view.composing`) */
   isComposing: () => boolean;
   save: (mode: SaveMode) => Promise<void>;
 }
-
-/** 초안 저장 · 발행 — 발행 글을 고쳐 반영하는 것도 발행이다 */
-export type SaveMode = "draft" | "publish";
 
 export interface Autosave {
   /** 바뀌었다 — 시계를 다시 맞춘다 */
@@ -24,11 +23,14 @@ export type ShortcutKey = Pick<
 >;
 
 /**
- * 자동 저장 시점(디자인 결정 4-A: 입력 멈추고 2초). 저장은 한 번에 하나 — 저장 중에 바뀌면 끝난 뒤 한 번 더.
+ * 저장 줄(디자인 결정 4-A: 입력 멈추고 2초). 자동 저장 · ⌘S · 발행 · 덮어쓰기가 모두 이 줄 하나에 서서
+ * 같은 ETag로 PUT이 겹치지 않는다. 조합 중이면 시각이 와도 · 바로 저장이어도 조합이 끝날 때까지 미룬다.
+ * 저장 중에 또 바뀌면 줄이 빈 뒤 한 번 더 시계를 맞춘다.
  */
 export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions): Autosave {
   let timer: ReturnType<typeof setTimeout> | null = null;
-  let inFlight: Promise<void> | null = null;
+  let queue: Promise<void> = Promise.resolve();
+  let queued = 0;
   let hasPendingChange = false;
 
   const clearTimer = () => {
@@ -36,31 +38,37 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
     timer = null;
   };
 
-  const run = async (): Promise<void> => {
-    if (inFlight !== null) {
-      hasPendingChange = true;
-      return inFlight;
-    }
-    hasPendingChange = false;
-    inFlight = save("draft").finally(() => {
-      inFlight = null;
-      if (hasPendingChange) schedule();
+  const untilNotComposing = () =>
+    new Promise<void>((resolve) => {
+      const check = () => {
+        if (isComposing()) setTimeout(check, delayMs);
+        else resolve();
+      };
+      check();
     });
-    return inFlight;
+
+  const run = (mode: SaveMode): Promise<void> => {
+    clearTimer();
+    hasPendingChange = false;
+    queued += 1;
+    const task = queue.then(untilNotComposing).then(() => save(mode));
+    queue = task
+      .catch(() => undefined)
+      .finally(() => {
+        queued -= 1;
+        if (queued === 0 && hasPendingChange) schedule();
+      });
+    return task;
   };
 
   const fire = () => {
     timer = null;
-    if (isComposing()) {
-      timer = setTimeout(fire, delayMs);
-      return;
-    }
-    void run().catch(() => undefined);
+    void run("draft").catch(() => undefined);
   };
 
   function schedule() {
     clearTimer();
-    if (inFlight !== null) {
+    if (queued > 0) {
       hasPendingChange = true;
       return;
     }
@@ -69,11 +77,8 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
 
   return {
     schedule,
-    flush: () => {
-      clearTimer();
-      return run();
-    },
-    run: (mode) => Promise.reject(new Error(`미구현: ${mode}`)),
+    flush: () => run("draft"),
+    run,
     dispose: clearTimer,
   };
 }

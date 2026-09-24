@@ -1,35 +1,31 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import type { PostMeta } from "@blog-editor/content-schema";
+import type { EditableMeta } from "../hooks/use-post-form";
 import { EDITOR_MESSAGES } from "../messages";
 
 export interface PostInfoPanelProps {
   meta: PostMeta;
-  slug: string;
   isPublished: boolean;
-  slugError: string | null;
+  /** 주소 칸(`SlugField`) — 주소는 저장 흐름(주소 바꾸기 · 잠금)과 묶여 있어 화면이 조립한다 */
+  slugField: ReactNode;
   /** 기존 글에서 쓰인 카테고리 — 제안만 한다(목록 API는 설정 #98) */
   categories: readonly string[];
-  onMetaChange: (patch: Partial<PostMeta>) => void;
-  onSlugChange: (slug: string) => void;
+  onMetaChange: (patch: EditableMeta) => void;
   onOpenDecorate: () => void;
 }
 
 /** 「글 정보」 탭(디자인 68:2) — 주소 · 카테고리 · 설명 · 날짜 · 꾸미기 열기 · AI와 다듬기 */
 export function PostInfoPanel({
   meta,
-  slug,
   isPublished,
-  slugError,
+  slugField,
   categories,
   onMetaChange,
-  onSlugChange,
   onOpenDecorate,
 }: PostInfoPanelProps) {
   const { info } = EDITOR_MESSAGES;
   const id = useId();
   const ids = {
-    slug: `${id}-slug`,
-    slugHint: `${id}-slug-hint`,
     category: `${id}-category`,
     categories: `${id}-categories`,
     categoryHint: `${id}-category-hint`,
@@ -46,23 +42,7 @@ export function PostInfoPanel({
         <span className="post-info-badge">{isPublished ? info.published : info.draft}</span>
       </div>
 
-      <div className="post-info-field">
-        <label htmlFor={ids.slug}>{info.slug}</label>
-        <input
-          id={ids.slug}
-          type="text"
-          value={slug}
-          readOnly={isPublished}
-          spellCheck={false}
-          autoComplete="off"
-          aria-invalid={slugError === null ? undefined : true}
-          aria-describedby={ids.slugHint}
-          onChange={(event) => onSlugChange(event.target.value)}
-        />
-        <p id={ids.slugHint} className={slugError === null ? "post-info-hint" : "post-info-error"}>
-          {slugError ?? (isPublished ? info.slugLocked : info.slugHint)}
-        </p>
-      </div>
+      {slugField}
 
       <div className="post-info-field">
         <label htmlFor={ids.category}>{info.category}</label>

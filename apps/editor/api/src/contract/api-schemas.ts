@@ -5,6 +5,7 @@ import {
   imagePathSchema,
   slugSchema,
 } from "@blog-editor/content-schema";
+import { RENAME_CONFLICT_REASONS } from "../post-rename";
 
 /** 오류 응답 대부분 — 화면이 `message`를 그대로 보여 준다(messages.ts) */
 export const messageBodySchema = z.strictObject({ message: z.string() });
@@ -23,6 +24,12 @@ export const schemaErrorBodySchema = z.strictObject({
 export const loginBodySchema = z.object({ username: z.string(), password: z.string() });
 
 export const saveResultSchema = z.strictObject({ revision: z.string() });
+
+/** 주소 바꾸기 409 — `reason`으로 화면이 충돌(stale)과 주소 칸 문장(published · taken)을 나눈다 */
+export const renameConflictBodySchema = z.strictObject({
+  message: z.string(),
+  reason: z.enum(RENAME_CONFLICT_REASONS),
+});
 
 export const renameResultSchema = z.strictObject({ slug: slugSchema, revision: z.string() });
 

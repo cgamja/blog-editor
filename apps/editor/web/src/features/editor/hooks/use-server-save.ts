@@ -1,32 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { SCHEMA_VERSION } from "@blog-editor/content-schema";
 import type { Doc, PostFile, PostMeta } from "@blog-editor/content-schema";
-import { isEditorComposing, useDocChange } from "@blog-editor/editor-react";
-import type { BlogEditorInstance } from "@blog-editor/editor-react";
-import { ApiError } from "../../../shared/api/errors";
 import { SESSION_EXPIRY_META } from "../../../shared/api/constants";
+import { ApiError } from "../../../shared/api/errors";
 import { renamePost, savePost } from "../api";
-import { createAutosave } from "../autosave";
-import { AUTOSAVE_DELAY_MS, NEW_POST_KEY } from "../constants";
+import { NEW_POST_KEY } from "../constants";
 import { todayIsoDate } from "../editing-start";
 import { clearLocalDraft, writeLocalDraft } from "../local-draft";
 import { EDITOR_MESSAGES } from "../messages";
 import { missingForSave } from "../post-meta";
-import { saveErrorKindOf } from "../save-model";
-import { suggestSlug } from "../slug";
-import type { EditingStart, LocalDraft, SaveStatus } from "../types";
+import { renameErrorKindOf, saveErrorKindOf } from "../save-model";
+import type { EditingStart, LocalDraft, SaveMode, SaveStatus } from "../types";
 
-const HTTP_CONFLICT = 409;
 // 저장이 401이면 띠로 알린다 — 전역 처리가 로그인 화면으로 곧장 보내면 쓰던 글을 두고 떠난다(design 3)
 const KEEP_SESSION = { [SESSION_EXPIRY_META]: false };
 
-export type SaveMode = "draft" | "publish";
-
-export interface UsePostSaveOptions {
-  editor: BlogEditorInstance;
+export interface UseServerSaveOptions {
   getDoc: () => Doc;
   start: EditingStart;
+  /** 지금 입력 값 — 렌더마다 새 값이 온다 */
+  form: { meta: PostMeta; slug: string };
   /** 화면이 스스로 새 주소로 옮긴다(새 글의 첫 저장 · 주소 바꾸기) — 에디터는 그대로 둔다 */
   onAdopt: (slug: string) => void;
   /** 서버가 먼저 바뀌었다(409) */
@@ -39,13 +33,10 @@ interface ServerState {
 }
 
 /**
- * 편집 화면의 글 정보 · 저장 흐름(edit-screen design 2 · 3). 문서의 진실은 에디터 하나이고, 이 훅은 메타와
- * 서버 쪽 상태(주소 · revision)만 가진다. 저장은 한 번에 하나 — `createAutosave`가 줄을 세운다.
+ * 편집 화면의 서버 저장(edit-screen design 2 · 3) — 저장 · 주소 바꾸기 mutation과 서버 쪽 상태(주소 · revision).
+ * 문서의 진실은 에디터 하나이고 입력 값은 `usePostForm`이 가진다. 저장 순서는 `useAutosave`의 줄이 정한다.
  */
-export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UsePostSaveOptions) {
-  const [meta, setMeta] = useState<PostMeta>(start.meta);
-  const [slug, setSlugValue] = useState(start.slug);
-  const [isSlugEdited, setSlugEdited] = useState(start.slug !== "");
+export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseServerSaveOptions) {
   const [isPublished, setPublished] = useState(start.isPublished);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [isExpired, setExpired] = useState(false);
@@ -53,10 +44,20 @@ export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UseP
 
   const server = useRef<ServerState>({ savedSlug: start.savedSlug, revision: start.revision });
   // 비동기 저장이 끝났을 때 읽는 지금 값 — 렌더마다 갱신한다
-  const latest = useRef({ meta, slug, isPublished, isExpired });
-  latest.current = { meta, slug, isPublished, isExpired };
-  // 충돌에서 「저장하지 않고 계속 쓰기」를 고르면 서버 저장을 멈춘다 — localDraft는 계속 쓴다
+  const latest = useRef({ ...form, isPublished, isExpired });
+  latest.current = { ...form, isPublished, isExpired };
+  // 충돌에서 「저장하지 않고 계속 쓰기」를 고르면 자동 저장을 멈춘다 — localDraft는 계속 쓴다
   const isPaused = useRef(start.restore === "conflict");
+  // 충돌로 실패한 저장의 방식 — 「덮어쓰기」가 같은 방식으로 다시 한다(발행이 초안으로 바뀌지 않게)
+  const failedMode = useRef<SaveMode | null>(null);
+  // 떠난 화면에서 끝난 저장이 주소를 옮기지 않게 한다
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const saveMutation = useMutation({
     mutationFn: (input: { slug: string; file: PostFile; revision: string | null }) =>
@@ -70,6 +71,9 @@ export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UseP
   });
 
   const localKey = () => server.current.savedSlug ?? NEW_POST_KEY;
+  const adopt = (slug: string) => {
+    if (isMounted.current) onAdopt(slug);
+  };
 
   const localDraftOf = (doc: Doc): LocalDraft => ({
     baseRevision: server.current.revision,
@@ -79,7 +83,7 @@ export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UseP
     savedAt: new Date().toISOString(),
   });
 
-  /** 주소가 바뀌었으면 먼저 옮긴다. 409면 주소 칸에 서버 문장을 보이고 false */
+  /** 주소가 바뀌었으면 먼저 옮긴다. 발행 글 · 이미 있는 주소면 주소 칸에 서버 문장을 보이고 false */
   const moveIfRenamed = async (to: string): Promise<boolean> => {
     const { savedSlug, revision } = server.current;
     if (savedSlug === null || savedSlug === to || revision === null) return true;
@@ -87,23 +91,25 @@ export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UseP
       const moved = await renameMutation.mutateAsync({ from: savedSlug, to, revision });
       clearLocalDraft(savedSlug);
       server.current = { savedSlug: to, revision: moved };
-      onAdopt(to);
+      adopt(to);
       return true;
     } catch (error) {
-      if (error instanceof ApiError && error.status === HTTP_CONFLICT) {
-        setSlugError(error.userMessage ?? EDITOR_MESSAGES.info.slugTaken);
-        setStatus({ kind: "failed", message: null });
-        return false;
-      }
-      throw error;
+      if (renameErrorKindOf(error) !== "slugRejected") throw error;
+      const message = error instanceof ApiError ? error.userMessage : null;
+      setSlugError(message ?? EDITOR_MESSAGES.info.slugTaken);
+      setStatus({ kind: "failed", message: null });
+      return false;
     }
   };
 
-  const handleFailure = (error: unknown) => {
+  const handleFailure = (error: unknown, mode: SaveMode) => {
     const kind = saveErrorKindOf(error, server.current.savedSlug === null);
     if (kind === "expired") setExpired(true);
     if (kind === "slugTaken") setSlugError(EDITOR_MESSAGES.info.slugTaken);
-    if (kind === "conflict") onConflict();
+    if (kind === "conflict") {
+      failedMode.current = mode;
+      onConflict();
+    }
     const message = kind === "rejected" && error instanceof ApiError ? error.userMessage : null;
     setStatus({ kind: "failed", message });
   };
@@ -147,87 +153,52 @@ export function usePostSave({ editor, getDoc, start, onAdopt, onConflict }: UseP
       });
       clearLocalDraft(localKey());
       server.current = { savedSlug: current.slug, revision };
-      if (wasNew) onAdopt(current.slug);
+      if (wasNew) adopt(current.slug);
       isPaused.current = false;
+      failedMode.current = null;
       setSlugError(null);
       setExpired(false);
       if (willPublish && !current.isPublished) {
         setPublished(true);
-        setMeta((previous) => ({ ...previous, draft: false }));
         setStatus({ kind: "published" });
       } else {
         setStatus({ kind: "saved", at: new Date(), isPublished: willPublish });
       }
     } catch (error) {
-      handleFailure(error);
+      handleFailure(error, mode);
     }
-  };
-
-  const saveRef = useRef(save);
-  saveRef.current = save;
-
-  const autosave = useMemo(
-    () =>
-      createAutosave({
-        delayMs: AUTOSAVE_DELAY_MS,
-        isComposing: () => isEditorComposing(editor),
-        save: () => saveRef.current("draft"),
-      }),
-    [editor],
-  );
-
-  useDocChange(
-    editor,
-    useCallback(() => autosave.schedule(), [autosave]),
-  );
-
-  useEffect(() => {
-    // 되살린 글은 서버보다 새것이다 — 곧 저장한다
-    if (start.restore === "restore") autosave.schedule();
-    return () => autosave.dispose();
-  }, [autosave, start.restore]);
-
-  const changeMeta = (patch: Partial<PostMeta>) => {
-    setMeta((previous) => ({ ...previous, ...patch }));
-    // 새 글은 제목에서 주소를 제안한다 — 사람이 주소를 고쳤거나 이미 저장된 글이면 두지 않는다
-    if (patch.title !== undefined && !isSlugEdited && server.current.savedSlug === null) {
-      setSlugValue(suggestSlug(patch.title));
-    }
-    autosave.schedule();
-  };
-
-  const changeSlug = (next: string) => {
-    setSlugValue(next);
-    setSlugEdited(true);
-    setSlugError(null);
-    autosave.schedule();
   };
 
   return {
-    meta,
-    slug,
     status,
     isPublished,
     isExpired,
     slugError,
-    changeMeta,
-    changeSlug,
-    /** ⌘S · 「초안 저장」 · 다시 시도 — 기다리지 않는다 */
-    saveNow: () => autosave.flush(),
-    publish: () => save("publish"),
+    save,
+    clearSlugError: () => setSlugError(null),
     /** 「저장하지 않고 계속 쓰기」 */
     pause: () => {
       isPaused.current = true;
       setStatus({ kind: "failed", message: null });
     },
-    /** 「덮어쓰기」 — 최신 revision 위에 내 글을 저장한다 */
-    overwriteWith: (revision: string) => {
+    /** 「덮어쓰기」 준비 — 최신 revision 위에 저장하고, 충돌로 실패한 저장의 방식을 돌려준다 */
+    prepareOverwrite: (revision: string): SaveMode => {
       server.current = { ...server.current, revision };
       isPaused.current = false;
-      return save(latest.current.isPublished ? "publish" : "draft");
+      return failedMode.current ?? (latest.current.isPublished ? "publish" : "draft");
+    },
+    /** 화면을 떠나기 전(다시 로그인 · 발행 글에서 글 목록) 쓰던 글을 브라우저에 남긴다 */
+    keepLocalDraft: () => {
+      try {
+        writeLocalDraft(localKey(), localDraftOf(getDoc()));
+      } catch {
+        // 닫힌 집합을 어기는 문서 — 마지막으로 남긴 글이 그대로 있다
+      }
     },
     currentDraft: () => localDraftOf(getDoc()),
     savedSlug: () => server.current.savedSlug,
     localKey,
   };
 }
+
+export type ServerSave = ReturnType<typeof useServerSave>;

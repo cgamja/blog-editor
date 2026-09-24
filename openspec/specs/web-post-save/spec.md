@@ -34,6 +34,15 @@ web은 SHALL `saveErrorKindOf(error, isNew)`로 저장 실패를 나눈다. 401�
 - **WHEN** 502 `ApiError`와 네트워크 `TypeError`를 나눈다
 - **THEN** 둘 다 실패다
 
+### Requirement: 주소 바꾸기 409는 이유로 나눈다
+
+web은 SHALL `renameErrorKindOf(error)`로 주소 바꾸기 실패를 나눈다. 409의 `reason`이 `stale`이면 충돌 대화상자, `published` · `taken`이면 주소 칸 문장이다.
+
+#### Scenario: 이유별 409
+
+- **WHEN** 409를 이유 stale · published · taken으로 나눈다
+- **THEN** 차례로 충돌 · 주소 칸 · 주소 칸이다
+
 ### Requirement: 머리줄 저장 문구는 오전 · 오후 시각으로 쓴다
 
 web은 SHALL `saveStatusText(status)`로 머리줄 문구를 만든다. 저장 중은 "저장 중…", 저장됨은 "초안 저장됨, 오후 3시 42분"처럼 12시간 시각, 발행한 글은 "발행됨, …", 실패는 "저장하지 못했어요"다.
@@ -61,3 +70,17 @@ web은 SHALL `restoreDecisionOf(local, serverRevision)`으로 localDraft 처리�
 
 - **WHEN** localDraft 없이 본다
 - **THEN** 그대로다
+
+### Requirement: 되살린 글이 충돌이면 쓰던 글의 기준 revision으로 저장한다
+
+web은 SHALL `editingStartOf`에서 되살리기가 충돌이면 저장 기준 revision을 쓰던 글의 기준 revision으로 둔다 — 덮어쓰기를 고르지 않은 저장(발행 포함)은 409로 다시 충돌 대화상자가 뜬다. 되살리기면 서버 revision이다.
+
+#### Scenario: 그사이 바뀐 글에 충돌로 되살리기
+
+- **WHEN** 서버 r2인 글에 r1 위에서 쓰던 글을 되살린다
+- **THEN** 충돌이고 쓰던 제목이 보이며 저장 기준은 r1이다
+
+#### Scenario: 같은 revision 위에서 되살리기
+
+- **WHEN** 서버 r2인 글에 r2 위에서 쓰던 글을 되살린다
+- **THEN** 되살리기이고 저장 기준은 r2다

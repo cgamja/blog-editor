@@ -33,6 +33,7 @@ export const PREVIEW_TOKEN_NAMES = [
 ] as const;
 
 export const POST_QUERY_KEY = "post";
+export const postQueryKey = (slug: string) => [POST_QUERY_KEY, slug] as const;
 export const POST_LIST_QUERY_KEY = ["posts"] as const;
 
 /** localDraft 저장 키 앞머리 — 뒤에 slug(새 글은 `new`) */

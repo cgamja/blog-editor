@@ -109,7 +109,7 @@ web의 QueryClient는 SHALL 쿼리나 mutation이 `UnauthorizedError`로 실패�
 
 ### Requirement: API 요청 도우미는 401과 그 밖의 실패를 오류로 나눈다
 
-web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401은 `UnauthorizedError`, 그 밖의 실패는 상태 코드와 본문 `message`(없으면 null)를 가진 `ApiError`로 던지고, 2xx는 응답을 그대로 돌려준다.
+web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401은 `UnauthorizedError`, 그 밖의 실패는 상태 코드와 본문 `message` · `reason`(없으면 null)을 가진 `ApiError`로 던지고, 2xx는 응답을 그대로 돌려준다.
 
 #### Scenario: 401은 UnauthorizedError
 
@@ -120,6 +120,11 @@ web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401�
 
 - **WHEN** `message`가 든 JSON 409를 받는다
 - **THEN** 상태 409와 그 문장을 가진 `ApiError`다
+
+#### Scenario: 이유 코드가 든 실패는 그 이유를 가진 ApiError
+
+- **WHEN** `reason: "published"`가 든 409를 받는다
+- **THEN** 상태 409 · 이유 `published`인 `ApiError`다
 
 #### Scenario: JSON이 아닌 실패는 문장 없는 ApiError
 

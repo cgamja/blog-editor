@@ -12,6 +12,7 @@ import {
   loginBodySchema,
   messageBodySchema,
   previewResultSchema,
+  renameConflictBodySchema,
   renameResultSchema,
   saveResultSchema,
   schemaErrorBodySchema,
@@ -24,6 +25,7 @@ import {
   IMAGE_ROTATED_MESSAGE,
   IMAGE_TOO_LARGE_MESSAGE,
   IMAGE_TOO_WIDE_MESSAGE,
+  PREVIEW_TOO_LARGE_MESSAGE,
 } from "../messages";
 import { SESSION_COOKIE_NAME } from "../session";
 import type {
@@ -65,6 +67,7 @@ function contractSchemas(categories: Categories) {
     SaveResult: saveResultSchema,
     RenameBody: renameBodySchema,
     RenameResult: renameResultSchema,
+    RenameConflictBody: renameConflictBodySchema,
     PreviewBody: previewBodySchema,
     PreviewResult: previewResultSchema,
     ImageUploadResult: imageUploadResultSchema,
@@ -229,8 +232,8 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
         404: { description: "글이 없다", schema: schemas.MessageBody },
         409: {
           description:
-            "발행한 글이다(주소 잠금) · revision이 맞지 않는다 · 새 주소에 글이 이미 있다 — 어느 쪽도 바뀌지 않는다",
-          schema: schemas.MessageBody,
+            "reason — published: 발행한 글이다(주소 잠금) · stale: revision이 맞지 않는다 · taken: 새 주소에 글이 이미 있다. 어느 쪽도 바뀌지 않는다",
+          schema: schemas.RenameConflictBody,
         },
         428: { description: "If-Match가 없다", schema: schemas.MessageBody },
       },
@@ -247,6 +250,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       requestBody: { description: "그릴 문서", schema: schemas.PreviewBody },
       responses: {
         200: { description: "그린 본문", schema: schemas.PreviewResult },
+        413: { description: PREVIEW_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
         400: {
           description: "본문이 JSON이 아니거나 문서가 스키마에 맞지 않는다",
           schema: schemas.SchemaErrorBody,

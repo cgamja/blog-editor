@@ -1,19 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { HTTP_NOT_FOUND, HTTP_SERVER_ERROR } from "../../../shared/api/constants";
 import { ApiError } from "../../../shared/api/errors";
 import { ROUTES } from "../../../shared/routes/constants";
-import { fetchPost, type LoadedPost } from "../api";
-import { NEW_POST_KEY, POST_QUERY_KEY } from "../constants";
+import { fetchPost, latestPostQuery } from "../api";
+import { NEW_POST_KEY, postQueryKey } from "../constants";
 import { editingStartOf } from "../editing-start";
 import { readLocalDraft } from "../local-draft";
 import { EDITOR_MESSAGES } from "../messages";
+import type { LoadedPost } from "../types";
 import { PostEditor } from "./PostEditor";
 
-const HTTP_NOT_FOUND = 404;
 const MAX_RETRIES = 3;
-
-const postQueryKey = (slug: string) => [POST_QUERY_KEY, slug] as const;
 
 export interface EditSessionProps {
   /** 이 세션이 연 글 — 새 글이면 null. 세션 안에서 주소가 바뀌어도 이 값은 그대로다 */
@@ -43,14 +42,15 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
     gcTime: 0,
     refetchOnWindowFocus: false,
     retry: (failureCount, error) =>
-      !(error instanceof ApiError && error.status < 500) && failureCount < MAX_RETRIES,
+      !(error instanceof ApiError && error.status < HTTP_SERVER_ERROR) &&
+      failureCount < MAX_RETRIES,
   });
   // 처음 읽은 localDraft — 렌더마다 저장소를 읽지 않게 한 번만
   const [local] = useState(() => readLocalDraft(initialSlug ?? NEW_POST_KEY));
 
   const handleReload = (slug: string) => {
     void queryClient
-      .fetchQuery({ queryKey: postQueryKey(slug), queryFn: () => fetchPost(slug), staleTime: 0 })
+      .fetchQuery(latestPostQuery(slug))
       .then((post) =>
         setReloaded((previous) => ({ version: (previous?.version ?? 0) + 1, slug, post })),
       );
@@ -60,7 +60,7 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
     return (
       <PostEditor
         key={reloaded.version}
-        start={editingStartOf(reloaded.post, reloaded.slug, null)}
+        initialStart={editingStartOf(reloaded.post, reloaded.slug, null)}
         onAdopt={onAdopt}
         onReload={handleReload}
       />
@@ -69,7 +69,7 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
   if (initialSlug === null) {
     return (
       <PostEditor
-        start={editingStartOf(null, null, local)}
+        initialStart={editingStartOf(null, null, local)}
         onAdopt={onAdopt}
         onReload={handleReload}
       />
@@ -95,7 +95,7 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
   }
   return (
     <PostEditor
-      start={editingStartOf(query.data, initialSlug, local)}
+      initialStart={editingStartOf(query.data, initialSlug, local)}
       onAdopt={onAdopt}
       onReload={handleReload}
     />

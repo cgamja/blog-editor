@@ -43,3 +43,17 @@ web은 SHALL `isSaveShortcut(event)`로 저장 단축키를 판정한다. `code`
 
 - **WHEN** `ctrlKey` · `shiftKey`, `code: "KeyS"`인 키를 판정한다
 - **THEN** 저장이 아니다
+
+### Requirement: 발행 · 덮어쓰기도 자동 저장과 같은 줄에 선다
+
+web은 SHALL `run(mode)`로 발행 · 덮어쓰기를 저장 줄에 세운다. 기다리던 시계를 지우고, 앞 저장이 끝난 뒤에 저장한다 — 같은 ETag로 PUT이 겹치지 않는다. `flush()`도 조합 중이면 조합이 끝날 때까지 미룬다.
+
+#### Scenario: 자동 저장 중의 발행
+
+- **WHEN** 자동 저장이 끝나기 전에 `run("publish")`한다
+- **THEN** 앞 저장이 끝난 뒤 발행을 한 번 저장하고, 두 저장은 겹치지 않는다
+
+#### Scenario: 조합 중의 바로 저장
+
+- **WHEN** 조합 중에 `flush()`하고, 조합이 끝난 뒤 2초가 지난다
+- **THEN** 조합 중에는 저장하지 않고 끝난 뒤 한 번 저장한다

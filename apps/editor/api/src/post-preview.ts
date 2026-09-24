@@ -1,9 +1,14 @@
 import type { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { docSchema, normalize } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
 import { issuesOf } from "./schema-issues";
-import { BODY_NOT_JSON_MESSAGE, SCHEMA_MISMATCH_MESSAGE } from "./messages";
+import {
+  BODY_NOT_JSON_MESSAGE,
+  PREVIEW_TOO_LARGE_MESSAGE,
+  SCHEMA_MISMATCH_MESSAGE,
+} from "./messages";
 
 export const previewBodySchema = z.strictObject({ doc: docSchema });
 
@@ -16,7 +21,11 @@ export const MAX_PREVIEW_BODY_BYTES = 1024 * 1024;
  * 저장하지 않는다.
  */
 export function registerPreviewRoute(app: Hono, imageBaseUrl: string): void {
-  app.post("/api/preview", async (c) => {
+  const limit = bodyLimit({
+    maxSize: MAX_PREVIEW_BODY_BYTES,
+    onError: (c) => c.json({ message: PREVIEW_TOO_LARGE_MESSAGE }, 413),
+  });
+  app.post("/api/preview", limit, async (c) => {
     let body: unknown;
     try {
       body = await c.req.json();

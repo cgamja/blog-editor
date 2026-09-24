@@ -16,6 +16,12 @@ import type { PostStore } from "./store";
 
 export const renameBodySchema = z.strictObject({ to: slugSchema });
 
+/** 주소 바꾸기 409의 이유 — 화면이 충돌 대화상자(stale)와 주소 칸 문장(published · taken)으로 나눈다 */
+export const RENAME_CONFLICT_REASONS = ["published", "stale", "taken"] as const;
+export type RenameConflictReason = (typeof RENAME_CONFLICT_REASONS)[number];
+
+const conflictBody = (message: string, reason: RenameConflictReason) => ({ message, reason });
+
 /**
  * 초안 주소 바꾸기(edit-screen design 5) — 새 주소에 쓰고 옛 주소를 지운다. 옛 글 지우기가 어긋나면
  * 새 주소를 지워 되돌린다. 같은 프로세스 안에서만 원자적이다(운영은 S3 조건부 쓰기 몫 — adr-014와 같은 한계).
@@ -43,24 +49,29 @@ export function registerRenameRoute(app: Hono, store: PostStore): void {
     const found = await store.get(from);
     if (found === null) return c.json({ message: POST_NOT_FOUND_MESSAGE }, 404);
     if (found.file.meta.draft === false) {
-      return c.json({ message: PUBLISHED_SLUG_LOCKED_MESSAGE }, 409);
+      return c.json(conflictBody(PUBLISHED_SLUG_LOCKED_MESSAGE, "published"), 409);
     }
     if (found.revision !== revisionFromEtag(ifMatch)) {
-      return c.json({ message: CONFLICT_MESSAGE }, 409);
+      return c.json(conflictBody(CONFLICT_MESSAGE, "stale"), 409);
     }
 
     let moved: { revision: string };
     try {
       moved = await store.put(to, found.file, null);
     } catch (error) {
-      if (error instanceof ConflictError) return c.json({ message: SLUG_TAKEN_MESSAGE }, 409);
+      if (error instanceof ConflictError) {
+        return c.json(conflictBody(SLUG_TAKEN_MESSAGE, "taken"), 409);
+      }
       throw error;
     }
     try {
       await store.delete(from, found.revision);
     } catch (error) {
-      await store.delete(to, moved.revision);
-      if (error instanceof ConflictError) return c.json({ message: CONFLICT_MESSAGE }, 409);
+      // 되돌리기가 실패해도 알려야 할 것은 처음 실패다 — 새 주소에 남은 사본은 초안이라 공개되지 않는다
+      await store.delete(to, moved.revision).catch(() => undefined);
+      if (error instanceof ConflictError) {
+        return c.json(conflictBody(CONFLICT_MESSAGE, "stale"), 409);
+      }
       throw error;
     }
     c.header("ETag", etagOf(moved.revision));

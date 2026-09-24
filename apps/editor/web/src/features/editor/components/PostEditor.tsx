@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Doc } from "@blog-editor/content-schema";
 import {
   EditorScreen,
-  editorPlainText,
   focusEditorStart,
   useBlogEditor,
   type SideTab,
@@ -12,37 +11,42 @@ import {
 } from "@blog-editor/editor-react";
 import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
-import { fetchPostCategories, fetchPost } from "../api";
+import { fetchPostCategories } from "../api";
 import { POST_LIST_QUERY_KEY } from "../constants";
-import { clearLocalDraft, writeLocalCopy } from "../local-draft";
 import { EDITOR_MESSAGES } from "../messages";
-import { missingForSave } from "../post-meta";
+import { useAutosave } from "../hooks/use-autosave";
+import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
-import { usePostSave } from "../hooks/use-post-save";
+import { usePostForm, type EditableMeta } from "../hooks/use-post-form";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
+import { useServerSave } from "../hooks/use-server-save";
 import type { EditingStart, EditorOverlay } from "../types";
-import { ConflictDialog } from "./ConflictDialog";
+import { EditorDialogs } from "./EditorDialogs";
 import { ExpiredBanner } from "./ExpiredBanner";
 import { PostInfoPanel } from "./PostInfoPanel";
-import { PreviewDialog } from "./PreviewDialog";
-import { PublishDialog } from "./PublishDialog";
 import { SaveStatusLine } from "./SaveStatusLine";
+import { SlugField } from "./SlugField";
 import { TitleField } from "./TitleField";
 
 /** 스티커 원본 — 개발 서버는 content-render assets를 `/stickers/`로 서빙한다(vite publicDir, 배포는 M4) */
 const stickerSrc = (id: StickerId) => `/stickers/${id}.png`;
 
 export interface PostEditorProps {
-  start: EditingStart;
+  /** 처음 한 번만 읽는다 — 뒤의 진실은 에디터와 저장 흐름이다 */
+  initialStart: EditingStart;
   onAdopt: (slug: string) => void;
   /** 「내 글을 복사해 두고 최신 글 열기」 — 최신 글로 에디터를 새로 만든다 */
   onReload: (slug: string) => void;
 }
 
-/** 편집 화면 한 벌(디자인 68:2) — 틀은 editor-react `EditorScreen`, 저장 흐름은 `usePostSave` */
-export function PostEditor({ start, onAdopt, onReload }: PostEditorProps) {
+/**
+ * 편집 화면 한 벌(디자인 68:2) — 틀은 editor-react `EditorScreen`. 입력(`usePostForm`) · 서버 저장
+ * (`useServerSave`) · 저장 줄(`useAutosave`)을 여기서 잇는다.
+ */
+export function PostEditor({ initialStart, onAdopt, onReload }: PostEditorProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [start] = useState(initialStart);
   const { editor, getDoc } = useBlogEditor({
     doc: start.doc,
     key: "post",
@@ -56,49 +60,49 @@ export function PostEditor({ start, onAdopt, onReload }: PostEditorProps) {
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const uploadImage = useImageUploader();
   const categories = useQuery({ queryKey: POST_LIST_QUERY_KEY, queryFn: fetchPostCategories });
-  const post = usePostSave({
-    editor,
+  const form = usePostForm(start);
+  const server = useServerSave({
     getDoc,
     start,
+    form,
     onAdopt,
     onConflict: () => setOverlay("conflict"),
   });
+  const autosave = useAutosave({
+    editor,
+    save: server.save,
+    shouldSaveSoon: start.restore === "restore",
+  });
+
+  const handleMetaChange = (patch: EditableMeta) => {
+    form.changeMeta(patch);
+    autosave.schedule();
+  };
+  const handleTitleChange = (title: string) => {
+    form.changeTitle(title, server.savedSlug() === null);
+    autosave.schedule();
+  };
+  const handleSlugChange = (slug: string) => {
+    form.changeSlug(slug);
+    server.clearSlugError();
+    autosave.schedule();
+  };
 
   const handleSaveDraft = () => {
-    if (post.isPublished) setOverlay("publish");
-    else void post.saveNow();
+    if (server.isPublished) setOverlay("publish");
+    else void autosave.flush();
   };
   useSaveShortcut(handleSaveDraft);
 
   const handleBack = async () => {
-    if (!post.isPublished) await post.saveNow().catch(() => undefined);
+    if (server.isPublished) server.keepLocalDraft();
+    else await autosave.flush().catch(() => undefined);
     void navigate(ROUTES.home);
   };
 
   const handleRelogin = () => {
+    server.keepLocalDraft();
     void navigate(loginPathFor(`${location.pathname}${location.search}`));
-  };
-
-  const handleCopyAndOpenLatest = () => {
-    const savedSlug = post.savedSlug();
-    // 클립보드는 거부될 수 있다(권한 · 창 포커스) — 사본은 브라우저 저장소에도 남긴다
-    navigator.clipboard?.writeText(editorPlainText(editor)).catch(() => undefined);
-    writeLocalCopy(post.localKey(), post.currentDraft());
-    clearLocalDraft(post.localKey());
-    setOverlay(null);
-    if (savedSlug !== null) onReload(savedSlug);
-  };
-
-  const handleOverwrite = async () => {
-    const savedSlug = post.savedSlug();
-    setOverlay(null);
-    if (savedSlug === null) return;
-    const latest = await fetchPost(savedSlug).catch(() => null);
-    if (latest === null) {
-      post.pause();
-      return;
-    }
-    await post.overwriteWith(latest.revision);
   };
 
   const handleOpenPreview = () => {
@@ -110,9 +114,17 @@ export function PostEditor({ start, onAdopt, onReload }: PostEditorProps) {
     }
   };
 
+  const conflict = useConflictActions({
+    editor,
+    server,
+    autosave,
+    onClose: () => setOverlay(null),
+    onReload,
+  });
+
   const handleConfirmPublish = () => {
     setOverlay(null);
-    void post.publish();
+    void autosave.run("publish");
   };
 
   return (
@@ -123,8 +135,8 @@ export function PostEditor({ start, onAdopt, onReload }: PostEditorProps) {
         uploadImage={uploadImage}
         tab={tab}
         onTabChange={setTab}
-        status={<SaveStatusLine status={post.status} onRetry={() => void post.saveNow()} />}
-        banner={post.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : undefined}
+        status={<SaveStatusLine status={server.status} onRetry={() => void autosave.flush()} />}
+        banner={server.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : undefined}
         actions={{
           onBack: () => void handleBack(),
           onPreview: handleOpenPreview,
@@ -133,46 +145,41 @@ export function PostEditor({ start, onAdopt, onReload }: PostEditorProps) {
         }}
         title={
           <TitleField
-            title={post.meta.title}
-            isAiDraft={post.meta.source !== "editor"}
-            onTitleChange={(title) => post.changeMeta({ title })}
+            title={form.meta.title}
+            isAiDraft={form.meta.source !== "editor"}
+            onTitleChange={handleTitleChange}
             onEnter={() => focusEditorStart(editor)}
           />
         }
         postInfo={
           <PostInfoPanel
-            meta={post.meta}
-            slug={post.slug}
-            isPublished={post.isPublished}
-            slugError={post.slugError}
+            meta={form.meta}
+            isPublished={server.isPublished}
             categories={categories.data ?? []}
-            onMetaChange={post.changeMeta}
-            onSlugChange={post.changeSlug}
+            onMetaChange={handleMetaChange}
             onOpenDecorate={() => setTab("decorate")}
+            slugField={
+              <SlugField
+                slug={form.slug}
+                isLocked={server.isPublished}
+                error={server.slugError}
+                onChange={handleSlugChange}
+              />
+            }
           />
         }
       />
-      {overlay === "conflict" && (
-        <ConflictDialog
-          onCopyAndOpenLatest={handleCopyAndOpenLatest}
-          onKeepWriting={() => {
-            setOverlay(null);
-            post.pause();
-          }}
-          onOverwrite={() => void handleOverwrite()}
-        />
-      )}
-      {overlay === "publish" && (
-        <PublishDialog
-          isUpdate={post.isPublished}
-          missing={missingForSave(post.meta, post.slug)}
-          onConfirm={handleConfirmPublish}
-          onCancel={() => setOverlay(null)}
-        />
-      )}
-      {overlay === "preview" && previewDoc !== null && (
-        <PreviewDialog title={post.meta.title} doc={previewDoc} onClose={() => setOverlay(null)} />
-      )}
+      <EditorDialogs
+        overlay={overlay}
+        form={form}
+        isPublished={server.isPublished}
+        previewDoc={previewDoc}
+        actions={{
+          onClose: () => setOverlay(null),
+          ...conflict,
+          onConfirmPublish: handleConfirmPublish,
+        }}
+      />
     </>
   );
 }

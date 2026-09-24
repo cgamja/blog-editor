@@ -1,7 +1,8 @@
 import type { Doc, PostFile } from "@blog-editor/content-schema";
 import { apiRequest } from "../../shared/api/http";
-import { POSTS_PATH, PREVIEW_PATH } from "./constants";
+import { POSTS_PATH, PREVIEW_PATH, postQueryKey } from "./constants";
 import { saveHeadersOf } from "./save-model";
+import type { LoadedPost } from "./types";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -13,16 +14,22 @@ function revisionOf(response: Response): string {
   return /^"([^"]*)"$/.exec(etag)?.[1] ?? etag;
 }
 
-export interface LoadedPost {
-  file: PostFile;
-  revision: string;
-}
-
 /** `GET /api/posts/{slug}` — 저장 형식과 ETag(revision) */
 export async function fetchPost(slug: string): Promise<LoadedPost> {
   const response = await apiRequest(postPath(slug));
   return { file: (await response.json()) as PostFile, revision: revisionOf(response) };
 }
+
+/**
+ * 지금 서버의 글을 새로 읽는 쿼리(「최신 글 열기」 · 「덮어쓰기」) — 캐시를 믿지 않고(staleTime 0), 편집 세션이
+ * 끝나면 버린다(gcTime 0). 남겨 두면 다시 열 때 옛 revision으로 에디터를 만들어 되살리기가 충돌로 빠진다.
+ */
+export const latestPostQuery = (slug: string) => ({
+  queryKey: postQueryKey(slug),
+  queryFn: () => fetchPost(slug),
+  staleTime: 0,
+  gcTime: 0,
+});
 
 /** 목록 요약 — 편집 화면은 카테고리 제안에만 쓴다(카테고리 목록 API는 설정 화면 #98 몫) */
 export async function fetchPostCategories(): Promise<string[]> {

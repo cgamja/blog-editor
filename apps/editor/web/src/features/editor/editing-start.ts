@@ -1,7 +1,6 @@
 import type { Doc, PostMeta } from "@blog-editor/content-schema";
-import type { LoadedPost } from "./api";
 import { restoreDecisionOf } from "./local-draft";
-import type { EditingStart, LocalDraft } from "./types";
+import type { EditingStart, LoadedPost, LocalDraft } from "./types";
 
 const EMPTY_DOC: Doc = { type: "doc", content: [{ type: "paragraph" }] };
 
@@ -52,7 +51,9 @@ export function editingStartOf(
     doc: source.doc,
     slug,
     savedSlug: slug,
-    revision: loaded.revision,
+    // 충돌이면 쓰던 글의 기준 revision으로 저장한다 — 그래야 어느 저장이든 409로 대화상자가 다시 뜬다.
+    // 서버 revision을 쓰면 덮어쓰기를 고르지 않았는데 최신 글을 조용히 덮는다
+    revision: restore === "conflict" && local !== null ? local.baseRevision : loaded.revision,
     isPublished,
     restore,
   };
