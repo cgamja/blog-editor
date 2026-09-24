@@ -16,3 +16,4 @@ export {
   decorationPanelStateOf,
 } from "./decoration-state";
 export type { Availability, DecorationPanelState, StickerId } from "./decoration-state";
+export { useCommandRunner } from "./use-command-runner";

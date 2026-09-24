@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import { setBlockWidth } from "@blog-editor/editor-core";
 import { WIDTH_PRESETS, widthTargetOf } from "./decoration-state";
-import { useEditorCommand } from "./use-editor-command";
+import { useCommandRunner } from "./use-command-runner";
 
 export interface WidthToolbarProps {
   editor: Editor;
@@ -22,7 +22,7 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
     editor,
     selector: ({ editor: current }) => widthTargetOf(current.state),
   });
-  const run = useEditorCommand(editor);
+  const run = useCommandRunner(editor);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 

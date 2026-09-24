@@ -9,7 +9,14 @@ import {
   moveBlockUp,
   setCalloutTone,
 } from "@blog-editor/editor-core";
-import { BlogEditor, DecorationPanel, WidthToolbar, readDoc, useBlogEditor } from "../src";
+import {
+  BlogEditor,
+  DecorationPanel,
+  WidthToolbar,
+  readDoc,
+  useBlogEditor,
+  useCommandRunner,
+} from "../src";
 
 type FixtureName = keyof typeof fixtures;
 const FIXTURE_NAMES = Object.keys(fixtures) as FixtureName[];
@@ -36,13 +43,8 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
     selector: ({ editor: current }) => describeDoc(() => readDoc(current.state.doc)),
   });
 
-  const run = (command: Command) => () => {
-    editor
-      .chain()
-      .focus()
-      .command(({ state, dispatch }) => command(state, dispatch))
-      .run();
-  };
+  const runCommand = useCommandRunner(editor);
+  const run = (command: Command) => () => runCommand(command);
 
   return (
     <div className="playground">

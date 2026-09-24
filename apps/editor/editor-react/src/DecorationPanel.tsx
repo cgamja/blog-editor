@@ -15,7 +15,7 @@ import {
   type Availability,
   type StickerId,
 } from "./decoration-state";
-import { useEditorCommand } from "./use-editor-command";
+import { useCommandRunner } from "./use-command-runner";
 
 export interface DecorationPanelProps {
   editor: Editor;
@@ -53,7 +53,7 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
       previewing: motionPreviewKey.getState(current.state) != null,
     }),
   });
-  const run = useEditorCommand(editor);
+  const run = useCommandRunner(editor);
   const reducedMotion = usePrefersReducedMotion();
   const ids = { font: useId(), sticker: useId(), motion: useId(), preview: useId() };
 
