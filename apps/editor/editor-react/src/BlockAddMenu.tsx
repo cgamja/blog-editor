@@ -60,7 +60,10 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
 
   // Tab 등으로 포커스가 메뉴 밖으로 나가면 닫는다(focusout)
   const onBlur = (event: FocusEvent<HTMLDivElement>) => {
-    if (!menuRef.current?.contains(event.relatedTarget as Node | null)) close();
+    const next = event.relatedTarget as Node | null;
+    // + 버튼으로 옮기는 포커스는 버튼의 토글이 처리한다 — 여기서 닫으면 click이 다시 연다
+    if (menuRef.current?.contains(next) || buttonRef.current?.contains(next)) return;
+    close();
   };
 
   return (
@@ -72,6 +75,8 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
         aria-label={BLOCK_HANDLE_MESSAGES.add}
         aria-haspopup="menu"
         aria-expanded={open}
+        // Safari는 누른 버튼에 포커스를 주지 않아 relatedTarget이 null이다 — 포커스를 메뉴에 둔 채 토글한다
+        onMouseDown={(event) => event.preventDefault()}
         onClick={() => onOpenChange(!open)}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
