@@ -19,7 +19,20 @@ errorElement
 └─ *                              NotFoundPage
 ```
 
-`AppShell`은 `app/`에 둔다 — 여러 기능(auth의 로그아웃 · posts의 링크)을 조합하는 층이다. 메뉴 항목은 `app/nav-items.ts` 상수 하나.
+`AppShell`은 `app/layout/`에 둔다 — 여러 기능(auth의 로그아웃 · posts의 링크)을 조합하는 층이다. 메뉴 항목은 `app/layout/nav-items.ts` 상수 하나.
+
+### 2-1. 폴더 층(사용자 결정 2026-09-24)
+
+최상위 `src/pages/`를 없앤다. 최상위는 `app` · `features` · `shared` · `styles`뿐이고 의존은 app → features → shared.
+
+| 무엇 | 어디 |
+|---|---|
+| 기능의 화면(로그인 · 글 목록 · 편집 …) | `features/<이름>/pages/` |
+| 기능에 속하지 않는 화면(404 · 오류 · 자리 표시) | `app/pages/` |
+| 앱 틀 · 메뉴 | `app/layout/` |
+| 라우터 · QueryClient | `app/` |
+
+이유: 화면 폴더가 층 밖에 있으면 import 방향 규칙이 걸리지 않는다. eslint web 층 블록에서 `pages/**` 대상을 지우고, `eslint.boundaries.test.ts`가 최상위 폴더 목록을 고정한다. #97 · #98은 이 표를 따른다(docs/conventions.md "web 폴더 층").
 
 ## 3. 목록의 순수 함수(features/posts/post-list.ts)
 
