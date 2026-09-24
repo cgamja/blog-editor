@@ -4,9 +4,9 @@
  * — `Max-Age`는 브라우저가 지키는 것이라 복사된 쿠키에는 효력이 없다.
  */
 import { setTimeout as sleep } from "node:timers/promises";
-import type { Hono, MiddlewareHandler } from "hono";
+import type { Context, Hono, MiddlewareHandler } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
-import type { AccountStore } from "./accounts";
+import type { Account, AccountStore } from "./accounts";
 import {
   BODY_NOT_JSON_MESSAGE,
   LOGIN_BODY_MESSAGE,
@@ -94,12 +94,40 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
  */
 const SESSION_FREE_METHODS: ReadonlySet<string> = new Set(["POST", "DELETE"]);
 
-export function requireSession({ sessionSecret, nowSeconds }: SessionConfig): MiddlewareHandler {
+/** 서명 · 만료가 맞는 세션 쿠키의 계정 id. 없거나 위조 · 만료면 null */
+export async function sessionAccountId(
+  c: Context,
+  { sessionSecret, nowSeconds }: SessionConfig,
+): Promise<string | null> {
+  const value = await getSignedCookie(c, sessionSecret, SESSION_COOKIE, COOKIE_PREFIX);
+  if (typeof value !== "string") return null;
+  const expiresAt = expiresAtOf(value);
+  if (expiresAt === null || expiresAt <= nowSeconds()) return null;
+  return value.slice(0, value.lastIndexOf("."));
+}
+
+/**
+ * 아이디 · 비밀번호 확인 — `/api/session`과 OAuth `/authorize`가 같은 것을 쓴다. 실패하면 고정 지연 뒤 null.
+ * 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8)
+ */
+export async function authenticate(
+  { accounts, loginFailureDelayMs }: SessionConfig,
+  username: string,
+  password: string,
+): Promise<Account | null> {
+  const account = await accounts.findByUsername(username);
+  const matched = await verifyPassword(password, account?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (account === null || !matched) {
+    await sleep(loginFailureDelayMs);
+    return null;
+  }
+  return account;
+}
+
+export function requireSession(config: SessionConfig): MiddlewareHandler {
   return async (c, next) => {
     if (c.req.path === SESSION_PATH && SESSION_FREE_METHODS.has(c.req.method)) return next();
-    const value = await getSignedCookie(c, sessionSecret, SESSION_COOKIE, COOKIE_PREFIX);
-    const expiresAt = typeof value === "string" ? expiresAtOf(value) : null;
-    if (expiresAt === null || expiresAt <= nowSeconds()) {
+    if ((await sessionAccountId(c, config)) === null) {
       return c.json({ message: UNAUTHORIZED_MESSAGE }, 401);
     }
     return next();
@@ -107,7 +135,7 @@ export function requireSession({ sessionSecret, nowSeconds }: SessionConfig): Mi
 }
 
 export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
-  const { accounts, sessionSecret, sessionTtlSeconds, loginFailureDelayMs, nowSeconds } = config;
+  const { sessionSecret, sessionTtlSeconds, nowSeconds } = config;
 
   app.post(SESSION_PATH, async (c) => {
     let body: unknown;
@@ -119,16 +147,8 @@ export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
     const credentials = readCredentials(body);
     if (credentials === null) return c.json({ message: LOGIN_BODY_MESSAGE }, 400);
 
-    const account = await accounts.findByUsername(credentials.username);
-    // 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8)
-    const matched = await verifyPassword(
-      credentials.password,
-      account?.passwordHash ?? DUMMY_PASSWORD_HASH,
-    );
-    if (account === null || !matched) {
-      await sleep(loginFailureDelayMs);
-      return c.json({ message: LOGIN_FAILED_MESSAGE }, 401);
-    }
+    const account = await authenticate(config, credentials.username, credentials.password);
+    if (account === null) return c.json({ message: LOGIN_FAILED_MESSAGE }, 401);
 
     const expiresAt = nowSeconds() + sessionTtlSeconds;
     await setSignedCookie(c, SESSION_COOKIE, `${account.id}.${expiresAt}`, sessionSecret, {

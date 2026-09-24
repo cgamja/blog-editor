@@ -18,6 +18,8 @@
  *   MCP_CONNECTION_TOKEN       연결용 토큰, 32자 이상 — `openssl rand -hex 32`
  *   MCP_CONNECTION_TOKEN_NAME  초안 출처 `token:<이름>`(기본 local)
  *   EDITOR_BASE_URL            초안 응답의 에디터 링크 앞부분
+ *   PUBLIC_BASE_URL            claude.ai가 닿는 주소(터널 origin) — 있으면 OAuth도 연다(mcp-oauth).
+ *                              OAuth 상태는 메모리라 재시작하면 claude.ai에서 다시 연결한다
  */
 import { fileURLToPath } from "node:url";
 import { registerHooks } from "node:module";
@@ -113,4 +115,6 @@ serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
       ? "mcp: 꺼짐 (MCP_CONNECTION_TOKEN 없음)"
       : `mcp: http://${HOSTNAME}:${info.port}/mcp`,
   );
+  if (mcp?.oauth !== undefined)
+    console.log(`oauth: ${mcp.oauth.issuer} (발급자 · MCP URL ${mcp.oauth.issuer}/mcp)`);
 });
