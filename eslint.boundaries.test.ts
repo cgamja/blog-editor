@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { ESLint } from "eslint";
 
 /**
@@ -194,7 +196,7 @@ describe("import 경계: web 안의 층(app → features → shared)", () => {
   it.each([
     [`${WEB}/app/__probe__.ts`, "../features/auth/session-cache"],
     [`${WEB}/app/__probe__.test.ts`, "../features/auth/components/RequireSession"],
-    [`${WEB}/pages/__probe__.tsx`, "../features/auth/pages/LoginPage"],
+    [`${WEB}/app/pages/__probe__.tsx`, "../../features/auth/pages/LoginPage"],
   ])(
     "WHEN 기능 밖(%s)에서 기능 안쪽 경로를 import하면(%s) THEN 막힌다",
     async (filePath, specifier) => {
@@ -205,13 +207,23 @@ describe("import 경계: web 안의 층(app → features → shared)", () => {
   it("WHEN 기능 밖에서 기능의 index · shared를 import하고 기능 안에서 자기 파일을 import하면 THEN 통과한다", async () => {
     const results = await Promise.all([
       restrictedImports(`${WEB}/app/__probe__.ts`, ["../features/auth", "../shared/messages"]),
-      restrictedImports(`${WEB}/pages/__probe__.tsx`, ["../shared/routes/constants"]),
+      restrictedImports(`${WEB}/app/pages/__probe__.tsx`, ["../../shared/routes/constants"]),
       restrictedImports(`${WEB}/features/auth/pages/__probe__.tsx`, [
         "../session-cache",
         "../../../shared/api/errors",
       ]),
     ]);
     expect(results).toEqual([[], [], []]);
+  });
+
+  // 화면 자리를 층 밖에 따로 두지 않는다 — 기능의 화면은 features/<이름>/pages, 기능에 속하지 않는
+  // 화면(404 · 오류 · 앱 틀)은 app 아래. 최상위 pages/는 어느 층인지 모호해 import 방향 규칙이 걸리지 않는다
+  it("WHEN web src 최상위 폴더를 읽으면 THEN app · features · shared · styles뿐이다", () => {
+    const top = readdirSync(join(import.meta.dirname, WEB), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+    expect(top).toEqual(["app", "features", "shared", "styles"]);
   });
 });
 
