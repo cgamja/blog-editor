@@ -66,14 +66,6 @@ const isEmpty = (attrs: Attrs) => Object.keys(attrs).length === 0;
 const sameAttrs = (left: Attrs, right: Attrs) =>
   STYLE_KEYS.every((key) => left[key] === right[key]);
 
-/** 이번 patch가 거는 색 — ⌘⇧H가 다시 건다(design.md 4). 둘 다 걸면 글자색 */
-function colorOfPatch(patch: TextStylePatch) {
-  if (typeof patch.color === "string") return { key: "color" as const, value: patch.color };
-  if (typeof patch.highlight === "string")
-    return { key: "highlight" as const, value: patch.highlight };
-  return null;
-}
-
 /**
  * 고른 글자 조각마다 textStyle 속성에 patch를 덮어쓴다. null은 그 속성을 지우고, 모두 비면 마크를 뗀다.
  * 결과가 정의 밖이거나 대상이 없으면 false, 바뀔 것이 없으면 dispatch 없이 true.
@@ -95,11 +87,7 @@ export function setTextStyle(patch: TextStylePatch): Command {
       tr.removeMark(from, to, type);
       if (!isEmpty(next)) tr.addMark(from, to, type.create(next));
     }
-    if (!tr.docChanged) return true;
-    if (dispatch) {
-      const color = colorOfPatch(patch);
-      dispatch(color === null ? tr : tr.setMeta(lastColorKey, color));
-    }
+    if (tr.docChanged && dispatch) dispatch(tr);
     return true;
   };
 }
@@ -150,9 +138,17 @@ export function toggleToolbarMark(name: ToolbarMark): Command {
   };
 }
 
-export const rememberColor: (color: LastColor) => Command = () => {
-  throw new Error("미구현");
-};
+/**
+ * 마지막에 건 색을 기억한다(⌘⇧H가 다시 건다, design.md 4). 문서는 바꾸지 않고 meta만 단 트랜잭션이라
+ * 되돌리기 기록에 남지 않는다 — 같은 색을 다시 걸어 문서가 그대로여도 기억은 갱신된다.
+ * https://prosemirror.net/docs/ref/#state.Transaction.setMeta
+ */
+export function rememberColor(color: LastColor): Command {
+  return (state, dispatch) => {
+    if (dispatch) dispatch(state.tr.setMeta(lastColorKey, color));
+    return true;
+  };
+}
 
 /** 마지막에 건 글자색 · 배경색을 고른 글자에 다시 건다. 기억이 없으면 false */
 export const applyLastColor: Command = (state, dispatch) => {

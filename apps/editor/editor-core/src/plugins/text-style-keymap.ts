@@ -12,9 +12,10 @@ import type { LastColor } from "../commands/text-style.types";
  * 기준: https://www.notion.com/help/keyboard-shortcuts (⌘U · ⌘⇧S · ⌘⇧H)
  */
 export const textStyleKeymap: Record<string, Command> = {
-  "Mod-u": toggleToolbarMark("underline"),
-  "Mod-Shift-s": toggleToolbarMark("strike"),
-  // 거절돼도 키를 삼킨다 — 빠져나가면 macOS Chrome이 ⌘⇧H로 홈 페이지를 연다
+  // 셋 다 거절돼도 키를 삼킨다 — 빠져나가면 브라우저 단축키가 된다
+  // (Windows Ctrl+U 페이지 소스, macOS Chrome ⌘⇧H 홈 페이지)
+  "Mod-u": swallowing(toggleToolbarMark("underline")),
+  "Mod-Shift-s": swallowing(toggleToolbarMark("strike")),
   "Mod-Shift-h": swallowing(applyLastColor),
 };
 
