@@ -107,7 +107,7 @@
 .editor-screen-header :focus-visible,
 .editor-screen-tab:focus-visible,
 .editor-screen-panel:focus-visible {
-  /* tokens focus-ring */
+  /* tokens focus-ring-width · focus-ring-offset (2px) */
   outline: 2px solid var(--brand-ink);
   outline-offset: 2px;
 }
