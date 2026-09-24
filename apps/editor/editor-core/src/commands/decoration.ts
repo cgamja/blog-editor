@@ -24,7 +24,7 @@ import type { StickerPatch, StickerPlacement, StickerTarget, TopBlock } from "./
 
 type Coordinates = Omit<StickerPlacement, "blockPos">;
 
-/** 이 블록 노드가 꾸미기 속성 key(font · motion · width · stickers)를 가질 수 있나 — 패널의 막힌 이유 판정도 이것을 쓴다 */
+/** 이 블록 노드가 꾸미기 속성 key(font · motion · width · align · stickers)를 가질 수 있나 — 패널의 막힌 이유 판정도 이것을 쓴다 */
 export const canHoldDecoration = (node: Node, key: string) =>
   Object.hasOwn(node.type.spec.attrs ?? {}, key);
 

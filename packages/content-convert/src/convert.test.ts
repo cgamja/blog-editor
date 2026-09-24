@@ -353,6 +353,17 @@ describe("markdown-directive", () => {
     expect(screenshot?.type === "appScreenshot" && screenshot.attrs.align).toBe("right");
   });
 
+  it("WHEN 이미지 앞 {align=center} · 문단 앞 {align=left}를 쓰면 THEN 기본 모양이라 정렬 속성이 남지 않는다", () => {
+    const markdown = ["{align=center}", "![그림](/images/a.webp)", "", "{align=left}", "문단"].join(
+      "\n",
+    );
+    const result = convertMarkdown(markdown);
+    expectOk(result);
+    const [image, paragraph] = result.doc.content;
+    expect(image?.type === "image" && image.attrs.align).toBeUndefined();
+    expect(paragraph).not.toHaveProperty("attrs");
+  });
+
   it.each([
     ["목록 앞 정렬", ["{align=center}", "- 목록"].join("\n")],
     ["정의 밖 정렬", ["{align=justify}", "문단"].join("\n")],

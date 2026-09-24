@@ -1,4 +1,6 @@
-import type { Doc, Mark } from "./doc";
+import type { ALIGNS, Doc, Mark } from "./doc";
+
+type Align = (typeof ALIGNS)[number];
 
 /** doc 노드는 재귀적으로 같은 모양이라 여기서는 unknown 레코드로 다룬다. */
 type Node = Record<string, unknown>;
@@ -22,14 +24,29 @@ function sortObjectKeys(obj: Node): Node {
   return sorted;
 }
 
-/** attrs: {}는 키 자체를 지운다(spec ③) — stickers[] 항목도 재귀적으로 키를 정렬한다. */
-function normalizeAttrs(attrs: unknown): Node | undefined {
+/** 폭을 줄일 수 있는 블록 — 정렬이 없으면 post.css가 가운데 여백으로 그린다 */
+const CENTERED_BY_DEFAULT: ReadonlySet<string> = new Set(["image", "appScreenshot"]);
+
+/**
+ * align 속성이 없을 때 그 블록이 보이는 모양(adr-020, post.css) — 그림 · 앱 스크린샷은 center,
+ * 글 블록은 left. 이 값과 같은 align은 정규형에서 지운다(저장 형식 하나). 에디터 커맨드도 이 판정을 쓴다.
+ */
+export function defaultAlignOf(type: string): Align {
+  return CENTERED_BY_DEFAULT.has(type) ? "center" : "left";
+}
+
+/**
+ * attrs: {}는 키 자체를 지운다(spec ③) — stickers[] 항목도 재귀적으로 키를 정렬한다.
+ * 블록 종류의 기본 모양과 같은 align도 지운다(spec ⑤).
+ */
+function normalizeAttrs(attrs: unknown, type: unknown): Node | undefined {
   if (typeof attrs !== "object" || attrs === null) return undefined;
   const source = attrs as Node;
   const withSortedStickers: Node = {};
   for (const key of Object.keys(source)) {
     const value = source[key];
     if (value === undefined) continue;
+    if (key === "align" && value === defaultAlignOf(String(type))) continue;
     withSortedStickers[key] =
       key === "stickers" && Array.isArray(value)
         ? value.map((sticker) => sortObjectKeys(sticker as Node))
@@ -40,7 +57,7 @@ function normalizeAttrs(attrs: unknown): Node | undefined {
 }
 
 function normalizeMark(mark: Node): Node {
-  return orderKeys({ type: mark.type, attrs: normalizeAttrs(mark.attrs) });
+  return orderKeys({ type: mark.type, attrs: normalizeAttrs(mark.attrs, mark.type) });
 }
 
 /** marks를 type 사전순으로 정렬한다 — 비어 있으면 undefined(키 삭제, spec ①). */
@@ -92,7 +109,7 @@ function normalizeNode(node: Node): Node {
 
   return orderKeys({
     type: node.type,
-    attrs: normalizeAttrs(node.attrs),
+    attrs: normalizeAttrs(node.attrs, node.type),
     content,
     marks: sortMarks(node.marks),
     text: node.text,

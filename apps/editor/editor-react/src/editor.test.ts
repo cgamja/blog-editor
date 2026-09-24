@@ -39,6 +39,12 @@ describe("에디터 확장 조립", () => {
     expect(names).toContain("listKeys");
   });
 
+  it("WHEN blogEditorExtensions()의 이름을 보면 THEN 정렬 단축키(alignKeys)가 있다", () => {
+    const names = blogEditorExtensions().map((extension) => extension.name);
+
+    expect(names).toContain("alignKeys");
+  });
+
   it("WHEN blogEditorExtensions()로 스키마를 만들면 THEN 노드 · 마크 이름이 createEditorSchema()와 같다", () => {
     const assembled = getSchema(blogEditorExtensions());
     const core = createEditorSchema();
