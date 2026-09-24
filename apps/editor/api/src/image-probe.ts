@@ -52,6 +52,8 @@ const JPEG_NOT_SOF = new Set([0xc4, 0xc8, 0xcc]);
 /** 길이 필드가 없는 마커(TEM · RST0–7, T.81 B.1.1.4) */
 const JPEG_STANDALONE = new Set([0x01, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7]);
 const JPEG_APP1 = 0xe1;
+/** SOS 뒤는 엔트로피 코딩 데이터, EOI는 끝 — 헤더 세그먼트는 여기까지다(T.81 B.2.1) */
+const JPEG_SCAN_OR_END = new Set([0xda, 0xd9]);
 
 const EXIF_HEADER = "Exif\0\0";
 const TIFF_BYTE_ORDER_BYTES = 2;
@@ -169,35 +171,40 @@ function isFrameHeader(marker: number): boolean {
   return marker >= JPEG_SOF_FIRST && marker <= JPEG_SOF_LAST && !JPEG_NOT_SOF.has(marker);
 }
 
-/** 마커를 차례로 건너뛰며 첫 프레임 헤더(SOF)를 찾는다. 가는 길에 APP1 Exif의 방향을 읽어 둔다 */
+/**
+ * 마커를 차례로 걸으며 첫 프레임 헤더(SOF)의 크기와 첫 APP1 Exif의 방향을 모은다. Exif는 SOF 뒤에 올 수도
+ * 있어서 SOF에서 멈추지 않고 SOS · EOI(또는 세그먼트가 끝나는 곳)까지 걷는다. SOF 전에 끝나면 null.
+ */
 const probeJpeg: Probe = (bytes, view) => {
   if (!startsWith(bytes, JPEG_SOI)) return null;
   let offset = JPEG_FIRST_SEGMENT;
+  let size: ImageProbe | null = null;
   let orientation: number | undefined;
   while (hasBytes(bytes, offset, JPEG_MARKER_BYTES + U16_BYTES)) {
-    if (bytes[offset] !== JPEG_MARKER_PREFIX) return null;
+    if (bytes[offset] !== JPEG_MARKER_PREFIX) break;
     const marker = bytes[offset + 1] ?? 0;
     // T.81 B.1.1.2: 마커 앞에는 채움 바이트 0xFF가 몇 개든 올 수 있다
     if (marker === JPEG_MARKER_PREFIX) {
       offset += 1;
       continue;
     }
+    if (JPEG_SCAN_OR_END.has(marker)) break;
     if (JPEG_STANDALONE.has(marker)) {
       offset += JPEG_MARKER_BYTES;
       continue;
     }
-    if (isFrameHeader(marker)) {
-      if (!hasBytes(bytes, offset + JPEG_SOF_WIDTH_OFFSET, U16_BYTES)) return null;
-      const found = sized(
+    if (isFrameHeader(marker) && size === null) {
+      if (!hasBytes(bytes, offset + JPEG_SOF_WIDTH_OFFSET, U16_BYTES)) break;
+      size = sized(
         "jpeg",
         view.getUint16(offset + JPEG_SOF_WIDTH_OFFSET),
         view.getUint16(offset + JPEG_SOF_HEIGHT_OFFSET),
       );
-      return found === null || orientation === undefined ? found : { ...found, orientation };
+      if (size === null) return null;
     }
     // T.81 B.1.1.4: 길이는 자기 2바이트를 포함한다 — 그보다 작으면 깨진 파일이고, 그대로 두면 제자리를 돈다
     const length = view.getUint16(offset + JPEG_MARKER_BYTES);
-    if (length < U16_BYTES) return null;
+    if (length < U16_BYTES) break;
     const segmentEnd = offset + JPEG_MARKER_BYTES + length;
     if (marker === JPEG_APP1 && orientation === undefined) {
       const payload = offset + JPEG_MARKER_BYTES + U16_BYTES;
@@ -205,7 +212,8 @@ const probeJpeg: Probe = (bytes, view) => {
     }
     offset = segmentEnd;
   }
-  return null;
+  if (size === null) return null;
+  return orientation === undefined ? size : { ...size, orientation };
 };
 
 const PROBES: readonly Probe[] = [probePng, probeGif, probeWebp, probeJpeg];
