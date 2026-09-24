@@ -8,7 +8,13 @@ render(#6) · convert · API(M1) · 사이트(#8) · Lighthouse 기준선이 같
 
 ### Requirement: 유효 픽스처 셋은 스키마와 정규형을 통과한다
 
-`fixtures`는 SHALL `minimal`(문단 하나) · `allBlocks`(모든 블록 · 마크 한 번씩) · `decorationMax`(글씨체 3종 · 움직임 · 폭 · 스티커 12개 — Lighthouse용)의 `PostFile` 세 개를 담는다. 메타는 `categories: ["studio", "parenting", "parenting-assistant"]`(사이트 `BLOG_CATEGORIES`)로 검증 가능해야 한다.
+`fixtures`는 SHALL `PostFile` 세 개를 담는다.
+
+- `minimal`: 문단 하나
+- `allBlocks`: 모든 블록 · 마크 한 번씩
+- `decorationMax`: Lighthouse용 — 글씨체 3종 · 움직임 · 폭 · 정렬 · 스티커 12개 · 글자 스타일(글꼴 · 두께 · 크기 · 프리셋 색 · hex 색 · 배경)
+
+메타는 `categories: ["studio", "parenting", "parenting-assistant"]`(사이트 `BLOG_CATEGORIES`)로 검증 가능해야 한다.
 
 #### Scenario: 세 픽스처가 파싱 · 정규형 · 현재 버전을 만족한다
 
@@ -18,7 +24,9 @@ render(#6) · convert · API(M1) · 사이트(#8) · Lighthouse 기준선이 같
 #### Scenario: allBlocks는 정말 모든 종류를 한 번 이상 쓴다
 
 - **WHEN** `allBlocks.doc`를 순회해 노드 `type`과 마크 `type`을 모은다
-- **THEN** 문서 스키마의 노드 12종(`doc` 제외: 최상위 블록 10 + `listItem` + `text`)과 마크 4종이 전부 나타난다
+- **THEN** 다음이 전부 나타난다
+  - 노드 12종(`doc` 제외): 최상위 블록 10 + `listItem` + `text`
+  - 마크 7종
 
 ### Requirement: 잘못된 문서 픽스처는 이유와 함께 거부된다 (보호 대상)
 
