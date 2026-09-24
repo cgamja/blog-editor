@@ -6,9 +6,9 @@
 
 ## 2. 구현
 
-- [ ] 2.1 `plugins/history.ts` · `index.ts` export · `blogEditorExtensions()`에 `History` → verify: 1.1 초록
-- [ ] 2.2 `docs/ime-checklist.md` 조합 중 ⌘Z 항목
+- [x] 2.1 `plugins/history.ts` · `index.ts` export · `blogEditorExtensions()`에 `History` → verify: 1.1 초록
+- [x] 2.2 `docs/ime-checklist.md` 조합 중 ⌘Z 항목
 
 ## 3. Converge
 
-- [ ] 3.1 실브라우저: 입력 → ⌘Z, 블록 위로 옮기기 → ⌘Z, 콘솔 0 → verify: `pnpm verify` 초록
+- [x] 3.1 실브라우저: 입력 → ⌘Z, 블록 위로 옮기기 → ⌘Z, 콘솔 0 → verify: `pnpm verify` 초록
