@@ -130,6 +130,113 @@ describe("editor-markdown-shortcuts: 줄 맨 앞 입력 규칙", () => {
   });
 });
 
+describe("editor-ordered-list-input-rule: 입력 규칙 n.", () => {
+  const orderedList = (...texts: string[]) => ({
+    type: "orderedList",
+    content: texts.map((text) => ({ type: "listItem", content: [paragraph(text)] })),
+  });
+  /** 항목 가 · 나 번호 목록(크기 12) 바로 뒤 문단 글자 자리 */
+  const AFTER_TWO_ITEM_LIST = 13;
+
+  it("WHEN 빈 최상위 문단에서 `3. `을 입력하면 THEN start 3 번호 목록의 첫 항목 문단이 되고 표시 글자는 없다", () => {
+    const { handled, state } = typeText(start([paragraph()]), "3. ");
+
+    expect(handled).toBe(true);
+    const list = state.doc.child(0);
+    expect(list.type.name).toBe("orderedList");
+    expect(list.attrs.start).toBe(3);
+    expect(state.doc.textContent).toBe("");
+    expect(state.selection.$from.parent.type.name).toBe("paragraph");
+    expect(() => docFromNode(state.doc)).not.toThrow();
+  });
+
+  it.each(["0. ", "1234567890. "])(
+    "WHEN 빈 최상위 문단에서 %j를 입력하면 THEN 규칙이 처리하지 않고 글자가 그대로 남는다",
+    (input) => {
+      const { handled, state } = typeText(start([paragraph()]), input);
+
+      expect(handled).toBe(false);
+      expect(state.doc.child(0).type.name).toBe("paragraph");
+      expect(state.doc.textContent).toBe(input);
+    },
+  );
+
+  it("WHEN 항목 둘인 번호 목록 바로 뒤 빈 문단에서 `3. `을 입력하면 THEN 앞 목록의 셋째 항목이 되고 번호 목록은 하나다", () => {
+    const { handled, state } = typeText(
+      start([orderedList("가", "나"), paragraph()], AFTER_TWO_ITEM_LIST),
+      "3. ",
+    );
+
+    expect(handled).toBe(true);
+    expect(state.doc.childCount).toBe(1);
+    const list = state.doc.child(0);
+    expect(list.childCount).toBe(3);
+    expect(list.attrs.start).toBeNull();
+    expect(state.selection.$from.index(1)).toBe(2);
+  });
+
+  it("WHEN 항목 둘인 번호 목록 바로 뒤 빈 문단에서 `5. `를 입력하면 THEN 앞 목록과 따로인 start 5 번호 목록이 된다", () => {
+    const { handled, state } = typeText(
+      start([orderedList("가", "나"), paragraph()], AFTER_TWO_ITEM_LIST),
+      "5. ",
+    );
+
+    expect(handled).toBe(true);
+    expect(state.doc.childCount).toBe(2);
+    expect(state.doc.child(0).childCount).toBe(2);
+    expect(state.doc.child(1).type.name).toBe("orderedList");
+    expect(state.doc.child(1).attrs.start).toBe(5);
+  });
+
+  it("WHEN 항목 둘인 번호 목록 바로 뒤 스티커가 있는 빈 문단에서 `3. `을 입력하면 THEN 스티커를 가진 start 3 번호 목록이 따로 생긴다", () => {
+    const { handled, state } = typeText(
+      start([orderedList("가", "나"), paragraph("", { stickers: [HEART] })], AFTER_TWO_ITEM_LIST),
+      "3. ",
+    );
+
+    expect(handled).toBe(true);
+    expect(state.doc.childCount).toBe(2);
+    const list = state.doc.child(1);
+    expect(list.attrs.start).toBe(3);
+    expect(list.attrs.stickers).toEqual([HEART]);
+    expect(() => docFromNode(state.doc)).not.toThrow();
+  });
+
+  it("WHEN 문단 맨 앞에서 `2025. `를 입력하면 THEN 날짜 글자로 남고 번호 목록이 되지 않는다", () => {
+    const { handled, state } = typeText(start([paragraph()]), "2025. ");
+
+    expect(handled).toBe(false);
+    expect(state.doc.child(0).type.name).toBe("paragraph");
+    expect(state.doc.textContent).toBe("2025. ");
+  });
+
+  it("WHEN start 3 목록(가 · 나) 바로 뒤 빈 문단에서 `5. `를 입력하면 THEN 목록 하나에 항목 셋이고 start는 3이다", () => {
+    const fromThree = { ...orderedList("가", "나"), attrs: { start: 3 } };
+    const { handled, state } = typeText(
+      start([fromThree, paragraph()], AFTER_TWO_ITEM_LIST),
+      "5. ",
+    );
+
+    expect(handled).toBe(true);
+    expect(state.doc.childCount).toBe(1);
+    expect(state.doc.child(0).childCount).toBe(3);
+    expect(state.doc.child(0).attrs.start).toBe(3);
+  });
+
+  it("WHEN 번호 목록(가 · 나) 바로 뒤 글꼴만 가진 빈 문단에서 `3. `을 입력하면 THEN 그 글꼴을 가진 start 3 목록이 따로 선다", () => {
+    const { handled, state } = typeText(
+      start([orderedList("가", "나"), paragraph("", { font: "jua" })], AFTER_TWO_ITEM_LIST),
+      "3. ",
+    );
+
+    expect(handled).toBe(true);
+    expect(state.doc.childCount).toBe(2);
+    const list = state.doc.child(1);
+    expect(list.attrs.start).toBe(3);
+    expect(list.attrs.font).toBe("jua");
+  });
+});
+
 describe("editor-markdown-shortcuts: 인라인 입력 규칙", () => {
   it.each([
     ["앞**굵게*", "*", "bold"],
