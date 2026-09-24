@@ -1,19 +1,6 @@
 /*
- * 앱 공통 바탕 — 화면별 모양은 각 화면 이슈가 채운다. 간격 · 선 두께 · 포커스 고리는 생성 토큰(tokens.css, #101)을 쓴다.
- * `--app-space-*`는 병렬로 만든 화면이 이미 쓰는 이름이라 같은 값의 토큰 별칭으로 남긴다 — 새 코드는 `--space-<px>`를 쓴다.
+ * 앱 공통 바탕 — 화면별 모양은 각 화면 이슈가 채운다. 간격 · 선 두께 · 포커스 고리는 생성 토큰(tokens.css, #101)만 쓴다.
  */
-:root {
-  --app-space-2: var(--space-8);
-  --app-space-3: var(--space-12);
-  --app-space-4: var(--space-16);
-  --app-space-6: var(--space-24);
-  --app-space-10: var(--space-40);
-  --app-button-padding-x: var(--space-18);
-  --app-border-width: var(--border-width);
-  --app-focus-ring-width: var(--focus-ring-width);
-  --app-focus-ring-offset: var(--focus-ring-offset);
-}
-
 body {
   margin: 0;
   background: var(--paper-deep);

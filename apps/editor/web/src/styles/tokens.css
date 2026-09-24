@@ -29,9 +29,9 @@
   --radius-button: 0.625rem;
   --radius-card: 0.875rem;
   --radius-pill: 62.4375rem;
-  --border-width: 0.0625rem;
-  --focus-ring-width: 0.125rem;
-  --focus-ring-offset: 0.125rem;
+  --border-width: 1px;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
   --nav-width: 13.75rem;
   --side-panel-width: 20rem;
   --article-width: 47.5rem;
