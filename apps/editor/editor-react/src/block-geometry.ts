@@ -39,3 +39,7 @@ export function dropLineTop(bands: readonly BlockBand[], gap: number, frameTop: 
   if (after === undefined) return before.bottom - frameTop;
   return (before.bottom + after.top) / 2 - frameTop;
 }
+
+export function autoScrollStep(pointerY: number, box: { top: number; bottom: number }): number {
+  throw new Error(`미구현: ${pointerY} ${box.top}`);
+}
