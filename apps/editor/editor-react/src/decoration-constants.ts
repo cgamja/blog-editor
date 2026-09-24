@@ -1,4 +1,5 @@
-import { STICKER_IDS } from "@blog-editor/content-schema";
+import { ALIGNS, STICKER_IDS } from "@blog-editor/content-schema";
+import { decorationMessages } from "./decoration-messages";
 import type { Align, Font, Motion, StickerId } from "./decoration-types";
 import { stickerName } from "./sticker-messages";
 
@@ -28,12 +29,10 @@ export const STICKER_OPTIONS: ReadonlyArray<{ id: StickerId; label: string }> = 
   (id) => ({ id, label: stickerName(id) }),
 );
 
-/** 정렬 버튼 순서 · 이름 — 값은 content-schema ALIGNS(adr-020) */
-export const ALIGN_OPTIONS: ReadonlyArray<{ value: Align; label: string }> = [
-  { value: "left", label: "왼쪽" },
-  { value: "center", label: "가운데" },
-  { value: "right", label: "오른쪽" },
-];
+/** 정렬 버튼 — 순서는 content-schema ALIGNS(adr-020), 이름의 원천은 decoration-messages */
+export const ALIGN_OPTIONS: ReadonlyArray<{ value: Align; label: string }> = ALIGNS.map(
+  (value) => ({ value, label: decorationMessages.alignName(value) }),
+);
 
 /** 결정 2026-09-24: 작게 50 · 보통 70 · 꽉 차게 100 */
 export const WIDTH_PRESETS: ReadonlyArray<{ value: number; label: string }> = [

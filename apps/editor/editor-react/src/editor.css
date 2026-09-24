@@ -286,7 +286,6 @@
   font-size: 0.8125rem;
   color: var(--line);
 }
-/* 폭 버튼과 정렬 버튼 사이 가는 줄 */
 .width-toolbar-divider {
   align-self: stretch;
   width: 1px;
