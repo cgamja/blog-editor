@@ -11,7 +11,8 @@ import {
   widthOrNull,
 } from "../closed-values";
 import { DEFAULT_COORDINATES } from "./decoration.constants";
-import type { BlockRect, StickerPatch, StickerPlacement, StickerTarget } from "./decoration.types";
+import { sameStickers, stickerCount, stickersOf } from "./sticker-query";
+import type { StickerPatch, StickerPlacement, StickerTarget } from "./decoration.types";
 
 /**
  * 꾸미기 커맨드 — spec: editor-decoration, design.md.
@@ -22,8 +23,6 @@ import type { BlockRect, StickerPatch, StickerPlacement, StickerTarget } from ".
  */
 
 type Coordinates = Omit<StickerPlacement, "blockPos">;
-
-const PERCENT = 100;
 
 interface TopBlock {
   pos: number;
@@ -110,35 +109,30 @@ function stickerOf(id: unknown, { x, y, size, rotate }: Coordinates): Sticker | 
   return Object.values(sticker).every((value) => value !== null) ? (sticker as Sticker) : null;
 }
 
-const stickersOf = (node: Node): Sticker[] =>
-  Array.isArray(node.attrs.stickers) ? (node.attrs.stickers as Sticker[]) : [];
-
 /** 빈 배열은 정규형에서 지워지는 값이라 null로 둔다 */
 const stickersAttr = (stickers: Sticker[]) => (stickers.length > 0 ? stickers : null);
-
-function stickerCount(doc: Node): number {
-  let count = 0;
-  doc.forEach((block) => {
-    count += stickersOf(block).length;
-  });
-  return count;
-}
 
 function cursorBlockPos(state: EditorState): number | null {
   const [first] = selectedTopBlocks(state);
   return first === undefined ? null : first.pos;
 }
 
-/** 블록 pos의 스티커 목록을 바꾸는 커맨드 — change가 null이면 false */
+/**
+ * 블록 pos의 스티커 목록을 바꾸는 커맨드 — change가 null이면 false.
+ * 결과가 지금과 같으면 true이되 dispatch하지 않는다 — 빈 undo 단계를 쌓지 않는다(글꼴 · 움직임과 같은 규칙)
+ */
 function changeStickers(
   blockPos: number,
   change: (stickers: Sticker[], state: EditorState) => Sticker[] | null,
 ): Command {
   return (state, dispatch) => {
     const block = topBlockAt(state.doc, blockPos);
-    const next = block === null ? null : change(stickersOf(block), state);
+    const current = block === null ? [] : stickersOf(block);
+    const next = block === null ? null : change(current, state);
     if (next === null) return false;
-    if (dispatch) dispatch(state.tr.setNodeAttribute(blockPos, "stickers", stickersAttr(next)));
+    if (dispatch && !sameStickers(current, next)) {
+      dispatch(state.tr.setNodeAttribute(blockPos, "stickers", stickersAttr(next)));
+    }
     return true;
   };
 }
@@ -195,36 +189,4 @@ export function moveStickerToBlock(fromPos: number, index: number, target: Stick
     }
     return true;
   };
-}
-
-// ── 놓은 자리 → 가장 가까운 블록 ──
-
-/** 점에서 사각형까지 거리 — 안이면 0 */
-function distanceTo(block: BlockRect, point: { x: number; y: number }): number {
-  const dx = Math.max(block.left - point.x, 0, point.x - (block.left + block.width));
-  const dy = Math.max(block.top - point.y, 0, point.y - (block.top + block.height));
-  return Math.hypot(dx, dy);
-}
-
-/**
- * 놓은 스티커 중심(px)에서 가장 가까운 블록과 그 블록 기준 % 좌표(design.md 3). 같은 거리면 앞 블록.
- * x · y는 중심의 블록 폭 · 높이 기준 %, size는 블록 폭 기준 % — content-render post.css `.post-sticker`와 같다.
- * 범위 밖이면 놓을 수 없는 자리라 null이다.
- */
-export function placeOnNearestBlock(
-  blocks: readonly BlockRect[],
-  point: { x: number; y: number },
-  stickerWidth: number,
-): StickerTarget | null {
-  let nearest: BlockRect | null = null;
-  for (const block of blocks) {
-    if (block.width <= 0 || block.height <= 0) continue;
-    if (nearest === null || distanceTo(block, point) < distanceTo(nearest, point)) nearest = block;
-  }
-  if (nearest === null) return null;
-  const percentOf = (value: number, whole: number) => Math.round((value / whole) * PERCENT) + 0; // + 0: -0을 0으로
-  const x = stickerFieldOrNull("x", percentOf(point.x - nearest.left, nearest.width));
-  const y = stickerFieldOrNull("y", percentOf(point.y - nearest.top, nearest.height));
-  const size = stickerFieldOrNull("size", percentOf(stickerWidth, nearest.width));
-  return x === null || y === null || size === null ? null : { blockPos: nearest.pos, x, y, size };
 }
