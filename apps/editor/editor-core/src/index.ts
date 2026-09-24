@@ -103,3 +103,26 @@ export {
 export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
 export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
 export { previewBlockWidth, widthPreview, widthPreviewKey } from "./plugins/width-preview";
+export {
+  cancelImageUpload,
+  failImageUpload,
+  finishImageUpload,
+  imageUpload,
+  imageUploadKey,
+  imageUploadsOf,
+  nearestTopGap,
+  startImageUpload,
+  topGapAfterSelection,
+} from "./plugins/image-upload";
+export type {
+  ImageUploadEntry,
+  ImageUploadRender,
+  ImageUploadStatus,
+  UploadedImageAttrs,
+} from "./plugins/image-upload.types";
+export { setImageAlt } from "./commands/image-alt";
+export {
+  ALT_MISSING_ATTR,
+  imageAltReminder,
+  imageAltReminderKey,
+} from "./plugins/image-alt-reminder";
