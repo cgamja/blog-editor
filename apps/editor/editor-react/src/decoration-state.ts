@@ -94,6 +94,8 @@ export function decorationPanelStateOf(state: EditorState): DecorationPanelState
         ? ENABLED
         : blockedBy(blocks, "motion", decorationMessages.cannotHoldMotion),
     },
+    // 스텁 — 구현은 다음 커밋
+    align: { value: null, availability: blocked("미구현") },
     sticker: { count, availability: stickerAvailability(state, first !== undefined, count) },
     width: widthTargetOf(state),
   };

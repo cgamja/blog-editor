@@ -104,6 +104,38 @@ describe("꾸미기 패널 상태", () => {
   });
 });
 
+describe("꾸미기 패널 정렬 상태", () => {
+  const bulletList = (value: string): Json => ({
+    type: "bulletList",
+    content: [{ type: "listItem", content: [paragraph(value)] }],
+  });
+
+  it("WHEN align 없는 문단에 커서를 두면 THEN 정렬 값은 left이고 쓸 수 있다", () => {
+    const panel = decorationPanelStateOf(stateOf([paragraph("가")], cursorInFirst));
+
+    expect(panel.align).toEqual({ value: "left", availability: { enabled: true } });
+  });
+
+  it("WHEN align 없는 그림을 노드로 고르면 THEN 정렬 값은 center이고 쓸 수 있다", () => {
+    const panel = decorationPanelStateOf(
+      stateOf([paragraph("가"), image()], (doc) => NodeSelection.create(doc, 3)),
+    );
+
+    expect(panel.align).toEqual({ value: "center", availability: { enabled: true } });
+  });
+
+  it("WHEN 목록 항목에 커서를 두면 THEN 정렬은 이유와 함께 막힌다", () => {
+    const panel = decorationPanelStateOf(
+      stateOf([bulletList("가")], (doc) => TextSelection.create(doc, 3)),
+    );
+
+    expect(panel.align).toEqual({
+      value: null,
+      availability: { enabled: false, reason: "목록에는 정렬을 줄 수 없어요" },
+    });
+  });
+});
+
 describe("패널 선택지", () => {
   it("WHEN 선택지를 스키마 상수와 비교하면 THEN 글씨체 · 스티커는 같은 집합, 움직임은 MOTIONS + 없음, 폭은 범위 안이다", () => {
     expect(FONT_OPTIONS.map(({ value }) => value).sort()).toEqual([...FONTS].sort());
