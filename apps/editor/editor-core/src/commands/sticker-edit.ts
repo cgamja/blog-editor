@@ -4,7 +4,8 @@ import type { Mappable } from "@tiptap/pm/transform";
 import { STICKER_RANGES } from "@blog-editor/content-schema";
 import type { Sticker } from "@blog-editor/content-schema";
 import { removeSticker, updateSticker } from "./decoration";
-import type { BlockRect, StickerPatch, StickerTarget } from "./decoration";
+import type { BlockRect, StickerPatch, StickerTarget } from "./decoration.types";
+import { stickersIn } from "./sticker-query";
 
 /**
  * 고른 스티커 조작 — spec: editor-sticker-edit, sticker-drag design.md.
@@ -16,9 +17,12 @@ export interface StickerRef {
   index: number;
 }
 
-const NUDGE = 1;
-const ROTATE_STEP = 15;
-const FULL_TURN = 360;
+/** 방향키 한 번에 옮기는 거리 — 블록 폭 · 높이의 % */
+const NUDGE_PERCENT = 1;
+/** +/- 한 번에 바꾸는 크기 — 블록 폭의 % */
+const RESIZE_STEP_PERCENT = 1;
+const ROTATE_STEP_DEGREES = 15;
+const FULL_TURN_DEGREES = 360;
 /** 블록 사이 틈(본문 22px)보다 조금 넓게 — 틈에 놓아도 가까운 블록 끝에 붙는다(design.md 3) */
 const MAX_SNAP_PX = 24;
 const PERCENT = 100;
@@ -26,38 +30,50 @@ const PERCENT = 100;
 /** ±180 밖이면 반대쪽으로 감는다 — 회전은 원이라 범위 끝에서 멈출 이유가 없다(design.md 4) */
 export function wrapRotation(degrees: number): number {
   const { min, max } = STICKER_RANGES.rotate;
-  if (degrees > max) return degrees - FULL_TURN;
-  if (degrees < min) return degrees + FULL_TURN;
+  if (degrees > max) return degrees - FULL_TURN_DEGREES;
+  if (degrees < min) return degrees + FULL_TURN_DEGREES;
   return degrees;
 }
 
 type KeyPatch = (sticker: Sticker) => StickerPatch;
 
 const KEY_PATCHES: Record<string, KeyPatch> = {
-  ArrowLeft: ({ x }) => ({ x: x - NUDGE }),
-  ArrowRight: ({ x }) => ({ x: x + NUDGE }),
-  ArrowUp: ({ y }) => ({ y: y - NUDGE }),
-  ArrowDown: ({ y }) => ({ y: y + NUDGE }),
-  "+": ({ size }) => ({ size: size + NUDGE }),
-  "=": ({ size }) => ({ size: size + NUDGE }),
-  "-": ({ size }) => ({ size: size - NUDGE }),
-  "[": ({ rotate }) => ({ rotate: wrapRotation(rotate - ROTATE_STEP) }),
-  "]": ({ rotate }) => ({ rotate: wrapRotation(rotate + ROTATE_STEP) }),
+  ArrowLeft: ({ x }) => ({ x: x - NUDGE_PERCENT }),
+  ArrowRight: ({ x }) => ({ x: x + NUDGE_PERCENT }),
+  ArrowUp: ({ y }) => ({ y: y - NUDGE_PERCENT }),
+  ArrowDown: ({ y }) => ({ y: y + NUDGE_PERCENT }),
+  "+": ({ size }) => ({ size: size + RESIZE_STEP_PERCENT }),
+  "=": ({ size }) => ({ size: size + RESIZE_STEP_PERCENT }),
+  "-": ({ size }) => ({ size: size - RESIZE_STEP_PERCENT }),
+  "[": ({ rotate }) => ({ rotate: wrapRotation(rotate - ROTATE_STEP_DEGREES) }),
+  "]": ({ rotate }) => ({ rotate: wrapRotation(rotate + ROTATE_STEP_DEGREES) }),
 };
 
 const REMOVE_KEYS = new Set(["Delete", "Backspace"]);
 
+export const isStickerRemoveKey = (key: string): boolean => REMOVE_KEYS.has(key);
+
+export interface KeyModifiers {
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+}
+
 /**
- * 키 하나 → 스티커 커맨드. 모르는 키면 null이라 부르는 쪽이 기본 동작에 넘긴다.
- * 범위 밖으로 나가는 키는 updateSticker가 false다(자르지 않는다).
+ * 키 하나 → 스티커 커맨드. 모르는 키 · 보조키 조합(Cmd+- 확대, Cmd+[ 뒤로 등)이면 null이라
+ * 부르는 쪽이 브라우저 기본 동작에 넘긴다. 범위 밖으로 나가는 키는 updateSticker가 false다(자르지 않는다).
  */
-export function stickerKeyCommand({ blockPos, index }: StickerRef, key: string): Command | null {
-  if (REMOVE_KEYS.has(key)) return removeSticker(blockPos, index);
+export function stickerKeyCommand(
+  { blockPos, index }: StickerRef,
+  key: string,
+  { metaKey = false, ctrlKey = false, altKey = false }: KeyModifiers = {},
+): Command | null {
+  if (metaKey || ctrlKey || altKey) return null;
+  if (isStickerRemoveKey(key)) return removeSticker(blockPos, index);
   const patchOf = KEY_PATCHES[key];
   if (patchOf === undefined) return null;
   return (state, dispatch) => {
-    const stickers = state.doc.nodeAt(blockPos)?.attrs.stickers as Sticker[] | null | undefined;
-    const current = stickers?.[index];
+    const current = stickersIn(state.doc, blockPos)[index];
     if (current === undefined) return false;
     return updateSticker(blockPos, index, patchOf(current))(state, dispatch);
   };
@@ -70,10 +86,10 @@ export function stickerKeyCommand({ blockPos, index }: StickerRef, key: string):
  */
 export function mapStickerRef(ref: StickerRef, mapping: Mappable, doc: Node): StickerRef | null {
   const mapped = mapping.mapResult(ref.blockPos, 1);
-  if (mapped.deleted || mapped.pos >= doc.content.size) return null;
-  if (doc.resolve(mapped.pos).depth !== 0) return null;
-  const stickers = doc.nodeAt(mapped.pos)?.attrs.stickers as unknown[] | null | undefined;
-  return stickers?.[ref.index] === undefined ? null : { blockPos: mapped.pos, index: ref.index };
+  if (mapped.deleted) return null;
+  return stickersIn(doc, mapped.pos)[ref.index] === undefined
+    ? null
+    : { blockPos: mapped.pos, index: ref.index };
 }
 
 // ── 놓은 자리 → 블록 ──

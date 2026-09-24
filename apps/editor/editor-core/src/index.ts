@@ -10,7 +10,6 @@ export type { AppScreenshotInput } from "./commands/custom-blocks";
 export {
   addSticker,
   moveStickerToBlock,
-  placeOnNearestBlock,
   removeSticker,
   setBlockFont,
   setBlockMotion,
@@ -24,12 +23,14 @@ export type {
   StickerTarget,
 } from "./commands/decoration.types";
 export {
+  isStickerRemoveKey,
   mapStickerRef,
   placeStickerNear,
   stickerKeyCommand,
   wrapRotation,
 } from "./commands/sticker-edit";
-export type { StickerRef } from "./commands/sticker-edit";
+export type { KeyModifiers, StickerRef } from "./commands/sticker-edit";
+export { stickerCount, stickersIn } from "./commands/sticker-query";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
