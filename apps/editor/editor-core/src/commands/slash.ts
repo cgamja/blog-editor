@@ -64,3 +64,11 @@ export function applySlashItem(kind: InsertableBlockKind): Command {
     return true;
   };
 }
+
+const unimplemented = (...args: unknown[]): never => {
+  void args;
+  throw new Error("미구현");
+};
+
+export const slashActionGap = (state: EditorState): number | null => unimplemented(state);
+export const clearSlashQuery: Command = (state, dispatch) => unimplemented(state, dispatch);

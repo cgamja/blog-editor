@@ -67,6 +67,21 @@ describe("editor-image-insert: 올리는 동안의 자리 표시는 문서가 �
     expect(typed.doc.resolve(entry?.pos ?? 0).depth).toBe(0);
   });
 
+  it("WHEN 문서 맨 앞 · 맨 끝 자리를 둔 뒤 문서 전체를 빈 문단으로 바꾼다 THEN 두 자리 모두 사라진다", () => {
+    const initial = start();
+    const end = initial.doc.content.size;
+    const withPlaces = run(
+      run(initial, startImageUpload("first", 0)).state,
+      startImageUpload("last", end),
+    ).state;
+
+    const cleared = withPlaces.apply(
+      withPlaces.tr.replaceWith(0, end, schema.nodes.paragraph!.create()),
+    );
+
+    expect(imageUploadsOf(cleared)).toEqual([]);
+  });
+
   it("WHEN 자리를 더한 뒤 두 문단에 걸친 범위를 지운다 THEN 자리가 사라진다", () => {
     const withPlace = run(start(), startImageUpload("a", GAP)).state;
 
@@ -89,6 +104,21 @@ describe("editor-image-insert: 올리기가 끝나면 자리에 그림을 한 �
     expect((state.selection as NodeSelection).node.type.name).toBe("image");
     expect(imageUploadsOf(state)).toEqual([]);
     expect(() => docFromNode(state.doc)).not.toThrow();
+  });
+
+  it("WHEN 자리를 둔 뒤 커서를 다른 문단으로 옮기고 finishImageUpload THEN 그림은 들어가지만 선택은 옮긴 커서 그대로다", () => {
+    const withPlace = run(start(), startImageUpload("a", GAP)).state;
+    const moved = withPlace.apply(
+      withPlace.tr.setSelection(TextSelection.create(withPlace.doc, 5)),
+    );
+
+    const { ok, state } = run(moved, finishImageUpload("a", UPLOADED));
+
+    expect(ok).toBe(true);
+    expect(state.doc.child(1).type.name).toBe("image");
+    expect(state.selection).toBeInstanceOf(TextSelection);
+    // 그림(크기 1)이 커서 앞에 들어갔으니 커서는 한 칸 밀린 자리다
+    expect(state.selection.from).toBe(6);
   });
 
   it("WHEN 자리가 가로지른 삭제로 사라진 뒤 finishImageUpload THEN false이고 문서는 그대로다", () => {

@@ -1,7 +1,10 @@
 import { INSERTABLE_BLOCKS } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { INSERTABLE_BLOCK_LABELS } from "./messages";
+import type { BlockMenuAction } from "./block-menu-actions";
 import { SLASH_ALIASES } from "./slash-menu.constants";
+
+export type SlashItem = InsertableBlockKind | BlockMenuAction;
 
 /** 「+」 메뉴와 같은 목록 · 같은 순서(spec: editor-slash-menu) */
 const KINDS = Object.keys(INSERTABLE_BLOCKS) as InsertableBlockKind[];
@@ -90,7 +93,11 @@ const searchKey = (text: string) =>
  * 슬래시 메뉴 항목을 거른다 — 한글 이름이나 영문 별칭에 query가 들어 있으면(대소문자 · 띄어쓰기 무시,
  * 한글은 자모 단위) 남긴다. 빈 query면 전부다.
  */
-export function filterSlashItems(query: string): InsertableBlockKind[] {
+export function filterSlashItems(
+  query: string,
+  actions: readonly BlockMenuAction[] = [],
+): InsertableBlockKind[] {
+  void actions;
   const needle = searchKey(query);
   return KINDS.filter((kind) =>
     [INSERTABLE_BLOCK_LABELS[kind], ...SLASH_ALIASES[kind]].some((name) =>

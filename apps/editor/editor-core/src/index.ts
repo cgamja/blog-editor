@@ -74,7 +74,7 @@ export type {
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
-export { applySlashItem } from "./commands/slash";
+export { applySlashItem, clearSlashQuery, slashActionGap } from "./commands/slash";
 export {
   wrapInBlockquote,
   wrapInBulletList,
@@ -140,3 +140,5 @@ export {
   imageAltReminder,
   imageAltReminderKey,
 } from "./plugins/image-alt-reminder";
+export { imageFilesOf, shouldTakePastedFiles } from "./plugins/image-file-input";
+export type { ImageFileLike, PastedContent } from "./plugins/image-file-input";

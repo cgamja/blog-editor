@@ -2,7 +2,6 @@ import { IMAGE_MAX_BYTES } from "@blog-editor/content-schema";
 import {
   fitWithin,
   imageAttrsFrom,
-  imageFilesOf,
   nextQuality,
   passesThrough,
   uploadErrorMessage,
@@ -32,17 +31,6 @@ describe("editor-image-insert: 브라우저가 이미지를 한도 안으로 줄
       false,
     );
     expect(passesThrough({ type: "image/png", size: 500 * KB }, small)).toBe(false);
-  });
-
-  it("WHEN image/png · image/svg+xml · text/plain · image/heic를 거른다 THEN image/png · image/heic만 남는다", () => {
-    const files = [
-      { type: "image/png", size: 1 },
-      { type: "image/svg+xml", size: 1 },
-      { type: "text/plain", size: 1 },
-      { type: "image/heic", size: 1 },
-    ];
-
-    expect(imageFilesOf(files).map((file) => file.type)).toEqual(["image/png", "image/heic"]);
   });
 });
 
