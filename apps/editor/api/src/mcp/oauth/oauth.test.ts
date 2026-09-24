@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { createApp } from "../../app";
 import { createMemoryPostStore } from "../../memory-store";
-import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../../test-app";
+import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../../test-app.test.helpers";
 import { hashConnectionToken } from "../connection-tokens";
 import { createMemoryConnectionTokenStore } from "../memory-connection-token-store";
 import { createMemoryOAuthStore } from "./memory-oauth-store";

@@ -2,7 +2,7 @@ import { fixtures, normalize } from "@blog-editor/content-schema";
 import type { PostFile } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
-import { testAuthOptions, withSession } from "./test-app";
+import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
 const CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 

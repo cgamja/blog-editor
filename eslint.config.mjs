@@ -73,9 +73,10 @@ const RELATIVE_CROSS_PACKAGE = {
 
 /**
  * 생성기(fast-check)는 런타임 번들(api · web)로 새지 않는다(adr-015). fast-check 직접 import · `*.arbitrary`
- * 생성기 파일 · 패키지 `testing` 진입점은 테스트(*.test.ts)와 생성기 파일(*.arbitrary.ts)에서만 쓴다.
+ * 생성기 파일 · 패키지 `testing` 진입점은 테스트(*.test.ts) · 생성기 파일(*.arbitrary.ts) ·
+ * 테스트 지원 파일(*.test.helpers.ts)에서만 쓴다.
  */
-const TEST_SUPPORT_FILES = ["**/*.test.{ts,tsx}", "**/*.arbitrary.ts"];
+const TEST_SUPPORT_FILES = ["**/*.test.{ts,tsx}", "**/*.arbitrary.ts", "**/*.test.helpers.ts"];
 const GENERATORS = {
   group: [
     ...withSubpaths("fast-check", "@blog-editor/*/testing"),

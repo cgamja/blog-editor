@@ -1,6 +1,6 @@
 import { createPostFileSchema, migrate, migrations, MigrationError } from "./post-file";
 import { SCHEMA_VERSION } from "./meta";
-import { BLOG_CATEGORIES } from "./test-helpers";
+import { BLOG_CATEGORIES } from "./categories.test.helpers";
 
 /** 입력 불변 검사용 — 픽스처는 JSON-safe라 이것으로 충분하다. */
 const deepClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
