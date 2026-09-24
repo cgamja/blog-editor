@@ -1,4 +1,4 @@
-import { loginPathFor, safeNextPath } from "./routes";
+import { loginPathFor, safeNextPath } from "./next-path";
 
 describe("safeNextPath — 로그인 뒤 돌아갈 경로는 이 앱 안의 경로만 받는다", () => {
   it("WHEN 앱 안의 경로를 고른다 THEN 같은 경로다", () => {
@@ -16,8 +16,25 @@ describe("safeNextPath — 로그인 뒤 돌아갈 경로는 이 앱 안의 경�
     }
   });
 
+  it("WHEN 공백 · 백슬래시로 감싼 다른 출처 주소나 쿼리에서 디코딩한 값을 고른다 THEN 모두 첫 화면이다", () => {
+    for (const raw of [
+      "\t//evil",
+      "/\t/evil",
+      "\\\\evil",
+      new URLSearchParams("next=%2F%2Fevil").get("next"),
+    ]) {
+      expect(safeNextPath(raw)).toBe("/");
+    }
+  });
+
   it("WHEN 로그인 화면 자신 · 빈 값을 고른다 THEN 모두 첫 화면이다", () => {
     for (const raw of ["/login", "/login?next=/x", "", null]) {
+      expect(safeNextPath(raw)).toBe("/");
+    }
+  });
+
+  it("WHEN 대소문자만 다른 로그인 화면을 고른다 THEN 첫 화면이다", () => {
+    for (const raw of ["/LOGIN", "/Login?next=/x", "/login/"]) {
       expect(safeNextPath(raw)).toBe("/");
     }
   });
