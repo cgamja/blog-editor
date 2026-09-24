@@ -39,7 +39,7 @@ export const WEIGHTS_BY_FONT: Readonly<
 };
 /** 글자 크기 단계(adr-020) — 보통은 값이 없는 것이다. */
 export const TEXT_SIZES = ["sm", "lg", "xl", "2xl"] as const;
-/** 글자색 프리셋 — design/tokens.json의 ink-soft · brand-ink · accent-ink-badge · danger-ink. */
+/** 글자색 프리셋 — design/tokens.json의 ink-soft · brand-ink · accent-ink · danger-ink. */
 export const TEXT_COLORS = ["muted", "brand", "green", "red"] as const;
 /** 배경(형광펜) 프리셋 — brand-soft · accent-soft · postit. */
 export const HIGHLIGHT_COLORS = ["apricot", "mint", "yellow"] as const;
@@ -99,10 +99,20 @@ const colorOf = <T extends readonly [string, ...string[]]>(presets: T) =>
   z.union([z.enum(presets), z.string().regex(HEX_COLOR_PATTERN)]);
 
 /** 두께는 같은 마크의 글꼴(없으면 Pretendard)에 있는 것만 — adr-020. */
-function weightFitsFont(style: { font?: string | undefined; weight?: string | undefined }) {
+/** 글자 스타일에 글꼴이 없을 때 두께를 판정하는 기준 — 본문 기본 글꼴. */
+export const DEFAULT_TEXT_FONT: (typeof FONTS)[number] = "pretendard";
+
+/**
+ * 두께가 그 글꼴(없으면 DEFAULT_TEXT_FONT)에 있는가 — 스키마와 markdown 변환(content-convert)이 같은
+ * 판정을 쓴다. 두께가 없으면 true.
+ */
+export function weightFitsFont(style: {
+  font?: string | undefined;
+  weight?: string | undefined;
+}): boolean {
   if (style.weight === undefined) return true;
-  const font = (style.font ?? "pretendard") as (typeof FONTS)[number];
-  return (WEIGHTS_BY_FONT[font] as readonly string[]).includes(style.weight);
+  const font = (style.font ?? DEFAULT_TEXT_FONT) as (typeof FONTS)[number];
+  return (WEIGHTS_BY_FONT[font] ?? []).includes(style.weight as (typeof TEXT_WEIGHTS)[number]);
 }
 
 export const textStyleAttrsSchema = z

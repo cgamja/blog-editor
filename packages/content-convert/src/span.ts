@@ -1,11 +1,12 @@
 import {
+  DEFAULT_TEXT_FONT,
   FONTS,
   HEX_COLOR_PATTERN,
   HIGHLIGHT_COLORS,
   TEXT_COLORS,
   TEXT_SIZES,
   TEXT_WEIGHTS,
-  WEIGHTS_BY_FONT,
+  weightFitsFont,
 } from "@blog-editor/content-schema";
 import type { TextStyleAttrs } from "@blog-editor/content-schema";
 import type { StateInline } from "markdown-it";
@@ -132,11 +133,8 @@ export function parseSpanBody(body: string): ParsedSpan {
     style[key] = accepted;
   }
 
-  const font = (style.font ?? FONTS[0]) as (typeof FONTS)[number];
-  if (
-    style.weight !== undefined &&
-    !(WEIGHTS_BY_FONT[font] as readonly string[]).includes(style.weight)
-  ) {
+  if (style.weight !== undefined && !weightFitsFont(style)) {
+    const font = (style.font ?? DEFAULT_TEXT_FONT) as (typeof FONTS)[number];
     issues.push({ rule: spanWeightRule(font), received: style.weight, fix: SPAN_WEIGHT_FIX });
   }
 
@@ -181,7 +179,8 @@ export function bracketSpanRule(state: StateInline, silent: boolean): boolean {
   state.md.inline.tokenize(state);
   if (parsed.style !== undefined) state.push("textstyle_close", "span", -1);
   if (parsed.underline) state.push("underline_close", "u", -1);
-  state.push("span_close", "span", -1);
+  // 닫는 토큰에도 원문을 둔다 — 이미지 대체 글자가 span을 원문으로 되돌릴 때 쓴다(tokens.ts imageAltText)
+  state.push("span_close", "span", -1).meta = { body, issues: [] } satisfies SpanOpenMeta;
 
   state.posMax = max;
   state.pos = braceEnd + 1;

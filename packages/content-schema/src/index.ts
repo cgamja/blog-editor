@@ -25,6 +25,8 @@ export {
   HIGHLIGHT_COLORS,
   HEX_COLOR_PATTERN,
   textStyleAttrsSchema,
+  DEFAULT_TEXT_FONT,
+  weightFitsFont,
   MAX_STICKERS_PER_DOC,
   WIDTH_RANGE,
   NATURAL_SIZE_RANGE,
