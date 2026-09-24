@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { LoginPage, RequireSession } from "../features/auth";
+import { editorRoutes } from "../features/editor";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { RouteErrorPage } from "../pages/RouteErrorPage";
@@ -19,8 +20,7 @@ export const router = createBrowserRouter([
         element: <RequireSession />,
         children: [
           { path: ROUTES.home, element: <PlaceholderPage title={MESSAGES.pages.posts} /> },
-          { path: ROUTES.newPost, element: <PlaceholderPage title={MESSAGES.pages.newPost} /> },
-          { path: ROUTES.editPost, element: <PlaceholderPage title={MESSAGES.pages.editPost} /> },
+          ...editorRoutes,
           { path: ROUTES.connect, element: <PlaceholderPage title={MESSAGES.pages.connect} /> },
           { path: ROUTES.settings, element: <PlaceholderPage title={MESSAGES.pages.settings} /> },
         ],

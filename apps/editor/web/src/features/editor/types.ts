@@ -29,6 +29,21 @@ export interface LocalDraft {
 
 export type RestoreDecision = "none" | "restore" | "conflict";
 
+/** 편집을 시작할 상태 — `savedSlug`는 서버에 있는 주소(아직 없으면 null), `slug`는 「글 정보」 칸 값 */
+export interface EditingStart {
+  meta: PostMeta;
+  doc: Doc;
+  slug: string;
+  savedSlug: string | null;
+  revision: string | null;
+  /** 서버에서 발행 글인가 — 발행 글은 주소가 잠기고 자동 저장하지 않는다 */
+  isPublished: boolean;
+  restore: RestoreDecision;
+}
+
+/** 머리줄 위에 띄우는 것 — 세션 만료 띠 · 충돌 · 발행 확인 · 미리보기 */
+export type EditorOverlay = "conflict" | "publish" | "preview" | null;
+
 /** 편집 세션 — 화면이 스스로 옮긴 주소(adopted)에서는 `sessionKey`를 이어 간다 */
 export interface EditingSession {
   routeKey: string;

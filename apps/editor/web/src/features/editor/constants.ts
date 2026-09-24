@@ -11,6 +11,7 @@ export const NEW_POST_KEY = "new";
 
 export const POSTS_PATH = "/api/posts";
 export const PREVIEW_PATH = "/api/preview";
+export const IMAGE_UPLOAD_PATH = "/api/images";
 /** 공개 렌더러 스타일 — 미리보기 iframe이 불러온다(공개 API와 같은 파일) */
 export const POST_CSS_PATH = "/public/post.css";
 
