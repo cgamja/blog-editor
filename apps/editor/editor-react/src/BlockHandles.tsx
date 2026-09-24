@@ -22,7 +22,7 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hovered, setHovered] = useHoveredBlock(editor, frameRef, dragging || menuOpen);
 
-  const run = useCallback(
+  const runAndDropHandle = useCallback(
     (command: Command) => {
       // 문서가 바뀌면 블록 자리도 바뀐다 — 옛 자리의 손잡이를 남기지 않는다
       setHovered(null);
@@ -35,7 +35,10 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
     [editor, setHovered],
   );
 
-  const onDrop = useCallback((from: number, gap: number) => run(moveTopBlockTo(from, gap)), [run]);
+  const onDrop = useCallback(
+    (from: number, gap: number) => runAndDropHandle(moveTopBlockTo(from, gap)),
+    [runAndDropHandle],
+  );
 
   if (hovered === null || !editor.isEditable) return null;
 
@@ -43,7 +46,7 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
     // 한글 조합 중에는 문서를 바꾸지 않는다 — 메뉴를 열어 둔 채 미룬다(.claude/rules/editor.md)
     if (editor.view.composing) return;
     setMenuOpen(false);
-    run(insertBlockAfter(hovered.index, kind));
+    runAndDropHandle(insertBlockAfter(hovered.index, kind));
   };
 
   return (
