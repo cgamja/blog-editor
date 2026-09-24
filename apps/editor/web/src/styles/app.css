@@ -8,8 +8,8 @@
   /* 캔버스 66:2 "AI가 올린 초안"의 rotate(-2deg) */
   --app-note-tilt: -2deg;
   /* 결정 아티팩트 1 · 2의 모형(300 · 320px)을 실제 화면에서 두 줄 안에 들도록 맞춘 폭 */
-  --app-login-card-width: 22rem;
-  --app-empty-text-width: 22rem;
+  --app-login-card-width: 22rem; /* token-lint-ignore: 위 주석 — 결정 아티팩트 모형에 맞춘 폭, 크기 토큰에 없다 */
+  --app-empty-text-width: 22rem; /* token-lint-ignore: 위 주석 — 결정 아티팩트 모형에 맞춘 폭, 크기 토큰에 없다 */
 }
 
 body {

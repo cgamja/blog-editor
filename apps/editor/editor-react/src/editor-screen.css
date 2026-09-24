@@ -7,16 +7,16 @@
 
 .editor-screen {
   /* 디자인 68:2 */
-  --header-height: 4.25rem; /* 머리줄 68px — 크기 토큰에 없다 */
+  --header-height: 4.25rem; /* token-lint-ignore: 머리줄 68px — 크기 토큰에 없다 */
   --header-padding-x: var(--space-28); /* 머리줄 좌우 */
   --header-gap: var(--space-12); /* 머리줄 요소 사이 */
-  --paper-padding-top: 4rem; /* 종이 위 64px — 간격 척도에 없다 */
+  --paper-padding-top: 4rem; /* token-lint-ignore: 종이 위 64px — 간격 척도에 없다 */
   /* 디자인 69:2 */
   --side-padding-x: var(--space-24); /* 옆 패널 좌우 */
   --side-padding-bottom: var(--space-24); /* 옆 패널 아래 */
   /* 디자인에 없는 값 — 쓰임새별로 따로 둔다 */
   --body-gutter-x: var(--space-24); /* 본문 상자 좌우, 좁은 폭에서 0 */
-  --body-scroll-room: 4rem; /* 종이 아래 스크롤 여유 64px — 간격 척도에 없다 */
+  --body-scroll-room: 4rem; /* token-lint-ignore: 종이 아래 스크롤 여유 64px — 간격 척도에 없다 */
   --tab-gap: var(--space-20); /* 탭 사이 */
 
   display: grid;

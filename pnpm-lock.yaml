@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@blog-editor/design-tokens':
+        specifier: workspace:*
+        version: link:packages/design-tokens
       '@commitlint/cli':
         specifier: ^21.2.3
         version: 21.2.3(@types/node@26.6.2)(conventional-commits-parser@7.1.2)(typescript@5.9.3)

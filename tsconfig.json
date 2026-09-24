@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["eslint.config.mjs", "vitest.config.ts", "*.test.ts"],
+  "include": ["eslint.config.mjs", "vitest.config.ts", "*.test.ts", "scripts/**/*.ts"],
   "compilerOptions": {
     "allowJs": true,
     "types": ["node", "vitest/globals"]

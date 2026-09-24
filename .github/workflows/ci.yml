@@ -15,7 +15,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.x # engines ">=22.18" — scripts/*.ts를 Node 타입 제거로 바로 돌린다
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # 실브라우저 층(adr-024)의 Chromium — 브라우저 파일은 Playwright 버전별로 캐시하고, 시스템 라이브러리는 매번 깐다
@@ -30,7 +30,7 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
       - run: pnpm exec playwright install-deps chromium
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-      - run: pnpm verify # typecheck · lint · format:check · test · test:e2e · docs:check — package.json과 같은 한 줄
+      - run: pnpm verify # typecheck · lint · lint:css · format:check · test · test:e2e · docs:check — package.json과 같은 한 줄
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

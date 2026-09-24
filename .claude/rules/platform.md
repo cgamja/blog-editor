@@ -11,6 +11,6 @@ paths: ["apps/editor/web/**/*.tsx", "apps/editor/editor-react/**/*.tsx", "**/*.c
 - 입력 기본: 포인터 + 키보드. 에디터 단축키는 macOS ⌘ / Windows Ctrl 둘 다 **[사람 — 리뷰 2축]**
 - 터치 타깃 24px(WCAG 2.2) **[사람 — 리뷰 2축]**
 - 성능: 꾸미기를 최대로 쓴 픽스처 글의 Lighthouse 기준선(plan 05 · D14) **[없음 — commands.perf 미선언]**
-- 금지: 고정 `px` 폭, `100vh`(→ `dvh`), 토큰 외 색 · 간격, 임의값. 값의 원천은 `design/tokens.json`(캔버스에서 뽑음) **[design.tokens 선언(`packages/design-tokens/src/tokens.css`, 생성 원천 `design/tokens.json`) · 값 린트 없음(#116) — 사람 · 리뷰 2축]**
+- 금지: 고정 `px` 폭, `100vh`(→ `dvh`), 토큰 외 색 · 간격, 임의값. 값의 원천은 `design/tokens.json`(캔버스에서 뽑음) **[design.tokens 선언(`packages/design-tokens/src/tokens.css`, 생성 원천 `design/tokens.json`) · 색 · 간격 · 선 두께 · 글자 크기는 `pnpm lint:css`(verify, adr-025) · 고정 `px` 폭 · `100vh` · 반경은 사람 · 리뷰 2축]**
 - 뷰포트 · 상태는 `design/map.md`의 아트보드를 따르고, 디자인에 없는 상태(빈 목록 · 저장 중 · 401 · 로그인)는 구현이 채운다 **[사람 — 리뷰 2축]**
 - 텍스트 `rem`, 200% 확대에서 잘림 0 **[evidence.zoom200]**
