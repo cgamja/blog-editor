@@ -293,6 +293,8 @@
    * 층: 블록 메뉴(손잡이 옆)보다 링크 팝오버(선택 아래)가 위다 — 둘이 겹치면 지금 입력 중인 팝오버가 보여야 한다.
    */
   --shadow-popover: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+  /* design/tokens.json size.radius-pill */
+  --radius-pill: 999px;
   --layer-block-menu: 1;
   --layer-link-popover: 2;
 }
@@ -747,7 +749,7 @@
   position: absolute;
   inset: 0.25rem 0.5625rem;
   border: 1px solid var(--surface);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--toolbar);
 }
 
@@ -761,7 +763,7 @@
   position: absolute;
   translate: -50% 0.5rem;
   padding: 0.25rem 0.625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--toolbar);
   color: var(--surface);
   /* caption 13px */
