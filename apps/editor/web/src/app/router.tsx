@@ -5,6 +5,7 @@ import { PostListPage } from "../features/posts";
 import { MESSAGES } from "../shared/messages";
 import { ROUTES } from "../shared/routes/constants";
 import { AppShell } from "./layout/AppShell";
+import { LIST_DIALOGS } from "./list-dialogs";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { RouteErrorPage } from "./pages/RouteErrorPage";
@@ -26,7 +27,7 @@ export const router = createBrowserRouter([
           {
             element: <AppShell />,
             children: [
-              { path: ROUTES.home, element: <PostListPage /> },
+              { path: ROUTES.home, element: <PostListPage dialogs={LIST_DIALOGS} /> },
               { path: ROUTES.connect, element: <ConnectPage /> },
               {
                 path: ROUTES.settings,

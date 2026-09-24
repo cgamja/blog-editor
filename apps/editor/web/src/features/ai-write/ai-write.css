@@ -63,7 +63,7 @@
 
 .ai-write-copy-state {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   color: var(--ink-mid);
 }
 

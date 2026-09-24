@@ -1,6 +1,6 @@
 /*
  * AI 연결(Figma 70:2). 색 · 반지름 · 컨트롤 높이는 tokens.css, 간격 · 테두리는 tokens.css `--space-<px>` · `--border-width`(#102).
- * 글자 크기는 tokens.json `font.*` 설명값(h1 34px · ui 15px · caption 13px)을 rem으로 — 생성 토큰이 아직 없다.
+ * 글자 크기는 tokens.css `--font-size-*`(#104).
  */
 .connect-page {
   display: flex;
@@ -22,7 +22,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 2.125rem;
+  font-size: var(--font-size-page-title);
 }
 
 .connect-lede {
@@ -90,7 +90,7 @@
 }
 
 .connect-label {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   font-weight: 500;
   color: var(--ink-mid);
 }
@@ -134,7 +134,7 @@
 .connect-hint {
   flex: 1;
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
 }
 
 .connect-hint-error {
@@ -166,7 +166,7 @@
 
 .connect-ability-title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   font-weight: 600;
   color: inherit;
 }

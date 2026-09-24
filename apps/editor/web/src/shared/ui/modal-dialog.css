@@ -15,7 +15,7 @@
   background: color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
-/* 28px = Figma 71:2(AI로 쓰기) h1. 글꼴 크기 토큰이 없어 값을 옮겼다 — #104 글꼴 토큰으로 바꿀 자리 */
+/* 28px = Figma 71:2(AI로 쓰기) h1. #104 글꼴 크기 토큰에 28px가 없어 값을 옮겼다 — 토큰이 생기면 바꿀 자리 */
 .modal-dialog-title {
   margin: 0;
   font-family: var(--font-display);
@@ -30,7 +30,7 @@
 }
 
 .modal-dialog-label {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   font-weight: 500;
   color: var(--ink-mid);
 }

@@ -21,6 +21,8 @@ interface ImportDialogProps {
   onClose: () => void;
   /** 워크스페이스 카테고리(설정 API) — 앱이 넘긴다 */
   categories: readonly string[];
+  /** 초안을 만든 뒤(편집 화면으로 가기 전) — 앱이 글 목록 캐시를 새로 고치는 자리 */
+  onCreated?: () => void;
 }
 
 const NO_SUGGESTION = { title: "", description: "" };
@@ -46,11 +48,16 @@ function suggestionOf(result: ImportPreview | undefined) {
  * 저장은 기존 `PUT` + `If-None-Match: *`. 만들면 편집 화면으로 간다.
  * 본문은 열려 있을 때만 그려진다(ModalDialog) — 닫았다 다시 열면 입력 · 오류가 처음 상태다.
  */
-export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
+export function ImportDialog({ open, onClose, categories, onCreated }: ImportDialogProps) {
   const titleId = useId();
   return (
     <ModalDialog open={open} onClose={onClose} labelledBy={titleId} className="import-dialog">
-      <ImportDialogBody titleId={titleId} onClose={onClose} categories={categories} />
+      <ImportDialogBody
+        titleId={titleId}
+        onClose={onClose}
+        categories={categories}
+        {...(onCreated === undefined ? {} : { onCreated })}
+      />
     </ModalDialog>
   );
 }
@@ -59,6 +66,7 @@ function ImportDialogBody({
   titleId,
   onClose,
   categories,
+  onCreated,
 }: Omit<ImportDialogProps, "open"> & { titleId: string }) {
   const errorId = useId();
   const navigate = useNavigate();
@@ -86,6 +94,7 @@ function ImportDialogBody({
       await createDraft(input.slug, buildImportedPost(current.doc, input));
     },
     onSuccess: () => {
+      onCreated?.();
       onClose();
       navigate(generatePath(ROUTES.editPost, { slug: input.slug }));
     },
