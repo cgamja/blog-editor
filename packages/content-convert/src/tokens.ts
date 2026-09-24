@@ -2,7 +2,7 @@ import MarkdownIt, { type PluginWithParams } from "markdown-it";
 import container from "markdown-it-container";
 import type Token from "markdown-it/lib/token.mjs";
 import { CALLOUT_CONTAINER_NAME } from "./constants";
-import { bracketSpanRule, type SpanOpenMeta } from "./span";
+import { bracketSpanRule, type SpanCloseMeta } from "./span";
 
 /** 괄호 span 규칙 이름 — 링크 규칙보다 먼저 본다(`[글자]{…}`는 링크가 아니다). */
 const BRACKET_SPAN_RULE = "bracket_span";
@@ -62,7 +62,7 @@ export function imageAltText(tok: Token): string {
         case "span_open":
           return "[";
         case "span_close":
-          return `]{${(child.meta as SpanOpenMeta).body}}`;
+          return `]{${(child.meta as SpanCloseMeta).body}}`;
         case "softbreak":
         case "hardbreak":
           return " ";

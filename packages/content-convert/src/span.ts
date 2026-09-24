@@ -50,6 +50,11 @@ export interface SpanOpenMeta {
   issues: SpanIssue[];
 }
 
+/** 닫는 토큰에는 원문만 — 이미지 대체 글자가 span을 원문으로 되돌릴 때 쓴다(tokens.ts imageAltText). */
+export interface SpanCloseMeta {
+  body: string;
+}
+
 type StyleKey = (typeof SPAN_STYLE_KEYS)[number];
 
 // 지시어 줄의 PAIR와 같은 모양 + 값 없는 켜기 키. 이 모양이 아니면 span이 아니다(글자로 남는다)
@@ -179,8 +184,7 @@ export function bracketSpanRule(state: StateInline, silent: boolean): boolean {
   state.md.inline.tokenize(state);
   if (parsed.style !== undefined) state.push("textstyle_close", "span", -1);
   if (parsed.underline) state.push("underline_close", "u", -1);
-  // 닫는 토큰에도 원문을 둔다 — 이미지 대체 글자가 span을 원문으로 되돌릴 때 쓴다(tokens.ts imageAltText)
-  state.push("span_close", "span", -1).meta = { body, issues: [] } satisfies SpanOpenMeta;
+  state.push("span_close", "span", -1).meta = { body } satisfies SpanCloseMeta;
 
   state.posMax = max;
   state.pos = braceEnd + 1;

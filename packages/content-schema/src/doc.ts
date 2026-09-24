@@ -98,13 +98,12 @@ export const CODE_LANGUAGE_PATTERN = /^[a-z][a-z0-9+#.]*$/;
 const colorOf = <T extends readonly [string, ...string[]]>(presets: T) =>
   z.union([z.enum(presets), z.string().regex(HEX_COLOR_PATTERN)]);
 
-/** 두께는 같은 마크의 글꼴(없으면 Pretendard)에 있는 것만 — adr-020. */
 /** 글자 스타일에 글꼴이 없을 때 두께를 판정하는 기준 — 본문 기본 글꼴. */
 export const DEFAULT_TEXT_FONT: (typeof FONTS)[number] = "pretendard";
 
 /**
  * 두께가 그 글꼴(없으면 DEFAULT_TEXT_FONT)에 있는가 — 스키마와 markdown 변환(content-convert)이 같은
- * 판정을 쓴다. 두께가 없으면 true.
+ * 판정을 쓴다. 두께가 없으면 true. 글꼴에 없는 두께를 막는 이유는 adr-020(가짜 굵기).
  */
 export function weightFitsFont(style: {
   font?: string | undefined;
