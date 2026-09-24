@@ -5,7 +5,7 @@ import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { menuItemsOf, onMenuKeyDown } from "./menu-keys";
 import { BLOCK_HANDLE_MESSAGES, INSERTABLE_BLOCK_LABELS } from "./messages";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
-import { useMenuPlacement } from "./use-menu-placement";
+import { useMenuPlacement, useScrollMenuIntoView } from "./use-menu-placement";
 
 const KINDS = Object.keys(INSERTABLE_BLOCKS) as InsertableBlockKind[];
 
@@ -26,7 +26,8 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
   const insideRefs = useMemo(() => [buttonRef, menuRef], []);
   useCloseOnOutsidePointer(open, insideRefs, close);
-  const placement = useMenuPlacement(menuRef, open);
+  const { placement, needsScroll } = useMenuPlacement(menuRef, open);
+  useScrollMenuIntoView(menuRef, needsScroll);
 
   // APG menu-button 패턴: 메뉴를 열면 포커스는 첫 항목으로 간다 — 방향키 탐색이 거기서 시작한다
   useEffect(() => {

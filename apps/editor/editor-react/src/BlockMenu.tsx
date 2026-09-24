@@ -13,7 +13,7 @@ import type { TurnIntoKind } from "@blog-editor/editor-core";
 import { menuItemsOf, onMenuKeyDown } from "./menu-keys";
 import { BLOCK_MENU_MESSAGES, TURN_INTO_LABELS } from "./messages";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
-import { useMenuPlacement } from "./use-menu-placement";
+import { useMenuPlacement, useScrollMenuIntoView } from "./use-menu-placement";
 
 const KINDS = Object.keys(TURN_INTO_TARGETS) as TurnIntoKind[];
 
@@ -36,7 +36,8 @@ export function BlockMenu({ editor, index, onClose, buttonRef, onRun }: BlockMen
   const menuRef = useRef<HTMLDivElement>(null);
   const insideRefs = useMemo(() => [buttonRef, menuRef], [buttonRef]);
   useCloseOnOutsidePointer(true, insideRefs, onClose);
-  const placement = useMenuPlacement(menuRef, true);
+  const { placement, needsScroll } = useMenuPlacement(menuRef, true);
+  useScrollMenuIntoView(menuRef, needsScroll);
 
   const enabledKinds = useEditorState({
     editor,
