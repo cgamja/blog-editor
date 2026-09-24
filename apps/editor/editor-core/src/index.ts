@@ -63,7 +63,7 @@ export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export { ListKeys, listKeymap } from "./plugins/list-keymap";
 export { markdownInputRules } from "./plugins/markdown-input-rules";
 export { markdownShortcutKeymap } from "./plugins/markdown-shortcut-keymap";
-export { textStyleKeymap, textStyleMemory } from "./plugins/text-style-keymap";
+export { TextStyleKeys, textStyleKeymap, textStyleMemory } from "./plugins/text-style-keymap";
 export { MarkdownShortcuts, markdownShortcutPlugins } from "./plugins/markdown-shortcuts";
 export {
   MOTION_PREVIEW_CLASS,
