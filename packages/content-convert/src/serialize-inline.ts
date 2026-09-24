@@ -201,9 +201,9 @@ function linkPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextNode>
 }
 
 /**
- * 괄호 span이 링크 바깥이다 — `[[글](url)]{…}`는 span 라벨 안 링크로 읽히지만, 링크 라벨 안 span은
- * markdown-it 링크 규칙이 중첩으로 보고 링크를 버린다(parseLinkLabel disableNested). 그래서 span
- * 경계에서 링크를 나눈다 — 같은 href의 두 링크로 돌아와도 마크가 달라 doc는 같다.
+ * 괄호 span을 링크 바깥에 둔다(`[[글](url)]{…}`) — 둘 다 괄호 묶음이라 경계가 어긋나면 한쪽을 나눠야
+ * 하는데, 바깥 하나로 정해 두면 쓰는 모양이 하나다. span 경계에서 링크를 나누면 같은 href의 두 링크로
+ * 돌아오지만 마크가 달라 doc는 같다.
  */
 function toPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextNode>): Piece[] {
   return groupBy(nodes, spanBodyOf).flatMap((group) => {

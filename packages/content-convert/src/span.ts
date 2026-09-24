@@ -148,8 +148,14 @@ export function parseSpanBody(body: string): ParsedSpan {
  * markdown-it 인라인 규칙 — 링크 규칙(rules_inline/link.mjs)과 같은 방식으로 라벨을 찾고
  * (`parseLinkLabel`, 안쪽 링크는 허용), 라벨 범위만 다시 토큰화한다. `push`의 nesting 1/-1이
  * 강조 구분자 범위를 span 안에 가둔다(StateInline.push).
+ *
+ * silent(`skipToken`)에서는 매치하지 않는다 — silent 호출은 링크 라벨의 끝을 찾는 `parseLinkLabel`
+ * 뿐인데(helpers/parse_link_label.mjs), 여기서 span을 한 토큰으로 건너뛰면 링크 규칙이 "라벨 안
+ * 중첩"으로 보고 링크를 버린다(disableNested). 매치하지 않으면 `[` `]`는 괄호 수로만 세어지고, 라벨을
+ * 다시 토큰화할 때(silent 아님) span이 된다 — 그래서 링크 안 span과 span 안 링크 둘 다 된다.
  */
 export function bracketSpanRule(state: StateInline, silent: boolean): boolean {
+  if (silent) return false;
   if (state.src.charCodeAt(state.pos) !== OPEN_BRACKET) return false;
   const labelStart = state.pos + 1;
   const labelEnd = state.md.helpers.parseLinkLabel(state, state.pos, false);
@@ -161,24 +167,23 @@ export function bracketSpanRule(state: StateInline, silent: boolean): boolean {
   const body = state.src.slice(braceStart + 1, braceEnd);
   if (!isSpanBody(body)) return false;
 
-  if (!silent) {
-    const parsed = parseSpanBody(body);
-    const max = state.posMax;
-    state.pos = labelStart;
-    state.posMax = labelEnd;
+  const parsed = parseSpanBody(body);
+  const max = state.posMax;
+  state.pos = labelStart;
+  state.posMax = labelEnd;
 
-    const open = state.push("span_open", "span", 1);
-    open.meta = { body, issues: parsed.issues } satisfies SpanOpenMeta;
-    if (parsed.underline) state.push("underline_open", "u", 1);
-    if (parsed.style !== undefined)
-      state.push("textstyle_open", "span", 1).meta = { attrs: parsed.style };
-    state.md.inline.tokenize(state);
-    if (parsed.style !== undefined) state.push("textstyle_close", "span", -1);
-    if (parsed.underline) state.push("underline_close", "u", -1);
-    state.push("span_close", "span", -1);
-
-    state.posMax = max;
+  const open = state.push("span_open", "span", 1);
+  open.meta = { body, issues: parsed.issues } satisfies SpanOpenMeta;
+  if (parsed.underline) state.push("underline_open", "u", 1);
+  if (parsed.style !== undefined) {
+    state.push("textstyle_open", "span", 1).meta = { attrs: parsed.style };
   }
+  state.md.inline.tokenize(state);
+  if (parsed.style !== undefined) state.push("textstyle_close", "span", -1);
+  if (parsed.underline) state.push("underline_close", "u", -1);
+  state.push("span_close", "span", -1);
+
+  state.posMax = max;
   state.pos = braceEnd + 1;
   return true;
 }

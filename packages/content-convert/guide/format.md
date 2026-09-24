@@ -116,7 +116,7 @@ const record = { type: "feeding", at: Date.now() };
 | `weight`    | `light` · `medium` · `heavy`                       | 두께. `jua`는 없음, `gaegu`는 `light`만   |
 | `underline` | (값 없음)                                          | 밑줄                                      |
 
-span 안에는 굵게 · 링크 등을 쓸 수 있다(`[[도움말](/help)]{color=brand}`). 링크 글자 안에 span을 넣으면(`[[글자]{…}](url)`) 링크가 되지 않으니 span을 바깥에 둔다.
+span 안에는 굵게 · 링크 등을 쓸 수 있다(`[[도움말](/help)]{color=brand}`). 링크 글자 안의 span(`[[도움말]{color=brand}](/help)`)도 같은 결과다.
 
 ```example
 오늘의 핵심은 [수면 기록]{color=brand weight=heavy}이다. [아기가 깨면]{highlight=yellow underline} 바로 적는다.
