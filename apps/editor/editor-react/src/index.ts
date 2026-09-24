@@ -20,3 +20,6 @@ export {
 export { decorationPanelStateOf } from "./decoration-state";
 export type { Availability, DecorationPanelState, StickerId } from "./decoration-types";
 export { useCommandRunner } from "./use-command-runner";
+export { EditorScreen } from "./EditorScreen";
+export type { EditorScreenProps } from "./EditorScreen";
+export type { EditorScreenActions, SideTab } from "./screen-types";

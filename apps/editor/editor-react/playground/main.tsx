@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "@blog-editor/content-render/post.css";
 import "../src/editor.css";
+import "../src/editor-screen.css";
 import "./playground.css";
 import { Playground } from "./Playground";
 
