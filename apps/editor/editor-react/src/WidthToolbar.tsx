@@ -128,7 +128,7 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
       {imageAlt !== null && (
         <>
           <span className="width-toolbar-divider" aria-hidden="true" />
-          <ImageAltControl editor={editor} pos={target.pos} alt={imageAlt} />
+          <ImageAltControl key={target.pos} editor={editor} pos={target.pos} alt={imageAlt} />
         </>
       )}
     </div>

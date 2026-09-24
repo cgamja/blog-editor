@@ -6,6 +6,9 @@ import { setImageAlt } from "@blog-editor/editor-core";
 import { IMAGE_INSERT_MESSAGES } from "./image-insert-messages";
 import { useCommandRunner } from "./use-command-runner";
 
+/** 조합 중인 키 입력의 keyCode(IME "Process" 키) */
+const COMPOSING_KEY_CODE = 229;
+
 export interface ImageAltControlProps {
   editor: Editor;
   /** 노드로 고른 그림의 위치와 지금 대체 텍스트 */
@@ -51,8 +54,9 @@ export function ImageAltControl({ editor, pos, alt }: ImageAltControlProps) {
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    // 한글 조합 중 Enter는 조합 확정이다 — 적용하지 않는다
-    if (event.nativeEvent.isComposing) return;
+    // 한글 조합 중 Enter는 조합 확정이다 — 적용하지 않는다. Safari는 확정 Enter에 isComposing을 끄고
+    // keyCode 229만 남긴다 — https://developer.mozilla.org/docs/Web/API/Element/keydown_event#keydown_events_with_ime
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === COMPOSING_KEY_CODE) return;
     if (event.key === "Escape") {
       event.preventDefault();
       closeToButton();
