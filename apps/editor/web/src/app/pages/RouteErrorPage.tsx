@@ -1,5 +1,5 @@
 import { isRouteErrorResponse, useRouteError } from "react-router";
-import { MESSAGES } from "../shared/messages";
+import { MESSAGES } from "../../shared/messages";
 import { NotFoundPage } from "./NotFoundPage";
 
 /**
@@ -15,8 +15,8 @@ export function RouteErrorPage() {
 
   return (
     <main className="app-page">
-      <h1>{MESSAGES.error.title}</h1>
-      <button type="button" onClick={handleRetry}>
+      <h1 className="page-title">{MESSAGES.error.title}</h1>
+      <button type="button" className="app-button" onClick={handleRetry}>
         {MESSAGES.error.retry}
       </button>
     </main>

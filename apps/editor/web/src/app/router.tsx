@@ -1,8 +1,8 @@
 import { createBrowserRouter } from "react-router";
 import { LoginPage, RequireSession } from "../features/auth";
-import { NotFoundPage } from "../pages/NotFoundPage";
-import { PlaceholderPage } from "../pages/PlaceholderPage";
-import { RouteErrorPage } from "../pages/RouteErrorPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { RouteErrorPage } from "./pages/RouteErrorPage";
 import { MESSAGES } from "../shared/messages";
 import { ROUTES } from "../shared/routes/constants";
 
