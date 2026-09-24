@@ -87,6 +87,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
       {layout.boxes.map((box) => {
         // 회전해도 스티커를 덮도록 긴 변 기준 정사각형
         const side = Math.max(box.width, box.height);
+        const isDraggingThis = gesture?.kind === "move" && gesture.box.key === box.key;
         return (
           <button
             key={box.key}
@@ -96,7 +97,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
             aria-label={stickerAriaLabel(box.id)}
             aria-describedby={hintId}
             aria-pressed={sameRef(selection.selected, refOf(box))}
-            data-dragging={gesture?.kind === "move" && gesture.box.key === box.key ? "" : undefined}
+            data-dragging={isDraggingThis ? "" : undefined}
             style={{
               left: box.centerX - side / 2,
               top: box.centerY - side / 2,
