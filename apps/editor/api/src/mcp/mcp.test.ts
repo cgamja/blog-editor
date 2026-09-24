@@ -4,7 +4,7 @@ import type { PostFile } from "@blog-editor/content-schema";
 import { createApp } from "../app";
 import { createMemoryPostStore } from "../memory-store";
 import type { PostStore } from "../store";
-import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../test-app";
+import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../test-app.test.helpers";
 import { hashConnectionToken } from "./connection-tokens";
 import { createMemoryConnectionTokenStore } from "./memory-connection-token-store";
 

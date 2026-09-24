@@ -1,6 +1,6 @@
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
-import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "./test-app";
+import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "./test-app.test.helpers";
 
 const CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const SESSION_TTL_SECONDS = 60 * 60;

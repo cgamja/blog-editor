@@ -4,7 +4,7 @@ import { createPublicPostsResponseSchema, fixtures } from "@blog-editor/content-
 import type { Fixtures, PostFile } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
-import { testAuthOptions } from "./test-app";
+import { testAuthOptions } from "./test-app.test.helpers";
 
 // 사이트 BLOG_CATEGORIES와 같은 목록 — 계약 픽스처의 category가 사이트 enum 안에 있어야 한다
 const SITE_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;

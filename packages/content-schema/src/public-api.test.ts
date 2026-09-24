@@ -1,5 +1,5 @@
 import { createPublicPostsResponseSchema } from "./public-api";
-import { BLOG_CATEGORIES } from "./test-helpers";
+import { BLOG_CATEGORIES } from "./categories.test.helpers";
 
 const schema = createPublicPostsResponseSchema({ categories: BLOG_CATEGORIES });
 

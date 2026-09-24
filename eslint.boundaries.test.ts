@@ -104,7 +104,12 @@ const cases: { dir: string; forbidden: string[]; allowed: string[] }[] = [
 ];
 
 /** 테스트 · 생성기 파일도 패키지 경계는 그대로다 — testing 진입점만 풀린다. */
-const PROBE_FILES = ["__probe__.ts", "__probe__.test.ts", "__probe__.arbitrary.ts"];
+const PROBE_FILES = [
+  "__probe__.ts",
+  "__probe__.test.ts",
+  "__probe__.arbitrary.ts",
+  "__probe__.test.helpers.ts",
+];
 
 describe.each(cases)("import 경계: $dir", ({ dir, forbidden, allowed }) => {
   const filePath = `${dir}/src/__probe__.ts`;
@@ -164,6 +169,7 @@ describe("import 경계: 생성기(fast-check)는 런타임 파일에 들어오�
   it.each([
     "packages/content-convert/src/__probe__.test.ts",
     "packages/content-render/src/__probe__.arbitrary.ts",
+    "apps/editor/editor-core/src/__probe__.test.helpers.ts",
     "__probe__.test.ts",
   ])("테스트 · 생성기 파일 %s에서는 생성기 import가 통과한다", async (filePath) => {
     expect(await restrictedImports(filePath, GENERATORS)).toEqual([]);
