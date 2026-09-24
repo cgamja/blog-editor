@@ -9,6 +9,12 @@ export {
 export type { AppScreenshotInput } from "./commands/custom-blocks";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
+export {
+  wrapInBlockquote,
+  wrapInBulletList,
+  wrapInCallout,
+  wrapInOrderedList,
+} from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
 export {
   normalizePastedSlice,
