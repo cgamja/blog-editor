@@ -17,3 +17,7 @@ export async function fetchPosts(): Promise<PostSummary[]> {
   }
   return (body as { posts: PostSummary[] }).posts;
 }
+
+export function parsePostList(body: unknown): PostSummary[] {
+  throw new Error(`미구현: ${typeof body}`);
+}

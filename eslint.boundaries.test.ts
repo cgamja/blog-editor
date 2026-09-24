@@ -216,6 +216,29 @@ describe("import 경계: web 안의 층(app → features → shared)", () => {
     expect(results).toEqual([[], [], []]);
   });
 
+  it.each([
+    [`${WEB}/features/posts/__probe__.ts`, "../../app/router"],
+    [`${WEB}/features/posts/pages/__probe__.tsx`, "../../../app/query-client"],
+    [`${WEB}/features/posts/__probe__.ts`, "../auth"],
+    [`${WEB}/features/posts/components/__probe__.tsx`, "../../auth/session-cache"],
+    [`${WEB}/features/posts/hooks/__probe__.test.ts`, "../../auth"],
+  ])(
+    "WHEN 기능(%s)이 app이나 다른 기능을 import하면(%s) THEN 막힌다",
+    async (filePath, specifier) => {
+      expect((await restrictedImports(filePath, [specifier])).length).toBeGreaterThanOrEqual(1);
+    },
+  );
+
+  it("WHEN 기능이 shared와 자기 파일을 import하면 THEN 통과한다", async () => {
+    expect(
+      await restrictedImports(`${WEB}/features/posts/pages/__probe__.tsx`, [
+        "../../../shared/routes/constants",
+        "../components/PostTable",
+        "../constants",
+      ]),
+    ).toEqual([]);
+  });
+
   // 화면 자리를 층 밖에 따로 두지 않는다 — 기능의 화면은 features/<이름>/pages, 기능에 속하지 않는
   // 화면(404 · 오류 · 앱 틀)은 app 아래. 최상위 pages/는 어느 층인지 모호해 import 방향 규칙이 걸리지 않는다
   it("WHEN web src 최상위 폴더를 읽으면 THEN app · features · shared · styles뿐이다", () => {

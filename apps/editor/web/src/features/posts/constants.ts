@@ -1,5 +1,8 @@
 import type { ListDialog, PostTab } from "./types";
 
+export const POST_SUMMARY_KEYS: readonly string[] = [];
+export const POST_SUMMARY_OPTIONAL_KEYS: readonly string[] = [];
+
 export const POSTS_QUERY_KEY = ["posts"] as const;
 export const POSTS_PATH = "/api/posts";
 
