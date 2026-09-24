@@ -76,6 +76,26 @@ describe("workspace-settings-api — 가이드 읽기 · 쓰기", () => {
   });
 });
 
+describe("workspace-settings-api — 세션", () => {
+  it("WHEN 가이드를 저장해 둔 뒤 세션 쿠키 없이 다른 가이드로 저장하면 THEN 401이고 가이드가 그대로다", async () => {
+    const app = createApp({
+      store: createMemoryPostStore(),
+      categories: CATEGORIES,
+      imageBaseUrl: "https://example.com",
+      ...testAuthOptions,
+    });
+    const client = withSession(app);
+    await client.request(PATH, putJson({ guide: "앞서 저장한 가이드" }));
+
+    const anonymous = await app.request(PATH, putJson({ guide: "몰래 바꾼 가이드" }));
+
+    expect(anonymous.status).toBe(401);
+    expect(await (await client.request(PATH)).json()).toMatchObject({
+      guide: "앞서 저장한 가이드",
+    });
+  });
+});
+
 describe("workspace-settings-api — 연결 주소", () => {
   it("WHEN 발급자 https://editor.example.com으로 OAuth를 켠 앱의 설정을 읽으면 THEN 연결 주소가 <발급자>/mcp다", async () => {
     const token = "t".repeat(64);

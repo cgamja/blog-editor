@@ -1,5 +1,11 @@
 import { SCHEMA_VERSION, fixtures } from "@blog-editor/content-schema";
-import { buildImportedPost, canCreateDraft, suggestSlug } from "./import-draft";
+import { MARKDOWN_FILE_MAX_BYTES } from "./constants";
+import {
+  buildImportedPost,
+  canCreateDraft,
+  markdownFileProblem,
+  suggestSlug,
+} from "./import-draft";
 import type { DraftInput, ImportPreview } from "./types";
 
 const INPUT: DraftInput = {
@@ -52,5 +58,15 @@ describe("web-import — 가져오기는 미리보기가 통과한 것만 초안
       canCreateDraft(CONVERTED, { ...INPUT, title: "  " }),
       canCreateDraft(CONVERTED, INPUT),
     ]).toEqual([false, false, false, false, true]);
+  });
+});
+
+describe("web-import — 가져올 파일은 마크다운 확장자와 크기 상한 안만 읽는다", () => {
+  it("WHEN note.MD(작음) · note.txt · 상한을 넘는 big.md를 거르면 THEN 차례로 통과 · 확장자 문제 · 크기 문제다", () => {
+    expect([
+      markdownFileProblem({ name: "note.MD", size: 10 }),
+      markdownFileProblem({ name: "note.txt", size: 10 }),
+      markdownFileProblem({ name: "big.md", size: MARKDOWN_FILE_MAX_BYTES + 1 }),
+    ]).toEqual([null, "extension", "size"]);
   });
 });

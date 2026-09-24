@@ -5,6 +5,10 @@ export const IMPORT_PREVIEW_PATH = "/api/import/preview";
 export const POSTS_PATH = "/api/posts";
 export const IMPORT_PREVIEW_QUERY_KEY = "import-preview";
 export const MARKDOWN_FILE_ACCEPT = ".md,.markdown,text/markdown";
+export const MARKDOWN_FILE_EXTENSIONS: readonly string[] = [".md", ".markdown"];
+/** 서버 markdown 상한(api input-limits `MAX_MARKDOWN_LENGTH` 200,000자) × UTF-8 한 글자 최대 4바이트 */
+export const MARKDOWN_MAX_LENGTH = 200_000;
+export const MARKDOWN_FILE_MAX_BYTES = MARKDOWN_MAX_LENGTH * 4;
 /** 입력을 멈춘 뒤 미리보기를 부르기까지(ms) — 타자마다 변환하지 않는다 */
 export const PREVIEW_DEBOUNCE_MS = 400;
 /** 글 날짜는 블로그 독자 기준(API mcp/route.ts와 같다) — en-CA 로캘이 YYYY-MM-DD로 쓴다 */

@@ -1,4 +1,4 @@
-import { HTTP_UNAUTHORIZED } from "./constants";
+import { HTTP_CONFLICT, HTTP_UNAUTHORIZED } from "./constants";
 
 /** API가 거절한 요청 — `userMessage`는 API가 본문 `message`로 보낸 사용자용 문장(없으면 null). */
 export class ApiError extends Error {
@@ -21,5 +21,16 @@ export class UnauthorizedError extends ApiError {
   constructor(userMessage: string | null = null) {
     super(HTTP_UNAUTHORIZED, userMessage);
     this.name = "UnauthorizedError";
+  }
+}
+
+/**
+ * 조건부 저장이 어긋났다(409) — 고치기면 다른 곳에서 먼저 저장했고, 새 글이면 그 주소에 글이 있다.
+ * 화면은 `instanceof ConflictError`로 가른다(.claude/rules/state.md).
+ */
+export class ConflictError extends ApiError {
+  constructor(userMessage: string | null = null) {
+    super(HTTP_CONFLICT, userMessage);
+    this.name = "ConflictError";
   }
 }

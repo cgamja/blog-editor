@@ -1,4 +1,4 @@
-import { ApiError, UnauthorizedError } from "./errors";
+import { ApiError, ConflictError, UnauthorizedError } from "./errors";
 import { apiRequest } from "./http";
 
 const respond = (response: Response) =>
@@ -42,5 +42,11 @@ describe("apiRequest — API 요청 도우미는 401과 그 밖의 실패를 오
     respond(new Response(null, { status: 204 }));
 
     expect((await apiRequest("/api/session", { method: "DELETE" })).status).toBe(204);
+  });
+
+  it("WHEN 409를 받는다 THEN ConflictError다", async () => {
+    respond(new Response(JSON.stringify({ message: "다른 곳에서 수정됐다" }), { status: 409 }));
+
+    await expect(apiRequest("/api/posts/a")).rejects.toBeInstanceOf(ConflictError);
   });
 });

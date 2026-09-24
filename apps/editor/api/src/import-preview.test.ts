@@ -71,3 +71,29 @@ describe("import-preview-api — 변환 결과만 돌려주고 저장하지 않�
     expect([notJson.status, missing.status, tooLong.status]).toEqual([400, 400, 400]);
   });
 });
+
+describe("import-preview-api — 제안 길이 · 세션", () => {
+  it("WHEN 79자 뒤에 그림 문자(서로게이트 쌍)가 오는 제목 블록이면 THEN 제안 제목이 앞 79자이고 짝 없는 서로게이트가 없다", async () => {
+    const { client } = setup();
+    const head = "가".repeat(79);
+
+    const res = await client.request(PATH, postJson({ markdown: `## ${head}😀끝\n\n문단` }));
+    const body = (await res.json()) as { suggested: { title: string } };
+
+    // 앞 79자와 정확히 같다 = 서로게이트 한쪽(80번째 UTF-16 단위)이 남지 않았다
+    expect(body.suggested.title).toBe(head);
+  });
+
+  it("WHEN 세션 쿠키 없이 맞는 markdown으로 부르면 THEN 401이다", async () => {
+    const app = createApp({
+      store: createMemoryPostStore(),
+      categories: ["studio"],
+      imageBaseUrl: "https://example.com",
+      ...testAuthOptions,
+    });
+
+    const res = await app.request(PATH, postJson({ markdown: "문단" }));
+
+    expect(res.status).toBe(401);
+  });
+});
