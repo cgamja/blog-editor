@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
-import { setBlockWidth } from "@blog-editor/editor-core";
-import { WIDTH_PRESETS } from "./decoration-constants";
+import { NodeSelection } from "@tiptap/pm/state";
+import { alignOf, setBlockAlign, setBlockWidth } from "@blog-editor/editor-core";
+import { AlignIcon } from "./AlignIcon";
+import { ALIGN_OPTIONS, WIDTH_PRESETS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
 import { widthTargetOf } from "./decoration-state";
 import { useCommandRunner } from "./use-command-runner";
@@ -23,6 +25,14 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
   const target = useEditorState({
     editor,
     selector: ({ editor: current }) => widthTargetOf(current.state),
+  });
+  // 정렬도 도구줄 대상(노드 선택한 그림 · 스크린샷)의 지금 모양 — 대상이 없으면 쓰이지 않는다
+  const align = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const { selection } = current.state;
+      return selection instanceof NodeSelection ? alignOf(selection.node) : null;
+    },
   });
   const run = useCommandRunner(editor);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -92,6 +102,18 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
         </button>
       ))}
       <span className="width-toolbar-value">{decorationMessages.widthValue(target.value)}</span>
+      <span className="width-toolbar-divider" aria-hidden="true" />
+      {ALIGN_OPTIONS.map(({ value, label }) => (
+        <button
+          key={value}
+          type="button"
+          aria-label={decorationMessages.alignButton(label)}
+          aria-pressed={align === value}
+          onClick={() => run(setBlockAlign(value))}
+        >
+          <AlignIcon align={value} />
+        </button>
+      ))}
     </div>
   );
 }

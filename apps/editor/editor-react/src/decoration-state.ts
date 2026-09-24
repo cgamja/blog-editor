@@ -2,6 +2,7 @@ import type { Node } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
 import type { EditorState } from "@tiptap/pm/state";
 import {
+  ALIGNS,
   FONTS,
   MAX_STICKERS_PER_DOC,
   MOTIONS,
@@ -10,8 +11,10 @@ import {
 } from "@blog-editor/content-schema";
 import {
   addSticker,
+  alignOf,
   canHoldDecoration,
   selectedTopBlocks,
+  setBlockAlign,
   setBlockFont,
   setBlockMotion,
   setBlockWidth,
@@ -94,8 +97,12 @@ export function decorationPanelStateOf(state: EditorState): DecorationPanelState
         ? ENABLED
         : blockedBy(blocks, "motion", decorationMessages.cannotHoldMotion),
     },
-    // 스텁 — 구현은 다음 커밋
-    align: { value: null, availability: blocked("미구현") },
+    align: {
+      value: first === undefined ? null : alignOf(first),
+      availability: setBlockAlign(ALIGNS[0])(state)
+        ? ENABLED
+        : blockedBy(blocks, "align", decorationMessages.cannotHoldAlign),
+    },
     sticker: { count, availability: stickerAvailability(state, first !== undefined, count) },
     width: widthTargetOf(state),
   };

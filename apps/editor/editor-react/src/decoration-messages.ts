@@ -13,6 +13,9 @@ export const decorationMessages = {
   stickerLimit: `스티커는 글 하나에 ${String(MAX_STICKERS_PER_DOC)}개까지예요`,
   cannotHoldFont: (block: string) => `${block}에는 글씨체를 줄 수 없어요`,
   cannotHoldMotion: (block: string) => `${block}에는 움직임을 줄 수 없어요`,
+  alignLegend: "정렬",
+  cannotHoldAlign: (block: string) => `${block}에는 정렬을 줄 수 없어요`,
+  alignButton: (label: string) => `${label} 정렬`,
   multipleBlocks: (count: number) => `블록 ${String(count)}개`,
   targetLine: (label: string | null) =>
     label === null ? "고른 블록 없음" : `고른 블록 · ${label}`,
