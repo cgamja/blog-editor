@@ -1,0 +1,37 @@
+/* 생성 파일 — 고치지 말고 design/tokens.json을 바꾼 뒤 `pnpm --filter @blog-editor/web tokens`. */
+
+:root {
+  --paper: #fbf6ef;
+  --paper-deep: #f3eee7;
+  --surface: #ffffff;
+  --surface-2: #fbf3ee;
+  --line: #e4d9cf;
+  --line-soft: #f0e3dc;
+  --ink: #3a2b26;
+  --ink-mid: #5f514b;
+  --ink-soft: #7b6b64;
+  --brand-ink: #b0552f;
+  --brand-ink-deep: #8f4424;
+  --brand-soft: #ffede6;
+  --accent-soft: #eaf5ee;
+  --accent-ink: #2a4f41;
+  --accent-ink-badge: #2f6350;
+  --postit: #fff1cc;
+  --postit-ink: #5a4632;
+  --danger-ink: #a3341f;
+  --toolbar: #3a2b26;
+  --font-sans: "IBM Plex Sans KR", sans-serif;
+  --font-display: "Jua", sans-serif;
+  --font-hand: "Gaegu", sans-serif;
+  --control-height: 2.75rem;
+  --dialog-button-height: 3rem;
+  --radius-input: 0.5rem;
+  --radius-button: 0.625rem;
+  --radius-card: 0.875rem;
+  --radius-pill: 62.4375rem;
+  --nav-width: 13.75rem;
+  --side-panel-width: 20rem;
+  --article-width: 47.5rem;
+  --article-padding-x: 5rem;
+  --brand: var(--brand-ink);
+}
