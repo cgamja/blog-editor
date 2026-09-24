@@ -7,3 +7,4 @@ export {
   setCalloutTone,
 } from "./commands/custom-blocks";
 export type { AppScreenshotInput } from "./commands/custom-blocks";
+export { blockGuard } from "./plugins/block-guard";
