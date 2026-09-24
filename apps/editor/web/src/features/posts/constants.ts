@@ -1,7 +1,17 @@
-import type { ListDialog, PostTab } from "./types";
+import type { ListDialog, PostSummary, PostTab } from "./types";
 
-export const POST_SUMMARY_KEYS: readonly string[] = [];
-export const POST_SUMMARY_OPTIONAL_KEYS: readonly string[] = [];
+/** 목록 한 줄의 필수 · 선택 키 — api.test.ts가 계약 PostList 항목의 required · properties와 견준다 */
+export const POST_SUMMARY_KEYS = [
+  "slug",
+  "title",
+  "date",
+  "category",
+  "draft",
+  "source",
+] as const satisfies readonly (keyof PostSummary)[];
+export const POST_SUMMARY_OPTIONAL_KEYS = [
+  "updated",
+] as const satisfies readonly (keyof PostSummary)[];
 
 export const POSTS_QUERY_KEY = ["posts"] as const;
 export const POSTS_PATH = "/api/posts";

@@ -18,8 +18,8 @@ export function countByTab(posts: readonly PostSummary[]): TabCounts {
 
 export function postsOfTab(posts: readonly PostSummary[], tab: PostTab): PostSummary[] {
   if (tab === "all") return [...posts];
-  const wantDraft = tab === "draft";
-  return posts.filter(({ draft }) => draft === wantDraft);
+  const isDraftTab = tab === "draft";
+  return posts.filter(({ draft }) => draft === isDraftTab);
 }
 
 const lastEditedOf = ({ updated, date }: PostSummary) => updated ?? date;

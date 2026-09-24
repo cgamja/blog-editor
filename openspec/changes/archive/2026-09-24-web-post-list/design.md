@@ -46,7 +46,7 @@ errorElement
 
 ## 4. 로그아웃
 
-`logout(client)`: `DELETE /api/session`(apiRequest) → `navigate(/login, replace)` → `markSignedOut(client)` = `client.clear()` 뒤 세션 캐시를 `anonymous`로. 이동을 먼저 해야 가드가 지금 경로를 `next`로 붙이지 않는다. DELETE가 실패해도(네트워크) 쿠키는 남지만 화면은 로그인 화면으로 간다 — 서버가 멱등이라 다음 로그인이 덮는다.
+`useLogout`: `DELETE /api/session`(apiRequest)이 **성공하면** `navigate(/login, replace)` → `markSignedOut(client)` = `client.clear()` 뒤 세션 캐시를 `anonymous`로. 이동을 먼저 해야 가드가 지금 경로를 `next`로 붙이지 않는다. DELETE가 실패하면(네트워크 · 5xx) 쿠키가 아직 유효하므로 화면도 세션도 그대로 두고, 메뉴의 `LogoutButton`이 "로그아웃하지 못했어요"와 다시 시도를 보인다 — 로그인 화면으로 보내면 로그아웃된 줄 알고 자리를 뜬다(PR #104 리뷰에서 바꿈, web-post-list-review).
 
 ## 5. 대화상자 자리(#98 연결점)
 
@@ -54,4 +54,4 @@ errorElement
 
 ## 6. 스타일
 
-`app.css`에 화면별 절을 더한다. 색 · 글꼴 · 반경 · 높이는 tokens.css 변수, 간격은 app.css 머리의 `--app-space-*`. 표는 CSS grid(Figma 66:2의 열 너비 140 · 110 · 110)이고 768 이하에서는 카테고리 · 고친 날 열을 접는다. 글꼴은 플레이그라운드처럼 Google Fonts(IBM Plex Sans KR · Jua · Gaegu)를 index.html에서 불러온다.
+`app.css`에 화면별 절을 더한다. 색 · 글꼴 · 글자 크기 · 반경 · 높이 · 간격 · 그림자는 생성 토큰(tokens.css) 변수만 쓴다(#102 간격 토큰, 글자 크기 · 그림자는 web-post-list-review). 표는 `<table>`(`thead` 열 머리 `scope="col"`)이고 열 너비는 내용이 정한다 — 캔버스 66:2의 grid 열 너비(140 · 110 · 110)는 옮기지 않았다. 48rem(768px) 이하에서는 카테고리 열만 접고 고친 날은 남긴다. 글꼴은 플레이그라운드처럼 Google Fonts(IBM Plex Sans KR · Jua · Gaegu)를 index.html에서 불러온다.

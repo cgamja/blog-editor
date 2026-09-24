@@ -7,12 +7,13 @@ import { MESSAGES } from "../../../shared/messages";
 import { NEXT_PARAM } from "../../../shared/routes/constants";
 import { safeNextPath } from "../../../shared/routes/next-path";
 import { login } from "../api";
+import { AUTH_MESSAGES } from "../messages";
 import { markSignedIn } from "../session-cache";
 
 function loginErrorMessage(error: Error | null): string | null {
   if (error === null) return null;
   if (error instanceof ApiError && error.userMessage !== null) return error.userMessage;
-  return MESSAGES.login.failed;
+  return AUTH_MESSAGES.login.failed;
 }
 
 /**
@@ -57,10 +58,10 @@ export function LoginPage() {
           <span className="brand-sub">{MESSAGES.appTitle}</span>
         </div>
         <h1 id={titleId} className="visually-hidden">
-          {MESSAGES.login.title}
+          {AUTH_MESSAGES.login.title}
         </h1>
         <div className="field">
-          <label htmlFor={usernameId}>{MESSAGES.login.username}</label>
+          <label htmlFor={usernameId}>{AUTH_MESSAGES.login.username}</label>
           <input
             ref={usernameRef}
             id={usernameId}
@@ -74,7 +75,7 @@ export function LoginPage() {
           />
         </div>
         <div className="field">
-          <label htmlFor={passwordId}>{MESSAGES.login.password}</label>
+          <label htmlFor={passwordId}>{AUTH_MESSAGES.login.password}</label>
           <input
             id={passwordId}
             name="password"
@@ -88,7 +89,7 @@ export function LoginPage() {
           />
           {hasError ? (
             <p id={errorId} className="field__error" role="alert">
-              <span>{errorMessage}</span> <span>{MESSAGES.login.lockNotice}</span>
+              <span>{errorMessage}</span> <span>{AUTH_MESSAGES.login.lockNotice}</span>
             </p>
           ) : null}
         </div>
@@ -97,7 +98,7 @@ export function LoginPage() {
           className="app-button app-button--primary app-button--full"
           disabled={submit.isPending}
         >
-          {submit.isPending ? MESSAGES.login.submitting : MESSAGES.login.submit}
+          {submit.isPending ? AUTH_MESSAGES.login.submitting : AUTH_MESSAGES.login.submit}
         </button>
       </form>
     </main>

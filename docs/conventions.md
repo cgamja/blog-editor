@@ -13,6 +13,8 @@
   - `features/<이름>/` — 기능 하나(auth · posts …)의 api · hooks · components · **pages** · constants · types. 밖에서는 `features/<이름>`(index.ts)만 import한다
   - `app/` — 여러 기능을 조합하는 곳: 라우터 · QueryClient · 앱 틀(`app/layout`) · 기능에 속하지 않는 화면(`app/pages`: 404 · 오류 · 자리 표시)
   - `shared/` — 기능을 모르는 것: 요청 도우미 · 경로 상수 · 공통 문장
+  - 서버 상태 쿼리 훅(`usePosts` 등)은 `features/<이름>/hooks/`에 둔다 — 요청 함수(`api.ts`)와 같은 기능 안
+- 기능끼리는 import하지 않는다(index도). 필요하면 app이 조합하거나 shared로 내린다. eslint web 층 블록이 기능 → app · 다른 기능을 막는다
 - 왜 최상위 `pages/`를 두지 않나: 화면 폴더가 층 밖에 있으면 어느 방향으로 import해도 되는지 규칙이 걸리지 않는다(#96 사용자 결정). 기능의 화면은 그 기능 안에, 조합은 app에 둔다
 - 정본: `eslint.config.mjs`의 web 층 블록 + `eslint.boundaries.test.ts`(막는 모양과 최상위 폴더 목록을 열거한다)
 

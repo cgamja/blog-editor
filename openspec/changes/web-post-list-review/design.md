@@ -12,7 +12,7 @@
 
 - `font` 그룹의 px 값(ui 15 · caption 13 · h2 25 + 새 row-title 16 · note 17 · brand 24 · page-title 34) → `--font-size-<이름>`(rem). `h1`("34-36px")은 범위라 건너뛴다 — 목록 · AI 연결 제목은 캔버스 66:2 · 70:2가 34px라 `page-title`로 둔다
 - `shadow` 그룹: `"<x> <y> <blur> [<spread>] <색 토큰 이름> <불투명도>%"`, 여러 겹은 `, `. → `x y blur spread color-mix(in srgb, var(--<색>) N%, transparent)`. 색 이름이 color 그룹에 없거나 모양이 다르면 생성이 멈춘다. 캔버스의 `rgba(58, 43, 38, a)`는 `ink`(#3a2b26)다
-  - `paper` = 68:2 글 종이(`0 18px 40px -18px ink 35%, 0 2px 6px ink 8%`) — 로그인 카드("종이 위 카드")
+  - `paper` · `paper-contact` = 68:2 글 종이의 두 겹(`0 18px 40px -18px ink 35%` · `0 2px 6px ink 8%`) — 로그인 카드("종이 위 카드"). 여러 겹 값은 prettier가 줄을 나눠 생성본과 어긋나므로 한 토큰에 한 겹만 두고 쓰는 쪽이 `var(--shadow-paper), var(--shadow-paper-contact)`로 잇는다
   - `note` = 68:2 포스트잇(`0 6px 12px -4px ink 25%`) — 빈 목록 안내
   - `note-tag` = 66:2 "AI가 올린 초안"(`0 2px 4px ink 12%`)
 - 토큰이 아닌 값은 app.css 머리에 이름을 붙여 둔다: 포스트잇 줄 간격 1.35(68:2 포스트잇), 로그인 카드 · 빈 목록 글 폭(결정 아티팩트 1 · 2의 모형 300 · 320px을 실제 화면 폭으로 맞춘 값). 제목 줄 간격은 캔버스가 정하지 않아(normal) 지운다

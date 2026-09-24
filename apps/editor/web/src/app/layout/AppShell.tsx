@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router";
-import { useLogout } from "../../features/auth";
+import { LogoutButton } from "../../features/auth";
 import { MESSAGES } from "../../shared/messages";
 import { NAV_ITEMS } from "./nav-items";
 
@@ -8,10 +8,6 @@ import { NAV_ITEMS } from "./nav-items";
  * `NavLink`가 지금 화면 항목에 `aria-current="page"`를 붙인다.
  */
 export function AppShell() {
-  const logout = useLogout();
-
-  const handleLogout = () => logout.mutate();
-
   return (
     <div className="app-shell">
       <nav className="app-nav" aria-label={MESSAGES.nav.label}>
@@ -26,14 +22,7 @@ export function AppShell() {
             </NavLink>
           ))}
         </div>
-        <button
-          type="button"
-          className="app-nav__logout"
-          onClick={handleLogout}
-          disabled={logout.isPending}
-        >
-          {logout.isPending ? MESSAGES.nav.loggingOut : MESSAGES.nav.logout}
-        </button>
+        <LogoutButton />
       </nav>
       <main className="app-main">
         <Outlet />

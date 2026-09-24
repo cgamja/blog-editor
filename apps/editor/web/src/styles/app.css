@@ -1,18 +1,15 @@
 /*
- * 앱 공통 바탕과 화면별 모양. 간격 · 선 두께 · 포커스 고리는 생성 토큰(tokens.css, #101)을 쓴다.
- * 글자 크기와 그림자는 아직 토큰이 없다 — tokens.json `font.ui` · `font.caption` · `font.h1`(설명 문자열)과
- * 캔버스 66:2 값을 여기 한 곳에 옮겼다.
+ * 앱 공통 바탕과 화면별 모양. 색 · 글꼴 · 글자 크기 · 간격 · 선 · 그림자는 생성 토큰(tokens.css)만 쓴다.
+ * 아래는 토큰이 아닌 값 — 디자인이 정했지만 척도가 아니라 한 곳에서만 쓰는 것이라 이름과 출처만 붙인다.
  */
 :root {
-  --app-font-caption: 0.8125rem;
-  --app-font-ui: 0.9375rem;
-  --app-font-row-title: 1rem;
-  --app-font-note: 1.0625rem;
-  --app-font-brand: 1.5rem;
-  --app-font-h1: 2.125rem;
-  --app-shadow-card: 0 1.125rem 2.5rem -1.5rem rgb(58 43 38 / 35%);
-  --app-shadow-note: 0 0.125rem 0.25rem rgb(58 43 38 / 12%);
+  /* 캔버스 68:2 종이 위 포스트잇의 줄 간격 */
+  --app-leading-note: 1.35;
+  /* 캔버스 66:2 "AI가 올린 초안"의 rotate(-2deg) */
   --app-note-tilt: -2deg;
+  /* 결정 아티팩트 1 · 2의 모형(300 · 320px)을 실제 화면에서 두 줄 안에 들도록 맞춘 폭 */
+  --app-login-card-width: 22rem;
+  --app-empty-text-width: 22rem;
 }
 
 body {
@@ -20,7 +17,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: var(--app-font-ui);
+  font-size: var(--font-size-ui);
 }
 
 :focus-visible {
@@ -45,9 +42,8 @@ a {
 .page-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--app-font-h1);
+  font-size: var(--font-size-page-title);
   font-weight: 400;
-  line-height: 1.25;
 }
 
 .app-page {
@@ -116,13 +112,13 @@ a {
 
 .brand-logo {
   font-family: var(--font-display);
-  font-size: var(--app-font-brand);
+  font-size: var(--font-size-brand);
   line-height: 1;
   color: var(--brand-ink);
 }
 
 .brand-sub {
-  font-size: var(--app-font-caption);
+  font-size: var(--font-size-caption);
   color: var(--ink-soft);
 }
 
@@ -134,11 +130,15 @@ a {
   background: var(--postit);
   color: var(--postit-ink);
   font-family: var(--font-hand);
-  font-size: var(--app-font-note);
+  font-size: var(--font-size-note);
   font-weight: 700;
-  line-height: 1.3;
+  line-height: var(--app-leading-note);
   transform: rotate(var(--app-note-tilt));
-  box-shadow: var(--app-shadow-note);
+  box-shadow: var(--shadow-note-tag);
+}
+
+.postit--note {
+  box-shadow: var(--shadow-note);
 }
 
 .postit--tag {
@@ -162,12 +162,12 @@ a {
   gap: var(--space-12);
   box-sizing: border-box;
   width: 100%;
-  max-width: 22rem;
+  max-width: var(--app-login-card-width);
   padding: var(--space-22);
   border: var(--border-width) solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--app-shadow-card);
+  box-shadow: var(--shadow-paper), var(--shadow-paper-contact);
 }
 
 .login-card__brand {
@@ -180,7 +180,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  font-size: var(--app-font-caption);
+  font-size: var(--font-size-caption);
   font-weight: 500;
   color: var(--ink-mid);
 }
@@ -193,7 +193,7 @@ a {
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: var(--app-font-ui);
+  font-size: var(--font-size-ui);
   font-weight: 400;
 }
 
@@ -261,10 +261,23 @@ a {
   font-weight: 600;
 }
 
-.app-nav__logout {
-  align-self: flex-start;
-  min-height: var(--control-height);
+.logout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
   padding: 0 var(--space-14);
+}
+
+.logout__error {
+  margin: 0;
+  color: var(--danger-ink);
+  font-size: var(--font-size-caption);
+}
+
+.logout__button {
+  min-height: var(--control-height);
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--ink-soft);
@@ -272,7 +285,7 @@ a {
   cursor: pointer;
 }
 
-.app-nav__logout:hover {
+.logout__button:hover {
   color: var(--brand-ink);
 }
 
@@ -329,7 +342,7 @@ a {
 }
 
 .post-tab__count {
-  font-size: var(--app-font-caption);
+  font-size: var(--font-size-caption);
   font-weight: 400;
   color: var(--ink-soft);
 }
@@ -349,7 +362,7 @@ a {
   border-bottom: var(--border-width) solid var(--line-soft);
   background: var(--surface-2);
   color: var(--ink-soft);
-  font-size: var(--app-font-caption);
+  font-size: var(--font-size-caption);
   font-weight: 400;
   text-align: left;
 }
@@ -365,7 +378,7 @@ a {
 }
 
 .post-table__title {
-  font-size: var(--app-font-row-title);
+  font-size: var(--font-size-row-title);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -389,7 +402,7 @@ a {
   border-radius: var(--radius-pill);
   background: var(--paper-deep);
   color: var(--ink-mid);
-  font-size: var(--app-font-caption);
+  font-size: var(--font-size-caption);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -415,7 +428,7 @@ a {
 }
 
 .post-empty__body {
-  max-width: 22rem;
+  max-width: var(--app-empty-text-width);
   margin: 0;
   color: var(--ink-mid);
 }
@@ -450,7 +463,8 @@ a {
     padding: var(--space-24) var(--space-16);
   }
 
-  .post-table__optional {
+  /* 좁으면 카테고리만 접는다 — 고친 날은 목록에서 글을 고르는 기준이라 남긴다 */
+  .post-table__category {
     display: none;
   }
 

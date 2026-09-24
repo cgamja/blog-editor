@@ -7,7 +7,7 @@ import { DIALOG_PARAM, TAB_PARAM } from "../constants";
 import { usePosts } from "../hooks/use-posts";
 import { POSTS_MESSAGES } from "../messages";
 import { countByTab, listDialogOf, postsOfTab, sortByLastEdited, tabOf } from "../post-list";
-import type { ListDialogComponents } from "../types";
+import type { ListDialogComponents, PostSummary, PostTab } from "../types";
 
 const NO_DIALOGS: ListDialogComponents = {};
 
@@ -28,12 +28,12 @@ export function PostListPage({ dialogs = NO_DIALOGS }: PostListPageProps) {
       </p>
     );
   }
-  if (posts.isError) throw posts.error;
+  // 첫 불러오기 실패만 오류 경계로 — 뒤에서 다시 불러오기가 실패해도 보던 목록(data)은 남긴다
+  if (posts.data === undefined) throw posts.error;
 
-  const tab = tabOf(searchParams.get(TAB_PARAM));
+  const isEmpty = posts.data.length === 0;
   const openDialog = listDialogOf(searchParams.get(DIALOG_PARAM));
   const Dialog = openDialog === null ? undefined : dialogs[openDialog];
-  const visible = sortByLastEdited(postsOfTab(posts.data, tab));
 
   const handleCloseDialog = () =>
     setSearchParams(
@@ -48,22 +48,39 @@ export function PostListPage({ dialogs = NO_DIALOGS }: PostListPageProps) {
     <div className="post-list">
       <header className="post-list__header">
         <h1 className="page-title">{POSTS_MESSAGES.title}</h1>
-        <ListActions dialogs={dialogs} order="header" />
+        {/* 빈 목록은 안내 안에 같은 세 동작이 있다 — 두 번 보이지 않게 머리에서는 뺀다 */}
+        {isEmpty ? null : <ListActions dialogs={dialogs} order="header" />}
       </header>
-      {posts.data.length === 0 ? (
-        <EmptyPosts dialogs={dialogs} />
+      {isEmpty ? (
+        <EmptyPosts>
+          <ListActions dialogs={dialogs} order="empty" />
+        </EmptyPosts>
       ) : (
-        <>
-          <PostTabs current={tab} counts={countByTab(posts.data)} />
-          {visible.length === 0 ? (
-            <p className="post-list__empty-tab">{POSTS_MESSAGES.emptyTab[tab]}</p>
-          ) : (
-            <PostTable posts={visible} />
-          )}
-        </>
+        <PostListBody posts={posts.data} tab={tabOf(searchParams.get(TAB_PARAM))} />
       )}
       <p className="post-list__footer">{POSTS_MESSAGES.footer}</p>
       {Dialog === undefined ? null : <Dialog onClose={handleCloseDialog} />}
     </div>
+  );
+}
+
+/** 글이 있을 때의 탭 · 표. 고른 탭만 비면 한 줄 */
+function PostListBody({ posts, tab }: { posts: readonly PostSummary[]; tab: PostTab }) {
+  const visible = sortByLastEdited(postsOfTab(posts, tab));
+  const tabs = <PostTabs current={tab} counts={countByTab(posts)} />;
+
+  if (visible.length === 0) {
+    return (
+      <>
+        {tabs}
+        <p className="post-list__empty-tab">{POSTS_MESSAGES.emptyTab[tab]}</p>
+      </>
+    );
+  }
+  return (
+    <>
+      {tabs}
+      <PostTable posts={visible} />
+    </>
   );
 }

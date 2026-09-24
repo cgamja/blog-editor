@@ -5,16 +5,16 @@ import { logout } from "../api";
 import { markSignedOut } from "../session-cache";
 
 /**
- * 로그아웃 — 로그인 화면으로 먼저 옮긴 뒤 캐시를 비운다. 순서가 반대면 가드가 지금 경로를 `next`로 붙여
- * 다음 로그인이 로그아웃했던 화면으로 돌아간다. 요청이 실패해도(네트워크) 화면은 로그인으로 간다 —
- * 서버 쪽은 멱등이라 다음 로그인이 쿠키를 덮는다.
+ * 로그아웃 — 서버가 쿠키를 지웠을 때만 로그인 화면으로 옮기고 캐시를 비운다. 이동을 먼저 해야 가드가 지금 경로를
+ * `next`로 붙이지 않는다. 요청이 실패하면(네트워크 · 5xx) 쿠키가 아직 유효하므로 화면도 세션도 그대로 두고
+ * 호출한 쪽이 `isError`로 다시 시도를 보인다 — 로그인 화면으로 보내면 로그아웃된 줄 알고 자리를 뜬다.
  */
 export function useLogout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   return useMutation({
     mutationFn: logout,
-    onSettled: async () => {
+    onSuccess: async () => {
       await navigate(ROUTES.login, { replace: true });
       markSignedOut(queryClient);
     },

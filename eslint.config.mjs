@@ -111,6 +111,27 @@ const WEB_FEATURE_INTERNALS = {
   message:
     "기능 밖에서는 features/<이름>(index.ts)만 import한다 — 기능 안쪽 경로는 그 기능의 것이다.",
 };
+/**
+ * 기능 안에서 위(app)나 옆(다른 기능)으로 가는 import — index도 막는다(ARCHITECTURE: feature 간 직접 import 금지).
+ * 기능끼리 필요한 것은 app이 조합하거나 shared로 내린다. 상대경로는 파일 깊이에 따라 모양이 달라
+ * (`features/posts/api.ts`의 `../auth` · `features/posts/pages/X.tsx`의 `../../auth`) 깊이마다 블록을 둔다.
+ * 깊이 d의 파일에서 `../`를 d+1번 올라가면 features 폴더다 — 그다음이 `..`가 아니면 옆 기능, 한 번 더 올라가 app이면 위다.
+ */
+const WEB_FEATURE_MAX_DEPTH = 3;
+const webFeatureOutward = (depth) => {
+  const toFeatures = "\\.\\./".repeat(depth + 1);
+  return [
+    {
+      regex: `^${toFeatures}(?!\\.\\.)`,
+      message: "web 기능은 다른 기능을 import하지 않는다 — 조합은 app, 공유는 shared.",
+    },
+    {
+      regex: `^${toFeatures}\\.\\./app(/|$)`,
+      message: "web 기능은 app을 import하지 않는다 — 아래 층이 위 층을 모른다.",
+    },
+  ];
+};
+const webFeatureFilesAt = (depth) => `${WEB_SRC}/features/*/${"*/".repeat(depth)}*`;
 
 const restrictedImports = (patterns) => ({
   "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
@@ -171,5 +192,8 @@ export default defineConfig([
   // 기능에 속하지 않는 화면(앱 틀 · 404 · 오류)은 app 아래라 따로 층을 두지 않는다 — 최상위 폴더는 테스트가 고정한다
   boundary([`${WEB_SRC}/app/**`], [...WEB_PACKAGE, WEB_FEATURE_INTERNALS]),
   boundary([`${WEB_SRC}/shared/**`], [...WEB_PACKAGE, WEB_SHARED_UPWARD, WEB_FEATURE_INTERNALS]),
+  ...Array.from({ length: WEB_FEATURE_MAX_DEPTH + 1 }, (_, depth) =>
+    boundary([webFeatureFilesAt(depth)], [...WEB_PACKAGE, ...webFeatureOutward(depth)]),
+  ),
   globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
 ]);
