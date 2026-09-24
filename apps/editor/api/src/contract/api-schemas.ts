@@ -24,6 +24,11 @@ export const loginBodySchema = z.object({ username: z.string(), password: z.stri
 
 export const saveResultSchema = z.strictObject({ revision: z.string() });
 
+export const renameResultSchema = z.strictObject({ slug: slugSchema, revision: z.string() });
+
+/** 공개 렌더러가 그린 본문 HTML(`<div class="post-body">…</div>`) */
+export const previewResultSchema = z.strictObject({ html: z.string() });
+
 const naturalSide = z.int().min(NATURAL_SIZE_RANGE.min).max(NATURAL_SIZE_RANGE.max);
 
 export const imageUploadResultSchema = z.strictObject({

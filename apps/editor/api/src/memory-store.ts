@@ -31,7 +31,8 @@ export function createMemoryPostStore(): PostStore {
       return { revision: next };
     },
     async delete(slug, revision) {
-      throw new Error(`미구현: ${slug} ${revision}`);
+      if (posts.get(slug)?.revision !== revision) throw new ConflictError(slug);
+      posts.delete(slug);
     },
   };
 }
