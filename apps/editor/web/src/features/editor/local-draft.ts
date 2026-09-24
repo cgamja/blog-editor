@@ -1,5 +1,6 @@
 import { LOCAL_COPY_PREFIX, LOCAL_DRAFT_PREFIX } from "./constants";
-import type { LocalDraft, RestoreDecision } from "./types";
+import type { Doc, PostMeta } from "@blog-editor/content-schema";
+import type { DraftStore, LocalDraft, RestoreDecision } from "./types";
 
 /**
  * 다시 들어왔을 때 브라우저에 남은 글을 어떻게 할지(edit-screen design 3). 같은 revision 위에서 쓰던 글이면
@@ -12,6 +13,22 @@ export function restoreDecisionOf(
   if (local === null) return "none";
   return local.baseRevision === serverRevision ? "restore" : "conflict";
 }
+
+/** 지금 쓰던 글을 localDraft 한 벌로 — `baseRevision`은 이 글을 쓰기 시작한 서버 revision(새 글이면 null) */
+export function localDraftOf(input: {
+  baseRevision: string | null;
+  slug: string;
+  meta: PostMeta;
+  doc: Doc;
+}): LocalDraft {
+  return { ...input, savedAt: new Date().toISOString() };
+}
+
+/** 브라우저 저장소 localDraft — 저장 흐름은 이 모양(`DraftStore`)으로만 쓴다 */
+export const browserDrafts: DraftStore = {
+  write: (key, draft) => writeLocalDraft(key, draft),
+  clear: (key) => clearLocalDraft(key),
+};
 
 // 브라우저 저장소는 사생활 보호 창 · 막힌 사이트 데이터에서 던질 수 있다 — 저장 실패가 편집을 막지 않는다
 function storage(): Storage | null {

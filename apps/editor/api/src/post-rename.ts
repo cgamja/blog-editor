@@ -11,14 +11,11 @@ import {
   PUBLISHED_SLUG_LOCKED_MESSAGE,
   SLUG_TAKEN_MESSAGE,
 } from "./messages";
+import type { RenameConflictReason } from "./rename-reasons";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 
 export const renameBodySchema = z.strictObject({ to: slugSchema });
-
-/** 주소 바꾸기 409의 이유 — 화면이 충돌 대화상자(stale)와 주소 칸 문장(published · taken)으로 나눈다 */
-export const RENAME_CONFLICT_REASONS = ["published", "stale", "taken"] as const;
-export type RenameConflictReason = (typeof RENAME_CONFLICT_REASONS)[number];
 
 const conflictBody = (message: string, reason: RenameConflictReason) => ({ message, reason });
 

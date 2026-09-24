@@ -6,7 +6,7 @@ import {
   imagePathSchema,
   slugSchema,
 } from "@blog-editor/content-schema";
-import { RENAME_CONFLICT_REASONS } from "../post-rename";
+import { RENAME_CONFLICT_REASONS } from "../rename-reasons";
 import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 
 /** 오류 응답 대부분 — 화면이 `message`를 그대로 보여 준다(messages.ts) */

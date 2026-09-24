@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import type { PostMeta } from "@blog-editor/content-schema";
-import type { EditableMeta } from "../hooks/use-post-form";
 import { EDITOR_MESSAGES } from "../messages";
+import type { EditableMeta } from "../types";
 
 export interface PostInfoPanelProps {
   meta: PostMeta;

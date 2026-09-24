@@ -1,5 +1,6 @@
 import { HTTP_BAD_REQUEST } from "../../shared/api/constants";
 import { ApiError, ConflictError, UnauthorizedError } from "../../shared/api/errors";
+import { RENAME_STALE_REASON } from "./constants";
 import { EDITOR_MESSAGES } from "./messages";
 import type { RenameErrorKind, SaveErrorKind, SaveStatus } from "./types";
 
@@ -37,7 +38,7 @@ function objectParticleOf(word: string): string {
  */
 export function renameErrorKindOf(error: unknown): RenameErrorKind {
   if (error instanceof ConflictError) {
-    return reasonOf(error.body) === "stale" ? "conflict" : "slugRejected";
+    return reasonOf(error.body) === RENAME_STALE_REASON ? "conflict" : "slugRejected";
   }
   return saveErrorKindOf(error, false);
 }

@@ -84,3 +84,17 @@ web은 SHALL `editingStartOf`에서 되살리기가 충돌이면 저장 기준 r
 
 - **WHEN** 서버 r2인 글에 r2 위에서 쓰던 글을 되살린다
 - **THEN** 되살리기이고 저장 기준은 r2다
+
+### Requirement: 발행 여부와 쓰던 글은 저장 줄 안에서 곧바로 이어진다
+
+web은 SHALL `createPostSaver`가 주소 · revision · 발행 여부를 닫힌 값으로 가지게 한다. 발행이 성공한 순간 발행 여부가 바뀌어, 그 뒤에 줄 선 초안 저장은 서버에 `draft: true`를 보내지 않는다. 주소를 바꾸면 쓰던 글을 새 주소 키에 먼저 남기고 옛 키를 지운다.
+
+#### Scenario: 발행 뒤에 줄 선 초안 저장
+
+- **WHEN** 발행 저장이 끝난 뒤 줄 서 있던 초안 저장이 돈다
+- **THEN** `draft: true`로 PUT하지 않고 발행 글이다
+
+#### Scenario: 주소를 바꾼 뒤 저장이 실패한다
+
+- **WHEN** 주소 바꾸기가 된 뒤 PUT이 실패한다
+- **THEN** localDraft가 새 주소 키(기준 revision은 옮긴 revision)에 있고 옛 키는 비었다

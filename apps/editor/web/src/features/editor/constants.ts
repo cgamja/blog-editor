@@ -34,7 +34,11 @@ export const PREVIEW_TOKEN_NAMES = [
 
 export const POST_QUERY_KEY = "post";
 export const postQueryKey = (slug: string) => [POST_QUERY_KEY, slug] as const;
-export const POST_CATEGORIES_QUERY_KEY = ["posts"] as const;
+/** 편집 화면의 카테고리 제안(글 목록에서 뽑은 문자열) — 글 목록 `["posts"]` 아래라 목록 무효화가 함께 닿는다 */
+export const POST_CATEGORIES_QUERY_KEY = ["posts", "categories"] as const;
+
+/** 주소 바꾸기 409의 `reason` 중 충돌 대화상자로 가는 것(post-rename-api) */
+export const RENAME_STALE_REASON = "stale";
 
 /** localDraft 저장 키 앞머리 — 뒤에 slug(새 글은 `new`) */
 export const LOCAL_DRAFT_PREFIX = "blog-editor:draft:";

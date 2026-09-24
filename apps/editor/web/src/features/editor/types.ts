@@ -21,6 +21,9 @@ export type RenameErrorKind = SaveErrorKind | "slugRejected";
 /** 초안 저장 · 발행 — 발행 글을 고쳐 반영하는 것도 발행이다 */
 export type SaveMode = "draft" | "publish";
 
+/** 「글 정보」에서 고치는 메타 — 제목은 `changeTitle`로만 바꾼다(주소 제안이 붙어서) */
+export type EditableMeta = Partial<Omit<PostMeta, "title" | "draft" | "source">>;
+
 /** 불러온 글 — 저장 형식과 ETag(revision) */
 export interface LoadedPost {
   file: PostFile;

@@ -1,10 +1,7 @@
 import { useState } from "react";
 import type { PostMeta } from "@blog-editor/content-schema";
 import { suggestSlug } from "../slug";
-import type { EditingStart } from "../types";
-
-/** 「글 정보」에서 고치는 메타 — 제목은 `changeTitle`로만 바꾼다(주소 제안이 붙어서) */
-export type EditableMeta = Partial<Omit<PostMeta, "title" | "draft" | "source">>;
+import type { EditableMeta, EditingStart } from "../types";
 
 /**
  * 편집 화면의 글 정보 입력 상태 — 메타와 주소 칸. 서버 저장은 `useServerSave`가 이 값을 읽어 보낸다.

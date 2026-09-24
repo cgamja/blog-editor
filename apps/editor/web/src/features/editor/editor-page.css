@@ -5,7 +5,7 @@
  */
 
 /*
- * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16 · 14px은
+ * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16px은
  * tokens.json에 아직 없어 규칙 안에 값과 출처 주석으로 둔다(토큰 추가는 후속). 대화상자는 편집 화면 틀(.editor-screen) 밖에 뜨므로 둘 다에 건다.
  */
 .editor-screen,
@@ -17,6 +17,8 @@
   --line-height-hint: 1.5; /* 68:2 칸 아래 안내 */
   --line-height-dialog-title: 1.35; /* 67:2 제목 */
   --line-height-dialog-body: 1.75; /* 67:2 본문 */
+  /* 글자 크기 — tokens.json에 14px가 없다 */
+  --font-size-small: 0.875rem; /* 14px — 68:2 입력 칸 · 띠, 67:2 본문 · 버튼 */
   /* 크기 · 자리 */
   --postit-width: 11.875rem; /* 68:2 포스트잇 190px */
   --postit-offset-top: -3.5rem; /* 68:2 종이 위로 14px 걸침(종이 위 여백 64px 안쪽 기준) */
@@ -109,7 +111,7 @@
   padding: var(--space-10) var(--space-28);
   background: var(--brand-soft);
   color: var(--ink);
-  font-size: 0.875rem; /* 14px(68:2 입력 · 67:2 본문) */
+  font-size: var(--font-size-small);
   border-bottom: var(--border-width) solid var(--line);
 }
 
@@ -178,7 +180,7 @@
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.875rem; /* 14px(68:2 입력 · 67:2 본문) */
+  font-size: var(--font-size-small);
 }
 
 .post-info-field textarea {
@@ -259,7 +261,7 @@
 
 .editor-dialog-body {
   margin: 0;
-  font-size: 0.875rem; /* 14px(68:2 입력 · 67:2 본문) */
+  font-size: var(--font-size-small);
   line-height: var(--line-height-dialog-body);
   color: var(--ink-mid);
 }
@@ -283,7 +285,7 @@
   padding: 0 var(--space-22);
   border-radius: var(--radius-button);
   font: inherit;
-  font-size: 0.875rem; /* 14px(68:2 입력 · 67:2 본문) */
+  font-size: var(--font-size-small);
   cursor: pointer;
 }
 
