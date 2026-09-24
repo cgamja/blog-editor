@@ -9,10 +9,13 @@ export function BlockDragOverlay({ drag }: { drag: BlockDrag }) {
   return createPortal(
     <>
       <div className="block-drop-line" style={{ top: drag.lineTop }} aria-hidden="true" />
+      {/* post-body: 본문 CSS를 받는다. inert: 복제된 링크 · 버튼이 Tab 포커스를 받지 않는다
+          (https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inert) */}
       <div
-        className="block-drag-ghost"
+        className="block-drag-ghost post-body"
         style={{ top: drag.ghostTop, left: drag.ghostLeft, width: drag.ghostWidth }}
         aria-hidden="true"
+        inert
         ref={(element) => {
           if (element !== null && element.firstChild !== drag.ghost) {
             element.replaceChildren(drag.ghost);
