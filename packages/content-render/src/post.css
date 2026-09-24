@@ -139,6 +139,88 @@
   font-family: var(--font-hand);
 }
 
+/* ---------- 글자 스타일 (글자 단위, adr-020) ---------- */
+
+.post-body .post-ts[data-font="pretendard"] {
+  font-family: var(--font-sans);
+}
+.post-body .post-ts[data-font="jua"] {
+  font-family: var(--font-display);
+}
+.post-body .post-ts[data-font="gaegu"] {
+  font-family: var(--font-hand);
+}
+/*
+ * 두께는 글꼴에 있는 것만 저장되지만, 글자 글꼴이 없으면 블록 글꼴(예: Jua 문단 · 기본 Jua 제목)을
+ * 물려받아 그 글꼴에 없는 두께가 될 수 있다 — 브라우저가 가짜 굵기를 만들지 않고 가까운 두께로 그리게 한다(ADR-020)
+ */
+.post-body .post-ts[data-weight] {
+  font-synthesis-weight: none;
+}
+.post-body .post-ts[data-weight="light"] {
+  font-weight: 300;
+}
+.post-body .post-ts[data-weight="medium"] {
+  font-weight: 500;
+}
+.post-body .post-ts[data-weight="heavy"] {
+  font-weight: 800;
+}
+/* 본문 대비 em — 폰에서 본문이 작아지면 같이 작아진다 */
+.post-body .post-ts[data-size="sm"] {
+  font-size: 0.875em;
+}
+.post-body .post-ts[data-size="lg"] {
+  font-size: 1.25em;
+}
+.post-body .post-ts[data-size="xl"] {
+  font-size: 1.5em;
+}
+.post-body .post-ts[data-size="2xl"] {
+  font-size: 2em;
+}
+.post-body .post-ts[data-color="muted"] {
+  color: var(--ink-soft);
+}
+.post-body .post-ts[data-color="brand"] {
+  color: var(--brand-ink);
+}
+.post-body .post-ts[data-color="green"] {
+  color: var(--accent-ink);
+}
+/* 사이트 토큰에 아직 없는 이름 — 디자인 tokens.json의 danger-ink 값으로 물러선다 */
+.post-body .post-ts[data-color="red"] {
+  color: var(--danger-ink, #a3341f);
+}
+/* 직접 입력 색은 렌더러가 #rrggbb인지 확인한 뒤에만 --ts-color로 싣는다 */
+.post-body .post-ts[data-color="custom"] {
+  color: var(--ts-color);
+}
+.post-body .post-ts[data-highlight] {
+  padding-inline: 0.1em;
+  border-radius: 0.2em;
+  box-decoration-break: clone;
+}
+.post-body .post-ts[data-highlight="apricot"] {
+  background: var(--brand-soft);
+}
+.post-body .post-ts[data-highlight="mint"] {
+  background: var(--accent-soft);
+}
+.post-body .post-ts[data-highlight="yellow"] {
+  background: var(--postit);
+}
+.post-body .post-ts[data-highlight="custom"] {
+  background: var(--ts-highlight);
+}
+.post-body s {
+  text-decoration-thickness: 1.5px;
+}
+.post-body u {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
 /* ---------- 꾸미기 래퍼 · 스티커 ---------- */
 
 /* --w는 단위 없는 정수(25~100). 스티커의 % 기준이 되도록 position: relative */
@@ -146,6 +228,19 @@
   position: relative;
   width: calc(var(--w, 100) * 1%);
   margin-inline: auto;
+}
+/* 정렬(adr-020) — 글은 text-align, 폭을 줄인 그림은 래퍼의 좌우 여백으로. 값이 없으면 위 기본(가운데 여백 · 왼쪽 글) */
+.post-body .post-block[data-align="left"] {
+  margin-inline: 0 auto;
+  text-align: left;
+}
+.post-body .post-block[data-align="center"] {
+  margin-inline: auto;
+  text-align: center;
+}
+.post-body .post-block[data-align="right"] {
+  margin-inline: auto 0;
+  text-align: right;
 }
 /* x · y는 스티커 중심의 블록 기준 %, s는 블록 폭 기준 %, r은 도. 블록이 옮겨지면 같이 간다(adr-008) */
 .post-body .post-sticker {

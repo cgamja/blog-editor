@@ -96,10 +96,16 @@ export const allBlocks = {
       {
         type: "paragraph",
         content: [
+          { type: "text", text: "이 글에서는 육아비서 앱이 제공하는 " },
+          { type: "text", text: "주요 화면", marks: [{ type: "underline" }] },
+          { type: "text", text: "과 " },
           {
             type: "text",
-            text: "이 글에서는 육아비서 앱이 제공하는 주요 화면과 기능을 순서대로 살펴봅니다.",
+            text: "기능",
+            marks: [{ type: "textStyle", attrs: { color: "brand", size: "lg" } }],
           },
+          { type: "text", text: "을 순서대로 살펴봅니다. " },
+          { type: "text", text: "베타 안내는 끝났습니다.", marks: [{ type: "strike" }] },
         ],
       },
       {
@@ -266,7 +272,7 @@ export const decorationMax = {
           font: "pretendard",
           motion: "fade-in",
           stickers: [
-            { id: "star-coral", x: -25, y: 0, size: 5, rotate: -180 },
+            { id: "star-coral", x: -25, y: 0, size: 2, rotate: -180 },
             { id: "heart", x: 50, y: 30, size: 20, rotate: 0 },
           ],
         },
@@ -279,16 +285,57 @@ export const decorationMax = {
       },
       {
         type: "heading",
-        attrs: { level: 2, font: "jua", motion: "fade-up" },
+        attrs: { align: "center", font: "jua", level: 2, motion: "fade-up" },
         content: [{ type: "text", text: "라이트하우스 성능 기준선" }],
       },
       {
         type: "paragraph",
-        attrs: { font: "gaegu" },
+        attrs: { align: "right", font: "gaegu" },
         content: [
           {
             type: "text",
             text: "이 글은 폰트·움직임·스티커를 모두 사용해 렌더링 성능을 측정하는 기준 문서입니다.",
+          },
+        ],
+      },
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: "글자 두께",
+            marks: [{ type: "textStyle", attrs: { size: "2xl", weight: "heavy" } }],
+          },
+          { type: "text", text: " · " },
+          {
+            type: "text",
+            text: "가벼운 손글씨",
+            marks: [{ type: "textStyle", attrs: { font: "gaegu", size: "xl", weight: "light" } }],
+          },
+          { type: "text", text: " · " },
+          {
+            type: "text",
+            text: "둥근 제목체",
+            marks: [{ type: "textStyle", attrs: { color: "green", font: "jua", size: "lg" } }],
+          },
+          { type: "text", text: " · " },
+          {
+            type: "text",
+            text: "직접 고른 색",
+            marks: [
+              {
+                type: "textStyle",
+                attrs: { color: "#2f6ad1", highlight: "yellow", weight: "medium" },
+              },
+            ],
+          },
+          { type: "text", text: " · " },
+          {
+            type: "text",
+            text: "작은 주석",
+            marks: [
+              { type: "textStyle", attrs: { color: "muted", highlight: "#eef4ff", size: "sm" } },
+            ],
           },
         ],
       },
@@ -386,6 +433,7 @@ export const decorationMax = {
           alt: "육아비서 앱의 알림 목록 화면",
           motion: "fade-in",
           width: 60,
+          align: "left",
           stickers: [
             { id: "rattle", x: 0, y: 0, size: 30, rotate: -90 },
             { id: "pacifier", x: 100, y: 100, size: 25, rotate: 90 },
@@ -401,6 +449,7 @@ export const decorationMax = {
           caption: "알림 상세 설정 화면",
           motion: "fade-up",
           width: 80,
+          align: "right",
           stickers: [
             { id: "foot-coral", x: -10, y: 110, size: 12, rotate: -45 },
             { id: "foot-mint", x: 110, y: -10, size: 40, rotate: 135 },

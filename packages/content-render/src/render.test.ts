@@ -144,6 +144,48 @@ describe("render-safety", () => {
     expect(hostileHtml).toContain('<a href="/a&quot;onmouseover=&quot;x">링크</a>');
   });
 
+  it("WHEN 검증을 건너뛴 글자 스타일 값을 렌더하면 THEN 모든 style 값이 허용된 CSS 변수 꼴뿐이고 새 태그 · on* 속성이 없다", () => {
+    const BAD_COLORS: unknown[] = [
+      "#aabbcc\n",
+      "#AABBCC",
+      "#000;x:url(a)",
+      42,
+      { toString: () => "#000;x:url(a)" },
+      // 검사할 때와 출력할 때 다른 글자를 내는 객체 — 문자열인지부터 봐야 막힌다
+      (() => {
+        let calls = 0;
+        return { toString: () => (calls++ === 0 ? "#aabbcc" : "#000;x:url(a)") };
+      })(),
+      ...HOSTILE,
+    ];
+    const styled = (attrs: Record<string, unknown>): Block =>
+      ({
+        type: "paragraph",
+        content: [{ type: "text", text: "가", marks: [{ type: "textStyle", attrs }] }],
+      }) as Block;
+    const hostile = docOf(
+      ...HOSTILE.flatMap((value) => [
+        styled({ font: value }),
+        styled({ weight: value }),
+        styled({ size: value }),
+      ]),
+      ...BAD_COLORS.flatMap((value) => [styled({ color: value }), styled({ highlight: value })]),
+    );
+    const outputs = [...Object.values(fixtures), hostile].map((file) =>
+      renderHtml(file, { imageBaseUrl: BASE }),
+    );
+    const ALLOWED_DECLARATION = /^(?:--[xysrw]:-?\d+|--ts-(?:color|highlight):#[0-9a-f]{6})$/;
+    for (const html of outputs) {
+      expect(html).not.toMatch(/<script/i);
+      for (const name of attributeNames(html)) expect(name).not.toMatch(/^on/i);
+      for (const [, style] of html.matchAll(/\sstyle="([^"]*)"/g)) {
+        for (const declaration of style!.split(";")) {
+          expect(declaration).toMatch(ALLOWED_DECLARATION);
+        }
+      }
+    }
+  });
+
   it("WHEN 표에 없는 heading level · 스티커 id를 렌더하면 THEN RangeError를 던진다", () => {
     // 검증을 건너뛴 문서를 흉내 낸다 — 태그 이름 · 파일 이름은 이스케이프로 막을 수 없어 오류가 답이다
     const heading = (level: unknown): Block =>
@@ -163,11 +205,36 @@ describe("render-safety", () => {
     }
   });
 
+  it("WHEN 검증을 건너뛴 폭 · 스티커 좌표에 정수가 아닌 값을 넣으면 THEN style에 싣지 않고 RangeError를 던진다", () => {
+    // 이스케이프는 `;`로 CSS 선언을 잇는 것을 막지 못한다 — 정수가 아니면 렌더하지 않는다(heading level · 스티커 id와 같다)
+    let calls = 0;
+    const flipping = { toString: () => (calls++ === 0 ? "1" : "1;x:url(a)") };
+    const BAD_NUMBERS: unknown[] = ["1;x:url(a)", "60", flipping, 1.5, Number.NaN];
+    const image = (width: unknown): Block =>
+      ({ type: "image", attrs: { src: "/images/a.webp", alt: "", width } }) as Block;
+    const withSticker = (key: "x" | "y" | "size" | "rotate", value: unknown): Block =>
+      paragraph("문단", {
+        stickers: [{ id: "heart", x: 0, y: 0, size: 10, rotate: 0, [key]: value } as never],
+      });
+    const cases = BAD_NUMBERS.flatMap((value) => [
+      docOf(image(value)),
+      ...(["x", "y", "size", "rotate"] as const).map((key) => docOf(withSticker(key, value))),
+    ]);
+    for (const file of cases) {
+      expect(() => renderHtml(file, { imageBaseUrl: BASE })).toThrow(RangeError);
+    }
+  });
+
   it("WHEN decorationMax를 렌더하면 THEN 속성 이름이 닫힌 목록의 부분집합이다", () => {
     const ALLOWED = new Set([
       "class",
       "data-font",
       "data-motion",
+      "data-align",
+      "data-weight",
+      "data-size",
+      "data-color",
+      "data-highlight",
       "data-tone",
       "data-language",
       "style",
@@ -195,15 +262,67 @@ describe("render-decoration", () => {
         attrs: { level: 2, font: "jua", motion: "fade-up" },
         content: [{ type: "text", text: "제목" }],
       },
-      { type: "image", attrs: { src: "/images/a.webp", alt: "a", width: 60 } },
+      { type: "image", attrs: { src: "/images/a.webp", alt: "a", width: 60, align: "right" } },
     );
     const html = renderHtml(file, { imageBaseUrl: BASE });
     expect(html).toContain(
       '<div class="post-block" data-font="jua" data-motion="fade-up"><h2>제목</h2></div>',
     );
     expect(html).toContain(
-      `<div class="post-block" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="a" loading="lazy" decoding="async"></figure></div>`,
+      `<div class="post-block" data-align="right" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="a" loading="lazy" decoding="async"></figure></div>`,
     );
+  });
+
+  it("WHEN 프리셋 · hex · 두께 · 크기 스타일과 밑줄이 겹치면 THEN span 하나와 u 로 나온다", () => {
+    const file = docOf({
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: "가",
+          marks: [
+            {
+              type: "textStyle",
+              attrs: {
+                font: "pretendard",
+                weight: "heavy",
+                size: "lg",
+                color: "brand",
+                highlight: "#fff1cc",
+              },
+            },
+            { type: "underline" },
+          ],
+        },
+      ],
+    });
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toBe(
+      '<div class="post-body"><p><span class="post-ts" data-font="pretendard" data-weight="heavy" data-size="lg" data-color="brand" data-highlight="custom" style="--ts-highlight:#fff1cc"><u>가</u></span></p></div>',
+    );
+  });
+
+  it("WHEN 검증을 건너뛴 doc의 색에 CSS를 끼우면 THEN 색 속성이 나오지 않는다", () => {
+    const file = {
+      doc: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "가",
+                marks: [{ type: "textStyle", attrs: { color: "#000;background:url(x)" } }],
+              },
+            ],
+          },
+        ],
+      },
+    } as unknown as { doc: Doc };
+    const html = renderHtml(file, { imageBaseUrl: BASE });
+    expect(html).not.toContain("url(");
+    expect(html).not.toContain("--ts-color");
+    expect(html).not.toContain("data-color");
   });
 
   it("WHEN 꾸미기가 없으면 THEN 래퍼가 없다", () => {

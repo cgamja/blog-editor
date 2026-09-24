@@ -1,14 +1,20 @@
 import fc from "fast-check";
 import type { Doc } from "./doc";
 import {
+  ALIGNS,
   FONTS,
+  HIGHLIGHT_COLORS,
   MOTIONS,
   STICKER_IDS,
   CALLOUT_TONES,
+  TEXT_COLORS,
+  TEXT_SIZES,
+  TEXT_WEIGHTS,
   WIDTH_RANGE,
   NATURAL_SIZE_RANGE,
   STICKER_RANGES,
   MAX_STICKERS_PER_DOC,
+  textStyleAttrsSchema,
 } from "./doc";
 
 /**
@@ -31,11 +37,39 @@ const LINK_HREFS = [
 const MAX_BLOCKS_PER_DOC = 4;
 const STICKER_CAP_PER_BLOCK = Math.floor(MAX_STICKERS_PER_DOC / MAX_BLOCKS_PER_DOC);
 
+const HEX_MAX = 0xffffff;
+const HEX_DIGITS = 6;
+const hexColorArb = fc
+  .integer({ min: 0, max: HEX_MAX })
+  .map((value) => `#${value.toString(16).padStart(HEX_DIGITS, "0")}`);
+
+/**
+ * textStyle attrs — 빈 스타일 · 글꼴에 없는 두께는 스키마로 거른다(규칙을 여기서 다시 적지 않는다).
+ * 값이 없는 키는 빼서 정규형과 같은 모양으로 낸다.
+ */
+export const textStyleArbitrary = fc
+  .record({
+    font: fc.option(fc.constantFrom(...FONTS), { nil: undefined }),
+    weight: fc.option(fc.constantFrom(...TEXT_WEIGHTS), { nil: undefined }),
+    size: fc.option(fc.constantFrom(...TEXT_SIZES), { nil: undefined }),
+    color: fc.option(fc.oneof(fc.constantFrom(...TEXT_COLORS), hexColorArb), { nil: undefined }),
+    highlight: fc.option(fc.oneof(fc.constantFrom(...HIGHLIGHT_COLORS), hexColorArb), {
+      nil: undefined,
+    }),
+  })
+  .map((style) =>
+    Object.fromEntries(Object.entries(style).filter(([, value]) => value !== undefined)),
+  )
+  .filter((style) => textStyleAttrsSchema.safeParse(style).success);
+
 const markArb = fc.oneof(
   fc.constant({ type: "bold" as const }),
   fc.constant({ type: "italic" as const }),
   fc.constant({ type: "code" as const }),
   fc.constantFrom(...LINK_HREFS).map((href) => ({ type: "link" as const, attrs: { href } })),
+  fc.constant({ type: "strike" as const }),
+  fc.constant({ type: "underline" as const }),
+  textStyleArbitrary.map((attrs) => ({ type: "textStyle" as const, attrs })),
 );
 
 /** 같은 텍스트 안에 같은 마크 type이 중복되지 않게 걸러낸다(docSchema가 중복 마크를 거부한다). */
@@ -70,8 +104,13 @@ const stickerArb = fc.record({
   rotate: fc.integer({ min: STICKER_RANGES.rotate.min, max: STICKER_RANGES.rotate.max }),
 });
 
-/** 최상위 블록 attrs — font/width는 자리가 있는 블록에서만 켠다(옵션으로 제어). */
-export function decorationArbitrary(opts: { font: boolean; width: boolean; maxStickers: number }) {
+/** 최상위 블록 attrs — font/width/align은 자리가 있는 블록에서만 켠다(옵션으로 제어). */
+export function decorationArbitrary(opts: {
+  font: boolean;
+  width: boolean;
+  align?: boolean;
+  maxStickers: number;
+}) {
   return fc
     .record({
       font: opts.font
@@ -83,13 +122,17 @@ export function decorationArbitrary(opts: { font: boolean; width: boolean; maxSt
             nil: undefined,
           })
         : fc.constant(undefined),
+      align: opts.align
+        ? fc.option(fc.constantFrom(...ALIGNS), { nil: undefined })
+        : fc.constant(undefined),
       stickers: fc.array(stickerArb, { maxLength: opts.maxStickers }),
     })
-    .map(({ font, motion, width, stickers }) => {
+    .map(({ font, motion, width, align, stickers }) => {
       const attrs: Record<string, unknown> = {};
       if (font !== undefined) attrs.font = font;
       if (motion !== undefined) attrs.motion = motion;
       if (width !== undefined) attrs.width = width;
+      if (align !== undefined) attrs.align = align;
       if (stickers.length > 0) attrs.stickers = stickers;
       return attrs;
     });
@@ -103,14 +146,24 @@ const innerParagraphArb = fc.record({
 
 const paragraphArb = fc.record({
   type: fc.constant("paragraph" as const),
-  attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+  attrs: decorationArbitrary({
+    font: true,
+    width: false,
+    align: true,
+    maxStickers: STICKER_CAP_PER_BLOCK,
+  }),
   content: fc.array(inlineArb, { maxLength: 3 }),
 });
 
 const headingArb = fc
   .record({
     level: fc.constantFrom(2, 3),
-    attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+    attrs: decorationArbitrary({
+      font: true,
+      width: false,
+      align: true,
+      maxStickers: STICKER_CAP_PER_BLOCK,
+    }),
   })
   .chain(({ level, attrs }) =>
     fc.record({
@@ -197,7 +250,12 @@ const imageArb = fc.record({
     .tuple(
       fc.constantFrom("/images/a1.webp", "/images/b2.png"),
       naturalSizeArbitrary,
-      decorationArbitrary({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
+      decorationArbitrary({
+        font: false,
+        width: true,
+        align: true,
+        maxStickers: STICKER_CAP_PER_BLOCK,
+      }),
     )
     .map(([src, size, deco]) => ({ src, alt: "", ...size, ...deco })),
 });
@@ -239,7 +297,12 @@ const appScreenshotArb = fc.record({
     .tuple(
       fc.constant("/images/shot1.webp"),
       naturalSizeArbitrary,
-      decorationArbitrary({ font: false, width: true, maxStickers: STICKER_CAP_PER_BLOCK }),
+      decorationArbitrary({
+        font: false,
+        width: true,
+        align: true,
+        maxStickers: STICKER_CAP_PER_BLOCK,
+      }),
     )
     .map(([src, size, deco]) => ({ src, caption: "", ...size, ...deco })),
 });

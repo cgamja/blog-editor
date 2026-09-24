@@ -1,12 +1,18 @@
 import {
+  ALIGNS,
   CALLOUT_TONES,
   CODE_LANGUAGE_PATTERN,
   FONTS,
   HEADING_LEVELS,
+  HEX_COLOR_PATTERN,
+  HIGHLIGHT_COLORS,
   MOTIONS,
   NATURAL_SIZE_RANGE,
   STICKER_IDS,
   STICKER_RANGES,
+  TEXT_COLORS,
+  TEXT_SIZES,
+  TEXT_WEIGHTS,
   WIDTH_RANGE,
   hrefSchema,
   imagePathSchema,
@@ -28,6 +34,15 @@ function oneOf<T extends string>(values: readonly T[]) {
 export const fontOrNull = oneOf(FONTS);
 export const motionOrNull = oneOf(MOTIONS);
 export const toneOrNull = oneOf(CALLOUT_TONES);
+export const alignOrNull = oneOf(ALIGNS);
+export const textWeightOrNull = oneOf(TEXT_WEIGHTS);
+export const textSizeOrNull = oneOf(TEXT_SIZES);
+export const textColorPresetOrNull = oneOf(TEXT_COLORS);
+export const highlightPresetOrNull = oneOf(HIGHLIGHT_COLORS);
+
+/** 직접 입력 색 — 스키마 정규형(소문자 6자리)만. 대문자 · 3자리는 없는 것으로 본다. */
+export const hexColorOrNull = (value: unknown): string | null =>
+  typeof value === "string" && HEX_COLOR_PATTERN.test(value) ? value : null;
 
 const DIGITS = /^\d+$/;
 

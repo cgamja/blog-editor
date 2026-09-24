@@ -139,6 +139,74 @@ describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고
   });
 });
 
+describe("editor-dom: 새 마크와 정렬도 공개 HTML과 같은 어휘로 나가고 다시 읽힌다", () => {
+  function markDom(mark: Node["marks"][number]): DOMOutputSpec {
+    const toDOM = mark.type.spec.toDOM;
+    if (toDOM === undefined) throw new Error(`${mark.type.name}에 toDOM이 없다`);
+    return toDOM(mark, true);
+  }
+
+  it("WHEN 글자 스타일 · 취소선 · 밑줄 글자가 있는 가운데 문단과 왼쪽 이미지를 DOM으로 냈다가 다시 읽는다 THEN attrs와 마크가 같다", () => {
+    const text = schema.text("가", [
+      schema.marks.strike!.create(),
+      schema.marks.textStyle!.create({ color: "#12abef", size: "xl" }),
+      schema.marks.underline!.create(),
+    ]);
+    const paragraph = schema.nodes.paragraph!.create({ align: "center" }, text);
+    const image = schema.nodes.image!.create({ src: "/images/a.webp", alt: "", align: "left" });
+
+    expect(markDom(text.marks.find((mark) => mark.type.name === "textStyle")!)).toEqual([
+      "span",
+      { class: "post-ts", "data-size": "xl", "data-color": "custom", style: "--ts-color:#12abef" },
+      0,
+    ]);
+    for (const block of [paragraph, image]) {
+      const read = readWith(schema, "nodes", block.type.name, elementFromSpec(toDom(block)));
+      expect(comparable(read as object), block.type.name).toEqual(comparable(block.attrs));
+    }
+    for (const mark of text.marks) {
+      const read = readWith(schema, "marks", mark.type.name, elementFromSpec(markDom(mark)));
+      expect(read, mark.type.name).not.toBe(false);
+      expect(comparable(read as object), mark.type.name).toEqual(comparable(mark.attrs));
+    }
+  });
+
+  it("WHEN 마크 7종이 한 글자에 겹친다 THEN 에디터의 겹침 순서가 공개 HTML과 같다(a > span.post-ts > u > s > strong > em > code)", () => {
+    const text = schema.text("가", [
+      schema.marks.code!.create(),
+      schema.marks.italic!.create(),
+      schema.marks.bold!.create(),
+      schema.marks.strike!.create(),
+      schema.marks.underline!.create(),
+      schema.marks.textStyle!.create({ color: "brand" }),
+      schema.marks.link!.create({ href: "/x" }),
+    ]);
+
+    // ProseMirror는 text.marks 순서대로 바깥부터 감싼다(DOMSerializer.serializeFragment)
+    expect(text.marks.map((mark) => mark.type.name)).toEqual([
+      "link",
+      "textStyle",
+      "underline",
+      "strike",
+      "bold",
+      "italic",
+      "code",
+    ]);
+  });
+
+  it("WHEN 남의 인라인 색 span과 정의 밖 값의 post-ts span을 읽는다 THEN 둘 다 글자 스타일 마크가 되지 않는다", () => {
+    const foreign = el({ tag: "span", attrs: { style: "color:red" }, children: ["가"] });
+    const outOfSet = el({
+      tag: "span",
+      attrs: { class: "post-ts", "data-color": "pink" },
+      children: ["나"],
+    });
+
+    expect(readWith(schema, "marks", "textStyle", foreign)).toBe(false);
+    expect(readWith(schema, "marks", "textStyle", outOfSet)).toBe(false);
+  });
+});
+
 describe("editor-dom: HTML 속성을 검증 없이 attrs로 읽지 않는다", () => {
   it("WHEN attribute 이름과 같은 HTML 속성이 붙은 문단 · 이미지를 읽는다 THEN 꾸밈 · 스티커 · 원본 크기로 들어오지 않는다", () => {
     const paragraph = el({

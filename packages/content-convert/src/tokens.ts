@@ -1,8 +1,11 @@
 import MarkdownIt, { type PluginWithParams } from "markdown-it";
 import container from "markdown-it-container";
 import type Token from "markdown-it/lib/token.mjs";
+import { CALLOUT_CONTAINER_NAME } from "./constants";
+import { bracketSpanRule, type SpanCloseMeta } from "./span";
 
-export const CALLOUT_CONTAINER_NAME = "callout";
+/** 괄호 span 규칙 이름 — 링크 규칙보다 먼저 본다(`[글자]{…}`는 링크가 아니다). */
+const BRACKET_SPAN_RULE = "bracket_span";
 
 /** markdown-it-container에 넘기는 옵션 타입 — container 자체의 3번째 매개변수에서 뽑는다. */
 type ContainerOpts = NonNullable<Parameters<typeof container>[2]>;
@@ -37,6 +40,7 @@ export function createMarkdownIt(): MarkdownIt {
   // 위에 @ts-ignore를 둔다). md.use()의 매개변수 타입 자체가 `...params: any[]`라 옵션 타입은
   // 어차피 여기서 못 걸러 containerOptions 변수 선언에서 미리 걸러 둔다.
   md.use(container as unknown as PluginWithParams, CALLOUT_CONTAINER_NAME, containerOptions);
+  md.inline.ruler.before("link", BRACKET_SPAN_RULE, bracketSpanRule);
   return md;
 }
 
@@ -54,6 +58,11 @@ export function imageAltText(tok: Token): string {
           return child.content;
         case "image":
           return imageAltText(child);
+        // 대체 글자에는 마크가 없다 — 괄호 span 모양은 해석하지 않고 원문 그대로 둔다
+        case "span_open":
+          return "[";
+        case "span_close":
+          return `]{${(child.meta as SpanCloseMeta).body}}`;
         case "softbreak":
         case "hardbreak":
           return " ";
