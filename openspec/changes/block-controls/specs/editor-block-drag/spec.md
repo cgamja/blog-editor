@@ -28,6 +28,11 @@
 - **WHEN** 커서가 A 안인 A · B에서 `atTopBlock(1, duplicateTopBlock)`, 또는 `turnTopBlockInto(0, "bulletList")`
 - **THEN** 앞은 A · B · B, 뒤는 A가 점 목록 안이다
 
+#### Scenario: 공유 트랜잭션에서도 바꾸기가 담긴다
+
+- **WHEN** TipTap 체인처럼 `state.tr`가 늘 같은 트랜잭션을 돌려주고 dispatch는 아무것도 하지 않는 상태에서 `turnTopBlockInto(1, "heading2")`
+- **THEN** 그 공유 트랜잭션을 적용하면 B가 큰 제목이다
+
 #### Scenario: 바꿀 수 없으면 거부한다
 
 - **WHEN** 구분선 블록에 `turnTopBlockInto(i, "heading2")`, 또는 범위 밖 번호

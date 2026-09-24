@@ -89,6 +89,20 @@ describe("editor-block-drag: 손잡이 블록에 커맨드를 부른다", () => 
     expect(() => docFromNode(next!.doc)).not.toThrow();
   });
 
+  it("WHEN TipTap 체인처럼 state.tr가 늘 같은 트랜잭션을 돌려주고 dispatch는 아무것도 하지 않는 상태에서 turnTopBlockInto(1, heading2) THEN 그 공유 트랜잭션을 적용하면 B가 큰 제목이다", () => {
+    const state = stateOf(docOf(paragraph("가"), paragraph("나")));
+    // TipTap createChainableState와 같은 모양 — tr 게터가 체인의 트랜잭션 하나를 돌려준다
+    const shared = state.tr;
+    const chainLike = Object.create(state, { tr: { get: () => shared } }) as EditorState;
+
+    const ok = turnTopBlockInto(1, "heading2")(chainLike, () => undefined);
+
+    expect(ok).toBe(true);
+    const next = state.apply(shared);
+    expect(types(next.doc)).toEqual(["paragraph", "heading"]);
+    expect(texts(next.doc)).toEqual(["가", "나"]);
+  });
+
   it("WHEN 커서가 A 안인 A · B에서 atTopBlock(1, duplicateTopBlock), 또는 turnTopBlockInto(0, bulletList) THEN 앞은 A · B · B, 뒤는 A가 점 목록 안이다", () => {
     const state = stateOf(docOf(paragraph("가"), paragraph("나")));
 
