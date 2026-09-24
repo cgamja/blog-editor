@@ -10,6 +10,7 @@ import {
 import { readDoc, useCommandRunner } from "../src";
 import type { FixtureName } from "./fixtures";
 import { FIXTURE_NAMES } from "./fixtures";
+import { DevLogin } from "./DevLogin";
 import { devMessages } from "./messages";
 
 // 스크린샷 넣기 버튼이 쓰는 저장 경로 모양의 예시 — 실제 파일은 없다(이미지 업로드는 M5)
@@ -47,6 +48,7 @@ export function DevTools({ editor, fixture, onFixtureChange }: DevToolsProps) {
 
   return (
     <section className="playground-dev" aria-label={devMessages.sectionLabel}>
+      <DevLogin />
       <label>
         {devMessages.fixture}{" "}
         <select
