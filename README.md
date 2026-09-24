@@ -24,15 +24,17 @@
 **꾸미기**([ADR-008](adr/2026-09-22-adr-008-decoration-closed-set-block-relative.md) · [ADR-020](adr/2026-09-24-adr-020-decoration-v2-text-style-align.md))
 
 - 블록 글꼴 3종 · 움직임 · 그림 폭(도구줄과 좌우 손잡이) · 스티커 9종(블록 기준 비율로 붙고, 끌기 · 크기 · 회전)
-- 글자 스타일(글꼴 · 두께 · 크기 · 글자색 · 배경색) · 취소선 · 밑줄 · 정렬: 저장 형식 · 공개 HTML · AI 마크다운 문법까지 있다. 에디터 도구줄 UI는 아직이다
+- 정렬(왼쪽 · 가운데 · 오른쪽): 꾸미기 패널과 ⌘⇧L · ⌘⇧E · ⌘⇧R
+- 글자 스타일(글꼴 · 두께 · 크기 · 글자색 · 배경색) · 취소선 · 밑줄: 저장 형식 · 공개 HTML · AI 마크다운 문법까지 있다. 에디터 도구줄 UI는 아직이다
 
 **서버와 AI 연결**
 
 - 로그인(아이디 · 비밀번호, HMAC 세션 쿠키, 실패 5회면 15분 잠금), 글 목록 · 읽기 · 저장(`/api/posts`), 발행된 글만 내보내는 공개 API(`/public/posts`)
 - MCP 커넥터(`/mcp`): 글쓰기 가이드 읽기 · 글 목록 · 글 읽기 · 초안 검사 · 초안 만들기 · 초안 고치기. 발행 도구는 없다
 - 연결은 연결용 토큰(Bearer) 또는 OAuth(DCR · PKCE S256) — [ADR-016](adr/2026-09-24-adr-016-mcp-server-sdk-connection-token.md) · [ADR-018](adr/2026-09-24-adr-018-mcp-oauth-authorization-server-in-service.md)
+- 이미지 올리기 API(`/api/images`): 형식 · 크기를 헤더로 검사하고 내용 해시 이름으로 저장한다. 줄이기는 브라우저가 한다 — [ADR-021](adr/2026-09-24-adr-021-image-upload-client-resize-no-server-codec.md)
 
-**예정** — 백오피스 화면(로그인 · 글 목록 · 저장 · 발행), 이미지 올리기, AWS 배포. 진행은 [마일스톤](https://github.com/cgamja/blog-editor/milestones) M3~M6.
+**예정** — 백오피스 화면(로그인 · 글 목록 · 저장 · 발행), 에디터에서 이미지 넣기(올리기 UI), AWS 배포. 진행은 [마일스톤](https://github.com/cgamja/blog-editor/milestones) M3~M6.
 
 ## 기술 스택
 
