@@ -7,14 +7,10 @@ import {
   setBlockFont,
   setBlockMotion,
 } from "@blog-editor/editor-core";
-import {
-  FONT_OPTIONS,
-  MOTION_OPTIONS,
-  STICKER_OPTIONS,
-  decorationPanelStateOf,
-  type Availability,
-  type StickerId,
-} from "./decoration-state";
+import { FONT_OPTIONS, MOTION_OPTIONS, STICKER_OPTIONS } from "./decoration-constants";
+import { decorationMessages } from "./decoration-messages";
+import { decorationPanelStateOf } from "./decoration-state";
+import type { Availability, StickerId } from "./decoration-types";
 import { useCommandRunner } from "./use-command-runner";
 
 export interface DecorationPanelProps {
@@ -60,14 +56,12 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
   const fontReason = reasonOf(panel.font.availability);
   const stickerReason = reasonOf(panel.sticker.availability);
   const motionReason = reasonOf(panel.motion.availability);
-  const previewReason = reducedMotion
-    ? "움직임 줄이기 설정이 켜져 있어 미리 보기를 재생하지 않아요."
-    : null;
+  const previewReason = reducedMotion ? decorationMessages.previewReducedMotion : null;
 
   return (
     <aside className="decoration-panel" aria-label="꾸미기">
       <p className="decoration-panel-target">
-        {panel.target === null ? "고른 블록 없음" : `고른 블록 · ${panel.target.label}`}
+        {decorationMessages.targetLine(panel.target?.label ?? null)}
       </p>
 
       <fieldset>
@@ -109,7 +103,7 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
               key={id}
               type="button"
               className="decoration-panel-choice decoration-panel-sticker"
-              aria-label={`${label} 스티커 붙이기`}
+              aria-label={decorationMessages.stickerButton(label)}
               disabled={stickerReason !== null}
               aria-describedby={stickerReason === null ? undefined : ids.sticker}
               onClick={() => run(addSticker(id))}
@@ -119,8 +113,7 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
           ))}
         </div>
         <p id={ids.sticker} className="decoration-panel-hint">
-          {stickerReason ??
-            `누르면 고른 블록 오른쪽 위에 붙어요(${String(panel.sticker.count)}개 붙음). 가장 가까운 문단이나 사진에 붙어서, 폰에서도 그 옆에 그대로 있어요.`}
+          {stickerReason ?? decorationMessages.stickerHint(panel.sticker.count)}
         </p>
       </fieldset>
 
@@ -140,7 +133,7 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
           ))}
         </select>
         <p id={`${ids.motion}-hint`} className="decoration-panel-hint">
-          {motionReason ?? "움직임을 줄이도록 설정한 독자에게는 움직이지 않고 보여요."}
+          {motionReason ?? decorationMessages.motionHint}
         </p>
       </div>
 

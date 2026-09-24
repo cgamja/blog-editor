@@ -13,7 +13,7 @@ export {
   MOTION_OPTIONS,
   STICKER_OPTIONS,
   WIDTH_PRESETS,
-  decorationPanelStateOf,
-} from "./decoration-state";
-export type { Availability, DecorationPanelState, StickerId } from "./decoration-state";
+} from "./decoration-constants";
+export { decorationPanelStateOf } from "./decoration-state";
+export type { Availability, DecorationPanelState, StickerId } from "./decoration-types";
 export { useCommandRunner } from "./use-command-runner";

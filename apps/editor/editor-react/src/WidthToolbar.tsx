@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import { setBlockWidth } from "@blog-editor/editor-core";
-import { WIDTH_PRESETS, widthTargetOf } from "./decoration-state";
+import { WIDTH_PRESETS } from "./decoration-constants";
+import { decorationMessages } from "./decoration-messages";
+import { widthTargetOf } from "./decoration-state";
 import { useCommandRunner } from "./use-command-runner";
 
 export interface WidthToolbarProps {
@@ -77,7 +79,7 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
           {label}
         </button>
       ))}
-      <span className="width-toolbar-value">가로 {target.value}%</span>
+      <span className="width-toolbar-value">{decorationMessages.widthValue(target.value)}</span>
     </div>
   );
 }
