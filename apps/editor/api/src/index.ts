@@ -8,3 +8,7 @@ export { createMemoryAccountStore } from "./memory-account-store";
 export type { Account, AccountStore } from "./accounts";
 export { hashPassword, verifyPassword } from "./password";
 export type { SessionOptions } from "./session";
+export type { McpOptions } from "./mcp/route";
+export type { ConnectionToken, ConnectionTokenStore } from "./mcp/connection-tokens";
+export { hashConnectionToken } from "./mcp/connection-tokens";
+export { createMemoryConnectionTokenStore } from "./mcp/memory-connection-token-store";

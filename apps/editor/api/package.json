@@ -12,9 +12,12 @@
     "dev": "node src/serve.ts"
   },
   "dependencies": {
+    "@blog-editor/content-convert": "workspace:*",
     "@blog-editor/content-render": "workspace:*",
     "@blog-editor/content-schema": "workspace:*",
     "@hono/node-server": "^2.1.1",
-    "hono": "^4.13.8"
+    "@modelcontextprotocol/server": "~2.0.0",
+    "hono": "^4.13.8",
+    "zod": "^4.6.5"
   }
 }

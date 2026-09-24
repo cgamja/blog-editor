@@ -13,6 +13,11 @@
  * `.env`에서 `#` · 공백이 든 값은 큰따옴표로 감싼다 — 따옴표 없으면 `#` 뒤가 주석으로 잘린다
  * (Node 26 실측: `ADMIN_PASSWORD=12#34` → "12").
  * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
+ *
+ * 선택 — 있으면 `/mcp`를 연다(adr-016, `.env`에 넣어도 된다):
+ *   MCP_CONNECTION_TOKEN       연결용 토큰, 32자 이상 — `openssl rand -hex 32`
+ *   MCP_CONNECTION_TOKEN_NAME  초안 출처 `token:<이름>`(기본 local)
+ *   EDITOR_BASE_URL            초안 응답의 에디터 링크 앞부분
  */
 import { fileURLToPath } from "node:url";
 import { registerHooks } from "node:module";
@@ -37,6 +42,7 @@ const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
 const { readLocalConfig } = await import("./local-config");
+const { readMcpOptionsFromEnv } = await import("./mcp/env");
 
 const DEFAULT_PORT = 8787;
 // TLS 없는 로컬 개발 서버다 — 로그인 비밀번호와 세션 쿠키가 평문으로 오가므로 같은 네트워크의 다른 기기에 열지 않는다
@@ -77,6 +83,7 @@ loadEnvFileIfPresent(ENV_FILE);
 const config = await readLocalConfig(process.env);
 const port = readPort(process.env.PORT);
 const root = process.env.POST_STORE_ROOT ?? DEFAULT_ROOT;
+const mcp = readMcpOptionsFromEnv(process.env);
 
 const app = createApp({
   store: createFilePostStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
@@ -91,6 +98,7 @@ const app = createApp({
     },
   ]),
   sessionSecret: config.sessionSecret,
+  ...(mcp === null ? {} : { mcp }),
 });
 
 serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
@@ -100,4 +108,9 @@ serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
   if (config.generatedSecret) {
     console.log("SESSION_SECRET이 없어 새로 만들었다 — 재시작하면 로그인이 끊긴다");
   }
+  console.log(
+    mcp === null
+      ? "mcp: 꺼짐 (MCP_CONNECTION_TOKEN 없음)"
+      : `mcp: http://${HOSTNAME}:${info.port}/mcp`,
+  );
 });
