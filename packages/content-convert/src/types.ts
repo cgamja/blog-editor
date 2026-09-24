@@ -1,4 +1,4 @@
-import type { FONTS, MOTIONS } from "@blog-editor/content-schema";
+import type { ALIGNS, FONTS, MOTIONS } from "@blog-editor/content-schema";
 
 /**
  * check.ts(토큰 검사) · directives.ts(지시어) · parser.ts(doc 조립) · references.ts(참조 정의)가
@@ -39,6 +39,7 @@ export interface ResolvedDirective {
   font?: (typeof FONTS)[number];
   motion?: (typeof MOTIONS)[number];
   width?: number;
+  align?: (typeof ALIGNS)[number];
   naturalWidth?: number;
   naturalHeight?: number;
   isAppScreenshot?: boolean;

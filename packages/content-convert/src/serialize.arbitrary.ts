@@ -1,7 +1,11 @@
 import fc from "fast-check";
 import { CALLOUT_TONES, docSchema } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
-import { decorationArbitrary, naturalSizeArbitrary } from "@blog-editor/content-schema/testing";
+import {
+  decorationArbitrary,
+  naturalSizeArbitrary,
+  textStyleArbitrary,
+} from "@blog-editor/content-schema/testing";
 
 /**
  * 왕복 속성 테스트(markdown-serialize) 전용 — 스티커 · 빈 문단이 없는 유효 doc를 만든다. 테스트
@@ -72,14 +76,20 @@ const inlineArb = fc
     italic: fc.boolean(),
     code: fc.boolean(),
     link: fc.option(fc.constantFrom(...LINK_HREFS), { nil: undefined }),
+    strike: fc.boolean(),
+    underline: fc.boolean(),
+    textStyle: fc.option(textStyleArbitrary, { nil: undefined }),
   })
-  .chain(({ bold, italic, code, link }) =>
+  .chain(({ bold, italic, code, link, strike, underline, textStyle }) =>
     (code ? codeMarkTextArb : textArb).map((text) => {
       const marks: Record<string, unknown>[] = [];
       if (bold) marks.push({ type: "bold" });
       if (italic) marks.push({ type: "italic" });
       if (code) marks.push({ type: "code" });
       if (link !== undefined) marks.push({ type: "link", attrs: { href: link } });
+      if (strike) marks.push({ type: "strike" });
+      if (underline) marks.push({ type: "underline" });
+      if (textStyle !== undefined) marks.push({ type: "textStyle", attrs: textStyle });
       return marks.length > 0 ? { type: "text", text, marks } : { type: "text", text };
     }),
   );
@@ -90,7 +100,7 @@ const inlinesArb = fc.array(inlineArb, { minLength: 1, maxLength: 4 });
 const paragraphInner = inlinesArb.map((content) => ({ type: "paragraph", content }));
 
 /** markdown에는 스티커 자리가 없다 — 공용 생성기에서 스티커만 끈다. */
-const decoration = (opts: { font: boolean; width: boolean }) =>
+const decoration = (opts: { font: boolean; width: boolean; align?: boolean }) =>
   decorationArbitrary({ ...opts, maxStickers: 0 });
 
 function withAttrs<T extends Record<string, unknown>>(
@@ -114,14 +124,14 @@ function listArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
 }
 
 const topParagraph = fc
-  .tuple(inlinesArb, decoration({ font: true, width: false }))
+  .tuple(inlinesArb, decoration({ font: true, width: false, align: true }))
   .map(([content, attrs]) => withAttrs({ type: "paragraph", content }, attrs));
 
 const heading = fc
   .tuple(
     fc.constantFrom(2, 3),
     fc.array(inlineArb, { maxLength: 3 }),
-    decoration({ font: true, width: false }),
+    decoration({ font: true, width: false, align: true }),
   )
   .map(([level, content, attrs]) => {
     const node: Record<string, unknown> = { type: "heading", attrs: { level, ...attrs } };
@@ -163,14 +173,14 @@ const horizontalRule = decoration({ font: false, width: false }).map((attrs) =>
 const altArb = fc.string({ unit: fc.constantFrom(...TEXT_UNITS), maxLength: 8 });
 
 const image = fc
-  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true }))
+  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true, align: true }))
   .map(([alt, size, attrs]) => ({
     type: "image",
     attrs: { src: "/images/a-1.webp", alt, ...size, ...attrs },
   }));
 
 const appScreenshot = fc
-  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true }))
+  .tuple(altArb, naturalSizeArbitrary, decoration({ font: false, width: true, align: true }))
   .map(([caption, size, attrs]) => ({
     type: "appScreenshot",
     attrs: { src: "/images/shot.png", caption, ...size, ...attrs },

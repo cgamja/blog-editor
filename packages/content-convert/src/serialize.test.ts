@@ -107,6 +107,24 @@ describe("serializeMarkdown", () => {
     expect(back.ok && back.doc).toEqual(normalize(input));
   });
 
+  it("WHEN 글자 스타일 · 밑줄 · 취소선 · 정렬을 직렬화하면 THEN span · ~~ · align 지시어로 나가고 되돌아온다", () => {
+    const input = doc({
+      type: "paragraph",
+      attrs: { align: "center" },
+      content: [
+        text("가", { type: "textStyle", attrs: { color: "brand" } }, { type: "underline" }),
+        text("나", { type: "strike" }),
+      ],
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("{align=center}\n[가]{color=brand underline}~~나~~\n");
+    expect(result.losses).toEqual([]);
+    const back = convertMarkdown(result.markdown);
+    expect(back.ok && back.doc).toEqual(normalize(input));
+  });
+
   it("이웃한 같은 종류 목록은 표지를 바꿔 따로 남긴다", () => {
     const result = serializeMarkdown(doc(bulletList("가"), bulletList("나")));
 

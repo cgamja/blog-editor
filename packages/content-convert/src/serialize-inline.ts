@@ -1,4 +1,5 @@
 import type { TextNode } from "@blog-editor/content-schema";
+import { SPAN_STYLE_KEYS, SPAN_UNDERLINE_KEY } from "./constants";
 import { createMarkdownIt } from "./tokens";
 
 /**
@@ -6,14 +7,15 @@ import { createMarkdownIt } from "./tokens";
  * 하나라서, 강조가 성립하는지는 파서와 같은 판정(markdown-it `scanDelims`의 flanking 규칙)으로
  * 확인하고, 성립하지 않는 경계 글자는 숫자 문자 참조로 바꿔 구두점으로 만든다(design.md 3번).
  *
- * 순서: 링크 묶음(같은 href가 이어진 노드) → 묶음 안 강조 스택(굵게 · 기울임) → 코드 스팬.
- * 강조는 링크 묶음 경계에서 전부 닫고 다시 연다 — 다시 읽으면 같은 마크라 doc는 같다.
+ * 순서: 괄호 span 묶음(같은 글자 스타일 · 밑줄) → 링크 묶음(같은 href) → 묶음 안 강조 스택(굵게 ·
+ * 기울임 · 취소선) → 코드 스팬. 강조는 묶음 경계에서 전부 닫고 다시 연다 — 다시 읽으면 같은 마크라
+ * doc는 같다.
  */
 
 const { isWhiteSpace, isMdAsciiPunct, isPunctCharCode } = createMarkdownIt().utils;
 
-type Emphasis = "bold" | "italic";
-type DelimChar = "*" | "_";
+type Emphasis = "bold" | "italic" | "strike";
+type DelimChar = "*" | "_" | "~";
 
 type CharMode = "plain" | "escape" | "entity";
 
@@ -36,7 +38,9 @@ const MAX_LIST_NUMBER_DIGITS = 9;
 /** 줄 끝 · 줄 처음은 공백으로 친다(markdown-it `scanDelims`와 같다). */
 const SPACE_CODE_POINT = 0x20;
 
-const MARK_DELIM: Record<Emphasis, number> = { bold: 2, italic: 1 };
+const MARK_DELIM: Record<Emphasis, number> = { bold: 2, italic: 1, strike: 2 };
+/** 취소선 구분자 — `*`/`_`처럼 바꿔 쓸 글자가 없다. 한 글자에 취소선은 하나뿐이라 겹칠 일도 없다. */
+const STRIKE_CH: DelimChar = "~";
 
 type CharClass = "space" | "punct" | "word";
 
@@ -82,9 +86,28 @@ function escapeHref(href: string): string {
 function emphasisOf(node: TextNode): Set<Emphasis> {
   const set = new Set<Emphasis>();
   for (const mark of node.marks ?? []) {
-    if (mark.type === "bold" || mark.type === "italic") set.add(mark.type);
+    if (mark.type === "bold" || mark.type === "italic" || mark.type === "strike") {
+      set.add(mark.type);
+    }
   }
   return set;
+}
+
+/**
+ * 괄호 span `{…}` 안쪽 — 글자 스타일 키(SPAN_STYLE_KEYS 순서) + 밑줄 켜기 키. span이 없으면 빈 문자열.
+ * 같은 문자열인 이웃 노드는 한 span으로 묶인다(markdown-serialize).
+ */
+function spanBodyOf(node: TextNode): string {
+  const parts: string[] = [];
+  for (const mark of node.marks ?? []) {
+    if (mark.type !== "textStyle") continue;
+    for (const key of SPAN_STYLE_KEYS) {
+      const value = mark.attrs[key];
+      if (value !== undefined) parts.push(`${key}=${value}`);
+    }
+  }
+  if ((node.marks ?? []).some((mark) => mark.type === "underline")) parts.push(SPAN_UNDERLINE_KEY);
+  return parts.join(" ");
 }
 
 function hasCode(node: TextNode): boolean {
@@ -136,7 +159,7 @@ function emphasisPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextN
     const taken = new Set([lastClosed, ...stack.map((span) => span.ch)]);
     const openCh: DelimChar = taken.has("*") ? "_" : "*";
     for (const mark of toOpen) {
-      const span = { mark, ch: openCh };
+      const span = { mark, ch: mark === "strike" ? STRIKE_CH : openCh };
       stack.push(span);
       pieces.push(delim(span, "open"));
     }
@@ -151,24 +174,47 @@ function emphasisPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextN
   return pieces;
 }
 
-function toPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextNode>): Piece[] {
-  const pieces: Piece[] = [];
+/** 같은 key를 가진 이웃 노드 묶음으로 나눈다. */
+function groupBy<K>(nodes: readonly TextNode[], keyOf: (node: TextNode) => K): TextNode[][] {
+  const groups: TextNode[][] = [];
   let start = 0;
   while (start < nodes.length) {
-    const href = linkOf(nodes[start]!);
+    const key = keyOf(nodes[start]!);
     let end = start + 1;
-    while (end < nodes.length && linkOf(nodes[end]!) === href) end += 1;
-    const group = nodes.slice(start, end);
-    if (href === undefined) {
-      pieces.push(...emphasisPieces(group, plainCode));
-    } else {
-      pieces.push({ kind: "raw", text: "[" });
-      pieces.push(...emphasisPieces(group, plainCode));
-      pieces.push({ kind: "raw", text: `](${escapeHref(href)})` });
-    }
+    while (end < nodes.length && keyOf(nodes[end]!) === key) end += 1;
+    groups.push(nodes.slice(start, end));
     start = end;
   }
-  return pieces;
+  return groups;
+}
+
+function linkPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextNode>): Piece[] {
+  return groupBy(nodes, linkOf).flatMap((group) => {
+    const href = linkOf(group[0]!);
+    if (href === undefined) return emphasisPieces(group, plainCode);
+    return [
+      { kind: "raw" as const, text: "[" },
+      ...emphasisPieces(group, plainCode),
+      { kind: "raw" as const, text: `](${escapeHref(href)})` },
+    ];
+  });
+}
+
+/**
+ * 괄호 span을 링크 바깥에 둔다(`[[글](url)]{…}`) — 둘 다 괄호 묶음이라 경계가 어긋나면 한쪽을 나눠야
+ * 하는데, 바깥 하나로 정해 두면 쓰는 모양이 하나다. span 경계에서 링크를 나누면 같은 href의 두 링크로
+ * 돌아오지만 마크가 달라 doc는 같다.
+ */
+function toPieces(nodes: readonly TextNode[], plainCode: ReadonlySet<TextNode>): Piece[] {
+  return groupBy(nodes, spanBodyOf).flatMap((group) => {
+    const body = spanBodyOf(group[0]!);
+    if (body === "") return linkPieces(group, plainCode);
+    return [
+      { kind: "raw" as const, text: "[" },
+      ...linkPieces(group, plainCode),
+      { kind: "raw" as const, text: `]{${body}}` },
+    ];
+  });
 }
 
 function toEntity(piece: Piece | undefined): boolean {
@@ -221,7 +267,8 @@ function fixRun(
   const after = sideClass(next);
   if (hasClose && before === "space") return toEntity(prev);
   if (hasOpen && after === "space") return toEntity(next);
-  if (ch === "*") {
+  // `~`(취소선)도 `*`처럼 단어 속에서 된다 — markdown-it strikethrough가 scanDelims(pos, true)를 쓴다
+  if (ch === "*" || ch === "~") {
     if (hasOpen && after === "punct" && before === "word") return toEntity(prev);
     if (hasClose && before === "punct" && after === "word") return toEntity(next);
     return false;
