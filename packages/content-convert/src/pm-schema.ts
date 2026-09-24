@@ -36,7 +36,8 @@ export const pmSchema = new Schema({
       attrs: { tone: { default: DEFAULT_CALLOUT_TONE } },
     },
     bulletList: { group: "block", content: "listItem+" },
-    orderedList: { group: "block", content: "listItem+" },
+    // start 없음은 toJSON에 undefined로 남고 normalize가 지운다
+    orderedList: { group: "block", content: "listItem+", attrs: { start: { default: undefined } } },
     listItem: { content: "paragraph (bulletList | orderedList)*" },
 
     image: {

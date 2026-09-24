@@ -536,3 +536,28 @@ describe("decoration-schema — 글자 스타일 마크는 이름 붙은 값과 
     expect(docSchema.safeParse(docWithTextStyle(attrs)).success).toBe(false);
   });
 });
+
+function orderedListWith(start: unknown, nestedStart?: unknown) {
+  const item = (label: string, ...nested: Record<string, unknown>[]) => ({
+    type: "listItem",
+    content: [{ type: "paragraph", content: [{ type: "text", text: label }] }, ...nested],
+  });
+  const nested =
+    nestedStart === undefined
+      ? []
+      : [{ type: "orderedList", attrs: { start: nestedStart }, content: [item("안")] }];
+  return {
+    type: "doc",
+    content: [{ type: "orderedList", attrs: { start }, content: [item("가", ...nested)] }],
+  };
+}
+
+describe("ordered-list-start — 번호 목록은 시작 번호를 선택으로 가진다", () => {
+  it("WHEN 최상위 번호 목록 start 3과 목록 항목 안 번호 목록 start 2를 검증하면 THEN 통과한다", () => {
+    expect(docSchema.safeParse(orderedListWith(3, 2)).success).toBe(true);
+  });
+
+  it.each([0, -1, 1.5, "3", 1_000_000_000])("WHEN start %s를 검증하면 THEN 거부된다", (start) => {
+    expect(docSchema.safeParse(orderedListWith(start)).success).toBe(false);
+  });
+});

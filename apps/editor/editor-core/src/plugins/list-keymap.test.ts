@@ -271,3 +271,66 @@ describe("editor-list-keys: 최상위 목록의 꾸미기", () => {
     expect(() => docFromNode(state.doc)).not.toThrow();
   });
 });
+
+describe("ordered-list-start: 번호 목록이 갈리면 뒤 조각이 번호를 잇는다", () => {
+  const ordered = (items: object[], attrs?: Record<string, unknown>) => ({
+    ...bullet(items, attrs),
+    type: "orderedList",
+  });
+  const listsOf = (doc: Node) =>
+    docFromNode(doc).content.map((block) => ({ type: block.type, attrs: block.attrs }));
+
+  it("WHEN 가 · (빈 항목) · 나 · 다 번호 목록의 가운데 빈 항목에서 Enter THEN 번호 목록 가 · 문단 · start 3 번호 목록 나 · 다가 된다", () => {
+    const { ok, state } = press(
+      "Enter",
+      start([ordered([item("가"), item(), item("나"), item("다")])], 1),
+    );
+
+    expect(ok).toBe(true);
+    expect(listsOf(state.doc)).toEqual([
+      { type: "orderedList", attrs: undefined },
+      { type: "paragraph", attrs: undefined },
+      { type: "orderedList", attrs: { start: 3 } },
+    ]);
+  });
+
+  it("WHEN start 3 번호 목록 가 · 나 · 다의 나 맨 앞에서 Backspace THEN start 3 목록 가 · 문단 나 · start 5 목록 다가 된다", () => {
+    const { ok, state } = press(
+      "Backspace",
+      start([ordered([item("가"), item("나"), item("다")], { start: 3 })], 1),
+    );
+
+    expect(ok).toBe(true);
+    expect(listsOf(state.doc)).toEqual([
+      { type: "orderedList", attrs: { start: 3 } },
+      { type: "paragraph", attrs: undefined },
+      { type: "orderedList", attrs: { start: 5 } },
+    ]);
+  });
+
+  it("WHEN 번호 목록 가 · 나 · 다의 나에서 Shift-Tab THEN 목록 가 · 문단 나 · start 3 목록 다가 된다", () => {
+    const { ok, state } = press(
+      "Shift-Tab",
+      start([ordered([item("가"), item("나"), item("다")])], 1),
+    );
+
+    expect(ok).toBe(true);
+    expect(listsOf(state.doc)).toEqual([
+      { type: "orderedList", attrs: undefined },
+      { type: "paragraph", attrs: undefined },
+      { type: "orderedList", attrs: { start: 3 } },
+    ]);
+  });
+
+  it("WHEN 안쪽 번호 목록 가 · 나 · 다의 나에서 Shift-Tab THEN 나는 바깥 항목이 되고 그 아래 다 목록이 start 3이다", () => {
+    const { ok, state } = press(
+      "Shift-Tab",
+      start([ordered([item("밖", ordered([item("가"), item("나"), item("다")]))])], 2),
+    );
+
+    expect(ok).toBe(true);
+    expect(docFromNode(state.doc).content).toEqual([
+      ordered([item("밖", ordered([item("가")])), item("나", ordered([item("다")], { start: 3 }))]),
+    ]);
+  });
+});

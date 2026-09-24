@@ -4,7 +4,13 @@ import type { Schema } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
-import { headingLevelOf, hrefOrNull, languageOrNull, toneOrNull } from "./closed-values";
+import {
+  headingLevelOf,
+  hrefOrNull,
+  languageOrNull,
+  orderedListStartOrNull,
+  toneOrNull,
+} from "./closed-values";
 import {
   TEXT_STYLE_TAG,
   hasClass,
@@ -99,21 +105,35 @@ const Heading = Node.create({
   renderHTML: ({ node }) => withDecoration(node.attrs, [node.attrs.level === 3 ? "h3" : "h2", 0]),
 });
 
-const listNode = (name: string, tag: "ul" | "ol") =>
-  Node.create({
-    name,
-    group: "block",
-    content: "listItem+",
-    addAttributes: () => decoration,
-    parseHTML: () => [
-      wrapperRule({ matches: isTag(tag.toUpperCase()), keys: ["font", "motion"] }),
-      { tag },
-    ],
-    renderHTML: ({ node }) => withDecoration(node.attrs, [tag, 0]),
-  });
+const BulletList = Node.create({
+  name: "bulletList",
+  group: "block",
+  content: "listItem+",
+  addAttributes: () => decoration,
+  parseHTML: () => [wrapperRule({ matches: isTag("UL"), keys: ["font", "motion"] }), { tag: "ul" }],
+  renderHTML: ({ node }) => withDecoration(node.attrs, ["ul", 0]),
+});
 
-const BulletList = listNode("bulletList", "ul");
-const OrderedList = listNode("orderedList", "ol");
+// 시작 번호는 `<ol start>`로 오간다(ordered-list-start) — 공개 HTML(content-render)과 같은 어휘
+const olStartAttrs = (element: ElementLike) => ({
+  start: orderedListStartOrNull(element.getAttribute("start")),
+});
+
+const OrderedList = Node.create({
+  name: "orderedList",
+  group: "block",
+  content: "listItem+",
+  addAttributes: () => ({ ...decoration, start: optional }),
+  parseHTML: () => [
+    wrapperRule({ matches: isTag("OL"), keys: ["font", "motion"], attrs: olStartAttrs }),
+    { tag: "ol", getAttrs: (element: ElementLike) => olStartAttrs(element) },
+  ],
+  renderHTML: ({ node }) =>
+    withDecoration(
+      node.attrs,
+      node.attrs.start == null ? ["ol", 0] : ["ol", { start: String(node.attrs.start) }, 0],
+    ),
+});
 
 // content-schema의 z.tuple([innerParagraph], innerList)와 같다 — 첫 자식은 문단, 뒤는 안쪽 목록만
 const ListItem = Node.create({

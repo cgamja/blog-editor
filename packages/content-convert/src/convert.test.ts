@@ -129,14 +129,24 @@ describe("markdown-format", () => {
     expect(hard.messages.length).toBeGreaterThan(0);
   });
 
-  it("WHEN 순서 목록이 1부터 시작하거나 아니면 THEN 1부터만 받는다", () => {
+  it("WHEN 순서 목록이 1부터 · 3부터 시작하면 THEN 앞은 start 없이, 뒤는 start 3으로 받는다", () => {
     const startsAtOne = convertMarkdown(["1. 가", "2. 나"].join("\n"));
     expectOk(startsAtOne);
     expect(startsAtOne.doc.content[0]?.type).toBe("orderedList");
+    expect(startsAtOne.doc.content[0]).not.toHaveProperty("attrs");
 
     const startsAtThree = convertMarkdown(["3. 가", "4. 나"].join("\n"));
-    expectFail(startsAtThree);
-    expect(startsAtThree.messages.length).toBeGreaterThan(0);
+    expectOk(startsAtThree);
+    expect(startsAtThree.doc.content[0]).toMatchObject({
+      type: "orderedList",
+      attrs: { start: 3 },
+    });
+  });
+
+  it("WHEN 0으로 시작하는 순서 목록을 변환하면 THEN 거부되고 메시지가 하나 이상 나온다", () => {
+    const result = convertMarkdown("0. 가");
+    expectFail(result);
+    expect(result.messages.length).toBeGreaterThan(0);
   });
 
   const outOfDefinitionCases: Array<[string, string]> = [

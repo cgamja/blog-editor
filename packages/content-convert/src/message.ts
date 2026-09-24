@@ -164,7 +164,7 @@ export function orderedListStartMessage(
   return blockMessage(
     topLevel,
     line,
-    "순서 목록은 1부터 시작한다",
+    "순서 목록은 1 이상 번호로 시작한다",
     received,
     "번호를 1부터 다시 매긴다",
   );

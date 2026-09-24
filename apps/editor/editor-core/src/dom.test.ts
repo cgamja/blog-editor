@@ -269,4 +269,25 @@ describe("editor-dom: HTML 속성을 검증 없이 attrs로 읽지 않는다", (
     expect(readWith(schema, "nodes", "callout", callout)).toBe(false);
     expect(comparable(readWith(schema, "nodes", "codeBlock", code) as object)).toEqual({});
   });
+
+  it('WHEN <ol start="3">과 <ol start="0">을 DOM에서 읽는다 THEN 앞은 start 3, 뒤는 start가 없고 start 3은 다시 ol start로 나간다', () => {
+    const list = (start: string) =>
+      el({ tag: "ol", attrs: { start }, children: [el({ tag: "li", children: ["가"] })] });
+
+    expect(comparable(readWith(schema, "nodes", "orderedList", list("3")) as object)).toEqual({
+      start: 3,
+    });
+    expect(comparable(readWith(schema, "nodes", "orderedList", list("0")) as object)).toEqual({});
+    const node = docToNode(schema, {
+      type: "doc",
+      content: [
+        {
+          type: "orderedList",
+          attrs: { start: 3 },
+          content: [{ type: "listItem", content: [{ type: "paragraph" }] }],
+        },
+      ],
+    }).child(0);
+    expect(toDom(node)).toEqual(["ol", { start: "3" }, 0]);
+  });
 });

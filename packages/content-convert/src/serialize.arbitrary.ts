@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import { CALLOUT_TONES, docSchema } from "@blog-editor/content-schema";
+import { CALLOUT_TONES, docSchema, ORDERED_LIST_START_RANGE } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import {
   decorationArbitrary,
@@ -13,6 +13,9 @@ import {
  * 것을 쓴다 — 스키마에 속성이 늘면 거기 한 곳만 고친다(document-fixtures). docArbitrary 전체를 쓰지
  * 않는 이유: 그 글자는 ASCII뿐이라 한글 · 줄바꿈 · markdown 문법 경계를 못 만든다.
  */
+
+/** 흔한 시작 번호(2 ~ 12) — 전체 범위만 뽑으면 거의 9자리 수라 작은 번호의 표지 · 들여쓰기를 못 본다 */
+const SMALL_START_RANGE = { min: 2, max: 12 };
 
 /** markdown 문법 글자 · 한글 · 공백류를 섞는다 — 이스케이프와 flanking 경계를 두드리는 게 목적이다. */
 const TEXT_UNITS = [
@@ -110,17 +113,38 @@ function withAttrs<T extends Record<string, unknown>>(
   return Object.keys(attrs).length > 0 ? { ...node, attrs } : node;
 }
 
+/** 번호 목록 시작 번호 — 없음(1) · 작은 수 · 9자리 상한까지 */
+const orderedStartArb = fc.option(
+  fc.oneof(
+    fc.integer(SMALL_START_RANGE),
+    fc.integer({ min: ORDERED_LIST_START_RANGE.min, max: ORDERED_LIST_START_RANGE.max }),
+  ),
+  { nil: undefined },
+);
+
+function withStart(
+  list: fc.Arbitrary<{ type: string; content: unknown[] }>,
+): fc.Arbitrary<Record<string, unknown>> {
+  return fc
+    .tuple(list, orderedStartArb)
+    .map(([node, start]) =>
+      node.type === "orderedList" && start !== undefined ? { ...node, attrs: { start } } : node,
+    );
+}
+
 function listArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
   const nested = depth < 2 ? fc.array(listArb(depth + 1), { maxLength: 2 }) : fc.constant([]);
   const item = fc
     .tuple(paragraphInner, nested)
     .map(([paragraph, lists]) => ({ type: "listItem", content: [paragraph, ...lists] }));
-  return fc
-    .tuple(
-      fc.constantFrom("bulletList", "orderedList"),
-      fc.array(item, { minLength: 1, maxLength: 11 }),
-    )
-    .map(([type, content]) => ({ type, content }));
+  return withStart(
+    fc
+      .tuple(
+        fc.constantFrom("bulletList", "orderedList"),
+        fc.array(item, { minLength: 1, maxLength: 11 }),
+      )
+      .map(([type, content]) => ({ type, content })),
+  );
 }
 
 const topParagraph = fc
@@ -186,15 +210,17 @@ const appScreenshot = fc
     attrs: { src: "/images/shot.png", caption, ...size, ...attrs },
   }));
 
-const calloutList = fc
-  .tuple(
-    fc.constantFrom("bulletList", "orderedList"),
-    fc.array(
-      paragraphInner.map((paragraph) => ({ type: "listItem", content: [paragraph] })),
-      { minLength: 1, maxLength: 3 },
-    ),
-  )
-  .map(([type, content]) => ({ type, content }));
+const calloutList = withStart(
+  fc
+    .tuple(
+      fc.constantFrom("bulletList", "orderedList"),
+      fc.array(
+        paragraphInner.map((paragraph) => ({ type: "listItem", content: [paragraph] })),
+        { minLength: 1, maxLength: 3 },
+      ),
+    )
+    .map(([type, content]) => ({ type, content })),
+);
 
 const callout = fc
   .tuple(
@@ -206,7 +232,7 @@ const callout = fc
 
 const topList = fc
   .tuple(listArb(0), decoration({ font: true, width: false }))
-  .map(([list, attrs]) => withAttrs(list, attrs));
+  .map(([list, attrs]) => withAttrs(list, { ...(list.attrs as object | undefined), ...attrs }));
 
 const topLevelBlock = fc.oneof(
   topParagraph,

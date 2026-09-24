@@ -20,7 +20,14 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   heading: { block: "heading", getAttrs: (tok) => ({ level: Number(tok.tag.slice(1)) }) },
   blockquote: { block: "blockquote" },
   bullet_list: { block: "bulletList" },
-  ordered_list: { block: "orderedList" },
+  // markdown-it은 첫 표지 번호가 1이 아닐 때만 start 속성을 싣는다 — 1은 정규형에서 지우므로 두지 않는다
+  ordered_list: {
+    block: "orderedList",
+    getAttrs: (tok) => {
+      const start = tok.attrGet("start");
+      return start === null ? {} : { start: Number(start) };
+    },
+  },
   list_item: { block: "listItem" },
   code_block: { block: "codeBlock", noCloseToken: true },
   fence: {
