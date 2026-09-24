@@ -1,5 +1,6 @@
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
-import { isStickerId, type StickerId } from "./sticker-ui";
+import type { StickerId } from "./sticker-types";
+import { isStickerId } from "./sticker-ui";
 
 /**
  * 스티커 오버레이의 사용자 문장 — 한 곳에서 고친다(CLEAN-CODE §3 messages).
@@ -21,8 +22,7 @@ const STICKER_NAMES: Record<StickerId, string> = {
 
 export const stickerName = (id: string): string => (isStickerId(id) ? STICKER_NAMES[id] : id);
 
-/** 스티커 버튼의 접근성 이름 */
-export const stickerLabel = (id: string): string => `${stickerName(id)} 스티커`;
+export const stickerAriaLabel = (id: string): string => `${stickerName(id)} 스티커`;
 
 export const removeStickerLabel = (id: string): string => `${stickerName(id)} 스티커 지우기`;
 

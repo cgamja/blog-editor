@@ -1,12 +1,11 @@
 import { STICKER_IDS, STICKER_RANGES } from "@blog-editor/content-schema";
 import { wrapRotation } from "@blog-editor/editor-core";
+import type { StickerId } from "./sticker-types";
 
 /**
  * 스티커 오버레이의 순수 계산 — spec: editor-sticker-layer, sticker-drag design.md.
  * DOM을 모른다(node 환경 테스트). 사용자 문장은 sticker-messages.
  */
-
-export type StickerId = (typeof STICKER_IDS)[number];
 
 export const isStickerId = (value: string): value is StickerId =>
   (STICKER_IDS as readonly string[]).includes(value);

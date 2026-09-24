@@ -4,7 +4,7 @@ import type { Editor } from "@tiptap/react";
 import { isStickerRemoveKey, removeSticker, stickerKeyCommand } from "@blog-editor/editor-core";
 import type { StickerRef } from "@blog-editor/editor-core";
 import { StickerFrame } from "./StickerFrame";
-import { STICKER_MESSAGES, stickerLabel } from "./sticker-messages";
+import { STICKER_MESSAGES, stickerAriaLabel } from "./sticker-messages";
 import { refOf, sameRef } from "./sticker-ref";
 import type { StickerBox } from "./sticker-types";
 import { useStickerDrop } from "./use-sticker-drop";
@@ -75,7 +75,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
             ref={(element) => selection.registerButton(box.key, element)}
             type="button"
             className="sticker-hit"
-            aria-label={stickerLabel(box.id)}
+            aria-label={stickerAriaLabel(box.id)}
             aria-describedby={hintId}
             aria-pressed={sameRef(selection.selected, refOf(box))}
             style={{

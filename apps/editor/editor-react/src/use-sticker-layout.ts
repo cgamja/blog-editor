@@ -10,7 +10,6 @@ export interface StickerLayout {
   boxes: StickerBox[];
   /** 지금 블록 사각형(레이어 기준) — 놓을 자리를 셀 때마다 새로 잰다 */
   measureBlocksNow: () => BlockRect[];
-  /** client 좌표 → 레이어 기준 */
   toLayerPoint: (clientX: number, clientY: number) => LayerPoint;
 }
 

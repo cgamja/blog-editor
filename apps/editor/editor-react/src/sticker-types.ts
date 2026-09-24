@@ -1,10 +1,13 @@
 import type { Command } from "@tiptap/pm/state";
+import type { STICKER_IDS } from "@blog-editor/content-schema";
 import type { StickerRef } from "@blog-editor/editor-core";
 
 /**
  * 스티커 오버레이의 타입 — sticker-drag design.md.
  * 좌표는 모두 **레이어 기준 px**다. 잴 때 바로 바꿔 두므로 스크롤해도 어긋나지 않는다.
  */
+
+export type StickerId = (typeof STICKER_IDS)[number];
 
 export interface LayerPoint {
   x: number;
