@@ -4,18 +4,18 @@
 
 ## 1. 의존성
 
-- [ ] 1.1 adr-016 · `apps/editor/api/package.json`(SDK · content-convert · zod) · lockfile → verify: `pnpm install` 뒤 `pnpm audit --prod` 취약점 없음
+- [x] 1.1 adr-016 · `apps/editor/api/package.json`(SDK · content-convert · zod) · lockfile → verify: `pnpm install` 뒤 `pnpm audit --prod` 취약점 없음
 
 ## 2. 테스트
 
-- [ ] 2.1 `src/mcp/mcp.test.ts` — 스펙 시나리오 9개(mcp-drafts 7 · mcp-auth 2) → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
+- [x] 2.1 `src/mcp/mcp.test.ts` — 스펙 시나리오 15개(mcp-drafts 11 · mcp-auth 4) → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
 
 ## 3. 구현
 
-- [ ] 3.1 `src/mcp/connection-tokens.ts` · `memory-connection-token-store.ts` — 토큰 계약 · SHA-256 · 메모리 구현 → verify: mcp-auth 시나리오 초록
-- [ ] 3.2 `src/mcp/tools.ts` · `messages.ts` · `route.ts` · `app.ts` 마운트 — 도구 6개 · 초안 규칙 · 충돌 → verify: 2.1 초록 + `pnpm test` PASS_TO_PASS
-- [ ] 3.3 `src/serve.ts` · `src/index.ts` — `MCP_CONNECTION_TOKEN`(32자 이상) · `MCP_CONNECTION_TOKEN_NAME` → verify: 로컬 서버에 JSON-RPC initialize → tools/list → create_draft 스모크
+- [x] 3.1 `src/mcp/connection-tokens.ts` · `memory-connection-token-store.ts` — 토큰 계약 · SHA-256 · 메모리 구현 → verify: mcp-auth 시나리오 초록
+- [x] 3.2 `src/mcp/tools.ts` · `messages.ts` · `route.ts` · `app.ts` 마운트 — 도구 6개 · 초안 규칙 · 충돌 → verify: 2.1 초록 + `pnpm test` PASS_TO_PASS
+- [x] 3.3 `src/serve.ts` · `src/index.ts` — `MCP_CONNECTION_TOKEN`(32자 이상) · `MCP_CONNECTION_TOKEN_NAME` → verify: 로컬 서버에 JSON-RPC initialize → tools/list → create_draft 스모크
 
 ## 4. Converge
 
-- [ ] 4.1 스펙 시나리오 9개 ↔ 테스트 대조 · 연결 절차 문서 → verify: `pnpm verify` 초록 출력
+- [x] 4.1 스펙 시나리오 15개 ↔ 테스트 대조 · 연결 절차 문서 → verify: `pnpm verify` 초록 출력
