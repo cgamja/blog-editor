@@ -15,8 +15,8 @@ import {
   MOTION_OPTIONS,
   STICKER_OPTIONS,
   WIDTH_PRESETS,
-  decorationPanelStateOf,
-} from "./decoration-state";
+} from "./decoration-constants";
+import { decorationPanelStateOf } from "./decoration-state";
 
 const schema = createEditorSchema();
 
