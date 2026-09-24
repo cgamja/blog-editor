@@ -104,7 +104,11 @@
   clip-path: inset(50%);
 }
 
-.import-pane-head:has(.import-file-input:focus-visible) .import-file {
+.import-file-row {
+  display: flex;
+}
+
+.import-file-input:focus-visible + .import-file {
   outline: var(--focus-ring-width) solid var(--brand-ink);
   outline-offset: var(--focus-ring-offset);
 }

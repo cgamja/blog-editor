@@ -108,17 +108,8 @@ export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
               <label htmlFor={sourceId} className="modal-dialog-label">
                 {M.source}
               </label>
-              <label htmlFor={fileId} className="import-file">
-                {M.pickFile}
-              </label>
-              <input
-                id={fileId}
-                className="import-file-input"
-                type="file"
-                accept={MARKDOWN_FILE_ACCEPT}
-                onChange={handleFile}
-              />
             </div>
+            {/* 원문이 첫 포커스 자리다 — showModal()은 대화상자 안 첫 포커스 가능 요소로 옮긴다 */}
             <textarea
               id={sourceId}
               className="import-source"
@@ -127,6 +118,18 @@ export function ImportDialog({ open, onClose, categories }: ImportDialogProps) {
               onChange={(event) => setMarkdown(event.target.value)}
               spellCheck={false}
             />
+            <div className="import-file-row">
+              <input
+                id={fileId}
+                className="import-file-input"
+                type="file"
+                accept={MARKDOWN_FILE_ACCEPT}
+                onChange={handleFile}
+              />
+              <label htmlFor={fileId} className="import-file">
+                {M.pickFile}
+              </label>
+            </div>
             {fileError ? (
               <p className="import-error" role="alert">
                 {M.fileFailed}
