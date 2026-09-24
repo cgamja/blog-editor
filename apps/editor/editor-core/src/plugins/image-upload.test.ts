@@ -121,6 +121,18 @@ describe("editor-image-insert: 올리기가 끝나면 자리에 그림을 한 �
     expect(state.selection.from).toBe(6);
   });
 
+  it("WHEN 자리를 둔 뒤 같은 자리에서 이어 쓰고 finishImageUpload THEN 선택은 쓰던 글자 선택 그대로다", () => {
+    const withPlace = run(start(), startImageUpload("a", GAP)).state;
+    const typed = withPlace.apply(withPlace.tr.insertText("abc"));
+
+    const { ok, state } = run(typed, finishImageUpload("a", UPLOADED));
+
+    expect(ok).toBe(true);
+    expect(state.doc.child(1).type.name).toBe("image");
+    expect(state.selection).toBeInstanceOf(TextSelection);
+    expect(state.selection.from).toBe(typed.selection.from);
+  });
+
   it("WHEN 자리가 가로지른 삭제로 사라진 뒤 finishImageUpload THEN false이고 문서는 그대로다", () => {
     const withPlace = run(start(), startImageUpload("a", GAP)).state;
     const deleted = withPlace.apply(withPlace.tr.delete(2, 5));
