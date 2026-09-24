@@ -54,15 +54,14 @@ export function useUploadQueue(editor: Editor, upload: ImageUploader | undefined
     const controller = new AbortController();
     lifetime.current = controller;
     const known = files.current;
-    // 자리가 사라지면(지우기 · 가로지른 삭제 · 되돌리기) 들고 있던 파일도 놓는다
-    const prune = () => {
+    const releaseFilesOfRemovedPlaceholders = () => {
       const alive = new Set(imageUploadsOf(editor.state).map((entry) => entry.id));
       for (const id of known.keys()) if (!alive.has(id)) known.delete(id);
     };
-    editor.on("transaction", prune);
+    editor.on("transaction", releaseFilesOfRemovedPlaceholders);
     return () => {
       controller.abort();
-      editor.off("transaction", prune);
+      editor.off("transaction", releaseFilesOfRemovedPlaceholders);
       known.clear();
       queue.current = Promise.resolve();
     };

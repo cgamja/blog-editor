@@ -150,4 +150,4 @@ export type {
   ImageFileInputOptions,
   ImageFileLike,
   PastedContent,
-} from "./plugins/image-file-input";
+} from "./plugins/image-file-input.types";

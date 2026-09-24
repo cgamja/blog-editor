@@ -2,10 +2,8 @@ import { INSERTABLE_BLOCKS } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { BLOCK_MENU_ACTION_LABELS, INSERTABLE_BLOCK_LABELS } from "./messages";
 import { BLOCK_MENU_ACTIONS } from "./block-menu-actions";
-import type { BlockMenuAction } from "./block-menu-actions";
+import type { BlockMenuAction, SlashItem } from "./block-menu-actions";
 import { SLASH_ACTION_ALIASES, SLASH_ALIASES } from "./slash-menu.constants";
-
-export type SlashItem = InsertableBlockKind | BlockMenuAction;
 
 /** 「+」 메뉴와 같은 목록 · 같은 순서(spec: editor-slash-menu) */
 const KINDS = Object.keys(INSERTABLE_BLOCKS) as InsertableBlockKind[];

@@ -8,11 +8,10 @@ import {
   slashMenuKey,
 } from "@blog-editor/editor-core";
 import type { SlashMenuState } from "@blog-editor/editor-core";
-import type { BlockMenuAction } from "./block-menu-actions";
+import type { BlockMenuAction, BlockMenuActionHandlers, SlashItem } from "./block-menu-actions";
 import { SLASH_MENU_MESSAGES } from "./messages";
 import { SELECTION_POPUP_GAP_PX } from "./popup-constants";
 import { filterSlashItems, isAction, slashItemLabel } from "./slash-items";
-import type { SlashItem } from "./slash-items";
 import { useCommandRunner } from "./use-command-runner";
 import { useSlashMenuAutoClose } from "./use-slash-menu-auto-close";
 import { useSlashMenuKeys } from "./use-slash-menu-keys";
@@ -21,14 +20,16 @@ export interface SlashMenuProps {
   editor: Editor;
   /** 목록 좌표의 기준(BlogEditor 바깥 틀, position: relative) */
   frameRef: RefObject<HTMLDivElement | null>;
-  /** 쓸 수 있는 동작 항목과 그 동작 — 결과를 넣을 최상위 자리(gap)를 받는다. 없는 동작은 목록에서 빠진다 */
-  actions?: Partial<Record<BlockMenuAction, (gap: number) => void>> | undefined;
+  /** 쓸 수 있는 동작 항목과 그 동작. 없는 동작은 목록에서 빠진다 */
+  actions?: BlockMenuActionHandlers | undefined;
 }
 
 interface Position {
   top: number;
   left: number;
 }
+
+const NO_ACTIONS: BlockMenuActionHandlers = {};
 
 const sameMenu = (a: SlashMenuState | null, b: SlashMenuState | null) =>
   a?.from === b?.from && a?.query === b?.query;
@@ -38,8 +39,6 @@ const sameMenu = (a: SlashMenuState | null, b: SlashMenuState | null) =>
  * 한글 · 선택이 끊기므로, contenteditable에 `aria-controls` · `aria-activedescendant`를 달아 고른 항목을 알린다
  * (APG combobox, https://www.w3.org/WAI/ARIA/apg/patterns/combobox/).
  */
-const NO_ACTIONS: Partial<Record<BlockMenuAction, (gap: number) => void>> = {};
-
 export function SlashMenu({ editor, frameRef, actions = NO_ACTIONS }: SlashMenuProps) {
   const run = useCommandRunner(editor);
   const listId = useId();
@@ -67,7 +66,8 @@ export function SlashMenu({ editor, frameRef, actions = NO_ACTIONS }: SlashMenuP
         run(applySlashItem(item));
         return;
       }
-      // 동작 항목은 /거르기를 지운 자리를 먼저 재 두고, 글자를 지운 뒤 동작(파일 고르기)을 부른다
+      // slashActionGap은 메뉴 상태(`/`의 자리)로 지운 뒤의 자리를 미리 잰다. clearSlashQuery가 메뉴를 닫으면
+      // 그 상태가 사라져 null이 되므로 먼저 부른다
       const gap = slashActionGap(editor.state);
       if (gap !== null && run(clearSlashQuery)) actions[item]?.(gap);
     },

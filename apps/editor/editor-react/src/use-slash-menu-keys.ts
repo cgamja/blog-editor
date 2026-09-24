@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import type { SlashItem } from "./slash-items";
+import type { SlashItem } from "./block-menu-actions";
 
 /** 고른 항목 번호 — query가 바뀌면 첫 항목부터 */
 interface ActiveItem {

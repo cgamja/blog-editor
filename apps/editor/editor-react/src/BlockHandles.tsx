@@ -5,7 +5,7 @@ import type { Command } from "@tiptap/pm/state";
 import { blockStart, insertBlockAfter, moveTopBlockTo } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { BlockAddMenu } from "./BlockAddMenu";
-import type { BlockMenuAction } from "./block-menu-actions";
+import type { BlockMenuAction, BlockMenuActionHandlers } from "./block-menu-actions";
 import { BlockMenu } from "./BlockMenu";
 import { BlockMoveHandle } from "./BlockMoveHandle";
 import { useHoveredBlock } from "./use-hovered-block";
@@ -14,7 +14,7 @@ export interface BlockHandlesProps {
   editor: Editor;
   frameRef: RefObject<HTMLDivElement | null>;
   /** 「+」 메뉴의 동작 항목 — 이 블록 뒤 자리(gap)를 넘긴다. 파일 고르기와 올리기는 부르는 쪽이 한다 */
-  actions?: Partial<Record<BlockMenuAction, (gap: number) => void>> | undefined;
+  actions?: BlockMenuActionHandlers | undefined;
 }
 
 /**
