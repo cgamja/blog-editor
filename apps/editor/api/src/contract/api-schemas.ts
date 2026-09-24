@@ -2,10 +2,12 @@ import { z } from "zod";
 import {
   NATURAL_SIZE_RANGE,
   createPostMetaSchema,
+  docSchema,
   imagePathSchema,
   slugSchema,
 } from "@blog-editor/content-schema";
 import { RENAME_CONFLICT_REASONS } from "../post-rename";
+import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 
 /** 오류 응답 대부분 — 화면이 `message`를 그대로 보여 준다(messages.ts) */
 export const messageBodySchema = z.strictObject({ message: z.string() });
@@ -58,3 +60,33 @@ export function createPostListSchema(options: { categories: readonly [string, ..
   });
   return z.strictObject({ posts: z.array(summary) });
 }
+
+/** `PUT /api/settings` 본문 — 화면이 고칠 수 있는 것은 가이드뿐이다(카테고리는 앱 설정이 원천) */
+export const settingsUpdateSchema = z.strictObject({
+  guide: z.string().max(MAX_GUIDE_LENGTH),
+});
+
+/** `GET /api/settings` — 가이드 · 카테고리 · 연결 정보(`url`은 OAuth 발급자가 있을 때만) */
+export function createSettingsSchema(options: { categories: readonly [string, ...string[]] }) {
+  return z.strictObject({
+    guide: z.string(),
+    categories: z.array(z.enum(options.categories)),
+    connector: z.strictObject({ enabled: z.boolean(), url: z.string().nullable() }),
+  });
+}
+
+/** `POST /api/import/preview` 본문 — markdown 하나뿐, 모르는 키는 400(계약 additionalProperties: false) */
+export const importPreviewRequestSchema = z.strictObject({
+  markdown: z.string().max(MAX_MARKDOWN_LENGTH),
+});
+
+/** 변환 결과 — 실패는 막는 오류뿐이다(변환기가 "빠지지만 가져오는" 손실을 두지 않는다) */
+export const importPreviewResultSchema = z.union([
+  z.strictObject({
+    ok: z.literal(true),
+    doc: docSchema,
+    html: z.string(),
+    suggested: z.strictObject({ title: z.string(), description: z.string() }),
+  }),
+  z.strictObject({ ok: z.literal(false), messages: z.array(z.string()).min(1) }),
+]);

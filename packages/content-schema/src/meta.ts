@@ -28,14 +28,18 @@ export const postSourceSchema = z.union([
 ]);
 export type PostSource = z.infer<typeof postSourceSchema>;
 
+/** 글 메타 길이 상한 — 가져오기 제안 · 화면의 입력 확인이 저장 규칙과 같은 값을 쓴다 */
+export const TITLE_MAX_LENGTH = 80;
+export const DESCRIPTION_MAX_LENGTH = 160;
+
 /**
  * 카테고리는 URL이 되므로 닫힌 집합이다. 목록은 사이트가 아니라 워크스페이스 설정이 준다(plan 3-3)
  * — 에디터는 특정 사이트에 묶이지 않는다. 그래서 스키마가 아니라 팩토리다.
  */
 export function createPostMetaSchema(options: { categories: readonly [string, ...string[]] }) {
   return z.strictObject({
-    title: z.string().trim().min(1).max(80),
-    description: z.string().trim().min(1).max(160),
+    title: z.string().trim().min(1).max(TITLE_MAX_LENGTH),
+    description: z.string().trim().min(1).max(DESCRIPTION_MAX_LENGTH),
     date: z.iso.date(),
     updated: z.iso.date().optional(),
     category: z.enum(options.categories),

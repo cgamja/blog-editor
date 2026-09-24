@@ -1,0 +1,146 @@
+/* 가져오기 대화상자(결정 A) — 원문 | 미리보기 두 칸이라 AI로 쓰기(640)보다 넓다. 틀과 버튼은 shared/ui/modal-dialog.css */
+.import-dialog {
+  width: min(64rem, calc(100% - var(--space-32)));
+}
+
+.import-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.import-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.import-panes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-12);
+}
+
+.import-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.import-pane-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: var(--space-24);
+}
+
+/*
+ * 두 칸 높이 18rem — 디자인(결정 A 스케치)에 값이 없다. 1360×860 화면에서 제목 · 두 칸 · 메타 · 버튼이
+ * 스크롤 없이 한 번에 보이는 가장 큰 값(원문 13px × 1.6 줄 간격으로 약 13줄)으로 정했다. 원문은 세로로 늘릴 수 있다.
+ */
+.import-source,
+.import-frame,
+.import-placeholder,
+.import-blocked {
+  box-sizing: border-box;
+  width: 100%;
+  height: 18rem;
+  margin: 0;
+  border: var(--border-width) solid var(--line-soft);
+  border-radius: var(--radius-input);
+  background: var(--paper);
+}
+
+.import-source {
+  padding: var(--space-12);
+  color: var(--ink);
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-caption);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.import-frame {
+  background: var(--surface);
+}
+
+.import-placeholder {
+  padding: var(--space-12);
+  color: var(--ink-soft);
+}
+
+.import-blocked {
+  overflow: auto;
+  padding: var(--space-12);
+  border-color: var(--postit);
+  background: var(--postit);
+  color: var(--postit-ink);
+  font-size: var(--font-size-caption);
+  line-height: 1.6;
+}
+
+.import-blocked-title {
+  margin: 0 0 var(--space-6);
+  font-weight: 600;
+}
+
+.import-blocked ul {
+  margin: 0;
+  padding-left: var(--space-16);
+}
+
+.import-file {
+  color: var(--brand-ink);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 파일 입력은 라벨로 연다 — 입력 자체는 읽기 도구에 남기고 화면에서만 감춘다 */
+.import-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.import-file-row {
+  display: flex;
+}
+
+.import-file-input:focus-visible + .import-file {
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.import-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-8) var(--space-12);
+}
+
+.import-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.import-field-wide {
+  grid-column: 1 / -1;
+}
+
+.import-hint {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--ink-soft);
+}
+
+.import-error {
+  margin: 0;
+  color: var(--danger-ink);
+}

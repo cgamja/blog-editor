@@ -9,6 +9,8 @@ import {
   slugSchema,
 } from "@blog-editor/content-schema";
 import type { PostFile, PostSource } from "@blog-editor/content-schema";
+import { MAX_MARKDOWN_LENGTH } from "../input-limits";
+import type { SettingsStore } from "../settings-store";
 import { ConflictError } from "../store";
 import type { PostStore } from "../store";
 import {
@@ -19,6 +21,7 @@ import {
   MCP_PUBLISHED_READ_ONLY_MESSAGE,
   MCP_SLUG_TAKEN_MESSAGE,
   MCP_TOOL_TEXT,
+  MCP_WORKSPACE_GUIDE_HEADING,
 } from "./messages";
 
 export interface DraftToolsOptions {
@@ -27,6 +30,8 @@ export interface DraftToolsOptions {
   editorBaseUrl: string;
   /** 형식 가이드 원문(content-convert `guide/format.md`) */
   formatGuide: string;
+  /** 워크스페이스 글쓰기 가이드 — 사람이 AI 연결 화면에서 저장한다 */
+  settings: SettingsStore;
   /** 새 초안의 `date`(YYYY-MM-DD) */
   today: () => string;
   /** 이 요청을 보낸 연결용 토큰에서 온 초안 출처 */
@@ -34,9 +39,12 @@ export interface DraftToolsOptions {
 }
 
 const SERVER_INFO = { name: "simsimee-blog-editor", version: "0.1.0" };
-/** 한 편의 글로 충분한 길이(문자 수) — 요청 본문 한도(route.ts)와 별개로 변환기에 넘기는 양을 묶는다 */
-const MAX_MARKDOWN_LENGTH = 200_000;
 const markdownSchema = z.string().max(MAX_MARKDOWN_LENGTH);
+
+/** 형식 가이드(문법) 뒤에 이 블로그의 글쓰기 가이드(말투 · 독자 · 구성)를 붙인다 */
+function withWorkspaceGuide(formatGuide: string, guide: string): string {
+  return `${formatGuide.trimEnd()}\n\n${MCP_WORKSPACE_GUIDE_HEADING}\n\n${guide.trim()}\n`;
+}
 
 function textResult(text: string): CallToolResult {
   return { content: [{ type: "text", text }] };
@@ -78,7 +86,7 @@ function byDateDesc(a: { date: string; slug: string }, b: { date: string; slug: 
  * 입력에 `draft` 자리가 없고(strictObject라 넣으면 입력 오류) 저장하는 글을 항상 `draft: true`로 둔다.
  */
 export function createDraftsServer(options: DraftToolsOptions): McpServer {
-  const { store, categories, editorBaseUrl, formatGuide, today, source } = options;
+  const { store, categories, editorBaseUrl, formatGuide, settings, today, source } = options;
   const postFileSchema = createPostFileSchema({ categories });
   const server = new McpServer(SERVER_INFO);
 
@@ -110,7 +118,10 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     {
       ...MCP_TOOL_TEXT.get_writing_guide,
     },
-    guarded(async () => textResult(formatGuide)),
+    guarded(async () => {
+      const { guide } = await settings.get();
+      return textResult(guide.trim() === "" ? formatGuide : withWorkspaceGuide(formatGuide, guide));
+    }),
   );
 
   server.registerTool(

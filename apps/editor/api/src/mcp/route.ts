@@ -3,6 +3,7 @@ import type { AuthInfo } from "@modelcontextprotocol/server";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { SessionConfig } from "../session";
+import type { SettingsStore } from "../settings-store";
 import type { PostStore } from "../store";
 import { hashConnectionToken } from "./connection-tokens";
 import type { ConnectionTokenStore } from "./connection-tokens";
@@ -49,10 +50,19 @@ export function registerMcpRoute(
     store: PostStore;
     categories: readonly [string, ...string[]];
     session: SessionConfig;
+    settings: SettingsStore;
   },
 ): void {
-  const { connectionTokens, store, categories, editorBaseUrl, formatGuide, oauth, session } =
-    options;
+  const {
+    connectionTokens,
+    store,
+    categories,
+    editorBaseUrl,
+    formatGuide,
+    oauth,
+    session,
+    settings,
+  } = options;
   if (oauth !== undefined) registerOAuthRoutes(app, { ...oauth, session });
   const today = options.today ?? (() => ISO_DATE_FORMAT.format(new Date()));
   const handler = createMcpHandler(({ authInfo }) => {
@@ -63,6 +73,7 @@ export function registerMcpRoute(
       categories,
       editorBaseUrl,
       formatGuide,
+      settings,
       today,
       source: `token:${authInfo.clientId}`,
     });

@@ -605,6 +605,171 @@
         }
       }
     },
+    "/api/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "tags": ["settings"],
+        "summary": "워크스페이스 설정",
+        "description": "글쓰기 가이드(MCP get_writing_guide가 형식 가이드 뒤에 붙인다) · 카테고리 · 연결 정보. 카테고리와 연결 정보는 서버 설정이라 읽기만 한다.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "설정",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveSettings",
+        "tags": ["settings"],
+        "summary": "글쓰기 가이드 저장",
+        "description": "마지막 쓰기가 이긴다(revision 없음 — 1단계는 사용자 한 명).",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "고칠 수 있는 설정",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "저장한 뒤의 설정",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "설정은 { guide } 하나만 — 가이드는 20,000자까지",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "요청 본문이 너무 크다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/import/preview": {
+      "post": {
+        "operationId": "previewImport",
+        "tags": ["import"],
+        "summary": "마크다운 가져오기 미리보기",
+        "description": "markdown을 변환만 하고 저장하지 않는다. 변환하지 못하면 ok: false와 줄 번호가 든 메시지(막는 오류)다. 초안은 이어서 savePost(If-None-Match: *)로 만든다.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "가져올 markdown",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "변환 결과 또는 메시지",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreviewResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "markdown 문자열이 필요하다 — 200,000자까지",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "요청 본문이 너무 크다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/images/{name}": {
       "get": {
         "operationId": "getImage",
@@ -2131,6 +2296,110 @@
           },
           {
             "$ref": "#/components/schemas/MessageBody"
+          }
+        ]
+      },
+      "Settings": {
+        "type": "object",
+        "properties": {
+          "guide": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "워크스페이스 설정의 카테고리 중 하나 — 목록은 설정이 주고, 서버의 zod가 최종 검증한다"
+            }
+          },
+          "connector": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "url": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["enabled", "url"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["guide", "categories", "connector"],
+        "additionalProperties": false
+      },
+      "SettingsUpdate": {
+        "type": "object",
+        "properties": {
+          "guide": {
+            "type": "string",
+            "maxLength": 20000
+          }
+        },
+        "required": ["guide"],
+        "additionalProperties": false
+      },
+      "ImportPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "markdown": {
+            "type": "string",
+            "maxLength": 200000
+          }
+        },
+        "required": ["markdown"],
+        "additionalProperties": false
+      },
+      "ImportPreviewResult": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "doc": {
+                "$ref": "#/components/schemas/Doc"
+              },
+              "html": {
+                "type": "string"
+              },
+              "suggested": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": ["title", "description"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["ok", "doc", "html", "suggested"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "messages": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["ok", "messages"],
+            "additionalProperties": false
           }
         ]
       },

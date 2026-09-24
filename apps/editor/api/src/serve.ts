@@ -43,6 +43,7 @@ const { serve } = await import("@hono/node-server");
 const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
 const { createFileImageStore } = await import("./file-image-store");
+const { createFileSettingsStore } = await import("./file-settings-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
 const { readLocalConfig } = await import("./local-config");
 const { readMcpOptionsFromEnv } = await import("./mcp/env");
@@ -53,7 +54,7 @@ const HOSTNAME = "127.0.0.1";
 const MAX_PORT = 65535;
 const DEFAULT_ROOT = ".data";
 const DEFAULT_WORKSPACE_ID = "default";
-// 1단계 워크스페이스 설정의 초깃값 — 사이트 BLOG_CATEGORIES와 같다(설정 API는 다음 이슈)
+// 1단계 워크스페이스 카테고리 — 사이트 BLOG_CATEGORIES와 같다. 설정 API는 읽기만 한다(카테고리 편집은 기존 글 이관과 함께)
 const DEFAULT_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const DEFAULT_IMAGE_BASE_URL = "https://simsimeestudio.com";
 const SEED_ACCOUNT_ID = "owner";
@@ -91,6 +92,7 @@ const mcp = readMcpOptionsFromEnv(process.env);
 const app = createApp({
   store: createFilePostStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
   images: createFileImageStore({ root }),
+  settings: createFileSettingsStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
   categories: DEFAULT_CATEGORIES,
   imageBaseUrl: process.env.IMAGE_BASE_URL ?? DEFAULT_IMAGE_BASE_URL,
   accounts: createMemoryAccountStore([

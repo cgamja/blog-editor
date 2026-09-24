@@ -1,0 +1,85 @@
+/* 대화상자 틀(Figma 71:2 — 폭 640 = tokens.json viewport.dialog). 안쪽 배치는 각 기능 CSS */
+.modal-dialog {
+  box-sizing: border-box;
+  width: min(40rem, calc(100% - var(--space-32)));
+  max-height: calc(100dvh - var(--space-32));
+  padding: var(--space-36) var(--space-40);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.modal-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+
+/* 28px = Figma 71:2(AI로 쓰기) h1. #104 글꼴 크기 토큰에 28px가 없어 값을 옮겼다 — 토큰이 생기면 바꿀 자리 */
+.modal-dialog-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.75rem;
+}
+
+.modal-dialog-lede {
+  margin: 0;
+  color: var(--ink-mid);
+  line-height: 1.6;
+}
+
+.modal-dialog-label {
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  color: var(--ink-mid);
+}
+
+.modal-dialog-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--dialog-button-height);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.modal-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-10);
+}
+
+.modal-dialog-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  padding: 0 var(--space-18);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-dialog-button-primary {
+  padding: 0 var(--space-22);
+  border-color: var(--brand-ink);
+  background: var(--brand-ink);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.modal-dialog-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
