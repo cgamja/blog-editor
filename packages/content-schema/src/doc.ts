@@ -24,6 +24,28 @@ export const STICKER_IDS = [
 export const CALLOUT_TONES = ["note", "tip", "warning"] as const;
 export const HEADING_LEVELS = [2, 3] as const;
 
+/** 블록 정렬(adr-020) — 없으면 블록 종류의 기본(글은 왼쪽, 폭을 줄인 그림은 가운데). */
+export const ALIGNS = ["left", "center", "right"] as const;
+
+/** 글자 두께 이름(adr-020) — 300 · 500 · 800. 굵게(700)는 bold 마크가 맡는다. */
+export const TEXT_WEIGHTS = ["light", "medium", "heavy"] as const;
+/** 글꼴마다 실제로 있는 두께만 — textStyle에 font가 없으면 본문 기본 Pretendard 기준. */
+export const WEIGHTS_BY_FONT: Readonly<
+  Record<(typeof FONTS)[number], readonly (typeof TEXT_WEIGHTS)[number][]>
+> = {
+  pretendard: ["light", "medium", "heavy"],
+  gaegu: ["light"],
+  jua: [],
+};
+/** 글자 크기 단계(adr-020) — 보통은 값이 없는 것이다. */
+export const TEXT_SIZES = ["sm", "lg", "xl", "2xl"] as const;
+/** 글자색 프리셋 — design/tokens.json의 ink-soft · brand-ink · accent-ink-badge · danger-ink. */
+export const TEXT_COLORS = ["muted", "brand", "green", "red"] as const;
+/** 배경(형광펜) 프리셋 — brand-soft · accent-soft · postit. */
+export const HIGHLIGHT_COLORS = ["apricot", "mint", "yellow"] as const;
+/** 직접 입력 색 — 소문자 16진 6자리 하나(정규형). 렌더러가 CSS 변수에 싣기 전에 다시 본다. */
+export const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+
 /** Lighthouse 성능 기준(adr-008)의 상한 — 늘리려면 ADR. */
 export const MAX_STICKERS_PER_DOC = 12;
 
@@ -31,7 +53,7 @@ export const WIDTH_RANGE = { min: 25, max: 100 } as const;
 export const STICKER_RANGES = {
   x: { min: -25, max: 125 },
   y: { min: -25, max: 125 },
-  size: { min: 5, max: 50 },
+  size: { min: 2, max: 50 },
   rotate: { min: -180, max: 180 },
 } as const;
 
@@ -73,11 +95,37 @@ export const CODE_LANGUAGE_PATTERN = /^[a-z][a-z0-9+#.]*$/;
 
 // ── 2. 마크 + 텍스트 ────────────────────────────────────────────────────
 
+const colorOf = <T extends readonly [string, ...string[]]>(presets: T) =>
+  z.union([z.enum(presets), z.string().regex(HEX_COLOR_PATTERN)]);
+
+/** 두께는 같은 마크의 글꼴(없으면 Pretendard)에 있는 것만 — adr-020. */
+function weightFitsFont(style: { font?: string | undefined; weight?: string | undefined }) {
+  if (style.weight === undefined) return true;
+  const font = (style.font ?? "pretendard") as (typeof FONTS)[number];
+  return (WEIGHTS_BY_FONT[font] as readonly string[]).includes(style.weight);
+}
+
+export const textStyleAttrsSchema = z
+  .strictObject({
+    font: z.enum(FONTS).optional(),
+    weight: z.enum(TEXT_WEIGHTS).optional(),
+    size: z.enum(TEXT_SIZES).optional(),
+    color: colorOf(TEXT_COLORS).optional(),
+    highlight: colorOf(HIGHLIGHT_COLORS).optional(),
+  })
+  .refine((style) => Object.values(style).some((value) => value !== undefined), {
+    message: "글자 스타일은 속성이 하나 이상 있어야 한다",
+  })
+  .refine(weightFitsFont, { message: "그 글꼴에 없는 두께다" });
+
 export const markSchema = z.union([
   z.strictObject({ type: z.literal("bold") }),
   z.strictObject({ type: z.literal("italic") }),
   z.strictObject({ type: z.literal("code") }),
   z.strictObject({ type: z.literal("link"), attrs: z.strictObject({ href: hrefSchema }) }),
+  z.strictObject({ type: z.literal("strike") }),
+  z.strictObject({ type: z.literal("underline") }),
+  z.strictObject({ type: z.literal("textStyle"), attrs: textStyleAttrsSchema }),
 ]);
 
 /** ProseMirror 마크 집합 규칙과 같다 — 한 텍스트에 같은 type이 두 번 올 수 없다. */
@@ -87,7 +135,7 @@ const marksArraySchema = z
     message: "마크 type 중복",
   });
 
-/** 최상위 인라인 텍스트 — bold/italic/code/link 마크만. */
+/** 인라인 텍스트 — markSchema의 마크만. */
 const textSchema = z.strictObject({
   type: z.literal("text"),
   text: z.string().min(1),
@@ -117,10 +165,18 @@ const textDecorationAttrsSchema = z.strictObject({
   stickers: z.array(stickerSchema).optional(),
 });
 
+/** 정렬은 문단 · 제목 · 이미지 · 앱 스크린샷만(adr-020) — 목록 · 인용 · 콜아웃은 정렬하지 않는다. */
+const alignSchema = z.enum(ALIGNS);
+
+const paragraphAttrsSchema = textDecorationAttrsSchema.extend({
+  align: alignSchema.optional(),
+});
+
 const headingAttrsSchema = z.strictObject({
   level: z.literal(HEADING_LEVELS),
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
+  align: alignSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
@@ -171,6 +227,7 @@ const imageAttrsSchema = z
     naturalHeight: naturalSizeSchema.optional(),
     motion: z.enum(MOTIONS).optional(),
     width: widthSchema.optional(),
+    align: alignSchema.optional(),
     stickers: z.array(stickerSchema).optional(),
   })
   .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
@@ -183,6 +240,7 @@ const appScreenshotAttrsSchema = z
     naturalHeight: naturalSizeSchema.optional(),
     motion: z.enum(MOTIONS).optional(),
     width: widthSchema.optional(),
+    align: alignSchema.optional(),
     stickers: z.array(stickerSchema).optional(),
   })
   .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
@@ -244,7 +302,7 @@ const innerListSchema: z.ZodType<InnerListNode> = z.lazy(() =>
 
 const paragraphSchema = z.strictObject({
   type: z.literal("paragraph"),
-  attrs: textDecorationAttrsSchema.optional(),
+  attrs: paragraphAttrsSchema.optional(),
   content: z.array(textSchema).optional(),
 });
 
@@ -354,7 +412,9 @@ export type DecorationAttrs = Partial<{
   font: (typeof FONTS)[number];
   motion: (typeof MOTIONS)[number];
   width: z.infer<typeof widthSchema>;
+  align: (typeof ALIGNS)[number];
   stickers: Sticker[];
 }>;
+export type TextStyleAttrs = z.infer<typeof textStyleAttrsSchema>;
 export type Block = z.infer<typeof topLevelBlockSchema>;
 export type Doc = z.infer<typeof docSchema>;
