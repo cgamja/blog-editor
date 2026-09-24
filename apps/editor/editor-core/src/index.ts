@@ -23,6 +23,13 @@ export type {
   StickerPlacement,
   StickerTarget,
 } from "./commands/decoration";
+export {
+  mapStickerRef,
+  placeStickerNear,
+  stickerKeyCommand,
+  wrapRotation,
+} from "./commands/sticker-edit";
+export type { StickerRef } from "./commands/sticker-edit";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
