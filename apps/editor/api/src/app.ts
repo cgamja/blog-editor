@@ -22,10 +22,15 @@ import { registerSessionRoutes, requireSession, resolveSessionConfig } from "./s
 import type { SessionOptions } from "./session";
 import { registerMcpRoute } from "./mcp/route";
 import type { McpOptions } from "./mcp/route";
+import { mcpResourceOf } from "./mcp/oauth/tokens";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 import type { ImageStore } from "./image-store";
 import { registerImageRoutes } from "./images";
+import { registerImportRoutes } from "./import-preview";
+import { createMemorySettingsStore } from "./memory-settings-store";
+import { registerSettingsRoutes } from "./settings";
+import type { SettingsStore } from "./settings-store";
 
 export interface AppOptions extends SessionOptions {
   store: PostStore;
@@ -37,6 +42,8 @@ export interface AppOptions extends SessionOptions {
   mcp?: McpOptions;
   /** 있을 때만 이미지 올리기 · 받기를 연다(ADR-021) — 없으면 두 경로가 없다 */
   images?: ImageStore;
+  /** 워크스페이스 설정(글쓰기 가이드) — 없으면 메모리. 라우트는 늘 있어 계약의 라우트 집합이 옵션으로 바뀌지 않는다 */
+  settings?: SettingsStore;
 }
 
 /** 사이트 빌드가 부르는 공개 조회의 짧은 캐시(plan 3-6) */
@@ -183,8 +190,20 @@ export function createApp(options: AppOptions): Hono {
 
   if (options.images !== undefined) registerImageRoutes(app, options.images);
 
+  const settings = options.settings ?? createMemorySettingsStore();
+  const oauthIssuer = options.mcp?.oauth?.issuer;
+  registerSettingsRoutes(app, {
+    settings,
+    categories,
+    connector: {
+      enabled: options.mcp !== undefined,
+      url: oauthIssuer === undefined ? null : mcpResourceOf(oauthIssuer),
+    },
+  });
+  registerImportRoutes(app, { imageBaseUrl });
+
   if (options.mcp !== undefined) {
-    registerMcpRoute(app, { ...options.mcp, store, categories, session });
+    registerMcpRoute(app, { ...options.mcp, store, categories, session, settings });
   }
 
   return app;

@@ -1,6 +1,8 @@
 export {
   SCHEMA_VERSION,
   POST_SOURCES,
+  TITLE_MAX_LENGTH,
+  DESCRIPTION_MAX_LENGTH,
   createPostMetaSchema,
   imagePathSchema,
   postSourceSchema,
