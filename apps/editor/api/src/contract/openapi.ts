@@ -14,6 +14,14 @@ import {
   saveResultSchema,
   schemaErrorBodySchema,
 } from "./api-schemas";
+import { CONTENT_TYPE_OF } from "../images";
+import {
+  IMAGE_FORMAT_MESSAGE,
+  IMAGE_ROTATED_MESSAGE,
+  IMAGE_TOO_LARGE_MESSAGE,
+  IMAGE_TOO_WIDE_MESSAGE,
+} from "../messages";
+import { SESSION_COOKIE_NAME } from "../session";
 import type {
   ContractOperation,
   ContractParameter,
@@ -33,10 +41,9 @@ const CATEGORY_DESCRIPTION =
 const COMPONENTS_PREFIX = "#/components/schemas/";
 /** zod가 레지스트리 밖 공유 정의를 모으는 이름(z.toJSONSchema 레지스트리 모드) */
 const ZOD_SHARED_ID = "__shared";
-const SESSION_COOKIE = "__Host-session";
 const SESSION_SCHEME = "session";
 const JSON_MEDIA_TYPE = "application/json";
-const IMAGE_MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+const IMAGE_MEDIA_TYPES = [...new Set(Object.values(CONTENT_TYPE_OF))];
 const OPENAPI_VERSION = "3.1.0";
 const API_VERSION = "1";
 const API_DESCRIPTION =
@@ -81,7 +88,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       tag: "session",
       summary: "로그인",
       description: "성공하면 세션 쿠키를 심는다. 실패가 이어지면 잠시 잠긴다(api-session).",
-      session: false,
+      requiresSession: false,
       requestBody: { description: "아이디와 비밀번호", schema: schemas.LoginBody },
       responses: {
         204: { description: "로그인됨", headers: { "Set-Cookie": "세션 쿠키" } },
@@ -96,7 +103,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       tag: "session",
       summary: "로그아웃",
       description: "멱등 — 세션이 없거나 만료돼도 204다.",
-      session: false,
+      requiresSession: false,
       responses: { 204: { description: "세션 쿠키를 지웠다" } },
     },
     {
@@ -106,7 +113,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       tag: "posts",
       summary: "글 목록",
       description: "초안과 발행 글 모두, date 최신순.",
-      session: true,
+      requiresSession: true,
       responses: {
         200: { description: "글 요약 목록", schema: schemas.PostList },
         401: unauthorized,
@@ -118,7 +125,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       operationId: "getPost",
       tag: "posts",
       summary: "글 읽기",
-      session: true,
+      requiresSession: true,
       parameters: [slugParameter],
       responses: {
         200: {
@@ -139,20 +146,20 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       summary: "글 저장(새 글 · 고치기 · 발행)",
       description:
         "새 글은 If-None-Match: *, 고치기는 If-Match: <ETag>. 발행은 meta.draft를 false로 저장하는 것이다(발행 전용 경로 없음). 본문의 doc은 저장 전에 정규형으로 바뀐다.",
-      session: true,
+      requiresSession: true,
       parameters: [
         slugParameter,
         {
           name: "If-None-Match",
           in: "header",
           required: false,
-          description: "`*` — 새 글일 때만 저장",
+          description: "`*` — 새 글일 때만 저장. 그 주소에 글이 이미 있으면 409",
         },
         {
           name: "If-Match",
           in: "header",
           required: false,
-          description: "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤으면 409",
+          description: "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤거나 그 주소에 글이 없으면 409",
         },
       ],
       requestBody: { description: "저장 형식", schema: schemas.PostFile },
@@ -173,7 +180,11 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
           schema: schemas.SaveBadRequestBody,
         },
         401: unauthorized,
-        409: { description: "다른 곳에서 먼저 고쳤다", schema: schemas.MessageBody },
+        409: {
+          description:
+            "revision이 맞지 않는다 — If-Match: 다른 곳에서 먼저 고쳤거나 글이 없다 · If-None-Match: *: 그 주소에 글이 이미 있다",
+          schema: schemas.MessageBody,
+        },
         428: { description: "If-None-Match · If-Match가 둘 다 없다", schema: schemas.MessageBody },
       },
     },
@@ -185,16 +196,16 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       summary: "이미지 올리기",
       description:
         "본문은 이미지 바이트. 줄이기와 방향 적용은 브라우저가 하고 서버는 형식 · 크기만 검사한다(ADR-021).",
-      session: true,
+      requiresSession: true,
       requestBody: { description: "이미지 바이트", mediaTypes: IMAGE_MEDIA_TYPES },
       responses: {
         200: { description: "같은 내용이 이미 있다", schema: schemas.ImageUploadResult },
         201: { description: "새로 저장됨", schema: schemas.ImageUploadResult },
         401: unauthorized,
-        413: { description: "1 MiB를 넘는다", schema: schemas.MessageBody },
-        415: { description: "JPEG · PNG · WebP · GIF가 아니다", schema: schemas.MessageBody },
+        413: { description: IMAGE_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
+        415: { description: IMAGE_FORMAT_MESSAGE, schema: schemas.MessageBody },
         422: {
-          description: "긴 변이 1600px을 넘거나 EXIF 방향이 돌아가 있다",
+          description: `${IMAGE_TOO_WIDE_MESSAGE} · ${IMAGE_ROTATED_MESSAGE}`,
           schema: schemas.MessageBody,
         },
       },
@@ -206,7 +217,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       tag: "images",
       summary: "올린 이미지 받기",
       description: "로컬 개발용 — 배포에서는 CloudFront가 같은 경로를 준다.",
-      session: false,
+      requiresSession: false,
       parameters: [
         {
           name: "name",
@@ -219,7 +230,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       responses: {
         200: {
           description: "이미지 바이트(nosniff · CSP sandbox · 긴 캐시)",
-          contentType: "image/",
+          contentTypePrefix: "image/",
           mediaTypes: IMAGE_MEDIA_TYPES,
         },
         404: { description: "이름 모양이 틀렸거나 없다", contentType: "text/plain" },
@@ -233,8 +244,14 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       summary: "공개 글 목록(사이트 빌드용)",
       description:
         "발행 글만, 렌더된 HTML 포함. 초안이 섞이면 응답 대신 500이다(public-posts-api).",
-      session: false,
-      responses: { 200: { description: "발행 글", schema: schemas.PublicPosts } },
+      requiresSession: false,
+      responses: {
+        200: { description: "발행 글", schema: schemas.PublicPosts },
+        500: {
+          description: "응답이 공개 계약에 맞지 않는다(초안이 섞였다) — Hono 기본 오류 응답",
+          contentType: "text/plain",
+        },
+      },
     },
     {
       method: "get",
@@ -242,7 +259,7 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
       operationId: "getPostCss",
       tag: "public",
       summary: "본문용 CSS",
-      session: false,
+      requiresSession: false,
       responses: { 200: { description: "본문용 CSS", contentType: "text/css" } },
     },
   ];
@@ -303,6 +320,12 @@ function componentSchemas(schemas: ContractSchemas): JsonObject {
   const renamed = new Map(
     Object.entries(sharedDefs).map(([key, schema]) => [key, sharedName(key, schema)]),
   );
+  // 끌어올린 이름이 겹치면 참조가 엉뚱한 컴포넌트를 가리키게 된다 — 조용히 덮지 않고 멈춘다
+  const taken = new Set(Object.keys(named));
+  for (const name of renamed.values()) {
+    if (taken.has(name)) throw new Error(`계약 컴포넌트 이름이 겹친다: ${name}`);
+    taken.add(name);
+  }
   const sharedRefPrefix = `${COMPONENTS_PREFIX}${ZOD_SHARED_ID}#/$defs/`;
 
   const replace = (node: unknown): unknown => {
@@ -377,7 +400,7 @@ function operationOf(op: ContractOperation, names: ReadonlyMap<z.ZodType, string
     tags: [op.tag],
     summary: op.summary,
     ...(op.description === undefined ? {} : { description: op.description }),
-    security: op.session ? [{ [SESSION_SCHEME]: [] }] : [],
+    security: op.requiresSession ? [{ [SESSION_SCHEME]: [] }] : [],
     ...(parameters === undefined ? {} : { parameters }),
     ...(op.requestBody === undefined || requestContent === undefined
       ? {}
@@ -413,7 +436,7 @@ export function buildOpenApiDocument(): JsonObject {
     paths,
     components: {
       securitySchemes: {
-        [SESSION_SCHEME]: { type: "apiKey", in: "cookie", name: SESSION_COOKIE },
+        [SESSION_SCHEME]: { type: "apiKey", in: "cookie", name: SESSION_COOKIE_NAME },
       },
       schemas: componentSchemas(schemas),
     },

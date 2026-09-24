@@ -206,7 +206,7 @@
             "name": "If-None-Match",
             "in": "header",
             "required": false,
-            "description": "`*` — 새 글일 때만 저장",
+            "description": "`*` — 새 글일 때만 저장. 그 주소에 글이 이미 있으면 409",
             "schema": {
               "type": "string"
             }
@@ -215,7 +215,7 @@
             "name": "If-Match",
             "in": "header",
             "required": false,
-            "description": "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤으면 409",
+            "description": "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤거나 그 주소에 글이 없으면 409",
             "schema": {
               "type": "string"
             }
@@ -290,7 +290,7 @@
             }
           },
           "409": {
-            "description": "다른 곳에서 먼저 고쳤다",
+            "description": "revision이 맞지 않는다 — If-Match: 다른 곳에서 먼저 고쳤거나 글이 없다 · If-None-Match: *: 그 주소에 글이 이미 있다",
             "content": {
               "application/json": {
                 "schema": {
@@ -365,7 +365,7 @@
             }
           },
           "413": {
-            "description": "1 MiB를 넘는다",
+            "description": "이미지는 1MB 이하만 올릴 수 있다",
             "content": {
               "application/json": {
                 "schema": {
@@ -375,7 +375,7 @@
             }
           },
           "415": {
-            "description": "JPEG · PNG · WebP · GIF가 아니다",
+            "description": "JPEG · PNG · WebP · GIF 이미지만 올릴 수 있다",
             "content": {
               "application/json": {
                 "schema": {
@@ -385,7 +385,7 @@
             }
           },
           "422": {
-            "description": "긴 변이 1600px을 넘거나 EXIF 방향이 돌아가 있다",
+            "description": "긴 변을 1600px 이하로 줄여서 올린다 · 사진 방향(EXIF)이 돌아가 있다 — 방향을 적용해 다시 그린 뒤 올린다",
             "content": {
               "application/json": {
                 "schema": {
@@ -450,6 +450,12 @@
                   "$ref": "#/components/schemas/PublicPosts"
                 }
               }
+            }
+          },
+          "500": {
+            "description": "응답이 공개 계약에 맞지 않는다(초안이 섞였다) — Hono 기본 오류 응답",
+            "content": {
+              "text/plain": {}
             }
           }
         }

@@ -39,7 +39,7 @@ const EXTENSION_OF: Record<ImageFormat, ImageExtension> = {
   gif: "gif",
 };
 
-const CONTENT_TYPE_OF: Record<ImageExtension, string> = {
+export const CONTENT_TYPE_OF: Record<ImageExtension, string> = {
   jpg: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
