@@ -19,3 +19,6 @@ export interface DraftInput {
   /** YYYY-MM-DD */
   date: string;
 }
+
+/** 대화상자에서 사람이 고칠 수 있는 칸 — 날짜는 오늘로 정한다 */
+export type EditableDraftField = "title" | "slug" | "description" | "category";
