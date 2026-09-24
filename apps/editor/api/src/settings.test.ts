@@ -1,6 +1,8 @@
 import { createApp } from "./app";
 import type { AppOptions } from "./app";
-import { MAX_GUIDE_LENGTH } from "./input-limits";
+import { contractOperations } from "./contract/openapi";
+import { MAX_GUIDE_LENGTH, MAX_SETTINGS_BODY_BYTES } from "./input-limits";
+import { REQUEST_TOO_LARGE_MESSAGE } from "./messages";
 import { createMemoryPostStore } from "./memory-store";
 import { hashConnectionToken } from "./mcp/connection-tokens";
 import { createMemoryConnectionTokenStore } from "./mcp/memory-connection-token-store";
@@ -90,6 +92,30 @@ describe("workspace-settings-api — 세션", () => {
     const anonymous = await app.request(PATH, putJson({ guide: "몰래 바꾼 가이드" }));
 
     expect(anonymous.status).toBe(401);
+    expect(await (await client.request(PATH)).json()).toMatchObject({
+      guide: "앞서 저장한 가이드",
+    });
+  });
+});
+
+describe("workspace-settings-api — 요청 본문 크기", () => {
+  it("WHEN 세션을 가진 채 본문 상한(가이드 상한 × 4바이트)을 넘겨 저장하면 THEN 413 · 크기 문장이고 계약의 413 스키마를 따르며 가이드가 그대로다", async () => {
+    const client = setup();
+    await client.request(PATH, putJson({ guide: "앞서 저장한 가이드" }));
+
+    const res = await client.request(PATH, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: "x".repeat(MAX_SETTINGS_BODY_BYTES + 1),
+    });
+    const body: unknown = await res.json();
+
+    expect(res.status).toBe(413);
+    expect(body).toEqual({ message: REQUEST_TOO_LARGE_MESSAGE });
+    const declared = contractOperations({ categories: CATEGORIES }).find(
+      (op) => op.method === "put" && op.path === PATH,
+    )?.responses[413];
+    expect(declared?.schema?.safeParse(body).success).toBe(true);
     expect(await (await client.request(PATH)).json()).toMatchObject({
       guide: "앞서 저장한 가이드",
     });

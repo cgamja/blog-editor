@@ -1,6 +1,8 @@
 import { docSchema } from "@blog-editor/content-schema";
 import { createApp } from "./app";
-import { MAX_MARKDOWN_LENGTH } from "./input-limits";
+import { contractOperations } from "./contract/openapi";
+import { MAX_IMPORT_BODY_BYTES, MAX_MARKDOWN_LENGTH } from "./input-limits";
+import { REQUEST_TOO_LARGE_MESSAGE } from "./messages";
 import { createMemoryPostStore } from "./memory-store";
 import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
@@ -95,5 +97,25 @@ describe("import-preview-api — 제안 길이 · 세션", () => {
     const res = await app.request(PATH, postJson({ markdown: "문단" }));
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe("import-preview-api — 요청 본문 크기", () => {
+  it("WHEN 세션을 가진 채 본문 상한(markdown 상한 × 4바이트)을 넘겨 부르면 THEN 413 · 크기 문장이고 계약의 413 스키마를 따른다", async () => {
+    const { client } = setup();
+
+    const res = await client.request(PATH, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "x".repeat(MAX_IMPORT_BODY_BYTES + 1),
+    });
+    const body: unknown = await res.json();
+
+    expect(res.status).toBe(413);
+    expect(body).toEqual({ message: REQUEST_TOO_LARGE_MESSAGE });
+    const declared = contractOperations({ categories: ["studio"] }).find(
+      (op) => op.method === "post" && op.path === PATH,
+    )?.responses[413];
+    expect(declared?.schema?.safeParse(body).success).toBe(true);
   });
 });

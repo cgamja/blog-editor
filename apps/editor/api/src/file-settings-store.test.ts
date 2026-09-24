@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFileSettingsStore } from "./file-settings-store";
@@ -21,5 +21,21 @@ describe("workspace-settings-api — 파일 설정 저장소", () => {
 
     expect(await reopened.get()).toEqual({ guide: "가이드" });
     expect(existsSync(join(root, "workspaces", WORKSPACE_ID, "settings.json"))).toBe(true);
+  });
+});
+
+describe("workspace-settings-api — 파일 설정 저장소가 틀린 파일을 읽지 않는다", () => {
+  it("WHEN settings.json에 모르는 키가 있거나 가이드가 문자열이 아니면 THEN 읽기가 실패한다", async () => {
+    const root = await mkdtemp(join(tmpdir(), "blog-editor-settings-"));
+    roots.push(root);
+    const dir = join(root, "workspaces", WORKSPACE_ID);
+    await mkdir(dir, { recursive: true });
+    const store = createFileSettingsStore({ root, workspaceId: WORKSPACE_ID });
+
+    await writeFile(join(dir, "settings.json"), JSON.stringify({ guide: "", categories: [] }));
+    await expect(store.get()).rejects.toThrow();
+
+    await writeFile(join(dir, "settings.json"), JSON.stringify({ guide: 42 }));
+    await expect(store.get()).rejects.toThrow();
   });
 });
