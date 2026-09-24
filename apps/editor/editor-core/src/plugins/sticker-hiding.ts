@@ -3,6 +3,7 @@ import type { Command } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { StickerRef } from "../commands/sticker-edit";
 import { stickersIn } from "../commands/sticker-query";
+import { STICKER_HIDDEN_ATTR } from "./sticker-hiding.constants";
 
 /**
  * 끄는 동안 원래 자리의 스티커를 숨긴다 — spec: editor-sticker-edit, sticker-polish design.md 3.
@@ -10,9 +11,6 @@ import { stickersIn } from "../commands/sticker-query";
  * 속성만 달고, 어느 img를 가릴지는 editor-react CSS가 순번으로 고른다
  * (https://prosemirror.net/docs/ref/#view.Decoration^node). 문서는 바꾸지 않는다(메타만).
  */
-
-/** 장식이 다는 속성 — 값은 가릴 스티커의 순번 */
-export const STICKER_HIDDEN_ATTR = "data-sticker-hidden";
 
 /** 플러그인 상태 = 숨긴 스티커, 없으면 null */
 export const stickerHidingKey = new PluginKey<StickerRef | null>("stickerHiding");

@@ -18,6 +18,7 @@ export {
   setBlockWidth,
   updateSticker,
 } from "./commands/decoration";
+export { DEFAULT_COORDINATES } from "./commands/decoration.constants";
 export type {
   BlockRect,
   StickerPatch,
@@ -60,9 +61,5 @@ export {
   pasteNormalizer,
   pasteNormalizerKey,
 } from "./plugins/paste-normalizer";
-export {
-  STICKER_HIDDEN_ATTR,
-  hideSticker,
-  stickerHiding,
-  stickerHidingKey,
-} from "./plugins/sticker-hiding";
+export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
+export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
