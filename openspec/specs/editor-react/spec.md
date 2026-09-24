@@ -49,3 +49,12 @@ React에 TipTap 에디터를 마운트한다 — 초기 문서는 docToNode를 �
 - **THEN** 에디터를 다시 만들지 않아 커서 · undo가 그대로다
 
 실패 의미론: 해당 없음 — 순수 조립(서버 상태 없음). 마운트 · 조합 입력은 실브라우저(#44 체크리스트) 몫이다.
+
+### Requirement: 조립한 에디터에 되돌리기가 있다
+
+`blogEditorExtensions()`는 SHALL editor-core의 `History` 확장을 포함한다.
+
+#### Scenario: 조립한 목록에 history가 있다
+
+- **WHEN** `blogEditorExtensions()`의 확장 이름을 본다
+- **THEN** `history`가 있다
