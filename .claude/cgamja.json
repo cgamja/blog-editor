@@ -7,7 +7,7 @@
   },
   "contract": null,
   "mock": { "boundary": null },
-  "design": { "source": "figma:cEy6fybMcrnEfokCc8XVQB", "tokens": null },
+  "design": { "source": "figma:cEy6fybMcrnEfokCc8XVQB", "tokens": "packages/design-tokens/src/tokens.css" },
   "platform": { "profile": "web-desktop" },
   "domains": {
     "root": "packages",
