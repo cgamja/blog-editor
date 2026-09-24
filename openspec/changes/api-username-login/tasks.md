@@ -4,14 +4,14 @@
 
 ## 1. 테스트
 
-- [ ] 1.1 `src/test-app.ts` · `src/session.test.ts` — email → username, 아이디 정규화 시나리오 추가 → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
-- [ ] 1.2 `src/local-config.test.ts` — 로컬 env 시나리오 → verify: 빨강
+- [x] 1.1 `src/test-app.ts` · `src/session.test.ts` — email → username, 아이디 정규화 시나리오 추가 → verify: `pnpm vitest run apps/editor/api` 빨강 · 실패 원문 보고
+- [x] 1.2 `src/local-config.test.ts` — 로컬 env 시나리오 → verify: 빨강
 
 ## 2. 구현
 
-- [ ] 2.1 `src/accounts.ts` · `src/memory-account-store.ts` · `src/session.ts` · `src/messages.ts` — username 계약 · 본문 · 메시지 → verify: 1.1 초록
-- [ ] 2.2 `src/local-config.ts` · `src/serve.ts` — env 해석 · 평문 해시 · 비밀 생성 → verify: 1.2 초록, `ADMIN_PASSWORD=1234`로 띄워 curl 로그인 204 → 목록 200
+- [x] 2.1 `src/accounts.ts` · `src/memory-account-store.ts` · `src/session.ts` · `src/messages.ts` — username 계약 · 본문 · 메시지 → verify: 1.1 초록
+- [x] 2.2 `src/local-config.ts` · `src/serve.ts` — env 해석 · 평문 해시 · 비밀 생성 → verify: 1.2 초록, `ADMIN_PASSWORD=1234`로 띄워 curl 로그인 204 → 목록 200
 
 ## 3. Converge
 
-- [ ] 3.1 시나리오 ↔ 테스트 대조 → verify: `pnpm verify` 초록
+- [x] 3.1 시나리오 ↔ 테스트 대조 → verify: `pnpm verify` 초록
