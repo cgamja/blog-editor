@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { FocusEvent, KeyboardEvent } from "react";
+import type { FocusEvent } from "react";
 import { INSERTABLE_BLOCKS } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
+import { menuItemsOf, onMenuKeyDown } from "./menu-keys";
 import { BLOCK_HANDLE_MESSAGES, INSERTABLE_BLOCK_LABELS } from "./messages";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
 
@@ -12,10 +13,6 @@ export interface BlockAddMenuProps {
   onOpenChange: (open: boolean) => void;
   onChoose: (kind: InsertableBlockKind) => void;
 }
-
-const menuItemsOf = (menu: HTMLElement | null) => [
-  ...(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? []),
-];
 
 /**
  * 「블록 추가」 버튼과 메뉴(role=menu). 방향키 · Home/End로 항목을 옮기고, Enter로 고르며, Esc로 닫고
@@ -37,25 +34,6 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
   const closeToButton = () => {
     close();
     buttonRef.current?.focus();
-  };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const items = menuItemsOf(menuRef.current);
-    const current = items.indexOf(document.activeElement as HTMLButtonElement);
-    const targets: Record<string, number | undefined> = {
-      ArrowDown: (current + 1) % items.length,
-      ArrowUp: (current - 1 + items.length) % items.length,
-      Home: 0,
-      End: items.length - 1,
-    };
-    const target = targets[event.key];
-    if (target !== undefined) {
-      event.preventDefault();
-      items[target]?.focus();
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      closeToButton();
-    }
   };
 
   // React onBlur는 부모로 버블된다(focusout)
@@ -96,7 +74,7 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
           role="menu"
           aria-label={BLOCK_HANDLE_MESSAGES.add}
           tabIndex={-1}
-          onKeyDown={onKeyDown}
+          onKeyDown={(event) => onMenuKeyDown(event, menuRef.current, closeToButton)}
           onBlur={onBlur}
         >
           {KINDS.map((kind) => (
