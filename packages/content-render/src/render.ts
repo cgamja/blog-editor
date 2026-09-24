@@ -207,11 +207,12 @@ function textStyleAttrsHtml(style: TextStyleAttrs): string {
  * 여기서 다시 본다 — 이스케이프는 `;`로 다른 선언을 잇는 것을 막지 못한다(spec: render-decoration).
  */
 function colorAttr(
-  value: string | undefined,
+  value: unknown,
   presets: readonly string[],
   cssVar: string,
 ): { data?: string | undefined; cssVar?: string | undefined } {
-  if (value === undefined) return {};
+  // 문자열이 아니면 검사와 출력이 서로 다른 글자를 볼 수 있다(toString) — 문자열만 받는다
+  if (typeof value !== "string") return {};
   if (HEX_COLOR_PATTERN.test(value)) return { data: CUSTOM_COLOR, cssVar: `${cssVar}:${value}` };
   return presets.includes(value) ? { data: value } : {};
 }
