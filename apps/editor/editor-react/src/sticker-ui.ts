@@ -39,16 +39,18 @@ const CURSOR_SECTOR_DEGREES = 45;
 /** 180°를 네 칸으로 나눈 순서 — 0° 가로부터 시계 방향 */
 const RESIZE_CURSORS = ["ew-resize", "nwse-resize", "ns-resize", "nesw-resize"] as const;
 
-export function cornerDistance(width: number, height: number): number {
-  throw new Error(`미구현: ${width} ${height}`);
-}
+/**
+ * 크기 조절의 기준 거리 — 중심에서 모서리까지. 누른 점까지의 거리를 쓰면 중심 가까이를 눌렀을 때
+ * 조금만 움직여도 크기가 폭주한다(sticker-polish-review).
+ */
+export const cornerDistance = (width: number, height: number): number =>
+  Math.hypot(width / 2, height / 2);
 
-export function isInsideLayer(
-  point: { x: number; y: number },
-  size: { width: number; height: number },
-): boolean {
-  throw new Error(`미구현: ${point.x} ${size.width}`);
-}
+/** 점이 에디터 틀(레이어 기준 0,0 ~ 폭,높이) 안인가 — 밖에 놓으면 끌기 취소다 */
+export const isInsideLayer = (
+  { x, y }: { x: number; y: number },
+  { width, height }: { width: number; height: number },
+): boolean => x >= 0 && y >= 0 && x <= width && y <= height;
 
 /**
  * 조절점은 스티커와 함께 돈다. 모서리 각도에 회전을 더한 화면 각도를 180°로 접어,
@@ -61,13 +63,17 @@ export function resizeCursor(corner: StickerCorner, rotate: number): string {
   return RESIZE_CURSORS[sector] ?? RESIZE_CURSORS[0];
 }
 
+/** 래퍼의 첫 자식은 블록 요소이고 스티커는 그 뒤다(editor-core withDecoration) — 순번 0이 둘째 자식 */
+const FIRST_STICKER_CHILD = 2;
+
 /**
  * 끄는 동안 원래 자리의 스티커 하나를 가리는 CSS 규칙. editor-core 장식이 블록에 순번을 달고,
- * 이 규칙이 그 블록 바로 아래 `.post-sticker` 가운데 그 순번만 고른다(`:nth-child(An+B of S)`).
- * https://developer.mozilla.org/docs/Web/CSS/:nth-child#the_of_selector_syntax
+ * 이 규칙이 그 블록 바로 아래 자식 가운데 그 순번의 스티커만 고른다. `:nth-child(An+B of S)`는
+ * 모르는 브라우저에서 규칙째 버려져서 자식 위치로 고른다(래퍼 구조가 고정이라 가능하다).
  */
 export function hiddenStickerRule(index: number): string {
-  return `.blog-editor [${STICKER_HIDDEN_ATTR}="${index}"] > :nth-child(${index + 1} of .post-sticker){visibility:hidden}`;
+  const child = index + FIRST_STICKER_CHILD;
+  return `.blog-editor [${STICKER_HIDDEN_ATTR}="${index}"] > .post-sticker:nth-child(${child}){visibility:hidden}`;
 }
 
 // ── 패널 격자 → 에디터 끌어 오기(HTML5 drag) ──

@@ -444,37 +444,43 @@
   background: var(--surface, Canvas);
 }
 
-/* 네 모서리. 커서는 회전에 따라 StickerFrame이 inline으로 고른다(resizeCursor) — 여기 값은 회전 0의 대체값 */
+/*
+ * 네 모서리 조절점 — 칸 가운데가 모서리다. 스티커가 44px 칸보다 작으면(폭 · 높이 < 2.75rem) 두 칸이 겹치므로
+ * min(0px, 50% − 1.375rem)만큼 바깥으로 민다(left · right의 %는 폭, top · bottom의 %는 높이 기준).
+ * 커서는 회전에 따라 StickerFrame이 inline으로 고른다(resizeCursor) — 여기 값은 회전 0의 대체값.
+ */
 .sticker-handle-nw {
-  top: -1.375rem;
-  left: -1.375rem;
+  top: calc(min(0px, 50% - 1.375rem) - 1.375rem);
+  left: calc(min(0px, 50% - 1.375rem) - 1.375rem);
   cursor: nwse-resize;
 }
 
 .sticker-handle-ne {
-  top: -1.375rem;
-  right: -1.375rem;
+  top: calc(min(0px, 50% - 1.375rem) - 1.375rem);
+  right: calc(min(0px, 50% - 1.375rem) - 1.375rem);
   cursor: nesw-resize;
 }
 
 .sticker-handle-se {
-  right: -1.375rem;
-  bottom: -1.375rem;
+  right: calc(min(0px, 50% - 1.375rem) - 1.375rem);
+  bottom: calc(min(0px, 50% - 1.375rem) - 1.375rem);
   cursor: nwse-resize;
 }
 
 .sticker-handle-sw {
-  bottom: -1.375rem;
-  left: -1.375rem;
+  bottom: calc(min(0px, 50% - 1.375rem) - 1.375rem);
+  left: calc(min(0px, 50% - 1.375rem) - 1.375rem);
   cursor: nesw-resize;
 }
 
 /*
- * 회전 커서 — 둥근 화살표 SVG, 가운데(12 12)가 기준점. 커서 이미지 안에서는 CSS 변수를 못 쓰므로 토큰 대신
+ * 회전 손잡이 · 지우기는 위 조절점 줄 위에 한 줄로 둔다 — 위 조절점 칸의 윗변(위와 같은 min 식)에서
+ * 칸 높이 2.75rem + 틈 0.25rem = 3rem 더 위. 그래서 스티커 크기와 상관없이 조절점 칸과 겹치지 않는다.
+ * 회전 커서는 둥근 화살표 SVG, 가운데(12 12)가 기준점. 커서 이미지 안에서는 CSS 변수를 못 쓰므로 토큰 대신
  * 시스템 커서 관례(검은 선 + 흰 테두리)를 따른다. 이미지를 못 쓰는 브라우저는 grab.
  */
 .sticker-handle-rotate {
-  top: -3.25rem;
+  top: calc(min(0px, 50% - 1.375rem) - 1.375rem - 3rem);
   left: 50%;
   transform: translateX(-50%);
   cursor:
@@ -483,20 +489,21 @@
     grab;
 }
 
+/* 스티커 윗변에서 회전 손잡이 점(지름 0.875rem)의 아래 끝까지 — 손잡이를 민 만큼 길어진다 */
 .sticker-stem {
   position: absolute;
   bottom: 100%;
   left: 50%;
   width: 1px;
-  height: 1.5rem;
+  height: calc(2.5625rem - min(0px, 50% - 1.375rem));
   background: var(--brand-ink, currentColor);
 }
 
-/* 오른쪽 위 모서리는 크기 조절점 자리라, 지우기는 회전 손잡이 바로 오른쪽(44px 칸이 겹치지 않게) */
+/* 오른쪽 위 모서리는 크기 조절점 자리라, 지우기는 회전 손잡이 줄에서 그 칸 바로 오른쪽(틈 0.25rem) */
 .sticker-remove {
   position: absolute;
-  top: -3.25rem;
-  left: calc(50% + 1.375rem);
+  top: calc(min(0px, 50% - 1.375rem) - 1.375rem - 3rem);
+  left: calc(50% + 1.625rem);
   display: grid;
   place-items: center;
   width: 2.75rem;
