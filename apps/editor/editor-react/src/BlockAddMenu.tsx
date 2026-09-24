@@ -29,7 +29,7 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
   const insideRefs = useMemo(() => [buttonRef, menuRef], []);
   useCloseOnOutsidePointer(open, insideRefs, close);
 
-  // 열리면 첫 항목에 포커스
+  // APG menu-button 패턴: 메뉴를 열면 포커스는 첫 항목으로 간다 — 방향키 탐색이 거기서 시작한다
   useEffect(() => {
     if (open) menuItemsOf(menuRef.current)[0]?.focus();
   }, [open]);
@@ -58,7 +58,7 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
     }
   };
 
-  // Tab 등으로 포커스가 메뉴 밖으로 나가면 닫는다(focusout)
+  // React onBlur는 부모로 버블된다(focusout)
   const onBlur = (event: FocusEvent<HTMLDivElement>) => {
     const next = event.relatedTarget as Node | null;
     // + 버튼으로 옮기는 포커스는 버튼의 토글이 처리한다 — 여기서 닫으면 click이 다시 연다
