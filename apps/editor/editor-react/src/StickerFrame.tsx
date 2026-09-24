@@ -1,19 +1,12 @@
-import type { PointerEvent } from "react";
-import type { StickerBox } from "./sticker-measure";
-import type { GestureKind } from "./sticker-preview";
-import { anchorLabel, stickerName } from "./sticker-ui";
-
-type PointerHandler = (event: PointerEvent<HTMLElement>) => void;
+import { anchorLabel, removeStickerLabel } from "./sticker-messages";
+import type { GestureKind, StickerBox } from "./sticker-types";
+import type { StickerGestureHandlers } from "./use-sticker-gesture";
 
 export interface StickerFrameProps {
   box: StickerBox;
-  toLocal: (x: number, y: number) => { left: number; top: number };
-  gesture: {
-    onStart: (kind: GestureKind, box: StickerBox) => PointerHandler;
-    onMove: PointerHandler;
-    onEnd: PointerHandler;
-    onCancel: () => void;
-  };
+  /** 끄는 중 — 유령이 대신 보이므로 숨기되 마운트는 유지한다(잡은 포인터가 풀리지 않게) */
+  hidden: boolean;
+  gesture: StickerGestureHandlers;
   onRemove: (box: StickerBox) => void;
 }
 
@@ -22,7 +15,7 @@ export interface StickerFrameProps {
  * 테두리는 스티커와 같이 돈다. 조절점과 손잡이는 포인터 전용이라 aria-hidden이고,
  * 같은 일을 스티커 버튼의 키보드로 한다(sticker-drag design.md 4).
  */
-export function StickerFrame({ box, toLocal, gesture, onRemove }: StickerFrameProps) {
+export function StickerFrame({ box, hidden, gesture, onRemove }: StickerFrameProps) {
   const handleProps = (kind: GestureKind) => ({
     "aria-hidden": true,
     onPointerDown: gesture.onStart(kind, box),
@@ -35,8 +28,10 @@ export function StickerFrame({ box, toLocal, gesture, onRemove }: StickerFramePr
     <>
       <div
         className="sticker-frame"
+        data-hidden={hidden ? "" : undefined}
         style={{
-          ...toLocal(box.centerX, box.centerY),
+          left: box.centerX,
+          top: box.centerY,
           width: box.width,
           height: box.height,
           transform: `translate(-50%, -50%) rotate(${box.rotate}deg)`,
@@ -48,15 +43,20 @@ export function StickerFrame({ box, toLocal, gesture, onRemove }: StickerFramePr
         <button
           type="button"
           className="sticker-remove"
-          aria-label={`${stickerName(box.id)} 스티커 지우기`}
+          aria-label={removeStickerLabel(box.id)}
           onClick={() => onRemove(box)}
         >
           <span aria-hidden="true">×</span>
         </button>
       </div>
-      <span className="sticker-tag" style={toLocal(box.centerX, box.centerY + box.height / 2)}>
-        {anchorLabel(box.nodeName)}
-      </span>
+      {!hidden && (
+        <span
+          className="sticker-tag"
+          style={{ left: box.centerX, top: box.centerY + box.height / 2 }}
+        >
+          {anchorLabel(box.nodeName)}
+        </span>
+      )}
     </>
   );
 }

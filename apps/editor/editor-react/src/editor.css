@@ -67,7 +67,12 @@
   pointer-events: none;
 }
 
-/* 조절점은 12px 동그라미로 보이지만 누르는 자리는 44px(디자인 control-height) */
+/* 끄는 동안은 유령이 대신 보인다. 잡은 손잡이가 캡처를 잃지 않게 마운트는 두고 보이지만 않게 한다 */
+.sticker-frame[data-hidden] {
+  opacity: 0;
+}
+
+/* 조절점은 14px 동그라미(디자인 69:2 모서리 점)로 보이지만 누르는 자리는 44px(디자인 control-height) */
 .sticker-handle {
   position: absolute;
   display: grid;
@@ -80,8 +85,8 @@
 
 .sticker-handle::after {
   content: "";
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.875rem;
+  height: 0.875rem;
   box-sizing: border-box;
   border: 0.125rem solid var(--brand-ink, currentColor);
   border-radius: 50%;
@@ -145,7 +150,8 @@
   border-radius: 999px;
   background: var(--toolbar, CanvasText);
   color: var(--surface, Canvas);
-  font-size: 0.75rem;
+  /* 디자인 caption 13px */
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 
