@@ -2,7 +2,7 @@ import { imagePathSchema } from "@blog-editor/content-schema";
 import { createApp } from "./app";
 import { createMemoryImageStore } from "./memory-image-store";
 import { createMemoryPostStore } from "./memory-store";
-import { pngBytes, svgBytes } from "./images.test.helpers";
+import { jpegWithOrientationBytes, pngBytes, svgBytes } from "./images.test.helpers";
 import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
 const MIB = 1024 * 1024;
@@ -50,10 +50,17 @@ describe("POST /api/images", () => {
     expect([svg.status, big.status, wide.status]).toEqual([415, 413, 422]);
     expect(await images.count()).toBe(0);
   });
+
+  it("WHEN EXIF Orientation 6인 JPEG를 올리면 THEN 422이고 저장하지 않는다", async () => {
+    const { client, images } = setup();
+    const res = await client.request("/api/images", upload(jpegWithOrientationBytes(640, 480, 6)));
+    expect(res.status).toBe(422);
+    expect(await images.count()).toBe(0);
+  });
 });
 
 describe("GET /images/:name", () => {
-  it("WHEN 올린 PNG의 path로 GET하면 THEN 같은 바이트 · image/png · nosniff · immutable이다", async () => {
+  it("WHEN 올린 PNG의 path로 GET하면 THEN 같은 바이트 · image/png · nosniff · CSP · CORP · immutable이다", async () => {
     const { app, client } = setup();
     const bytes = pngBytes(800, 600);
     const { path } = (await (await client.request("/api/images", upload(bytes))).json()) as {
@@ -64,6 +71,8 @@ describe("GET /images/:name", () => {
     expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
     expect(res.headers.get("Content-Type")).toBe("image/png");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(res.headers.get("Content-Security-Policy")).toBe("default-src 'none'; sandbox");
+    expect(res.headers.get("Cross-Origin-Resource-Policy")).toBe("same-site");
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
   });
 

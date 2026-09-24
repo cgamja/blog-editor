@@ -91,6 +91,40 @@ export function jpegBytes(width: number, height: number): Uint8Array {
   return out;
 }
 
+/**
+ * SOI → APP1(Exif, 빅엔디언 TIFF, IFD0에 Orientation 한 칸) → SOF0. 방향 태그 0x0112 · SHORT(3) · 개수 1.
+ * https://www.cipa.jp/std/documents/e/DC-X008-Translation-2019-E.pdf 4.6.4
+ */
+export function jpegWithOrientationBytes(
+  width: number,
+  height: number,
+  orientation: number,
+): Uint8Array {
+  const tiffLength = 8 + 2 + 12 + 4;
+  const app1Length = 2 + 6 + tiffLength;
+  const out = bytes(2 + 2 + app1Length + 19 + PAD);
+  out.set([0xff, 0xd8], 0);
+  out.set([0xff, 0xe1], 2);
+  view(out).setUint16(4, app1Length);
+  ascii(out, 6, "Exif");
+  const tiff = 12;
+  ascii(out, tiff, "MM");
+  view(out).setUint16(tiff + 2, 42);
+  view(out).setUint32(tiff + 4, 8);
+  view(out).setUint16(tiff + 8, 1);
+  view(out).setUint16(tiff + 10, 0x0112);
+  view(out).setUint16(tiff + 12, 3);
+  view(out).setUint32(tiff + 14, 1);
+  view(out).setUint16(tiff + 18, orientation);
+  const sof = 4 + app1Length;
+  out.set([0xff, 0xc0], sof);
+  view(out).setUint16(sof + 2, 17);
+  out[sof + 4] = 8;
+  view(out).setUint16(sof + 5, height);
+  view(out).setUint16(sof + 7, width);
+  return out;
+}
+
 export function svgBytes(): Uint8Array {
   return new TextEncoder().encode(
     '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>alert(1)</script></svg>',

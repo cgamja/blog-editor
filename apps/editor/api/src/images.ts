@@ -57,9 +57,10 @@ export function registerImageRoutes(app: Hono, images: ImageStore): void {
         return c.json({ message: IMAGE_TOO_WIDE_MESSAGE }, 422);
       }
 
-      const name = `${contentHash(bytes)}.${EXTENSION_OF[probe.format]}`;
+      const extension = EXTENSION_OF[probe.format];
+      const name = `${contentHash(bytes)}.${extension}`;
       const existed = await images.has(name);
-      if (!existed) await images.put(name, bytes);
+      if (!existed) await images.put(name, bytes, CONTENT_TYPE_OF[extension]);
       return c.json(
         {
           path: `${PUBLIC_PREFIX}${name}`,

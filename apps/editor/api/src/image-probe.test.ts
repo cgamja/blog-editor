@@ -2,6 +2,7 @@ import { probeImage } from "./image-probe";
 import {
   gifBytes,
   jpegBytes,
+  jpegWithOrientationBytes,
   pngBytes,
   svgBytes,
   webpVp8Bytes,
@@ -36,5 +37,32 @@ describe("probeImage", () => {
     expect(probeImage(pngBytes(800, 600).slice(0, 12))).toBeNull();
     expect(probeImage(gifBytes(0, 10))).toBeNull();
     expect(probeImage(new Uint8Array(0))).toBeNull();
+  });
+
+  it("WHEN 깨진 JPEG · 잘린 WebP · IHDR 없는 PNG를 넣으면 THEN 끝나고 모두 null이다", () => {
+    const zeroLengthSegment = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x00, 0x00, 0x00]);
+    const onlyFill = new Uint8Array(64).fill(0xff);
+    onlyFill[1] = 0xd8;
+    const sof = 20;
+    const truncatedSof = jpegBytes(640, 480).slice(0, sof + 6);
+    const pngWithoutIhdr = pngBytes(800, 600);
+    pngWithoutIhdr.set([0x49, 0x44, 0x41, 0x54], 12);
+
+    expect(probeImage(zeroLengthSegment)).toBeNull();
+    expect(probeImage(onlyFill)).toBeNull();
+    expect(probeImage(truncatedSof)).toBeNull();
+    expect(probeImage(webpVp8Bytes(10, 10).slice(0, 27))).toBeNull();
+    expect(probeImage(webpVp8lBytes(10, 10).slice(0, 24))).toBeNull();
+    expect(probeImage(webpVp8xBytes(10, 10).slice(0, 29))).toBeNull();
+    expect(probeImage(pngWithoutIhdr)).toBeNull();
+  });
+
+  it("WHEN Orientation 6 EXIF가 든 JPEG를 넣으면 THEN 방향도 돌려준다", () => {
+    expect(probeImage(jpegWithOrientationBytes(640, 480, 6))).toEqual({
+      format: "jpeg",
+      width: 640,
+      height: 480,
+      orientation: 6,
+    });
   });
 });
