@@ -17,7 +17,7 @@ adr-008의 원칙 — **문서에 들어가는 값은 zod가 정의한 닫힌 �
 
 1. **글자 스타일 마크 `textStyle`**(인라인). 속성은 모두 선택이고 하나 이상 있어야 한다.
    - `font`: `pretendard` · `jua` · `gaegu`(블록 `font`와 같은 집합). 블록 글꼴은 그대로 둔다 — 글자 단위와 블록 단위를 둘 다 쓴다(사용자 결정).
-   - `weight`: 이름 `light` · `medium` · `heavy`(300 · 500 · 800). **글꼴마다 실제로 있는 두께만** 허용한다: Pretendard는 셋 다, Gaegu는 `light`만, Jua는 없음. 판정 기준은 같은 마크의 `font`, 없으면 본문 기본 Pretendard다. 블록 글꼴이 Jua인 문단 안 `weight=light`처럼 교차하는 경우는 막지 않는다(브라우저가 가장 가까운 두께로 그린다 — 가짜 굵기를 만들지 않는다). 굵게(700)는 기존 `bold` 마크가 맡는다.
+   - `weight`: 이름 `light` · `medium` · `heavy`(300 · 500 · 800). **글꼴마다 실제로 있는 두께만** 허용한다: Pretendard는 셋 다, Gaegu는 `light`만, Jua는 없음. 판정 기준은 같은 마크의 `font`, 없으면 본문 기본 Pretendard다. 블록 글꼴이 Jua인 문단 안 `weight=light`처럼 교차하는 경우는 막지 않는다(본문용 CSS가 `.post-ts[data-weight]`에 `font-synthesis-weight: none`을 둬서 브라우저가 가짜 굵기를 만들지 않고 가장 가까운 두께로 그린다). 굵게(700)는 기존 `bold` 마크가 맡는다.
    - `size`: 이름 단계 `sm` · `lg` · `xl` · `2xl`(본문 대비 0.875 · 1.25 · 1.5 · 2em). 보통은 값이 없는 것이다. **자유 수치(%)가 아니라 단계로** — 블로그 에디터에서 흔한 방식이고, AI가 `size=lg`로 틀릴 일이 없으며, 글 전체의 크기 체계가 흐트러지지 않는다.
    - `color`(글자색) · `highlight`(배경): 프리셋 이름 또는 `#rrggbb`(소문자 6자리). 프리셋은 design/tokens.json에서 뽑는다 — 글자색 `muted`(ink-soft) · `brand`(brand-ink) · `green`(accent-ink) · `red`(danger-ink — 사이트 토큰에 아직 없어 CSS가 디자인 값으로 물러선다), 배경 `apricot`(brand-soft) · `mint`(accent-soft) · `yellow`(postit). AI 형식 가이드는 프리셋을 먼저 권한다.
 2. **마크 `strike` · `underline`**.
