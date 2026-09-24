@@ -92,6 +92,26 @@ const GENERATORS = {
     "생성기(fast-check · *.arbitrary · testing 진입점)는 테스트와 *.arbitrary.ts에서만 import한다 (adr-015).",
 };
 
+/**
+ * web 안의 층(ARCHITECTURE: app → features → shared). gitignore 방식이라 아래 기능 안쪽 패턴은
+ * `features/auth` 자신(index)은 통과시키고 그 안쪽 경로만 막는다. eslint.boundaries.test.ts가 모양을 열거한다.
+ */
+const WEB_SRC = "apps/editor/web/src";
+const WEB_PACKAGE = [
+  TIPTAP,
+  PROSEMIRROR,
+  forbidWorkspace(...except("editor-react", "content-schema")),
+];
+const WEB_SHARED_UPWARD = {
+  group: withSubpaths("../**/features", "../**/app"),
+  message: "web shared는 features · app을 import하지 않는다 — 아래 층이 위 층을 모른다.",
+};
+const WEB_FEATURE_INTERNALS = {
+  group: ["./features/*/**", "../**/features/*/**"],
+  message:
+    "기능 밖에서는 features/<이름>(index.ts)만 import한다 — 기능 안쪽 경로는 그 기능의 것이다.",
+};
+
 const restrictedImports = (patterns) => ({
   "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
 });
@@ -146,9 +166,9 @@ export default defineConfig([
       forbidWorkspace(...except("content-schema", "content-convert", "content-render")),
     ],
   ),
-  boundary(
-    ["apps/editor/web/**"],
-    [TIPTAP, PROSEMIRROR, forbidWorkspace(...except("editor-react", "content-schema"))],
-  ),
+  boundary(["apps/editor/web/**"], WEB_PACKAGE),
+  // 뒤 블록이 규칙을 통째로 덮어쓰므로 패키지 경계(WEB_PACKAGE)를 층마다 다시 넣는다
+  boundary([`${WEB_SRC}/app/**`, `${WEB_SRC}/pages/**`], [...WEB_PACKAGE, WEB_FEATURE_INTERNALS]),
+  boundary([`${WEB_SRC}/shared/**`], [...WEB_PACKAGE, WEB_SHARED_UPWARD, WEB_FEATURE_INTERNALS]),
   globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
 ]);
