@@ -709,3 +709,51 @@
   outline: 2px solid var(--brand-ink, currentColor);
   outline-offset: 2px;
 }
+
+/*
+ * 그림 · 앱 스크린샷 폭 손잡이(block-controls design.md 6, Notion 이미지 크기 조절). 레이어는 포인터를 통과시키고
+ * 손잡이만 받는다. 손잡이 칸은 터치 타깃 24px × 컨트롤 높이 44px, 보이는 막대는 가운데 6px.
+ */
+.width-resize {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.width-resize-handle {
+  position: absolute;
+  width: 1.5rem;
+  height: 2.75rem;
+  translate: -50% -50%;
+  pointer-events: auto;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.width-resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0.25rem 0.5625rem;
+  border: 1px solid var(--surface);
+  border-radius: 999px;
+  background: var(--toolbar);
+}
+
+/* 끄는 동안에는 폭 도구줄(문서 값)을 숨긴다 — 숫자가 「가로 N%」(미리보기 값)와 둘로 갈리지 않게 */
+:has(> .blog-editor-frame .width-resize[data-resizing]) > .width-toolbar {
+  visibility: hidden;
+}
+
+/* 끄는 동안의 「가로 N%」 — 폭 도구줄(블록 위)과 겹치지 않게 블록 아래 가운데 */
+.width-resize-value {
+  position: absolute;
+  translate: -50% 0.5rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--toolbar);
+  color: var(--surface);
+  /* caption 13px */
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
