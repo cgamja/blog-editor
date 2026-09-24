@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { fixtures } from "@blog-editor/content-schema";
 import { EditorScreen, useBlogEditor, type StickerId } from "../src";
-import { DevTools, FIXTURE_NAMES, type FixtureName } from "./DevTools";
+import { DevTools } from "./DevTools";
+import { FIXTURE_NAMES, type FixtureName } from "./fixtures";
 
 /** 스티커 원본은 vite publicDir(content-render assets)가 `/stickers/{id}.png`로 서빙한다 — 에디터 DOM과 같은 주소 */
 const stickerSrc = (id: StickerId) => `/stickers/${id}.png`;
