@@ -110,6 +110,48 @@ describe("api-session — /api/*는 세션 필수 (보호 대상 — 고쳐서 �
   });
 });
 
+describe("api-session — 로그인 잠금 (보호 대상 — 고쳐서 통과시키지 않는다)", () => {
+  const LOCKOUT_FAILURES = 5;
+  const LOCKOUT_MS = 15 * 60 * 1000;
+
+  async function failRepeatedly(app: ReturnType<typeof setup>["app"]) {
+    for (let attempt = 0; attempt < LOCKOUT_FAILURES; attempt += 1) {
+      await loginRequest(app, TEST_ACCOUNT.username, "wrong-password");
+    }
+  }
+
+  it("WHEN 틀린 비밀번호로 5번 로그인한 뒤 맞는 비밀번호로 로그인하면 THEN 401이고 Set-Cookie가 없다", async () => {
+    const { app } = setup();
+    await failRepeatedly(app);
+
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get("Set-Cookie")).toBeNull();
+  });
+
+  it("WHEN 5번 실패해 잠긴 뒤 15분이 넘게 흐르고 맞는 비밀번호로 로그인하면 THEN 204다", async () => {
+    const { app, advance } = setup();
+    await failRepeatedly(app);
+
+    advance(LOCKOUT_MS + 1000);
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(204);
+  });
+
+  it("WHEN 없는 아이디로 5번 실패한 뒤 시드 아이디 · 맞는 비밀번호로 로그인하면 THEN 204다", async () => {
+    const { app } = setup();
+    for (let attempt = 0; attempt < LOCKOUT_FAILURES; attempt += 1) {
+      await loginRequest(app, "nobody", "wrong-password");
+    }
+
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(204);
+  });
+});
+
 describe("api-session — 로그아웃", () => {
   it("WHEN 로그인 → 로그아웃 → 응답 쿠키를 적용해 목록을 부르면 THEN 로그아웃 204 · Max-Age=0이고 목록은 401이다", async () => {
     const { app } = setup();
