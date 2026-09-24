@@ -29,7 +29,7 @@
 **서버와 AI 연결**
 
 - 로그인(아이디 · 비밀번호, HMAC 세션 쿠키, 실패 5회면 15분 잠금), 글 목록 · 읽기 · 저장(`/api/posts`), 발행된 글만 내보내는 공개 API(`/public/posts`)
-- MCP 커넥터(`/mcp`): 글쓰기 가이드 읽기 · 글 목록 · 글 읽기 · 초안 검사 · 초안 만들기. 발행 도구는 없다
+- MCP 커넥터(`/mcp`): 글쓰기 가이드 읽기 · 글 목록 · 글 읽기 · 초안 검사 · 초안 만들기 · 초안 고치기. 발행 도구는 없다
 - 연결은 연결용 토큰(Bearer) 또는 OAuth(DCR · PKCE S256) — [ADR-016](adr/2026-09-24-adr-016-mcp-server-sdk-connection-token.md) · [ADR-018](adr/2026-09-24-adr-018-mcp-oauth-authorization-server-in-service.md)
 
 **예정** — 백오피스 화면(로그인 · 글 목록 · 저장 · 발행), 이미지 올리기, AWS 배포. 진행은 [마일스톤](https://github.com/cgamja/blog-editor/milestones) M3~M6.
@@ -105,11 +105,12 @@ pnpm install   # lefthook 훅(commit-msg · pre-commit · pre-push)도 건다
 
 레포 루트에 `.env`를 만든다(gitignore됨). 값은 직접 정하고 커밋하지 않는다.
 
-| 이름                   | 뜻                                                                                       |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| `ADMIN_USERNAME`       | 로그인 아이디(없으면 `admin`)                                                            |
-| `ADMIN_PASSWORD`       | 로그인 비밀번호(필수). 해시로 줄 때는 `ADMIN_PASSWORD_HASH`                              |
-| `MCP_CONNECTION_TOKEN` | 있으면 `/mcp`를 연다. 32자 이상 — 만드는 법은 [docs/mcp-connect.md](docs/mcp-connect.md) |
+| 이름                   | 뜻                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ADMIN_USERNAME`       | 로그인 아이디(없으면 `admin`)                                                                         |
+| `ADMIN_PASSWORD`       | 로그인 비밀번호(필수). 해시로 줄 때는 `ADMIN_PASSWORD_HASH`                                           |
+| `MCP_CONNECTION_TOKEN` | 있으면 `/mcp`를 연다. 32자 이상 — 만드는 법은 [docs/mcp-connect.md](docs/mcp-connect.md)              |
+| `PUBLIC_BASE_URL`      | claude.ai가 닿는 주소(터널 등). 있으면 OAuth 연결을 연다 — [docs/mcp-connect.md](docs/mcp-connect.md) |
 
 ```bash
 pnpm --filter @blog-editor/api dev                       # API → http://127.0.0.1:8787
