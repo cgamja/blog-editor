@@ -30,7 +30,7 @@ describe("api-session — 로그인", () => {
   it("WHEN 시드 계정으로 로그인하면 THEN 204이고 쿠키가 HttpOnly · Secure · SameSite=Strict · Path=/ · Max-Age를 갖는다", async () => {
     const { app } = setup();
 
-    const res = await loginRequest(app, TEST_ACCOUNT.email, TEST_ACCOUNT.password);
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
 
     expect(res.status).toBe(204);
     const setCookie = res.headers.get("Set-Cookie") ?? "";
@@ -42,10 +42,18 @@ describe("api-session — 로그인", () => {
     expect(setCookie).toMatch(new RegExp(`Max-Age=${SESSION_TTL_SECONDS}`));
   });
 
+  it('WHEN 시드 아이디 admin을 " Admin "으로 적어 로그인하면 THEN 204다', async () => {
+    const { app } = setup();
+
+    const res = await loginRequest(app, " Admin ", TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(204);
+  });
+
   it("WHEN 틀린 비밀번호로 로그인하면 THEN 401이고 쿠키가 없다", async () => {
     const { app } = setup();
 
-    const res = await loginRequest(app, TEST_ACCOUNT.email, "wrong-password");
+    const res = await loginRequest(app, TEST_ACCOUNT.username, "wrong-password");
 
     expect(res.status).toBe(401);
     expect(res.headers.get("Set-Cookie")).toBeNull();
@@ -54,8 +62,8 @@ describe("api-session — 로그인", () => {
   it("WHEN 없는 계정과 틀린 비밀번호로 로그인하면 THEN 두 응답의 상태와 본문이 같다", async () => {
     const { app } = setup();
 
-    const unknown = await loginRequest(app, "nobody@example.com", TEST_ACCOUNT.password);
-    const wrong = await loginRequest(app, TEST_ACCOUNT.email, "wrong-password");
+    const unknown = await loginRequest(app, "nobody", TEST_ACCOUNT.password);
+    const wrong = await loginRequest(app, TEST_ACCOUNT.username, "wrong-password");
 
     expect(unknown.status).toBe(wrong.status);
     expect(await unknown.text()).toBe(await wrong.text());
@@ -74,7 +82,7 @@ describe("api-session — /api/*는 세션 필수 (보호 대상 — 고쳐서 �
 
   it("WHEN 쿠키의 서명 부분을 바꿔 부르면 THEN 401이다", async () => {
     const { app } = setup();
-    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.email, TEST_ACCOUNT.password));
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
     const [name, encoded] = cookie.split("=", 2) as [string, string];
     const value = decodeURIComponent(encoded);
     const dot = value.lastIndexOf(".");
@@ -88,7 +96,7 @@ describe("api-session — /api/*는 세션 필수 (보호 대상 — 고쳐서 �
 
   it("WHEN 세션 수명보다 시계가 더 흐른 뒤 그 쿠키로 부르면 THEN 401이다", async () => {
     const { app, advance } = setup();
-    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.email, TEST_ACCOUNT.password));
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
 
     advance(SESSION_TTL_SECONDS * 1000 + 1);
 
@@ -105,7 +113,7 @@ describe("api-session — /api/*는 세션 필수 (보호 대상 — 고쳐서 �
 describe("api-session — 로그아웃", () => {
   it("WHEN 로그인 → 로그아웃 → 응답 쿠키를 적용해 목록을 부르면 THEN 로그아웃 204 · Max-Age=0이고 목록은 401이다", async () => {
     const { app } = setup();
-    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.email, TEST_ACCOUNT.password));
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
 
     const logout = await app.request("/api/session", {
       method: "DELETE",
