@@ -1,5 +1,6 @@
 import type { Node } from "@tiptap/pm/model";
 import type { Command } from "@tiptap/pm/state";
+import { defaultAlignOf } from "@blog-editor/content-schema";
 import type { ALIGNS } from "@blog-editor/content-schema";
 import { alignOrNull } from "../closed-values";
 import { canHoldDecoration, selectedTopBlocks } from "./decoration";
@@ -14,17 +15,10 @@ type Align = (typeof ALIGNS)[number];
 
 const ALIGN_KEY = "align";
 
-/**
- * 속성이 없을 때 post.css가 그리는 모양 — 폭을 줄일 수 있는 블록(그림 · 앱 스크린샷)은 가운데 여백,
- * 글 블록은 왼쪽 글자(design.md 1). 이 값과 같으면 저장하지 않아 정규형이 하나로 남는다
- */
-const defaultAlignOf = (node: Node): Align =>
-  canHoldDecoration(node, "width") ? "center" : "left";
-
-/** 지금 모양 — 저장값, 없으면 그 블록의 기본 모양. 정렬 자리가 없는 블록이면 null */
+/** 지금 모양 — 저장값, 없으면 그 블록의 기본 모양(content-schema 정규형 규칙). 정렬 자리가 없는 블록이면 null */
 export function alignOf(node: Node): Align | null {
   if (!canHoldDecoration(node, ALIGN_KEY)) return null;
-  return alignOrNull(node.attrs[ALIGN_KEY]) ?? defaultAlignOf(node);
+  return alignOrNull(node.attrs[ALIGN_KEY]) ?? defaultAlignOf(node.type.name);
 }
 
 export function setBlockAlign(align: string): Command {
@@ -38,7 +32,8 @@ export function setBlockAlign(align: string): Command {
     if (dispatch && changed.length > 0) {
       const tr = state.tr;
       for (const { pos, node } of changed) {
-        const stored = value === defaultAlignOf(node) ? null : value;
+        // 기본 모양이면 저장하지 않는다 — normalize가 지우는 값과 같은 규칙(defaultAlignOf 한 곳)
+        const stored = value === defaultAlignOf(node.type.name) ? null : value;
         // https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute — 노드 선택이 유지된다
         tr.setNodeAttribute(pos, ALIGN_KEY, stored);
       }
