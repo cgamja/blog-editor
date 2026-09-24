@@ -48,6 +48,11 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
     [runAndDropHandle],
   );
   const closeBlockMenu = useCallback(() => setBlockMenuOpen(false), []);
+  // 메뉴를 연 채 끌기 시작하면 메뉴를 닫는다 — 열린 채 남으면 손잡이가 붙잡힌 채 다른 블록으로 옮겨 가지 않는다
+  const onDraggingChange = useCallback((next: boolean) => {
+    setDragging(next);
+    if (next) setBlockMenuOpen(false);
+  }, []);
 
   if (hovered === null || !editor.isEditable) return null;
 
@@ -67,7 +72,7 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
         buttonRef={moveButtonRef}
         from={hovered.index}
         menu={{ open: blockMenuOpen, onToggle: () => setBlockMenuOpen((open) => !open) }}
-        dragEvents={{ onDraggingChange: setDragging, onDrop }}
+        dragEvents={{ onDraggingChange, onDrop }}
       />
       {blockMenuOpen && (
         <BlockMenu
