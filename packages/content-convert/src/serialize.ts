@@ -1,4 +1,4 @@
-import { naturalSizeOf, normalize } from "@blog-editor/content-schema";
+import { naturalSizeOf, normalize, orderedListNumberAt } from "@blog-editor/content-schema";
 import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
 import { APP_FRAME, CALLOUT_CONTAINER_NAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
 import { serializeInline, serializePlainLabel } from "./serialize-inline";
@@ -24,6 +24,11 @@ export interface SerializeResult {
 
 /** 최상위 블록 · 콜아웃 안 블록 사이 구분 — 빈 줄 하나. */
 const BLOCK_SEPARATOR = "\n\n";
+/**
+ * 문단을 끊고 목록을 시작할 수 있는 번호 — 다른 번호로 시작하는 목록은 바로 위 글줄의 이어진 글자로 읽힌다
+ * (CommonMark 5.2 "In order for a sequence of lines to constitute a list item … start with 1").
+ */
+const PARAGRAPH_INTERRUPTING_LIST_START = 1;
 const MIN_FENCE_LENGTH = 3;
 
 interface ParagraphLike {
@@ -36,6 +41,7 @@ interface ListItemLike {
 }
 interface ListLike {
   type: "bulletList" | "orderedList";
+  attrs?: { start?: number | undefined } | undefined;
   content: ListItemLike[];
 }
 
@@ -78,9 +84,10 @@ class ListMarkers {
   }
 }
 
-function listMarker(type: ListLike["type"], index: number, alternate: boolean): string {
-  if (type === "bulletList") return alternate ? "*" : "-";
-  return `${index + 1}${alternate ? ")" : "."}`;
+/** 번호 목록 표지는 시작 번호부터 센다 — markdown은 첫 표지 번호를 시작 번호로 읽는다(CommonMark 5.2) */
+function listMarker(list: ListLike, index: number, alternate: boolean): string {
+  if (list.type === "bulletList") return alternate ? "*" : "-";
+  return `${orderedListNumberAt(list.attrs?.start, index)}${alternate ? ")" : "."}`;
 }
 
 function isEmptyParagraph(paragraph: ParagraphLike): boolean {
@@ -90,26 +97,36 @@ function isEmptyParagraph(paragraph: ParagraphLike): boolean {
 /**
  * 첫 문단이 빈 항목은 빼되 그 안쪽 목록은 버리지 않고 한 단계 위로 올린다(design.md 2-b) — 목록을
  * 그 자리에서 나누고 올라간 목록을 사이에 둔다. 결과 목록들의 모든 항목은 첫 문단이 비지 않는다.
+ * 나뉜 번호 목록 조각은 원래 번호를 잇는다(ordered-list-start).
  */
 function liftEmptyItems(list: ListLike, dropped: BlockLosses): ListLike[] {
   const lists: ListLike[] = [];
   let items: ListItemLike[] = [];
-  const flush = (): void => {
-    if (items.length > 0) lists.push({ type: list.type, content: items });
+  let firstIndex = 0;
+  const flush = (nextIndex: number): void => {
+    if (items.length > 0) {
+      const start = orderedListNumberAt(list.attrs?.start, firstIndex);
+      lists.push(
+        list.type === "orderedList"
+          ? { type: list.type, attrs: { start }, content: items }
+          : { type: list.type, content: items },
+      );
+    }
     items = [];
+    firstIndex = nextIndex;
   };
-  for (const item of list.content) {
+  list.content.forEach((item, index) => {
     const [paragraph, ...nested] = item.content;
     const liftedNested = nested.flatMap((child) => liftEmptyItems(child, dropped));
     if (isEmptyParagraph(paragraph)) {
       dropped.emptyParagraph += 1;
-      flush();
+      flush(index + 1);
       lists.push(...liftedNested);
     } else {
       items.push({ type: "listItem", content: [paragraph, ...liftedNested] });
     }
-  }
-  flush();
+  });
+  flush(list.content.length);
   return lists;
 }
 
@@ -120,12 +137,24 @@ function renderLists(
   markers: ListMarkers,
   separator: string,
 ): string | undefined {
-  const texts = lists.map((list) => {
+  const texts = lists.map((list, index) => {
     const alternate = markers.alternateFor(list.type);
     markers.wroteList(list.type, alternate);
-    return renderList(list, dropped, alternate);
+    const text = renderList(list, dropped, alternate);
+    // 블록 사이(빈 줄)가 아니라 줄바꿈으로 잇는 안쪽 목록만 빈 줄이 더 필요하다
+    const needsBlankLine =
+      separator !== BLOCK_SEPARATOR && index > 0 && cannotInterruptParagraph(list);
+    return needsBlankLine ? `\n${text}` : text;
   });
   return texts.length > 0 ? texts.join(separator) : undefined;
+}
+
+/** 안쪽 목록처럼 빈 줄 없이 잇는 자리에서 이 목록은 앞에 빈 줄이 있어야 한다 */
+function cannotInterruptParagraph(list: ListLike): boolean {
+  return (
+    list.type === "orderedList" &&
+    orderedListNumberAt(list.attrs?.start, 0) !== PARAGRAPH_INTERRUPTING_LIST_START
+  );
 }
 
 /** liftEmptyItems를 거친 목록 하나 — 안쪽 목록은 항목 들여쓰기 아래 빈 줄 없이 잇는다. */
@@ -133,13 +162,16 @@ function renderList(list: ListLike, dropped: BlockLosses, alternate: boolean): s
   return list.content
     .map((item, index) => {
       const [paragraph, ...nested] = item.content;
-      const marker = listMarker(list.type, index, alternate);
+      const marker = listMarker(list, index, alternate);
       const indent = " ".repeat(marker.length + 1);
       // liftEmptyItems가 첫 문단이 빈 항목을 이미 뺐으므로 inlineOf는 늘 글자를 돌려준다.
       const lines = [`${marker} ${inlineOf(paragraph, dropped) ?? ""}`];
       const nestedText = renderLists(nested, dropped, new ListMarkers(), "\n");
       if (nestedText !== undefined) {
-        lines.push(...nestedText.split("\n").map((line) => `${indent}${line}`));
+        if (nested[0] !== undefined && cannotInterruptParagraph(nested[0])) lines.push("");
+        lines.push(
+          ...nestedText.split("\n").map((line) => (line === "" ? "" : `${indent}${line}`)),
+        );
       }
       return lines.join("\n");
     })

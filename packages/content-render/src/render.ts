@@ -1,4 +1,5 @@
 import {
+  DEFAULT_ORDERED_LIST_START,
   HEX_COLOR_PATTERN,
   HIGHLIGHT_COLORS,
   naturalSizeOf,
@@ -71,7 +72,7 @@ function renderTopLevelBlock(block: Block, ctx: RenderContext): string {
       );
     case "orderedList":
       return finishBlock(
-        tag("ol", "", block.content.map(renderListItem).join("")),
+        tag("ol", olStartAttr(block.attrs?.start), block.content.map(renderListItem).join("")),
         block.attrs ?? {},
         ctx,
       );
@@ -230,7 +231,9 @@ function renderListItem(item: InnerListItem): string {
 
 function renderInnerList(list: InnerList): string {
   const itemsHtml = list.content.map(renderListItem).join("");
-  return list.type === "bulletList" ? tag("ul", "", itemsHtml) : tag("ol", "", itemsHtml);
+  return list.type === "bulletList"
+    ? tag("ul", "", itemsHtml)
+    : tag("ol", olStartAttr(list.attrs?.start), itemsHtml);
 }
 
 function renderCalloutChild(node: CalloutChild): string {
@@ -300,6 +303,12 @@ function cssInteger(value: unknown, what: string): string {
     throw new RangeError(`renderHtml: ${what}는 정수여야 한다 — ${typeof value}`);
   }
   return String(value);
+}
+
+/** `<ol>`의 start 속성 — 없거나 기본(1)이면 싣지 않는다. 정수만 싣는다(cssInteger와 같은 관례, spec: render-safety) */
+function olStartAttr(start: unknown): string {
+  if (start === undefined || start === DEFAULT_ORDERED_LIST_START) return "";
+  return ` start="${cssInteger(start, "번호 목록 start")}"`;
 }
 
 function headingTag(level: (typeof HEADING_LEVELS)[number]): string {

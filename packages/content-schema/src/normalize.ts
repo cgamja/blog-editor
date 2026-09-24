@@ -1,3 +1,4 @@
+import { DEFAULT_ORDERED_LIST_START } from "./doc";
 import type { ALIGNS, Doc, Mark } from "./doc";
 
 type Align = (typeof ALIGNS)[number];
@@ -37,7 +38,7 @@ export function defaultAlignOf(type: string): Align {
 
 /**
  * attrs: {}는 키 자체를 지운다(spec ③) — stickers[] 항목도 재귀적으로 키를 정렬한다.
- * 블록 종류의 기본 모양과 같은 align도 지운다(spec ⑤).
+ * 블록 종류의 기본 모양과 같은 align(spec ⑤)과 번호 목록 start 1도 지운다.
  */
 function normalizeAttrs(attrs: unknown, type: unknown): Node | undefined {
   if (typeof attrs !== "object" || attrs === null) return undefined;
@@ -47,6 +48,10 @@ function normalizeAttrs(attrs: unknown, type: unknown): Node | undefined {
     const value = source[key];
     if (value === undefined) continue;
     if (key === "align" && value === defaultAlignOf(String(type))) continue;
+    // 번호 목록 start 1은 없을 때와 같은 모양이다(ordered-list-start)
+    if (key === "start" && type === "orderedList" && value === DEFAULT_ORDERED_LIST_START) {
+      continue;
+    }
     withSortedStickers[key] =
       key === "stickers" && Array.isArray(value)
         ? value.map((sticker) => sortObjectKeys(sticker as Node))

@@ -14,6 +14,7 @@ import {
   NATURAL_SIZE_RANGE,
   STICKER_RANGES,
   MAX_STICKERS_PER_DOC,
+  ORDERED_LIST_START_RANGE,
   textStyleAttrsSchema,
 } from "./doc";
 
@@ -199,24 +200,48 @@ const horizontalRuleArb = fc.record({
 });
 
 // listItem 재귀는 depth <= 2까지만 — 스펙 "nested listItem lists depth ≤ 2"
-// depth 0(최상위에서 직접 쓴 리스트)만 attrs가 있다 — listItem 안에 중첩된 리스트는 안쪽 노드라
-// attrs 자리 자체가 없다(decoration-schema).
+// depth 0(최상위에서 직접 쓴 리스트)만 꾸미기가 있다 — listItem 안에 중첩된 리스트는 안쪽 노드라
+// 꾸미기 자리가 없고 번호 목록 시작 번호만 있다(decoration-schema · ordered-list-start).
+/** 번호 목록 시작 번호 — 없거나 범위 안(1은 normalize가 지운다) */
+const orderedListStartArb = fc.option(
+  fc.integer({ min: ORDERED_LIST_START_RANGE.min, max: ORDERED_LIST_START_RANGE.max }),
+  { nil: undefined },
+);
+
+/** 번호 목록이면 시작 번호를 attrs에 얹는다 — 안쪽 목록은 attrs가 시작 번호뿐이다(ordered-list-start) */
+function withStart(
+  type: "bulletList" | "orderedList",
+  list: fc.Arbitrary<Record<string, unknown>>,
+): fc.Arbitrary<Record<string, unknown>> {
+  if (type === "bulletList") return list;
+  return fc
+    .tuple(list, orderedListStartArb)
+    .map(([node, start]) =>
+      start === undefined
+        ? node
+        : { ...node, attrs: { ...(node.attrs as Record<string, unknown> | undefined), start } },
+    );
+}
+
 function listArb(
   type: "bulletList" | "orderedList",
   depth: number,
 ): fc.Arbitrary<Record<string, unknown>> {
   const content = fc.array(listItemArb(depth), { minLength: 1, maxLength: 2 });
-  return depth === 0
-    ? fc.record({
-        type: fc.constant(type),
-        attrs: decorationArbitrary({
-          font: true,
-          width: false,
-          maxStickers: STICKER_CAP_PER_BLOCK,
-        }),
-        content,
-      })
-    : fc.record({ type: fc.constant(type), content });
+  return withStart(
+    type,
+    depth === 0
+      ? fc.record({
+          type: fc.constant(type),
+          attrs: decorationArbitrary({
+            font: true,
+            width: false,
+            maxStickers: STICKER_CAP_PER_BLOCK,
+          }),
+          content,
+        })
+      : fc.record({ type: fc.constant(type), content }),
+  );
 }
 
 function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
@@ -260,18 +285,21 @@ const imageArb = fc.record({
     .map(([src, size, deco]) => ({ src, alt: "", ...size, ...deco })),
 });
 
-/** callout 안 bulletList/orderedList — 안쪽 노드라 attrs 자리가 없다(listArb depth 0과 다르다). */
+/** callout 안 bulletList/orderedList — 안쪽 노드라 꾸미기 자리가 없다(listArb depth 0과 다르다). */
 function calloutListArb(type: "bulletList" | "orderedList"): fc.Arbitrary<Record<string, unknown>> {
-  return fc.record({
-    type: fc.constant(type),
-    content: fc.array(
-      fc.record({
-        type: fc.constant("listItem" as const),
-        content: innerParagraphArb.map((paragraphNode) => [paragraphNode]),
-      }),
-      { minLength: 1, maxLength: 2 },
-    ),
-  });
+  return withStart(
+    type,
+    fc.record({
+      type: fc.constant(type),
+      content: fc.array(
+        fc.record({
+          type: fc.constant("listItem" as const),
+          content: innerParagraphArb.map((paragraphNode) => [paragraphNode]),
+        }),
+        { minLength: 1, maxLength: 2 },
+      ),
+    }),
+  );
 }
 
 const calloutArb = fc.record({

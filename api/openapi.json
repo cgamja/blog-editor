@@ -1272,6 +1272,11 @@
                             "required": ["id", "x", "y", "size", "rotate"],
                             "additionalProperties": false
                           }
+                        },
+                        "start": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 999999999
                         }
                       },
                       "additionalProperties": false
@@ -1774,6 +1779,17 @@
                               "type": {
                                 "type": "string",
                                 "const": "orderedList"
+                              },
+                              "attrs": {
+                                "type": "object",
+                                "properties": {
+                                  "start": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 999999999
+                                  }
+                                },
+                                "additionalProperties": false
                               },
                               "content": {
                                 "minItems": 1,
@@ -2475,6 +2491,17 @@
                     "type": {
                       "type": "string",
                       "const": "orderedList"
+                    },
+                    "attrs": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 999999999
+                        }
+                      },
+                      "additionalProperties": false
                     },
                     "content": {
                       "minItems": 1,

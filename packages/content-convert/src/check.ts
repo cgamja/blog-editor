@@ -6,6 +6,7 @@ import {
   HEADING_LEVELS,
   hrefSchema,
   imagePathSchema,
+  ORDERED_LIST_START_RANGE,
 } from "@blog-editor/content-schema";
 import { ALLOWED_IN, CALLOUT_CONTAINER_NAME, DEFAULT_CALLOUT_TONE } from "./constants";
 import {
@@ -316,8 +317,9 @@ function checkOrderedListOpen(
   const [start, end] = mapOf(tok);
   const record = openBlockRecord("orderedList", start, end);
   checkPlacement(record);
+  // 2 이상은 start로 받는다(ordered-list-start). markdown-it은 9자리까지만 번호로 읽어 상한은 넘지 않는다
   const startAttr = tok.attrGet("start");
-  if (startAttr !== null && Number(startAttr) !== 1) {
+  if (startAttr !== null && Number(startAttr) < ORDERED_LIST_START_RANGE.min) {
     messages.push(orderedListStartMessage(record.topLevel, start + 1, sourceLines[start] ?? ""));
   }
   return record;

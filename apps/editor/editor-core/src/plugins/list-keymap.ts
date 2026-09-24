@@ -1,4 +1,5 @@
 import { Extension } from "@tiptap/core";
+import { DEFAULT_ORDERED_LIST_START, orderedListNumberAt } from "@blog-editor/content-schema";
 import type { Node, NodeType } from "@tiptap/pm/model";
 import { keymap } from "@tiptap/pm/keymap";
 import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-list";
@@ -88,17 +89,82 @@ function keepTopListDecoration(state: EditorState, tr: Transaction): Transaction
   return tr;
 }
 
+function isLeadingPieceOf(source: Node, piece: Node): boolean {
+  if (piece.childCount >= source.childCount) return false;
+  for (let index = 0; index < piece.childCount; index += 1) {
+    if (!piece.child(index).eq(source.child(index))) return false;
+  }
+  return true;
+}
+
+function isTrailingPieceOf(source: Node, piece: Node): boolean {
+  const offset = source.childCount - piece.childCount;
+  if (offset <= 0) return false;
+  for (let index = 0; index < piece.childCount; index += 1) {
+    if (!piece.child(index).eq(source.child(offset + index))) return false;
+  }
+  return true;
+}
+
+/** from ~ to 안에서 원래 목록과 같은 깊이 · 종류인 목록들, 문서 순서 — https://prosemirror.net/docs/ref/#model.Node.nodesBetween */
+function piecesAt(
+  doc: Node,
+  range: { from: number; to: number },
+  source: { type: NodeType; parentDepth: number },
+): { node: Node; pos: number }[] {
+  const pieces: { node: Node; pos: number }[] = [];
+  doc.nodesBetween(range.from, range.to, (node, pos) => {
+    const inRange = pos >= range.from && pos < range.to;
+    if (inRange && node.type === source.type && doc.resolve(pos).depth === source.parentDepth) {
+      pieces.push({ node, pos });
+    }
+  });
+  return pieces;
+}
+
 /**
- * 한 단계 내어쓰기 — 안쪽이면 바깥 목록으로, 최상위면 목록을 빠져나온다.
- * 최상위 목록의 꾸미기(글꼴 · 움직임 · 스티커)를 같은 트랜잭션에서 보정한다(keepTopListDecoration).
+ * 번호 목록(최상위 · 안쪽)이 둘로 갈리면 뒤 조각은 원래 번호를 잇는다(ordered-list-start) — liftListItem은
+ * 뒤 조각에 원래 attrs를 그대로 준다(최상위는 liftOutOfList의 split, 안쪽은 liftToOuterList의
+ * `range.parent.copy()`, prosemirror-schema-list 1.5.1 소스). 앞 조각이 없으면(첫 항목을 빼냄) 갈린 것이
+ * 아니라 번호를 그대로 둔다. https://prosemirror.net/docs/ref/#schema-list.liftListItem ·
+ * https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
+ */
+function continueNumbering(state: EditorState, tr: Transaction): Transaction {
+  const { $from } = state.selection;
+  const listDepth = $from.depth - 2;
+  const source = $from.node(listDepth);
+  if (source.type.name !== "orderedList") return tr;
+  const topPos = $from.before(1);
+  const range = {
+    from: tr.mapping.map(topPos, -1),
+    to: tr.mapping.map(topPos + $from.node(1).nodeSize, 1),
+  };
+  const pieces = piecesAt(tr.doc, range, { type: source.type, parentDepth: listDepth - 1 });
+  const leading = pieces.find(({ node }) => isLeadingPieceOf(source, node));
+  const trailing = [...pieces].reverse().find(({ node }) => isTrailingPieceOf(source, node));
+  if (leading === undefined || trailing === undefined || trailing.pos <= leading.pos) return tr;
+  const start = orderedListNumberAt(
+    source.attrs.start ?? undefined,
+    source.childCount - trailing.node.childCount,
+  );
+  return tr.setNodeAttribute(
+    trailing.pos,
+    "start",
+    start === DEFAULT_ORDERED_LIST_START ? null : start,
+  );
+}
+
+/**
+ * 한 단계 내어쓰기 — 안쪽이면 바깥 목록으로, 최상위면 목록을 빠져나온다. 같은 트랜잭션에서 두 가지를 보정한다:
+ * 최상위 목록의 꾸미기(keepTopListDecoration) · 갈린 번호 목록 뒤 조각의 번호(continueNumbering).
  * https://prosemirror.net/docs/ref/#schema-list.liftListItem
  */
-const liftItemKeepingDecoration: Command = (state, dispatch) => {
+const liftItemFixingSplit: Command = (state, dispatch) => {
   const listItem = listItemOf(state);
   if (listItem === undefined) return false;
   return liftListItem(listItem)(
     state,
-    dispatch && ((tr) => dispatch(keepTopListDecoration(state, tr))),
+    dispatch && ((tr) => dispatch(continueNumbering(state, keepTopListDecoration(state, tr)))),
   );
 };
 
@@ -107,7 +173,7 @@ const enterInList: Command = (state, dispatch) => {
   const listItem = listItemOf(state);
   if (listItem === undefined || !isInListItem(state)) return false;
   const { $from, empty } = state.selection;
-  if (empty && $from.parent.content.size === 0) return liftItemKeepingDecoration(state, dispatch);
+  if (empty && $from.parent.content.size === 0) return liftItemFixingSplit(state, dispatch);
   // https://prosemirror.net/docs/ref/#schema-list.splitListItem
   return splitListItem(listItem)(state, dispatch);
 };
@@ -127,10 +193,7 @@ const sinkItem: Command = (state, dispatch) => {
 const backspaceAtItemStart: Command = (state, dispatch) => {
   const { $from, empty } = state.selection;
   return (
-    isInListItem(state) &&
-    empty &&
-    $from.parentOffset === 0 &&
-    liftItemKeepingDecoration(state, dispatch)
+    isInListItem(state) && empty && $from.parentOffset === 0 && liftItemFixingSplit(state, dispatch)
   );
 };
 
@@ -174,7 +237,7 @@ const joinIntoPreviousList: Command = (state, dispatch) => {
 export const listKeymap: Record<string, Command> = {
   Enter: enterInList,
   Tab: swallowInList(sinkItem),
-  "Shift-Tab": swallowInList(liftItemKeepingDecoration),
+  "Shift-Tab": swallowInList(liftItemFixingSplit),
   Backspace: (state, dispatch) =>
     backspaceAtItemStart(state, dispatch) || joinIntoPreviousList(state, dispatch),
 };

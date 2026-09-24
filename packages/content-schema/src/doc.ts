@@ -50,6 +50,22 @@ export const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/;
 export const MAX_STICKERS_PER_DOC = 12;
 
 export const WIDTH_RANGE = { min: 25, max: 100 } as const;
+/**
+ * 번호 목록 시작 번호의 검증 범위. 상한은 CommonMark 번호 9자리
+ * (https://spec.commonmark.org/0.31.2/#ordered-list-marker)라 markdown으로 오갈 수 있는 값만 둔다.
+ */
+export const ORDERED_LIST_START_RANGE = { min: 1, max: 999_999_999 } as const;
+/** start가 없을 때 번호 목록이 보이는 첫 번호 — 이 값과 같은 start는 정규형에서 지운다 */
+export const DEFAULT_ORDERED_LIST_START = 1;
+
+/**
+ * 시작 번호 start 목록의 offset번째 항목 번호 — 목록이 갈린 뒤 조각의 start와 markdown 표지가 쓴다.
+ * 상한을 넘으면 상한에 멈춘다(스키마 · markdown이 받을 수 있는 값만 낸다).
+ */
+export function orderedListNumberAt(start: number | undefined, offset: number): number {
+  return Math.min((start ?? DEFAULT_ORDERED_LIST_START) + offset, ORDERED_LIST_START_RANGE.max);
+}
+
 export const STICKER_RANGES = {
   x: { min: -25, max: 125 },
   y: { min: -25, max: 125 },
@@ -187,6 +203,20 @@ const paragraphAttrsSchema = textDecorationAttrsSchema.extend({
   align: alignSchema.optional(),
 });
 
+/** 시작 번호는 꾸미기가 아니라 목록 구조라서 안쪽 번호 목록에도 자리가 있다(ordered-list-start). */
+const orderedListStartSchema = intInRange(
+  ORDERED_LIST_START_RANGE.min,
+  ORDERED_LIST_START_RANGE.max,
+);
+
+const orderedListAttrsSchema = textDecorationAttrsSchema.extend({
+  start: orderedListStartSchema.optional(),
+});
+
+const innerOrderedListAttrsSchema = z.strictObject({
+  start: orderedListStartSchema.optional(),
+});
+
 const headingAttrsSchema = z.strictObject({
   level: z.literal(HEADING_LEVELS),
   font: z.enum(FONTS).optional(),
@@ -279,14 +309,15 @@ interface InnerBulletListNode {
 }
 interface InnerOrderedListNode {
   type: "orderedList";
+  attrs?: z.infer<typeof innerOrderedListAttrsSchema> | undefined;
   content: ListItemNode[];
 }
 type InnerListNode = InnerBulletListNode | InnerOrderedListNode;
 
 /**
  * listItem ↔ 안쪽 list(bulletList/orderedList) 상호 재귀 — z.lazy로 순환을 끊는다.
- * 안쪽 리스트에는 attrs 자리가 없다(꾸미기는 doc.content 바로 아래 최상위 블록에만, 스티커 상한이
- * 안쪽 노드로 우회되지 않게 — decoration-schema).
+ * 안쪽 리스트에는 꾸미기 자리가 없다(꾸미기는 doc.content 바로 아래 최상위 블록에만, 스티커 상한이
+ * 안쪽 노드로 우회되지 않게 — decoration-schema). 안쪽 번호 목록은 시작 번호만 가진다.
  */
 const listItemSchema: z.ZodType<ListItemNode> = z.lazy(() =>
   z.strictObject({
@@ -305,6 +336,7 @@ const innerBulletListSchema: z.ZodType<InnerBulletListNode> = z.lazy(() =>
 const innerOrderedListSchema: z.ZodType<InnerOrderedListNode> = z.lazy(() =>
   z.strictObject({
     type: z.literal("orderedList"),
+    attrs: innerOrderedListAttrsSchema.optional(),
     content: z.array(listItemSchema).min(1),
   }),
 );
@@ -363,7 +395,7 @@ const bulletListSchema = z.strictObject({
 
 const orderedListSchema = z.strictObject({
   type: z.literal("orderedList"),
-  attrs: textDecorationAttrsSchema.optional(),
+  attrs: orderedListAttrsSchema.optional(),
   content: z.array(listItemSchema).min(1),
 });
 

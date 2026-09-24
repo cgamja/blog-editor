@@ -2,12 +2,14 @@ import {
   ALIGNS,
   CALLOUT_TONES,
   CODE_LANGUAGE_PATTERN,
+  DEFAULT_ORDERED_LIST_START,
   FONTS,
   HEADING_LEVELS,
   HEX_COLOR_PATTERN,
   HIGHLIGHT_COLORS,
   MOTIONS,
   NATURAL_SIZE_RANGE,
+  ORDERED_LIST_START_RANGE,
   STICKER_IDS,
   STICKER_RANGES,
   TEXT_COLORS,
@@ -58,6 +60,12 @@ function intInRange(value: unknown, range: { min: number; max: number }): number
 }
 
 export const widthOrNull = (value: unknown): number | null => intInRange(value, WIDTH_RANGE);
+
+/** 번호 목록 시작 번호 — 범위 밖 · 정수 아님은 없음, 기본(1)도 없음(정규형과 같은 모양) */
+export function orderedListStartOrNull(value: unknown): number | null {
+  const start = intInRange(value, ORDERED_LIST_START_RANGE);
+  return start === DEFAULT_ORDERED_LIST_START ? null : start;
+}
 
 export const stickerIdOrNull = oneOf(STICKER_IDS);
 
