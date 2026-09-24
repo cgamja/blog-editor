@@ -1,5 +1,6 @@
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
+import { vi } from "vitest";
 
 interface TypedResult {
   /** 마지막 글자를 입력 규칙이 처리했나 */
@@ -46,7 +47,8 @@ export function typeText(
 
 /**
  * 조합이 끝났을 때 — prosemirror-inputrules는 compositionend 뒤 setTimeout으로 커서 앞 글자를 text ""로 다시 본다
- * (1.5.1 dist/index.js handleDOMEvents.compositionend). 그 타이머까지 기다린 상태를 돌려준다.
+ * (1.5.1 dist/index.js handleDOMEvents.compositionend). 그 타이머를 가짜 타이머로 흘린 상태를 돌려준다.
+ * editor-core에는 DOM 타입이 없어서 이벤트 객체는 핸들러가 읽지 않는 빈 값으로 넘긴다.
  */
 export async function endComposition(initial: EditorState): Promise<EditorState> {
   const plugin = initial.plugins.find((candidate) => candidate.spec.isInputRules === true);
@@ -58,11 +60,14 @@ export async function endComposition(initial: EditorState): Promise<EditorState>
       view.state = view.state.apply(tr);
     },
   };
-  plugin.props.handleDOMEvents?.compositionend?.call(
-    plugin,
-    view as unknown as EditorView,
-    new Event("compositionend") as CompositionEvent,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  const onEnd = plugin.props.handleDOMEvents?.compositionend;
+  if (onEnd === undefined) throw new Error("endComposition: compositionend 처리가 없다");
+  vi.useFakeTimers();
+  try {
+    onEnd.call(plugin, view as unknown as EditorView, {} as Parameters<typeof onEnd>[1]);
+    await vi.runAllTimersAsync();
+  } finally {
+    vi.useRealTimers();
+  }
   return view.state;
 }
