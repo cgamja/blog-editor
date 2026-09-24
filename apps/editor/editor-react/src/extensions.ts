@@ -2,6 +2,7 @@ import { Extension, type AnyExtension } from "@tiptap/core";
 import {
   AlignKeys,
   backspaceAfterCustomBlock,
+  CUSTOM_BLOCK_KEYS_PRIORITY,
   blockGuard,
   editorExtensions,
   History,
@@ -14,9 +15,6 @@ import {
   TextStyleKeys,
   widthPreview,
 } from "@blog-editor/editor-core";
-
-// 코어 Keymap(우선순위 100)의 Backspace(joinBackward)보다 먼저 본다 — 커맨드가 false면 코어로 넘어간다
-const CUSTOM_BLOCK_KEYS_PRIORITY = 1000;
 
 /**
  * 편집 중 닫힌 집합을 지키는 blockGuard를 싣는다(spec: editor-block-guard). 등록만 한다(adr-002).

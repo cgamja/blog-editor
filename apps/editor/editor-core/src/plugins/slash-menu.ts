@@ -11,17 +11,8 @@ import { Extension } from "@tiptap/core";
 import { closeHistory } from "@tiptap/pm/history";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Command, EditorState, Transaction } from "@tiptap/pm/state";
-
-/** 슬래시 메뉴 상태. `from`은 `/`의 위치, `query`는 `/` 뒤부터 커서까지의 글자 */
-export interface SlashMenuState {
-  from: number;
-  query: string;
-}
-
-export interface SlashMenuOptions {
-  /** 열려 있을 때 방향키 · Enter · Tab을 받는 UI 처리기. 처리했으면 true */
-  onKey?: ((key: string) => boolean) | undefined;
-}
+import { SLASH_MENU_PRIORITY } from "../keymap-priority.constants";
+import type { SlashMenuOptions, SlashMenuState, SlashMenuStorage } from "./slash-menu.types";
 
 type SlashMenuMeta = { open: number } | typeof CLOSE | typeof APPLIED;
 
@@ -46,14 +37,26 @@ function inTopParagraph(state: EditorState, pos: number): boolean {
   return $pos.depth === 1 && $pos.parent.type.name === "paragraph";
 }
 
-/** 빈 선택, 최상위 문단, 줄 맨 앞이거나 공백 뒤, 코드 마크 밖 */
+/** `a/b` 같은 경로 · 분수는 메뉴를 부르는 게 아니다(design.md 2) */
+function isAtLineStartOrAfterWhitespace(state: EditorState, pos: number): boolean {
+  if (state.doc.resolve(pos).parentOffset === 0) return true;
+  return WHITESPACE.test(state.doc.textBetween(pos - 1, pos));
+}
+
+/** 이어 칠 마크(storedMarks)나 바로 앞 글자의 마크에 코드가 있으면 코드를 쓰는 중이다 */
+function isInCodeMark(state: EditorState, pos: number): boolean {
+  const $pos = state.doc.resolve(pos);
+  const marks = [...(state.storedMarks ?? $pos.marks()), ...($pos.nodeBefore?.marks ?? [])];
+  return marks.some((mark) => mark.type.name === "code");
+}
+
 function canOpenAt(state: EditorState, from: number, to: number): boolean {
-  if (from !== to || !inTopParagraph(state, from)) return false;
-  const $from = state.doc.resolve(from);
-  const before = $from.parentOffset === 0 ? "" : state.doc.textBetween(from - 1, from);
-  if (before !== "" && !WHITESPACE.test(before)) return false;
-  const marks = [...(state.storedMarks ?? $from.marks()), ...($from.nodeBefore?.marks ?? [])];
-  return !marks.some((mark) => mark.type.name === "code");
+  return (
+    from === to &&
+    inTopParagraph(state, from) &&
+    isAtLineStartOrAfterWhitespace(state, from) &&
+    !isInCodeMark(state, from)
+  );
 }
 
 /** 새 문서에서 `/` 자리와 커서를 다시 읽는다 — 조합 중인 글자도 query에 들어간다(design.md 1) */
@@ -121,20 +124,11 @@ export const closeSlashMenu: Command = (state, dispatch) => {
 export const markSlashItemApplied = (tr: Transaction): Transaction =>
   closeHistory(tr.setMeta(slashMenuKey, APPLIED));
 
-/** UI가 키 처리기를 꽂는 자리(extension storage) */
-export interface SlashMenuStorage {
-  onKey: ((key: string) => boolean) | null;
-}
-
 declare module "@tiptap/core" {
   interface Storage {
     slashMenu: SlashMenuStorage;
   }
 }
-
-// 메뉴가 열려 있을 때의 Enter · Tab · 방향키는 다른 키맵보다 먼저 받아야 한다 —
-// 입력 규칙 되돌리기(1100) · 목록 키(1050) · 스티커 분할(1000)보다 위. 닫혀 있으면 false라 다음으로 넘어간다
-const SLASH_MENU_PRIORITY = 1200;
 
 /**
  * 조립하는 쪽이 고른다. 등록만 한다(adr-002). 키 처리기는 React가 `editor.storage.slashMenu.onKey`에 꽂는다.
