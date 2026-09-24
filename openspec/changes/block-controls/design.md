@@ -22,7 +22,7 @@ allBlocks 픽스처, 1360×860, headless shell. 증거는 `.claude/state/evidenc
 
 ## 5. 블록 메뉴 — 손잡이 블록에 커맨드
 
-블록 바꾸기(`turnIntoTextblock`) · 감싸기(`wrapIn*`) · 복제(`duplicateTopBlock`)는 모두 **선택**이 든 블록에 작동한다. 손잡이 블록은 커서와 다를 수 있다. 그래서 `atTopBlock(index, command)`는 선택만 그 블록으로 옮긴 상태를 만들어 커맨드에 넘긴다. 선택 이동은 문서를 바꾸지 않으므로, 커맨드가 만든 트랜잭션은 원래 상태에도 그대로 적용된다(같은 doc). 그리고 되돌리기 한 번에 되돌아간다.
+블록 바꾸기(`turnIntoTextblock`) · 감싸기(`wrapIn*`) · 복제(`duplicateTopBlock`)는 모두 **선택**이 든 블록에 작동한다. 손잡이 블록은 커서와 다를 수 있다. 그래서 `atTopBlock(index, command)`는 선택만 그 블록에 둔 상태를 `EditorState.create`로 따로 만들어 커맨드에 넘긴다. 커맨드가 만든 step은 원래 `state.tr`에 옮겨 담아 보낸다(문서가 같아 step이 그대로 맞는다). 그대로 보내지 않는 이유는 TipTap 체인 때문이다. 체인은 `state.tr`로 공유 트랜잭션을 주고, 커맨드가 부른 dispatch는 무시한 채 그 공유 트랜잭션만 적용한다. 실브라우저에서 블록 메뉴 「큰 제목」이 아무 일도 하지 않은 원인이 이것이었다. 되돌리기 한 번에 돌아가고, 커서도 원래 자리로 온다.
 
 선택 자리는 이렇다.
 

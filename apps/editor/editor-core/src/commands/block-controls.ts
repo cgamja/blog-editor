@@ -2,11 +2,13 @@
  * 블록 손잡이 메뉴 · 폭 손잡이(이슈 #81, openspec block-controls)가 부르는 커맨드와 계산. 근거 문서:
  * - Command: https://prosemirror.net/docs/ref/#state.Command
  * - Selection.findFrom · NodeSelection.create: https://prosemirror.net/docs/ref/#state.Selection^findFrom
- * - EditorState.apply(선택만 바꾼 상태): https://prosemirror.net/docs/ref/#state.EditorState.apply
+ * - EditorState.create(선택만 다른 상태): https://prosemirror.net/docs/ref/#state.EditorState^create
+ * - Transform.step · Selection.map: https://prosemirror.net/docs/ref/#transform.Transform.step
  * - Transform.delete · replaceWith: https://prosemirror.net/docs/ref/#transform.Transform.delete
  */
-import { NodeSelection, Selection } from "@tiptap/pm/state";
-import type { Command } from "@tiptap/pm/state";
+import { EditorState, NodeSelection, Selection } from "@tiptap/pm/state";
+import type { Command, Transaction } from "@tiptap/pm/state";
+import { Mapping } from "@tiptap/pm/transform";
 import type { Node } from "@tiptap/pm/model";
 import { WIDTH_RANGE } from "@blog-editor/content-schema";
 import { TURN_INTO_TARGETS } from "./block-controls.constants";
@@ -63,14 +65,32 @@ function selectionInTopBlock(doc: Node, index: number): Selection {
 
 /**
  * 선택을 최상위 `index`번째 블록으로 옮긴 상태로 `command`를 부른다(design.md 5). 블록 바꾸기 · 감싸기 · 복제는
- * 선택이 든 블록에 작동하는데, 손잡이 블록은 커서와 다를 수 있다. 선택 이동은 문서를 바꾸지 않으므로
- * command가 만든 트랜잭션은 원래 상태에도 그대로 적용된다(같은 doc). 되돌리면 커서는 원래 자리로 돌아온다.
+ * 선택이 든 블록에 작동하는데, 손잡이 블록은 커서와 다를 수 있다.
+ * 안쪽 커맨드가 만든 step은 `state.tr`에 옮겨 담아 보낸다 — TipTap 체인은 `state.tr`로 공유 트랜잭션을 주고
+ * 커맨드가 부른 dispatch는 무시한 채 그 공유 트랜잭션만 적용하기 때문이다
+ * (https://tiptap.dev/docs/editor/api/commands#chain-commands). 선택만 다른 상태라 문서가 같아 step이 그대로 맞는다.
+ * 되돌리면 커서는 원래 자리로 돌아온다.
  */
 export function atTopBlock(index: number, command: Command): Command {
   return (state, dispatch) => {
     if (!isTopIndex(state.doc, index)) return false;
-    const selected = state.apply(state.tr.setSelection(selectionInTopBlock(state.doc, index)));
-    return command(selected, dispatch);
+    // state.tr를 건드리지 않고 만든다 — 체인에서는 공유 트랜잭션이라 can()만 물어도 선택이 바뀐다
+    const selected = EditorState.create({
+      doc: state.doc,
+      selection: selectionInTopBlock(state.doc, index),
+      plugins: state.plugins,
+    });
+    const inner: Transaction[] = [];
+    const ok = command(selected, dispatch === undefined ? undefined : (tr) => inner.push(tr));
+    if (!ok || dispatch === undefined || inner.length === 0) return ok;
+
+    const tr = state.tr;
+    for (const innerTr of inner) for (const step of innerTr.steps) tr.step(step);
+    const last = inner.at(-1)!;
+    tr.setSelection(last.selection.map(tr.doc, new Mapping()));
+    if (last.scrolledIntoView) tr.scrollIntoView();
+    dispatch(tr);
+    return true;
   };
 }
 
