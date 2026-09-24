@@ -23,8 +23,6 @@ const NUDGE_PERCENT = 1;
 const RESIZE_STEP_PERCENT = 1;
 const ROTATE_STEP_DEGREES = 15;
 const FULL_TURN_DEGREES = 360;
-/** 블록 사이 틈(본문 22px)보다 조금 넓게 — 틈에 놓아도 가까운 블록 끝에 붙는다(design.md 3) */
-const MAX_SNAP_PX = 24;
 const PERCENT = 100;
 
 /** ±180 밖이면 반대쪽으로 감는다 — 회전은 원이라 범위 끝에서 멈출 이유가 없다(design.md 4) */
@@ -135,7 +133,8 @@ function candidateOn(
 
 /**
  * 놓은 스티커 중심(px) → 붙을 블록과 % 좌표(design.md 3). x · y는 중심의 블록 폭 · 높이 기준 %, size는 폭 기준 %(post.css).
- * (스냅 거리, 블록까지 거리, 문서 순서)로 고르고, 24px보다 멀리 옮겨야 하면 놓을 수 없는 자리라 null이다.
+ * (스냅 거리, 블록까지 거리, 문서 순서)로 고른다. 스냅 거리에 한도가 없다 — 한도가 있으면 여백에 놓은 스티커가
+ * 거절돼 "잘 안 옮겨진다"(sticker-polish design.md 1 · 2). null은 크기가 맞는 블록이 없을 때뿐이다.
  */
 export function placeStickerNear(
   blocks: readonly BlockRect[],
@@ -153,5 +152,5 @@ export function placeStickerNear(
       (candidate.snap === best.snap && candidate.distance < best.distance);
     if (better) best = candidate;
   }
-  return best !== null && best.snap <= MAX_SNAP_PX ? best.target : null;
+  return best?.target ?? null;
 }
