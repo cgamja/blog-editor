@@ -93,21 +93,11 @@ editor-core는 SHALL `addSticker` · `updateSticker` · `removeSticker` · `move
 - **WHEN** 스티커를 다른 블록으로 옮긴 뒤 undo를 한 번 실행한다
 - **THEN** 문서가 옮기기 전과 같다
 
-### Requirement: 놓은 자리에서 가장 가까운 블록과 % 좌표를 구한다
+### Requirement: 스티커 목록이 그대로면 dispatch하지 않는다
 
-editor-core는 SHALL DOM 없는 순수 함수 `placeOnNearestBlock(blocks, point, stickerWidth)`를 export한다. 점에서 사각형까지 거리가 가장 작은 블록을 고르고(같으면 앞 블록), 스티커 중심을 그 블록 폭 · 높이 기준 %로, 크기를 블록 폭 기준 %로 반올림해 돌려준다. 결과가 `STICKER_RANGES` 밖이거나 블록이 없으면 `null`이다.
+스티커 목록 커맨드(`updateSticker` · `moveStickerToBlock`의 같은 블록 경로)는 SHALL 결과 목록이 지금과 같으면 `true`를 돌려주되 dispatch하지 않는다. 빈 undo 단계를 쌓지 않는다. 글꼴 · 움직임 커맨드의 같은 값 규칙과 같다.
 
-#### Scenario: 블록 안에 놓으면 그 블록 기준 %다
+#### Scenario: 같은 좌표로 updateSticker를 부르면 dispatch가 없다
 
-- **WHEN** `{ pos: 0, left: 100, top: 0, width: 600, height: 100 }` 블록 안 점 `(400, 25)`에 폭 90px 스티커를 놓는다
-- **THEN** `{ blockPos: 0, x: 50, y: 25, size: 15 }`
-
-#### Scenario: 블록 사이 틈에 놓으면 더 가까운 블록에 붙는다
-
-- **WHEN** 위 블록(top 0, 높이 100)과 아래 블록(top 140, 높이 100) 사이 `y = 130`에 놓는다
-- **THEN** 아래 블록 기준으로 `y`가 음수 %인 결과다
-
-#### Scenario: 범위 밖이 되면 놓을 수 없다
-
-- **WHEN** 블록에서 멀리 떨어진 점에 놓거나, 블록 폭의 절반보다 큰 스티커를 놓거나, 블록 목록이 비어 있다
-- **THEN** `null`
+- **WHEN** x 10 스티커에 `updateSticker(블록, 0, { x: 10 })`을 실행한다
+- **THEN** `true`이고 dispatch가 한 번도 불리지 않는다
