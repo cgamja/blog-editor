@@ -30,7 +30,10 @@ export function useStickerSelection(editor: Editor, boxes: StickerBox[]): Sticke
       if (!transaction.docChanged) return;
       setSelected((ref) => ref && mapStickerRef(ref, transaction.mapping, transaction.doc));
     };
-    const handleEditorFocus = () => setSelected(null);
+    const handleEditorFocus = () => {
+      pendingFocus.current = null;
+      setSelected(null);
+    };
     editor.on("transaction", handleTransaction);
     editor.on("focus", handleEditorFocus);
     return () => {
@@ -47,12 +50,21 @@ export function useStickerSelection(editor: Editor, boxes: StickerBox[]): Sticke
     button.focus();
   }, [boxes]);
 
+  // 커맨드가 true여도 목록이 그대로면 dispatch가 없어 버튼이 다시 그려지지 않는다 —
+  // 이미 있는 버튼이면 바로 포커스하고, 기다리는 포커스를 남기지 않는다(남으면 나중에 글 쓸 때 튄다)
   const selectAndFocus = useCallback((ref: StickerRef) => {
-    pendingFocus.current = keyOf(ref);
+    const key = keyOf(ref);
+    const button = buttons.current.get(key);
+    if (button === undefined) pendingFocus.current = key;
+    else {
+      pendingFocus.current = null;
+      button.focus();
+    }
     setSelected(ref);
   }, []);
 
   const leave = useCallback(() => {
+    pendingFocus.current = null;
     setSelected(null);
     editor.commands.focus();
   }, [editor]);
