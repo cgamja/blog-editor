@@ -1,5 +1,4 @@
 import type { Command } from "@tiptap/pm/state";
-import type { STICKER_IDS } from "@blog-editor/content-schema";
 import type { StickerRef } from "@blog-editor/editor-core";
 
 /**
@@ -7,7 +6,8 @@ import type { StickerRef } from "@blog-editor/editor-core";
  * 좌표는 모두 **레이어 기준 px**다. 잴 때 바로 바꿔 두므로 스크롤해도 어긋나지 않는다.
  */
 
-export type StickerId = (typeof STICKER_IDS)[number];
+/** 스티커 id 타입의 원천은 꾸미기 패널 타입(decoration-types) — 두 벌 두지 않는다 */
+export type { StickerId } from "./decoration-types";
 
 export interface LayerPoint {
   x: number;
