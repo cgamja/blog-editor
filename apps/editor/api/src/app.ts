@@ -20,6 +20,8 @@ import {
 } from "./messages";
 import { registerSessionRoutes, requireSession, resolveSessionConfig } from "./session";
 import type { SessionOptions } from "./session";
+import { registerMcpRoute } from "./mcp/route";
+import type { McpOptions } from "./mcp/route";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 
@@ -29,6 +31,8 @@ export interface AppOptions extends SessionOptions {
   categories: readonly [string, ...string[]];
   /** 저장된 이미지 경로 앞에 붙는 주소(plan 3-8) */
   imageBaseUrl: string;
+  /** 연결용 토큰이 있을 때만 `/mcp`를 연다(mcp-auth) — 없으면 그 경로가 없다 */
+  mcp?: McpOptions;
 }
 
 /** 사이트 빌드가 부르는 공개 조회의 짧은 캐시(plan 3-6) */
@@ -172,6 +176,8 @@ export function createApp(options: AppOptions): Hono {
     c.header("Cache-Control", PUBLIC_CACHE_CONTROL);
     return c.body(postCss, 200, { "Content-Type": "text/css; charset=utf-8" });
   });
+
+  if (options.mcp !== undefined) registerMcpRoute(app, { ...options.mcp, store, categories });
 
   return app;
 }
