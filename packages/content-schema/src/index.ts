@@ -50,7 +50,7 @@ export type {
 export { createPostFileSchema, migrations, migrate, MigrationError } from "./post-file";
 export type { PostFile } from "./post-file";
 
-export { normalize } from "./normalize";
+export { defaultAlignOf, normalize } from "./normalize";
 
 export { createPublicPostsResponseSchema } from "./public-api";
 export type { PublicPostsResponse } from "./public-api";
