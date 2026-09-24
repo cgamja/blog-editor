@@ -205,6 +205,26 @@ describe("render-safety", () => {
     }
   });
 
+  it("WHEN 검증을 건너뛴 폭 · 스티커 좌표에 정수가 아닌 값을 넣으면 THEN style에 싣지 않고 RangeError를 던진다", () => {
+    // 이스케이프는 `;`로 CSS 선언을 잇는 것을 막지 못한다 — 정수가 아니면 렌더하지 않는다(heading level · 스티커 id와 같다)
+    let calls = 0;
+    const flipping = { toString: () => (calls++ === 0 ? "1" : "1;x:url(a)") };
+    const BAD_NUMBERS: unknown[] = ["1;x:url(a)", "60", flipping, 1.5, Number.NaN];
+    const image = (width: unknown): Block =>
+      ({ type: "image", attrs: { src: "/images/a.webp", alt: "", width } }) as Block;
+    const withSticker = (key: "x" | "y" | "size" | "rotate", value: unknown): Block =>
+      paragraph("문단", {
+        stickers: [{ id: "heart", x: 0, y: 0, size: 10, rotate: 0, [key]: value } as never],
+      });
+    const cases = BAD_NUMBERS.flatMap((value) => [
+      docOf(image(value)),
+      ...(["x", "y", "size", "rotate"] as const).map((key) => docOf(withSticker(key, value))),
+    ]);
+    for (const file of cases) {
+      expect(() => renderHtml(file, { imageBaseUrl: BASE })).toThrow(RangeError);
+    }
+  });
+
   it("WHEN decorationMax를 렌더하면 THEN 속성 이름이 닫힌 목록의 부분집합이다", () => {
     const ALLOWED = new Set([
       "class",
