@@ -50,8 +50,9 @@ function WriteWithAIBody({
     chosenCategory !== null && categories.includes(chosenCategory)
       ? chosenCategory
       : (categories[0] ?? "");
-  const hasTopic = topic.trim() !== "";
-  const prompt = hasTopic ? buildWritePrompt(topic, category) : "";
+  // 주제와 카테고리가 다 있어야 보낼 수 있다 — 카테고리가 비면 "카테고리는 ."가 된다
+  const canSend = topic.trim() !== "" && category !== "";
+  const prompt = canSend ? buildWritePrompt(topic, category) : "";
 
   const handleCopy = async () => {
     try {
@@ -93,7 +94,10 @@ function WriteWithAIBody({
           id={categoryId}
           className="modal-dialog-control"
           value={category}
-          onChange={(event) => setCategory(event.target.value)}
+          onChange={(event) => {
+            setCategory(event.target.value);
+            setCopyState("idle");
+          }}
         >
           {categories.map((name) => (
             <option key={name} value={name}>
@@ -112,7 +116,10 @@ function WriteWithAIBody({
                 name="chat-app"
                 value={name}
                 checked={app === name}
-                onChange={() => setApp(name)}
+                onChange={() => {
+                  setApp(name);
+                  setCopyState("idle");
+                }}
               />
               {M.appName[name]}
             </label>
@@ -122,7 +129,7 @@ function WriteWithAIBody({
       <div className="ai-write-field">
         <div className="modal-dialog-label">{M.preview}</div>
         <p className="ai-write-prompt" aria-live="polite">
-          {hasTopic ? prompt : M.previewEmpty}
+          {canSend ? prompt : M.previewEmpty}
         </p>
         {copyState !== "idle" ? (
           <p className="ai-write-copy-state" role="status">
@@ -138,11 +145,11 @@ function WriteWithAIBody({
           type="button"
           className="modal-dialog-button"
           onClick={handleCopy}
-          disabled={!hasTopic}
+          disabled={!canSend}
         >
           {M.copy}
         </button>
-        {hasTopic ? (
+        {canSend ? (
           <a
             className="modal-dialog-button modal-dialog-button-primary"
             href={chatAppUrl(app, prompt)}

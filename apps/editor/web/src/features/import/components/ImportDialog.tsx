@@ -10,6 +10,7 @@ import { BLOG_DATE_FORMAT } from "../constants";
 import { useImportPreview } from "../hooks/use-import-preview";
 import { buildImportedPost, canCreateDraft, suggestSlug } from "../import-draft";
 import { IMPORT_MESSAGES as M } from "../messages";
+import type { Doc } from "@blog-editor/content-schema";
 import type { DraftInput, EditableDraftField, ImportPreview } from "../types";
 import { ImportMetaFields } from "./ImportMetaFields";
 import { ImportPreviewPane } from "./ImportPreviewPane";
@@ -88,25 +89,28 @@ function ImportDialogBody({
   };
   const isReady = canCreateDraft(current, input);
 
+  // 보낸 입력을 변수로 넘긴다 — 저장 중에 칸을 고쳐도 저장한 주소로 간다
   const create = useMutation({
-    mutationFn: async () => {
-      if (current?.ok !== true) return;
-      await createDraft(input.slug, buildImportedPost(current.doc, input));
+    mutationFn: async ({ doc, draft }: { doc: Doc; draft: DraftInput }) => {
+      await createDraft(draft.slug, buildImportedPost(doc, draft));
     },
-    onSuccess: () => {
+    onSuccess: (_result, { draft }) => {
       onCreated?.();
       onClose();
-      navigate(generatePath(ROUTES.editPost, { slug: input.slug }));
+      navigate(generatePath(ROUTES.editPost, { slug: draft.slug }));
     },
   });
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isReady) create.mutate();
+    if (isReady && current?.ok === true) create.mutate({ doc: current.doc, draft: input });
   };
 
-  const handleEdit = (field: EditableDraftField, value: string) =>
+  const handleEdit = (field: EditableDraftField, value: string) => {
     setEdited((previous) => ({ ...previous, [field]: value }));
+    // 고친 뒤에도 앞 저장 오류(이미 있는 주소 등)가 남지 않게
+    if (create.isError) create.reset();
+  };
 
   const errorMessage = createErrorMessage(create.error);
 

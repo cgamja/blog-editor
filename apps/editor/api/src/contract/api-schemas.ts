@@ -63,8 +63,8 @@ export function createSettingsSchema(options: { categories: readonly [string, ..
   });
 }
 
-/** `POST /api/import/preview` 본문 — MCP `check_draft`처럼 markdown 밖의 키는 무시한다 */
-export const importPreviewRequestSchema = z.object({
+/** `POST /api/import/preview` 본문 — markdown 하나뿐, 모르는 키는 400(계약 additionalProperties: false) */
+export const importPreviewRequestSchema = z.strictObject({
   markdown: z.string().max(MAX_MARKDOWN_LENGTH),
 });
 

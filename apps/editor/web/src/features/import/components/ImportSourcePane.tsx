@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { MARKDOWN_FILE_ACCEPT } from "../constants";
 import { markdownFileProblem } from "../import-draft";
@@ -20,21 +20,27 @@ export function ImportSourcePane({ markdown, onChange }: ImportSourcePaneProps) 
   const sourceId = useId();
   const fileId = useId();
   const [fileError, setFileError] = useState<string | null>(null);
+  // 읽기는 비동기라 앞 파일이 늦게 끝날 수 있다 — 마지막으로 고른 파일 · 입력만 반영한다
+  const readSeq = useRef(0);
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (file === undefined) return;
+    readSeq.current += 1;
+    const seq = readSeq.current;
     const problem = markdownFileProblem(file);
     if (problem !== null) {
       setFileError(FILE_PROBLEM_MESSAGE[problem]);
       return;
     }
     try {
-      onChange(await file.text());
+      const text = await file.text();
+      if (seq !== readSeq.current) return;
+      onChange(text);
       setFileError(null);
     } catch {
-      setFileError(M.fileFailed);
+      if (seq === readSeq.current) setFileError(M.fileFailed);
     }
   };
 
@@ -51,7 +57,10 @@ export function ImportSourcePane({ markdown, onChange }: ImportSourcePaneProps) 
         className="import-source"
         value={markdown}
         placeholder={M.sourcePlaceholder}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          readSeq.current += 1;
+          onChange(event.target.value);
+        }}
         spellCheck={false}
       />
       <div className="import-file-row">
