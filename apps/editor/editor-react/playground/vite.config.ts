@@ -26,6 +26,8 @@ function readPort(raw: string | undefined): number {
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
+  // 스티커 원본(content-render assets/stickers)을 에디터 DOM의 `/stickers/{id}.png`로 서빙한다 — 배포에서는 이미지 호스트가 같은 경로를 준다
+  publicDir: fileURLToPath(new URL("../../../../packages/content-render/assets", import.meta.url)),
   plugins: [react()],
   server: {
     host: "127.0.0.1",
