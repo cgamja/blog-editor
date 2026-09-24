@@ -1,5 +1,5 @@
 /**
- * design/tokens.json → `:root` CSS 변수(design.md 4). 이 결과가 web의 코드 토큰 정본(`tokens.css`)이고,
+ * design/tokens.json → `:root` CSS 변수(design.md 4). 이 결과가 web · editor-react가 함께 쓰는 코드 토큰 정본(`tokens.css`, adr-023)이고,
  * 테스트가 저장된 파일과 같은지 확인한다. 이름은 editor-react · content-render CSS가 이미 쓰는 것에 맞춘다.
  * 잘못된 토큰(이름 · 중복 · 간격 단위 · 색 형식)은 조용히 빼지 않고 생성을 멈춘다.
  */
@@ -36,7 +36,7 @@ const PX_LENGTH = /^(\d+(?:\.\d+)?)px$/;
 const ROOT_FONT_SIZE_PX = 16;
 
 const HEADER =
-  "/* 생성 파일 — 고치지 말고 design/tokens.json을 바꾼 뒤 `pnpm --filter @blog-editor/web tokens`. */";
+  "/* 생성 파일 — 고치지 말고 design/tokens.json을 바꾼 뒤 `pnpm --filter @blog-editor/design-tokens tokens`. */";
 
 type Group = Readonly<Record<string, unknown>>;
 type Declaration = readonly [name: string, value: string];

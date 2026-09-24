@@ -1,6 +1,9 @@
 /*
  * 에디터 안에서만 필요한 모양. 본문 모양은 content-render post.css가 맡는다(미리보기와 공개 HTML이 같다).
- * 색은 사이트 토큰 이름을 참조만 한다 — 정의하지 않는다.
+ * 색 · 간격 · 선 두께 · 포커스 고리는 토큰 이름을 참조만 한다 — 정의하지 않는다. `:root` 값은 불러오는 쪽(web ·
+ * 플레이그라운드)이 @blog-editor/design-tokens의 tokens.css로 준다(adr-023). 토큰 없이도 기능이 무너지지 않게
+ * 두 곳에는 fallback을 둔다 — 색에 fallback이 있는 선언의 선 두께(선이 사라지지 않게), 누르는 칸 크기
+ * `--control-height`와 알약 반경 `--radius-pill`(손잡이 · 메뉴 위치가 0으로 무너지지 않게).
  */
 
 .blog-editor .ProseMirror {
@@ -15,8 +18,8 @@
  * 토큰이 정의되지 않은 곳(web 밖)에서도 외곽선이 사라지지 않게 글자색으로 물러선다.
  */
 .blog-editor .ProseMirror-selectednode {
-  outline: 0.125rem solid var(--brand-ink, currentColor);
-  outline-offset: 0.125rem;
+  outline: var(--focus-ring-width, 2px) solid var(--brand-ink, currentColor);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /*
@@ -113,8 +116,8 @@
 .decoration-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem 1.5rem;
+  gap: var(--space-20);
+  padding: var(--space-20) var(--space-24) var(--space-24);
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -123,7 +126,7 @@
 .decoration-panel fieldset {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-8);
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -132,12 +135,12 @@
 .decoration-panel-field {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--space-6);
 }
 .decoration-panel legend,
 .decoration-panel label {
   padding: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   font-weight: 500;
   color: var(--ink-mid);
 }
@@ -149,7 +152,7 @@
 .decoration-panel-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 /* 디자인: 높이 60px 카드, 고른 것은 2px 브랜드 테두리 + 옅은 브랜드 바탕 */
 .decoration-panel-choice {
@@ -157,15 +160,15 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 0.125rem;
+  gap: var(--space-2);
   min-height: 3.75rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--line);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--line);
   border-radius: 0.625rem;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   cursor: pointer;
 }
 .decoration-panel-choice[aria-pressed="true"] {
@@ -178,7 +181,7 @@
   background: var(--paper);
 }
 .decoration-panel-sample {
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   line-height: 1.2;
 }
 .decoration-panel-sample[data-font="pretendard"] {
@@ -199,7 +202,7 @@
 /* 정렬 버튼은 아이콘만 — 컨트롤 높이 44px(tokens.json control-height) */
 .decoration-panel-align {
   align-items: center;
-  min-height: 2.75rem;
+  min-height: var(--control-height, 2.75rem);
 }
 .decoration-panel-sticker {
   align-items: center;
@@ -212,16 +215,16 @@
 }
 .decoration-panel-hint {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   line-height: 1.5;
   color: var(--ink-soft);
 }
 .decoration-panel select {
   box-sizing: border-box;
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--line);
+  min-height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--line);
   border-radius: 0.5rem;
   background: var(--surface);
   color: var(--ink);
@@ -229,14 +232,14 @@
   font-size: 0.875rem;
 }
 .decoration-panel-preview {
-  min-height: 2.75rem;
-  padding: 0 1.125rem;
-  border: 1px solid var(--line);
+  min-height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-18);
+  border: var(--border-width) solid var(--line);
   border-radius: 0.625rem;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   font-weight: 500;
   cursor: pointer;
 }
@@ -246,8 +249,8 @@
 }
 .decoration-panel :focus-visible,
 .width-toolbar :focus-visible {
-  outline: 0.125rem solid var(--brand-ink);
-  outline-offset: 0.125rem;
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* ---------- 폭 도구줄 (디자인 69:2 — 사진 위 가운데, 어두운 줄) ---------- */
@@ -257,7 +260,7 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  padding: 0.125rem;
+  padding: var(--space-2);
   border-radius: 0.625rem;
   background: var(--toolbar);
   box-shadow: 0 0.5rem 1.25rem -0.375rem color-mix(in srgb, var(--ink) 50%, transparent);
@@ -266,8 +269,8 @@
   transform: translate(-50%, calc(-100% - 0.875rem));
 }
 .width-toolbar button {
-  min-height: 2.75rem;
-  padding: 0 0.875rem;
+  min-height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-14);
   border: 0;
   border-radius: 0.5rem;
   background: transparent;
@@ -282,21 +285,21 @@
   font-weight: 600;
 }
 .width-toolbar-value {
-  padding: 0 0.875rem 0 0.625rem;
-  font-size: 0.8125rem;
+  padding: 0 var(--space-14) 0 var(--space-10);
+  font-size: var(--font-size-caption);
   color: var(--line);
 }
 .width-toolbar-divider {
   align-self: stretch;
-  width: 1px;
-  margin: 0.5rem 0.125rem;
+  width: var(--border-width, 1px);
+  margin: var(--space-8) var(--space-2);
   background: color-mix(in srgb, var(--surface) 25%, transparent);
 }
 .width-toolbar button:has(svg) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.75rem;
+  min-width: var(--control-height, 2.75rem);
   padding: 0;
 }
 
@@ -307,13 +310,11 @@
 .blog-editor-frame {
   position: relative;
   /*
-   * 에디터 위에 뜨는 것들의 공통 값 — 한 곳에서 고친다. 그림자 토큰이 없어 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다.
+   * 에디터 위에 뜨는 것들의 공통 값 — 한 곳에서 고친다. 팝오버 그림자 토큰이 없어 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다.
    * 층: 블록 메뉴(손잡이 옆)보다 링크 팝오버(선택 아래)가 위다 — 둘이 겹치면 지금 입력 중인 팝오버가 보여야 한다.
    * 슬래시 메뉴는 링크 팝오버와 같은 이유로 같은 높이다 — 둘 다 입력 중에 뜨고 동시에 열리지 않는다.
    */
   --shadow-popover: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
-  /* design/tokens.json size.radius-pill */
-  --radius-pill: 999px;
   --layer-block-menu: 1;
   --layer-link-popover: 2;
   --layer-slash-menu: 2;
@@ -323,7 +324,7 @@
   position: absolute;
   display: flex;
   align-items: flex-start;
-  gap: 0.25rem;
+  gap: var(--space-4);
   width: 6.5rem;
   translate: -6.5rem 0;
 }
@@ -332,15 +333,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--control-height, 2.75rem);
+  height: var(--control-height, 2.75rem);
   padding: 0;
   color: var(--ink-soft, currentColor);
   cursor: pointer;
 }
 
 .block-handle-add {
-  border: 1px solid var(--line, currentColor);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 50%;
   background: var(--surface);
 }
@@ -358,21 +359,22 @@
 }
 
 .block-handles button:focus-visible {
-  outline: 2px solid var(--brand-ink, currentColor);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width, 2px) solid var(--brand-ink, currentColor);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .block-add-menu,
 .block-menu {
   position: absolute;
-  top: 3rem;
+  /* 손잡이 버튼(control-height) + 틈 아래 */
+  top: calc(var(--control-height, 2.75rem) + var(--space-4));
   left: 0;
   z-index: var(--layer-block-menu);
   display: flex;
   flex-direction: column;
   min-width: 11rem;
-  padding: 0.25rem;
-  border: 1px solid var(--line, currentColor);
+  padding: var(--space-4);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   /* radius-card 14px */
   border-radius: 0.875rem;
   background: var(--surface);
@@ -381,28 +383,28 @@
 
 /* 블록 메뉴는 옮기기 손잡이 아래 — 추가 버튼(44px) + 틈(4px) 만큼 오른쪽 */
 .block-menu {
-  left: 3rem;
+  left: calc(var(--control-height, 2.75rem) + var(--space-4));
 }
 
 /* 아래로 펼치면 보이는 영역을 넘을 때는 손잡이 위로 펼친다(use-menu-placement) */
 .block-add-menu[data-placement="above"],
 .block-menu[data-placement="above"] {
   top: auto;
-  bottom: 3rem;
+  bottom: calc(var(--control-height, 2.75rem) + var(--space-4));
 }
 
 .block-handles .block-add-menu button,
 .block-handles .block-menu button {
   justify-content: flex-start;
   width: 100%;
-  padding: 0 0.75rem;
+  padding: 0 var(--space-12);
   border: 0;
   border-radius: 0.5rem;
   background: transparent;
   color: var(--ink, currentColor);
   font: inherit;
   /* ui 15px */
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   text-align: start;
 }
 
@@ -418,15 +420,15 @@
 }
 
 .block-menu-heading {
-  padding: 0.375rem 0.75rem 0.25rem;
+  padding: var(--space-6) var(--space-12) var(--space-4);
   /* caption 13px */
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   color: var(--ink-soft, currentColor);
 }
 
 .block-menu-separator {
-  height: 1px;
-  margin: 0.25rem 0;
+  height: var(--border-width, 1px);
+  margin: var(--space-4) 0;
   background: var(--line, currentColor);
 }
 
@@ -494,8 +496,8 @@
 
 .sticker-hit:focus-visible,
 .sticker-remove:focus-visible {
-  outline: 0.125rem solid var(--brand-ink, currentColor);
-  outline-offset: 0.125rem;
+  outline: var(--focus-ring-width, 2px) solid var(--brand-ink, currentColor);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /*
@@ -506,9 +508,9 @@
  * - corner-offset: 모서리 칸의 바깥 변, top-row: 회전 손잡이 · 지우기 줄의 위 변(모서리 칸 위로 칸 + 틈)
  */
 .sticker-frame {
-  --sticker-handle-size: 2.75rem;
+  --sticker-handle-size: var(--control-height, 2.75rem);
   --sticker-handle-half: calc(var(--sticker-handle-size) / 2);
-  --sticker-handle-gap: 0.25rem;
+  --sticker-handle-gap: var(--space-4);
   --sticker-handle-dot: 0.875rem;
   --sticker-handle-push: min(0px, 50% - var(--sticker-handle-half));
   --sticker-corner-offset: calc(var(--sticker-handle-push) - var(--sticker-handle-half));
@@ -517,8 +519,8 @@
   );
 
   position: absolute;
-  outline: 1px dashed var(--brand-ink, currentColor);
-  outline-offset: 0.25rem;
+  outline: var(--border-width, 1px) dashed var(--brand-ink, currentColor);
+  outline-offset: var(--space-4);
   pointer-events: none;
 }
 
@@ -596,7 +598,7 @@
   position: absolute;
   bottom: 100%;
   left: 50%;
-  width: 1px;
+  width: var(--border-width, 1px);
   height: calc(
     var(--sticker-handle-size) + var(--sticker-handle-gap) - var(--sticker-handle-dot) / 2 -
       var(--sticker-handle-push)
@@ -650,7 +652,7 @@
   left: 0;
   margin: 0;
   color: var(--danger-ink, currentColor);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
 }
 
 .sticker-status:empty {
@@ -659,6 +661,7 @@
 
 .sticker-visually-hidden {
   position: absolute;
+  /* 화면에서 숨기는 1px 상자(시각적 숨김 관용구) — 선 두께가 아니라 토큰을 쓰지 않는다 */
   width: 1px;
   height: 1px;
   overflow: hidden;
@@ -675,15 +678,15 @@
   z-index: var(--layer-link-popover);
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--space-6);
   width: min(20rem, 100%);
-  padding: 0.75rem;
-  border: 1px solid var(--line, currentColor);
+  padding: var(--space-12);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.875rem;
   background: var(--surface);
   box-shadow: var(--shadow-popover);
   color: var(--ink, currentColor);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
 }
 
 .link-popover label {
@@ -693,18 +696,18 @@
 
 .link-popover-row {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 
 .link-popover input {
   flex: 1;
   min-width: 0;
-  height: 2.75rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--line, currentColor);
+  height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-12);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.5rem;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
 }
 
 .link-popover input[aria-invalid="true"] {
@@ -712,14 +715,14 @@
 }
 
 .link-popover button {
-  height: 2.75rem;
-  padding: 0 0.875rem;
-  border: 1px solid var(--line, currentColor);
+  height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-14);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.625rem;
   background: var(--surface);
   color: var(--ink, currentColor);
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   cursor: pointer;
 }
 
@@ -740,8 +743,8 @@
 }
 
 .link-popover :is(input, button):focus-visible {
-  outline: 2px solid var(--brand-ink, currentColor);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width, 2px) solid var(--brand-ink, currentColor);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /*
@@ -755,10 +758,10 @@
   display: flex;
   flex-direction: column;
   min-width: 11rem;
-  max-height: calc(2.75rem * 6.5);
+  max-height: calc(var(--control-height, 2.75rem) * 6.5);
   overflow-y: auto;
-  padding: 0.25rem;
-  border: 1px solid var(--line, currentColor);
+  padding: var(--space-4);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.875rem;
   background: var(--surface);
   box-shadow: var(--shadow-popover);
@@ -768,11 +771,11 @@
   display: flex;
   flex: none;
   align-items: center;
-  height: 2.75rem;
-  padding: 0 0.75rem;
+  height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-12);
   border-radius: 0.5rem;
   color: var(--ink, currentColor);
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
   cursor: pointer;
 }
 
@@ -793,7 +796,7 @@
 .width-resize-handle {
   position: absolute;
   width: 1.5rem;
-  height: 2.75rem;
+  height: var(--control-height, 2.75rem);
   translate: -50% -50%;
   pointer-events: auto;
   cursor: ew-resize;
@@ -803,9 +806,9 @@
 .width-resize-handle::after {
   content: "";
   position: absolute;
-  inset: 0.25rem 0.5625rem;
-  border: 1px solid var(--surface);
-  border-radius: var(--radius-pill);
+  inset: var(--space-4) 0.5625rem;
+  border: var(--border-width) solid var(--surface);
+  border-radius: var(--radius-pill, 999px);
   background: var(--toolbar);
 }
 
@@ -818,12 +821,12 @@
 .width-resize-value {
   position: absolute;
   translate: -50% 0.5rem;
-  padding: 0.25rem 0.625rem;
-  border-radius: var(--radius-pill);
+  padding: var(--space-4) var(--space-10);
+  border-radius: var(--radius-pill, 999px);
   background: var(--toolbar);
   color: var(--surface);
   /* caption 13px */
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   white-space: nowrap;
   pointer-events: none;
 }
@@ -840,15 +843,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-8);
   /* 디자인 69:2 사진 자리 높이(270px)의 절반 — 줄여 올리는 동안 본문이 크게 튀지 않을 만큼 */
   min-height: 8.4375rem;
-  padding: 1rem;
-  border: 1px dashed var(--line, currentColor);
+  padding: var(--space-16);
+  border: var(--border-width, 1px) dashed var(--line, currentColor);
   border-radius: 0.875rem;
   background: var(--paper-deep, transparent);
   color: var(--ink-mid, currentColor);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   text-align: center;
 }
 .image-upload-placeholder p {
@@ -861,12 +864,12 @@
 }
 .image-upload-placeholder-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 .image-upload-placeholder-actions button {
-  min-height: 2.75rem;
-  padding: 0 0.875rem;
-  border: 1px solid var(--line, currentColor);
+  min-height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-14);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.625rem;
   background: var(--surface);
   color: var(--ink, currentColor);
@@ -882,13 +885,13 @@
   /* 문장은 image-insert-messages.ts — 장식이 속성 값으로 싣는다 */
   content: attr(data-alt-missing);
   position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-pill);
+  top: var(--space-8);
+  left: var(--space-8);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-pill, 999px);
   background: var(--danger-ink, currentColor);
   color: var(--surface);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   pointer-events: none;
 }
 
@@ -902,7 +905,7 @@
   display: inline-block;
   width: 0.5rem;
   height: 0.5rem;
-  margin-right: 0.375rem;
+  margin-right: var(--space-6);
   border-radius: 50%;
   background: var(--danger-ink, currentColor);
 }
@@ -912,20 +915,20 @@
  */
 .image-alt-popover {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(100% + var(--space-8));
   right: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
+  gap: var(--space-6);
   width: min(20rem, 80vw);
-  padding: 0.75rem;
-  border: 1px solid var(--line, currentColor);
+  padding: var(--space-12);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.875rem;
   background: var(--surface);
   box-shadow: 0 0.5rem 1.25rem -0.375rem color-mix(in srgb, var(--ink) 50%, transparent);
   color: var(--ink, currentColor);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-caption);
   white-space: normal;
 }
 .image-alt-popover label {
@@ -933,12 +936,12 @@
   font-weight: 500;
 }
 .image-alt-popover input {
-  height: 2.75rem;
-  padding: 0 0.75rem;
-  border: 1px solid var(--line, currentColor);
+  height: var(--control-height, 2.75rem);
+  padding: 0 var(--space-12);
+  border: var(--border-width, 1px) solid var(--line, currentColor);
   border-radius: 0.5rem;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-ui);
 }
 .image-alt-hint {
   color: var(--ink-soft, currentColor);

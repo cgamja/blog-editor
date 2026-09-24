@@ -1,0 +1,14 @@
+{
+  "name": "@blog-editor/design-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "design/tokens.json → :root CSS 변수. web과 editor-react가 같은 tokens.css를 불러온다(adr-023). 워크스페이스 패키지를 import하지 않는 잎.",
+  "exports": {
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "tokens": "node scripts/generate-tokens.ts"
+  }
+}

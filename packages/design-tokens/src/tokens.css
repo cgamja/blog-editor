@@ -1,4 +1,4 @@
-/* 생성 파일 — 고치지 말고 design/tokens.json을 바꾼 뒤 `pnpm --filter @blog-editor/web tokens`. */
+/* 생성 파일 — 고치지 말고 design/tokens.json을 바꾼 뒤 `pnpm --filter @blog-editor/design-tokens tokens`. */
 
 :root {
   --paper: #fbf6ef;
