@@ -26,7 +26,11 @@ export type {
   StickerPlacement,
   StickerTarget,
   TopBlock,
-} from "./commands/decoration";
+} from "./commands/decoration.types";
+export { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./commands/drag-block";
+export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
+export type { InsertableBlockKind } from "./commands/drag-block.constants";
+export type { BlockBand, InsertableBlock } from "./commands/drag-block.types";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {

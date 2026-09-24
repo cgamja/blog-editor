@@ -281,3 +281,99 @@
   font-size: 0.8125rem;
   color: var(--line);
 }
+
+/*
+ * 블록 손잡이(디자인 68:2, 이슈 #59). 값은 design/tokens.json — 컨트롤 44px, 추가 버튼 -104px · 옮기기 -56px.
+ * 손잡이 줄은 블록 왼쪽 가장자리까지 이어져서 버튼으로 옮겨 가는 사이에 마우스가 틀을 벗어나지 않는다.
+ */
+.blog-editor-frame {
+  position: relative;
+}
+
+.block-handles {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 6.5rem;
+  translate: -6.5rem 0;
+}
+
+.block-handles button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  color: var(--ink-soft, currentColor);
+  cursor: pointer;
+}
+
+.block-handle-add {
+  border: 1px solid var(--line, currentColor);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.block-handle-move {
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.block-handle-move[data-dragging] {
+  cursor: grabbing;
+}
+
+.block-handles button:focus-visible {
+  outline: 2px solid var(--brand-ink, currentColor);
+  outline-offset: 2px;
+}
+
+.block-add-menu {
+  position: absolute;
+  top: 3rem;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 11rem;
+  padding: 0.25rem;
+  border: 1px solid var(--line, currentColor);
+  /* radius-card 14px */
+  border-radius: 0.875rem;
+  background: var(--surface);
+  /* 그림자 토큰이 없다 — 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다 */
+  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+}
+
+.block-handles .block-add-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink, currentColor);
+  font: inherit;
+  /* ui 15px */
+  font-size: 0.9375rem;
+  text-align: start;
+}
+
+.block-handles .block-add-menu button:is(:hover, :focus-visible) {
+  background: var(--brand-soft, transparent);
+}
+
+.block-drop-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  translate: 0 -1px;
+  background: var(--brand-ink, currentColor);
+  pointer-events: none;
+}
