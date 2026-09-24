@@ -1,10 +1,4 @@
-# render-safety Specification
-
-## Purpose
-
-렌더 결과는 사이트가 그대로 꽂는 HTML이다. 스크립트가 실릴 길이 렌더러에 없다는 것을 회귀 테스트로 고정한다 — 사이트의 sanitize(#8)는 두 번째 방어선이지 첫 번째가 아니다(plan 05 계약 층).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 렌더 결과에 스크립트 · 이벤트 핸들러 · javascript: 스킴이 없다 (보호 대상 — 고쳐서 통과시키지 않는다)
 
