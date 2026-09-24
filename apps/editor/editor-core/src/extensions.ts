@@ -276,7 +276,6 @@ const Callout = Node.create({
 const NOT_BOLD_STYLE = /font-weight\s*:\s*normal/i;
 const BOLD_WEIGHT = /^(?:bold|bolder|[7-9]\d\d)$/;
 
-// 정의 순서 = ProseMirror 마크 정렬 순서(rank). 정규형(type 사전순)과 같게 둔다
 const Bold = Mark.create({
   name: "bold",
   parseHTML: () => [
@@ -385,13 +384,16 @@ export const editorExtensions = [
   Image,
   Callout,
   AppScreenshot,
-  Bold,
-  Code,
-  Italic,
+  // 마크 등록 순서 = ProseMirror rank = DOM에서 바깥부터 감싸는 순서. 공개 HTML과 같게
+  // a > span.post-ts > u > s > strong > em > code (content-render MARK_INNER_TO_OUTER의 역순).
+  // 저장 형식의 마크 순서(type 사전순)는 docFromNode의 normalize가 따로 맞춘다
   Link,
-  Strike,
   TextStyle,
   Underline,
+  Strike,
+  Bold,
+  Italic,
+  Code,
   StickerSafeSplit,
   PasteNormalizer,
 ];
