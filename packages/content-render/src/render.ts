@@ -1,4 +1,9 @@
-import { naturalSizeOf } from "@blog-editor/content-schema";
+import {
+  HEX_COLOR_PATTERN,
+  HIGHLIGHT_COLORS,
+  naturalSizeOf,
+  TEXT_COLORS,
+} from "@blog-editor/content-schema";
 import type {
   Block,
   HEADING_LEVELS,
@@ -7,8 +12,14 @@ import type {
   PostFile,
   Sticker,
   TextNode,
+  TextStyleAttrs,
 } from "@blog-editor/content-schema";
-import { HEADING_TAGS, MARK_INNER_TO_OUTER } from "./constants";
+import {
+  CUSTOM_COLOR,
+  HEADING_TAGS,
+  MARK_INNER_TO_OUTER,
+  TEXT_STYLE_COLOR_VARS,
+} from "./constants";
 import { escapeHtml } from "./escape";
 import { STICKER_SIZES } from "./stickers";
 import type {
@@ -162,9 +173,47 @@ function wrapMark(mark: Mark, inner: string): string {
       return tag("code", "", inner);
     case "link":
       return tag("a", ` href="${escapeHtml(mark.attrs.href)}"`, inner);
+    case "strike":
+      return tag("s", "", inner);
+    case "underline":
+      return tag("u", "", inner);
+    case "textStyle":
+      return tag("span", textStyleAttrsHtml(mark.attrs), inner);
     default:
       return assertNever(mark);
   }
+}
+
+/** 속성 순서 고정: class → data-font → data-weight → data-size → data-color → data-highlight → style. */
+function textStyleAttrsHtml(style: TextStyleAttrs): string {
+  const color = colorAttr(style.color, TEXT_COLORS, TEXT_STYLE_COLOR_VARS.color);
+  const highlight = colorAttr(style.highlight, HIGHLIGHT_COLORS, TEXT_STYLE_COLOR_VARS.highlight);
+  const data = (name: string, value: string | undefined) =>
+    value === undefined ? "" : ` data-${name}="${escapeHtml(value)}"`;
+  const cssVars = [color.cssVar, highlight.cssVar].filter((value) => value !== undefined);
+  return (
+    ` class="post-ts"` +
+    data("font", style.font) +
+    data("weight", style.weight) +
+    data("size", style.size) +
+    data("color", color.data) +
+    data("highlight", highlight.data) +
+    (cssVars.length > 0 ? ` style="${cssVars.join(";")}"` : "")
+  );
+}
+
+/**
+ * 프리셋은 data 값 그대로, hex는 `custom` + CSS 변수. 스키마를 건너뛴 doc도 올 수 있어 hex 모양을
+ * 여기서 다시 본다 — 이스케이프는 `;`로 다른 선언을 잇는 것을 막지 못한다(spec: render-decoration).
+ */
+function colorAttr(
+  value: string | undefined,
+  presets: readonly string[],
+  cssVar: string,
+): { data?: string | undefined; cssVar?: string | undefined } {
+  if (value === undefined) return {};
+  if (HEX_COLOR_PATTERN.test(value)) return { data: CUSTOM_COLOR, cssVar: `${cssVar}:${value}` };
+  return presets.includes(value) ? { data: value } : {};
 }
 
 // ── 안쪽 노드(blockquote · callout · listItem 안, attrs 없음) ────────────────
@@ -198,6 +247,7 @@ function hasDecoration(attrs: Decoration): boolean {
     attrs.font !== undefined ||
     attrs.motion !== undefined ||
     attrs.width !== undefined ||
+    attrs.align !== undefined ||
     (attrs.stickers?.length ?? 0) > 0
   );
 }
@@ -206,11 +256,12 @@ function finishBlock(elementHtml: string, decoration: Decoration, ctx: RenderCon
   return hasDecoration(decoration) ? wrapDecoration(elementHtml, decoration, ctx) : elementHtml;
 }
 
-/** 속성 순서 고정: class → data-font → data-motion → style(spec: render-decoration). */
+/** 속성 순서 고정: class → data-font → data-motion → data-align → style(spec: render-decoration). */
 function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderContext): string {
   // enum · 정수라 타입상 닫혀 있지만, 검증을 건너뛴 doc가 와도 속성 경계는 지킨다(spec: render-safety)
   const fontAttr = attrs.font !== undefined ? ` data-font="${escapeHtml(attrs.font)}"` : "";
   const motionAttr = attrs.motion !== undefined ? ` data-motion="${escapeHtml(attrs.motion)}"` : "";
+  const alignAttr = attrs.align !== undefined ? ` data-align="${escapeHtml(attrs.align)}"` : "";
   const styleAttr =
     attrs.width !== undefined ? ` style="--w:${escapeHtml(String(attrs.width))}"` : "";
   const stickersHtml = (attrs.stickers ?? [])
@@ -218,7 +269,7 @@ function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderConte
     .join("");
   return tag(
     "div",
-    ` class="post-block"${fontAttr}${motionAttr}${styleAttr}`,
+    ` class="post-block"${fontAttr}${motionAttr}${alignAttr}${styleAttr}`,
     elementHtml + stickersHtml,
   );
 }
