@@ -117,7 +117,7 @@ const WEB_FEATURE_INTERNALS = {
  * (`features/posts/api.ts`의 `../auth` · `features/posts/pages/X.tsx`의 `../../auth`) 깊이마다 블록을 둔다.
  * 깊이 d의 파일에서 `../`를 d+1번 올라가면 features 폴더다 — 그다음이 `..`가 아니면 옆 기능, 한 번 더 올라가 app이면 위다.
  */
-const WEB_FEATURE_MAX_DEPTH = 3;
+export const WEB_FEATURE_MAX_DEPTH = 3;
 const webFeatureOutward = (depth) => {
   const toFeatures = "\\.\\./".repeat(depth + 1);
   return [

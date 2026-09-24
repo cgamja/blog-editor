@@ -50,6 +50,10 @@ describe("tokensToCss — 코드 토큰 파일은 디자인 토큰과 어긋나�
   it.each([
     ["없는 색 이름", { color: { ink: "#3a2b26" }, shadow: { card: "0 2px 4px nope 12%" } }],
     ["불투명도가 빠졌다", { color: { ink: "#3a2b26" }, shadow: { card: "0 2px 4px ink" } }],
+    [
+      "0이 아닌 길이에 단위가 없다",
+      { color: { ink: "#3a2b26" }, shadow: { card: "0 2 4 ink 12%" } },
+    ],
   ])("WHEN 잘못된 그림자(%s) THEN 생성이 멈춘다", (_case, tokens) => {
     expect(() => tokensToCss(tokens)).toThrow();
   });
