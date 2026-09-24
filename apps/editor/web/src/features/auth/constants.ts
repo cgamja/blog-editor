@@ -6,5 +6,5 @@ export const SESSION_QUERY_KEY = ["session"] as const;
  */
 export const SESSION_PROBE_PATH = "/api/posts";
 
-/** 로그인(POST) · 로그아웃(DELETE) */
+/** 로그인(POST) */
 export const SESSION_PATH = "/api/session";

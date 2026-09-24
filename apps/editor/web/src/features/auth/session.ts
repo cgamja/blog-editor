@@ -1,6 +1,6 @@
+import { HTTP_UNAUTHORIZED } from "../../shared/api/constants";
 import type { SessionState } from "./types";
 
-const UNAUTHORIZED = 401;
 const SUCCESS_MIN = 200;
 const SUCCESS_MAX = 299;
 
@@ -9,7 +9,7 @@ const SUCCESS_MAX = 299;
  * 그 밖의 코드(403 · 404 · 5xx)는 로그인 여부를 말해 주지 않으므로 오류로 둔다 — 로그인 화면으로 보내지 않는다.
  */
 export function sessionStateOf(status: number): SessionState {
-  if (status === UNAUTHORIZED) return "anonymous";
+  if (status === HTTP_UNAUTHORIZED) return "anonymous";
   if (status >= SUCCESS_MIN && status <= SUCCESS_MAX) return "authenticated";
   return "error";
 }

@@ -45,8 +45,8 @@ export function LoginPage() {
   };
 
   const errorMessage = loginErrorMessage(submit.error);
-  const invalid = errorMessage !== null;
-  const describedBy = invalid ? errorId : undefined;
+  const hasError = errorMessage !== null;
+  const describedBy = hasError ? errorId : undefined;
 
   return (
     <main className="app-page app-login">
@@ -60,7 +60,7 @@ export function LoginPage() {
           autoComplete="username"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
-          aria-invalid={invalid}
+          aria-invalid={hasError}
           aria-describedby={describedBy}
           required
         />
@@ -72,11 +72,11 @@ export function LoginPage() {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          aria-invalid={invalid}
+          aria-invalid={hasError}
           aria-describedby={describedBy}
           required
         />
-        {invalid ? (
+        {hasError ? (
           <p id={errorId} className="app-error" role="alert">
             {errorMessage}
           </p>

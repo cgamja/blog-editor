@@ -1,6 +1,5 @@
+import { HTTP_UNAUTHORIZED } from "./constants";
 import { ApiError, UnauthorizedError } from "./errors";
-
-const UNAUTHORIZED = 401;
 
 /**
  * 같은 출처 API 요청 — 401은 `UnauthorizedError`, 그 밖의 실패는 `ApiError`로 던진다(design.md 1).
@@ -10,7 +9,7 @@ export async function apiRequest(path: string, init?: RequestInit): Promise<Resp
   const response = await fetch(path, init);
   if (response.ok) return response;
   const userMessage = await messageOf(response);
-  if (response.status === UNAUTHORIZED) throw new UnauthorizedError(userMessage);
+  if (response.status === HTTP_UNAUTHORIZED) throw new UnauthorizedError(userMessage);
   throw new ApiError(response.status, userMessage);
 }
 
