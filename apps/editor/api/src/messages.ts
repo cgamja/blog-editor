@@ -1,5 +1,4 @@
-import { NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
-import { MAX_IMAGE_BYTES } from "./image-constants";
+import { IMAGE_MAX_BYTES, NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
 
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -14,7 +13,7 @@ export const CONFLICT_MESSAGE = "다른 곳에서 수정됐다 — 다시 불러
 export const LOGIN_BODY_MESSAGE = "username과 password 문자열이 필요하다";
 export const LOGIN_FAILED_MESSAGE = "아이디 또는 비밀번호가 맞지 않는다";
 export const UNAUTHORIZED_MESSAGE = "로그인이 필요하다";
-export const IMAGE_TOO_LARGE_MESSAGE = `이미지는 ${MAX_IMAGE_BYTES / BYTES_PER_MB}MB 이하만 올릴 수 있다`;
+export const IMAGE_TOO_LARGE_MESSAGE = `이미지는 ${IMAGE_MAX_BYTES / BYTES_PER_MB}MB 이하만 올릴 수 있다`;
 export const IMAGE_FORMAT_MESSAGE = "JPEG · PNG · WebP · GIF 이미지만 올릴 수 있다";
 export const IMAGE_TOO_WIDE_MESSAGE = `긴 변을 ${NATURAL_SIZE_RANGE.max}px 이하로 줄여서 올린다`;
 export const IMAGE_ROTATED_MESSAGE =
