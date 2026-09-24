@@ -20,3 +20,6 @@ export const AI_WRITE_MESSAGES = {
   openIn: (app: ChatApp) => `${APP_NAME[app]}에서 열기`,
   opensInNewTab: "(새 탭)",
 } as const;
+
+/** 목록이 제목 글꼴 조각을 미리 받을 때 쓴다(#107) — 문구 원천은 위 한 곳 */
+export const AI_WRITE_DIALOG_TITLE = AI_WRITE_MESSAGES.title;
