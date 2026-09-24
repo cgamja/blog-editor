@@ -24,7 +24,7 @@ const NO_ACTIONS: EditorScreenActions = {};
 
 /**
  * 편집 화면 틀(디자인 02 · 03, Figma 68:2 · 69:2, spec: editor-screen) — 머리줄 · 종이 · 옆 패널 탭을
- * 조합만 한다. 머리줄 동작과 글 정보 내용은 화면(web, M3)이 채운다.
+ * 조합만 한다. 머리줄 동작과 글 정보 내용은 화면(web, M3)이 채운다. 본문 영역이 `<main>`이라 화면이 따로 감싸지 않는다.
  */
 export function EditorScreen({
   editor,
@@ -37,12 +37,12 @@ export function EditorScreen({
   return (
     <div className="editor-screen">
       <ScreenHeader actions={actions} status={status} />
-      <div className="editor-screen-body">
+      <main className="editor-screen-body">
         <article className="editor-screen-paper">
           <BlogEditor editor={editor} />
           <WidthToolbar editor={editor} />
         </article>
-      </div>
+      </main>
       <SideTabs
         initialTab={initialTab}
         postInfo={

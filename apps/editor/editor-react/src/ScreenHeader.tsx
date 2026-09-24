@@ -8,7 +8,7 @@ export interface ScreenHeaderProps {
 }
 
 interface HeaderActionProps {
-  label: string;
+  label: ReactNode;
   onPress: (() => void) | undefined;
   reasonId: string;
   className: string;
@@ -41,7 +41,7 @@ export function ScreenHeader({ actions, status }: ScreenHeaderProps) {
   return (
     <header className="editor-screen-header">
       <HeaderAction
-        label={screenMessages.back}
+        label={<span className="editor-screen-back-label">{screenMessages.back}</span>}
         onPress={actions.onBack}
         reasonId={reasonId}
         className="editor-screen-back"

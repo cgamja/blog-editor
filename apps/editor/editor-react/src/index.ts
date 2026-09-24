@@ -23,4 +23,3 @@ export { useCommandRunner } from "./use-command-runner";
 export { EditorScreen } from "./EditorScreen";
 export type { EditorScreenProps } from "./EditorScreen";
 export type { EditorScreenActions, SideTab } from "./screen-types";
-export { tabIndexAfterKey } from "./screen-tabs";

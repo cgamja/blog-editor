@@ -4,7 +4,7 @@ export const screenMessages = {
   preview: "미리보기",
   saveDraft: "초안 저장",
   publish: "발행",
-  notConnected: "저장 · 발행은 백오피스 화면(M3)에서 연결돼요",
+  notConnected: "백오피스 화면(M3)에서 연결돼요",
   sideLabel: "옆 패널",
   postInfoTab: "글 정보",
   decorateTab: "꾸미기",

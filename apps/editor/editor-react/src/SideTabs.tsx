@@ -66,6 +66,8 @@ export function SideTabs({ postInfo, decorate, initialTab }: SideTabsProps) {
           id={panelId(tab)}
           aria-labelledby={tabId(tab)}
           hidden={active !== tab}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- APG Tabs: 패널 첫 내용이 포커스를 못 받으면(글 정보 자리 표시) tabpanel이 탭 순서에 든다. https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+          tabIndex={0}
           className="editor-screen-panel"
         >
           {panels[tab]}
