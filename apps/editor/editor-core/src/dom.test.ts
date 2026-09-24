@@ -11,7 +11,7 @@ function toDom(node: Node): DOMOutputSpec {
   return toDOM(node);
 }
 
-/** 비교용 — null(없음)과 스티커(DOM으로 나가지 않음)를 뺀 attrs. */
+/** 비교용 — null(없음)과 스티커(HTML에서 읽는 규칙이 없음)를 뺀 attrs. */
 function comparable(attrs: object): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(attrs).filter(([key, value]) => value !== null && key !== "stickers"),
@@ -21,7 +21,7 @@ function comparable(attrs: object): Record<string, unknown> {
 const sticker = { id: "heart", x: 50, y: 30, size: 20, rotate: 0 };
 
 describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고 다시 읽힌다", () => {
-  it("WHEN 꾸밈 · 스티커 문단, 폭 60 이미지, 꾸밈 없는 문단을 DOM 스펙으로 낸다 THEN 공개 HTML과 같은 래퍼로 나가고 스티커 요소는 없다", () => {
+  it("WHEN 꾸밈 · 스티커 문단, 폭 60 이미지, 꾸밈 없는 문단을 DOM 스펙으로 낸다 THEN 공개 HTML과 같은 래퍼로 나가고 스티커는 래퍼 안 img다", () => {
     const decorated = schema.nodes.paragraph!.create(
       { font: "jua", motion: "fade-up", stickers: [sticker] },
       schema.text("가"),
@@ -33,6 +33,17 @@ describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고
       "div",
       { class: "post-block", "data-font": "jua", "data-motion": "fade-up" },
       ["p", 0],
+      [
+        "img",
+        {
+          class: "post-sticker",
+          src: "/stickers/heart.png",
+          alt: "",
+          contenteditable: "false",
+          draggable: "false",
+          style: "--x:50;--y:30;--s:20;--r:0",
+        },
+      ],
     ]);
     expect(toDom(image)).toEqual([
       "div",
@@ -40,6 +51,29 @@ describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고
       ["figure", { class: "post-image" }, ["img", { src: "/images/a.webp", alt: "그림" }]],
     ]);
     expect(toDom(plain)).toEqual(["p", 0]);
+  });
+
+  it("WHEN 스티커 두 개만 있는 구분선을 DOM 스펙으로 낸다 THEN 래퍼 안 hr 뒤에 스티커 img 둘이고 래퍼에 data · style이 없다", () => {
+    const rule = schema.nodes.horizontalRule!.create({
+      stickers: [
+        { id: "star-coral", x: -25, y: 0, size: 5, rotate: -180 },
+        { id: "cloud", x: 100, y: 125, size: 50, rotate: 45 },
+      ],
+    });
+
+    const [tag, wrapperAttrs, inner, ...stickers] = toDom(rule) as unknown[];
+
+    expect([tag, wrapperAttrs, inner]).toEqual(["div", { class: "post-block" }, ["hr"]]);
+    expect(stickers.map((spec) => (spec as [string, Record<string, string>])[1])).toEqual([
+      expect.objectContaining({
+        src: "/stickers/star-coral.png",
+        style: "--x:-25;--y:0;--s:5;--r:-180",
+      }),
+      expect.objectContaining({
+        src: "/stickers/cloud.png",
+        style: "--x:100;--y:125;--s:50;--r:45",
+      }),
+    ]);
   });
 
   it.each(["decorationMax", "allBlocks"] as const)(

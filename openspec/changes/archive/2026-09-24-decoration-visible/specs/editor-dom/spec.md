@@ -1,10 +1,4 @@
-# editor-dom Specification
-
-## Purpose
-
-에디터 안 DOM 매핑(renderHTML · parseHTML) — 공개 HTML(content-render)과 같은 어휘를 쓰고, HTML에서 읽는 attrs는 닫힌 집합으로 검증한 값만 받는다.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고 다시 읽힌다
 
@@ -24,17 +18,3 @@
 
 - **WHEN** 픽스처 `decorationMax` · `allBlocks`의 최상위 블록을 DOM 스펙으로 낸 뒤 그 모양을 파싱 규칙으로 다시 읽는다
 - **THEN** 스티커를 뺀 attrs가 원래와 같다
-
-### Requirement: HTML 속성을 검증 없이 attrs로 읽지 않는다
-
-파싱 규칙은 SHALL attrs 값을 content-schema 상수(`FONTS` · `MOTIONS` · `WIDTH_RANGE` · `NATURAL_SIZE_RANGE` · `CALLOUT_TONES` · `CODE_LANGUAGE_PATTERN` · `imagePathSchema` · `hrefSchema`)로 검증한 것만 받는다. 모르는 값은 없는 것으로 본다. attribute 이름과 같은 HTML 속성(`font="jua"` · `stickers="…"` · `motion="pop"`)은 읽지 않는다.
-
-#### Scenario: attribute 이름과 같은 HTML 속성은 무시된다
-
-- **WHEN** `<p font="jua" motion="pop" stickers="[]">` · `<img src="/images/a.webp" alt="" width="800" motion="pop">`를 파싱 규칙으로 읽는다
-- **THEN** 문단 attrs에 꾸밈 · 스티커가 없고, 이미지에는 꾸밈 폭 · 움직임이 없으며, 높이가 없어 원본 크기도 없다
-
-#### Scenario: 허용되지 않는 값은 없는 것으로 읽힌다
-
-- **WHEN** `data-font="comic"` · `data-motion="spin"` · `style="--w:5"`인 래퍼, `data-tone="danger"`인 콜아웃, `data-language="C Sharp"`인 코드를 읽는다
-- **THEN** 꾸밈 · 언어는 없는 것으로 읽히고, 콜아웃 규칙은 거부한다(안의 문단은 문단으로 남는다)

@@ -31,21 +31,46 @@ export function hasClass(element: ElementLike, className: string): boolean {
   return (element.getAttribute("class") ?? "").split(/\s+/).includes(className);
 }
 
-function decorationDomAttrs(attrs: Attrs): Record<string, string> | null {
+function decorationDomAttrs(attrs: Attrs): Record<string, string> {
   const dom: Record<string, string> = {};
   if (attrs.font != null) dom["data-font"] = String(attrs.font);
   if (attrs.motion != null) dom["data-motion"] = String(attrs.motion);
   if (attrs.width != null) dom.style = `--w:${String(attrs.width)}`;
-  return Object.keys(dom).length === 0 ? null : { class: WRAPPER_CLASS, ...dom };
+  return dom;
+}
+
+// 값은 스키마 attrs(blockGuard가 zod로 지킨 닫힌 집합)라 여기서 다시 검증하지 않는다
+type StickerAttrs = { id: unknown; x: unknown; y: unknown; size: unknown; rotate: unknown };
+
+/**
+ * 공개 HTML의 `img.post-sticker`와 같은 어휘. 편집용으로 편집 불가 · 브라우저 기본 이미지 끌기 끔을 더하고,
+ * 크기 속성(content-render STICKER_SIZES)은 내지 않는다 — absolute라 레이아웃 이동이 없다(decoration-visible design.md 2).
+ */
+function stickerSpec(sticker: StickerAttrs): DOMOutputSpec {
+  const { id, x, y, size, rotate } = sticker;
+  return [
+    "img",
+    {
+      class: "post-sticker",
+      src: `/stickers/${String(id)}.png`,
+      alt: "",
+      contenteditable: "false",
+      draggable: "false",
+      style: `--x:${String(x)};--y:${String(y)};--s:${String(size)};--r:${String(rotate)}`,
+    },
+  ];
 }
 
 /**
- * 꾸밈이 있으면 공개 HTML처럼 `div.post-block`으로 감싼다. 스티커는 내지 않는다 — 구멍(0)은
- * 부모의 유일한 자식이어야 해서 스티커 요소를 형제로 둘 수 없고, 표시는 NodeView 몫이다(design.md 1).
+ * 꾸밈이나 스티커가 있으면 공개 HTML처럼 `div.post-block`으로 감싸고, 스티커는 블록 요소 뒤(같은 래퍼 안)에 둔다.
+ * 구멍(0)은 부모(블록 요소)의 유일한 자식이기만 하면 되고 래퍼는 형제를 가질 수 있다 —
+ * https://prosemirror.net/docs/ref/#model.DOMOutputSpec (decoration-visible design.md 1: NodeView 대신 toDOM)
  */
 export function withDecoration(attrs: Attrs, element: DOMOutputSpec): DOMOutputSpec {
-  const wrapper = decorationDomAttrs(attrs);
-  return wrapper === null ? element : ["div", wrapper, element];
+  const dom = decorationDomAttrs(attrs);
+  const stickers = (attrs.stickers ?? []) as readonly StickerAttrs[];
+  if (Object.keys(dom).length === 0 && stickers.length === 0) return element;
+  return ["div", { class: WRAPPER_CLASS, ...dom }, element, ...stickers.map(stickerSpec)];
 }
 
 function readDecoration(wrapper: ElementLike, keys: readonly DecorationKey[]): Attrs {

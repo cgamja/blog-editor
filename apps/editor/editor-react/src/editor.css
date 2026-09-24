@@ -14,6 +14,15 @@
  * 선택이 눈에 보여야 두 번째 Backspace가 무엇을 지우는지 안다(editor-custom-blocks design).
  * 토큰이 정의되지 않은 곳(web 밖)에서도 외곽선이 사라지지 않게 글자색으로 물러선다.
  */
+/*
+ * 편집 중에는 움직임(post.css의 스크롤 진입 애니메이션)을 재생하지 않는다 — 쓰는 동안 블록이 스크롤마다
+ * 사라졌다 나타나면 안 된다. 미리보기 · 공개 HTML에서는 그대로다. 명시도 0,3,0이 post.css의
+ * `.post-body [data-motion="…"]`(0,2,0)를 불러오는 순서와 무관하게 이긴다(decoration-visible design.md 5).
+ */
+.blog-editor .ProseMirror [data-motion] {
+  animation-name: none;
+}
+
 .blog-editor .ProseMirror-selectednode {
   outline: 0.125rem solid var(--brand-ink, currentColor);
   outline-offset: 0.125rem;
