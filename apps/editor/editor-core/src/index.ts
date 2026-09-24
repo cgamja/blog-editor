@@ -57,6 +57,21 @@ export {
   moveBlockKeymap,
   moveBlockUp,
 } from "./commands/move-block";
+export {
+  applyLastColor,
+  rememberColor,
+  setTextStyle,
+  textStyleSummary,
+  toggleToolbarMark,
+} from "./commands/text-style";
+export { MIXED, TOOLBAR_MARKS } from "./commands/text-style.types";
+export type {
+  LastColor,
+  SummaryValue,
+  TextStylePatch,
+  TextStyleSummary,
+  ToolbarMark,
+} from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
@@ -71,6 +86,7 @@ export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export { ListKeys, listKeymap } from "./plugins/list-keymap";
 export { markdownInputRules } from "./plugins/markdown-input-rules";
 export { markdownShortcutKeymap } from "./plugins/markdown-shortcut-keymap";
+export { TextStyleKeys, textStyleKeymap, textStyleMemory } from "./plugins/text-style-keymap";
 export { MarkdownShortcuts, markdownShortcutPlugins } from "./plugins/markdown-shortcuts";
 export {
   MOTION_PREVIEW_CLASS,
