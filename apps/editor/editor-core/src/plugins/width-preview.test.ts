@@ -49,14 +49,14 @@ function previewAttrs(state: EditorState): unknown[] {
 }
 
 describe("editor-block-resize: 끄는 동안 폭을 미리 보인다", () => {
-  it("WHEN 그림 블록에 previewBlockWidth(pos, 40) THEN 그 블록 장식의 style에 --w:40이 있고 문서는 그대로다", () => {
+  it("WHEN 그림 블록에 previewBlockWidth(pos, 40) THEN 그 블록 장식에 post-block 클래스와 style --w:40이 있고 문서는 그대로다", () => {
     const initial = start();
 
     const { ok, state } = run(initial, previewBlockWidth(IMAGE, 40));
 
     expect(ok).toBe(true);
     expect(state.doc.eq(initial.doc)).toBe(true);
-    expect(previewAttrs(state)).toEqual([{ style: "--w:40" }]);
+    expect(previewAttrs(state)).toEqual([{ class: "post-block", style: "--w:40" }]);
   });
 
   it("WHEN 미리보기 중에 글자를 입력한다, 또는 문단에 previewBlockWidth THEN 앞은 장식이 사라지고, 뒤는 false다", () => {

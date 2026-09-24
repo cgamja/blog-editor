@@ -16,12 +16,12 @@
 
 ### Requirement: 끄는 동안 폭을 미리 보인다
 
-`@blog-editor/editor-core`는 SHALL `widthPreview()` 플러그인과 커맨드 `previewBlockWidth(pos, width | null)`을 export한다. 미리보기는 그 블록에 노드 장식 `style="--w:N"`을 달 뿐 문서를 바꾸지 않는다. 폭을 가질 수 없는 블록이거나 WIDTH_RANGE 밖의 폭이면 false다. 문서가 바뀌면 미리보기는 풀린다.
+`@blog-editor/editor-core`는 SHALL `widthPreview()` 플러그인과 커맨드 `previewBlockWidth(pos, width | null)`을 export한다. 미리보기는 그 블록에 노드 장식(`post-block` 클래스 + `style="--w:N"`)을 달 뿐 문서를 바꾸지 않는다. 폭이 없는 그림은 래퍼 없이 그려지므로 클래스가 있어야 `--w`가 먹는다. 폭을 가질 수 없는 블록이거나 WIDTH_RANGE 밖의 폭이면 false다. 문서가 바뀌면 미리보기는 풀린다.
 
 #### Scenario: 미리보기는 장식만 달고 되돌리기에 남지 않는다
 
 - **WHEN** 그림 블록에 `previewBlockWidth(pos, 40)`
-- **THEN** 그 블록 장식의 style에 `--w:40`이 있고, 문서는 그대로다
+- **THEN** 그 블록 장식에 `post-block` 클래스와 style `--w:40`이 있고, 문서는 그대로다
 
 #### Scenario: 문서가 바뀌면 풀린다
 
