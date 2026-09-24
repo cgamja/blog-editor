@@ -1,7 +1,9 @@
 import { INSERTABLE_BLOCKS } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
-import { INSERTABLE_BLOCK_LABELS } from "./messages";
-import { SLASH_ALIASES } from "./slash-menu.constants";
+import { BLOCK_MENU_ACTION_LABELS, INSERTABLE_BLOCK_LABELS } from "./messages";
+import { BLOCK_MENU_ACTIONS } from "./block-menu-actions";
+import type { BlockMenuAction, SlashItem } from "./block-menu-actions";
+import { SLASH_ACTION_ALIASES, SLASH_ALIASES } from "./slash-menu.constants";
 
 /** 「+」 메뉴와 같은 목록 · 같은 순서(spec: editor-slash-menu) */
 const KINDS = Object.keys(INSERTABLE_BLOCKS) as InsertableBlockKind[];
@@ -86,15 +88,33 @@ const SEPARATORS = /[\s·]/g;
 const searchKey = (text: string) =>
   [...text.toLowerCase().replace(SEPARATORS, "")].map(jamoOf).join("");
 
+/** 항목의 이름과 검색 키 — 블록 종류는 「+」 메뉴 이름 · 별칭, 동작 항목은 동작 이름 · 별칭 */
+function namesOf(item: SlashItem): readonly string[] {
+  return isAction(item)
+    ? [BLOCK_MENU_ACTION_LABELS[item], ...SLASH_ACTION_ALIASES[item]]
+    : [INSERTABLE_BLOCK_LABELS[item], ...SLASH_ALIASES[item]];
+}
+
+export function isAction(item: SlashItem): item is BlockMenuAction {
+  return (BLOCK_MENU_ACTIONS as readonly string[]).includes(item);
+}
+
+export function slashItemLabel(item: SlashItem): string {
+  return isAction(item) ? BLOCK_MENU_ACTION_LABELS[item] : INSERTABLE_BLOCK_LABELS[item];
+}
+
 /**
  * 슬래시 메뉴 항목을 거른다 — 한글 이름이나 영문 별칭에 query가 들어 있으면(대소문자 · 띄어쓰기 무시,
- * 한글은 자모 단위) 남긴다. 빈 query면 전부다.
+ * 한글은 자모 단위) 남긴다. 빈 query면 전부다. 블록 종류 뒤에 쓸 수 있는 동작 항목(actions)이 「+」 메뉴와 같은
+ * 순서로 붙는다 — 없는 동작(예: 올릴 곳이 없는 에디터의 이미지)은 빠진다.
  */
-export function filterSlashItems(query: string): InsertableBlockKind[] {
+export function filterSlashItems(
+  query: string,
+  actions: readonly BlockMenuAction[] = [],
+): SlashItem[] {
   const needle = searchKey(query);
-  return KINDS.filter((kind) =>
-    [INSERTABLE_BLOCK_LABELS[kind], ...SLASH_ALIASES[kind]].some((name) =>
-      searchKey(name).includes(needle),
-    ),
+  const available = BLOCK_MENU_ACTIONS.filter((action) => actions.includes(action));
+  return [...KINDS, ...available].filter((item) =>
+    namesOf(item).some((name) => searchKey(name).includes(needle)),
   );
 }

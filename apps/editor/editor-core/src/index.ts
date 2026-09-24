@@ -74,7 +74,7 @@ export type {
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
-export { applySlashItem } from "./commands/slash";
+export { applySlashItem, clearSlashQuery, slashActionGap } from "./commands/slash";
 export {
   wrapInBlockquote,
   wrapInBulletList,
@@ -117,3 +117,37 @@ export {
   SLASH_MENU_PRIORITY,
   STICKER_SPLIT_PRIORITY,
 } from "./keymap-priority.constants";
+export {
+  cancelImageUpload,
+  failImageUpload,
+  finishImageUpload,
+  imageUpload,
+  imageUploadKey,
+  imageUploadsOf,
+  nearestTopGap,
+  startImageUpload,
+  topGapAfterSelection,
+} from "./plugins/image-upload";
+export type {
+  ImageUploadEntry,
+  ImageUploadRender,
+  ImageUploadStatus,
+  UploadedImageAttrs,
+} from "./plugins/image-upload.types";
+export { setImageAlt } from "./commands/image-alt";
+export {
+  ALT_MISSING_ATTR,
+  imageAltReminder,
+  imageAltReminderKey,
+} from "./plugins/image-alt-reminder";
+export {
+  imageFileInput,
+  imageFileInputKey,
+  imageFilesOf,
+  shouldTakePastedFiles,
+} from "./plugins/image-file-input";
+export type {
+  ImageFileInputOptions,
+  ImageFileLike,
+  PastedContent,
+} from "./plugins/image-file-input.types";

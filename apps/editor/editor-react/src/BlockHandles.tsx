@@ -2,9 +2,10 @@ import { useCallback, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Command } from "@tiptap/pm/state";
-import { insertBlockAfter, moveTopBlockTo } from "@blog-editor/editor-core";
+import { blockStart, insertBlockAfter, moveTopBlockTo } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { BlockAddMenu } from "./BlockAddMenu";
+import type { BlockMenuAction, BlockMenuActionHandlers } from "./block-menu-actions";
 import { BlockMenu } from "./BlockMenu";
 import { BlockMoveHandle } from "./BlockMoveHandle";
 import { useHoveredBlock } from "./use-hovered-block";
@@ -12,6 +13,8 @@ import { useHoveredBlock } from "./use-hovered-block";
 export interface BlockHandlesProps {
   editor: Editor;
   frameRef: RefObject<HTMLDivElement | null>;
+  /** 「+」 메뉴의 동작 항목 — 이 블록 뒤 자리(gap)를 넘긴다. 파일 고르기와 올리기는 부르는 쪽이 한다 */
+  actions?: BlockMenuActionHandlers | undefined;
 }
 
 /**
@@ -19,7 +22,7 @@ export interface BlockHandlesProps {
  * 둔다. 옮기기 손잡이를 끌지 않고 누르면 블록 메뉴가 열린다. 문서를 바꾸는 일은 editor-core 커맨드 한 번이고,
  * 여기는 어느 블록 옆에 띄울지만 정한다.
  */
-export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
+export function BlockHandles({ editor, frameRef, actions }: BlockHandlesProps) {
   const [dragging, setDragging] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
@@ -63,9 +66,25 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
     runAndDropHandle(insertBlockAfter(hovered.index, kind));
   };
 
+  const addMenuActions = Object.fromEntries(
+    Object.entries(actions ?? {}).map(([action, handle]) => [
+      action,
+      () => {
+        setAddMenuOpen(false);
+        setHovered(null);
+        handle(blockStart(editor.state.doc, hovered.index + 1));
+      },
+    ]),
+  ) as Partial<Record<BlockMenuAction, () => void>>;
+
   return (
     <div className="block-handles" style={{ top: hovered.top, left: hovered.left }}>
-      <BlockAddMenu open={addMenuOpen} onOpenChange={setAddMenuOpen} onChoose={onChoose} />
+      <BlockAddMenu
+        open={addMenuOpen}
+        onOpenChange={setAddMenuOpen}
+        onChoose={onChoose}
+        actions={addMenuActions}
+      />
       <BlockMoveHandle
         editor={editor}
         frameRef={frameRef}

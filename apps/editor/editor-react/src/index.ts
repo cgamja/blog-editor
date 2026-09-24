@@ -25,3 +25,5 @@ export { useCommandRunner } from "./use-command-runner";
 export { EditorScreen } from "./EditorScreen";
 export type { EditorScreenProps } from "./EditorScreen";
 export type { EditorScreenActions, SideTab } from "./screen-types";
+export { uploadResultFrom } from "./image-insert-model";
+export type { ImageUploader, UploadResult } from "./image-upload-types";

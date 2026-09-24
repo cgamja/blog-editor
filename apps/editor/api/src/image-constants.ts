@@ -1,7 +1,7 @@
-/** 이미지 올리기의 한도와 이름 규칙(ADR-021) — 라우트 · 저장소 · 응답 문장이 같은 값을 본다. */
-
-/** plan 3-8 "1MB 이하" — 브라우저가 1600px WebP로 줄인 결과가 들어갈 크기 */
-export const MAX_IMAGE_BYTES = 1024 * 1024;
+/**
+ * 이미지 올리기의 이름 규칙(ADR-021) — 라우트 · 저장소가 같은 값을 본다. 용량 한도는 브라우저 줄이기와 같은 값이라
+ * content-schema IMAGE_MAX_BYTES를 쓴다.
+ */
 
 export const IMAGE_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
 

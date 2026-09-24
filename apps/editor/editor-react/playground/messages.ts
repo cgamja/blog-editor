@@ -12,4 +12,10 @@ export const devMessages = {
   docSummary: "현재 문서(JSON)",
   cannotSave: (reason: string) => `저장할 수 없는 문서: ${reason}`,
   sampleCaption: "플레이그라운드 예시",
+  loginLabel: "로컬 API 로그인(이미지 올리기용)",
+  username: "아이디",
+  password: "비밀번호",
+  login: "로그인",
+  loggedIn: "로그인했어요",
+  loginFailed: (status: number) => `로그인 실패(${status})`,
 } as const;
