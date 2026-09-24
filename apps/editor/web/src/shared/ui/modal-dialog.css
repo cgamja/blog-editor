@@ -20,7 +20,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: 1.75rem;
+  font-size: 1.75rem; /* token-lint-ignore: 28px — 위 주석, 글자 크기 토큰에 없다 */
 }
 
 .modal-dialog-lede {

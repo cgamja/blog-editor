@@ -18,15 +18,15 @@
   --line-height-dialog-title: 1.35; /* 67:2 제목 */
   --line-height-dialog-body: 1.75; /* 67:2 본문 */
   /* 글자 크기 — tokens.json에 14px가 없다 */
-  --font-size-small: 0.875rem; /* 14px — 68:2 입력 칸 · 띠, 67:2 본문 · 버튼 */
+  --font-size-small: 0.875rem; /* token-lint-ignore: 14px — 68:2 입력 칸 · 띠, 67:2 본문 · 버튼 */
   /* 크기 · 자리 */
-  --postit-width: 11.875rem; /* 68:2 포스트잇 190px */
-  --postit-offset-top: -3.5rem; /* 68:2 종이 위로 14px 걸침(종이 위 여백 64px 안쪽 기준) */
-  --postit-offset-right: -2.25rem; /* 68:2 종이 오른쪽에서 44px(좌우 여백 80px 안쪽 기준) */
-  --mini-button-height: 1.875rem; /* 디자인 결정 4-A 작은 버튼 30px */
-  --dialog-gutter: 2rem; /* 좁은 화면에서 대화상자 둘레 — 디자인에 없음 */
-  --preview-width: 56rem; /* 종이 760px + 대화상자 여백 — 디자인에 없는 화면 */
-  --preview-height: 48rem; /* 1360×860 화면에 들어가는 높이 — 디자인에 없는 화면 */
+  --postit-width: 11.875rem; /* token-lint-ignore: 68:2 포스트잇 190px */
+  --postit-offset-top: -3.5rem; /* token-lint-ignore: 위치 좌표 — 간격 척도와 무관. 68:2 종이 위로 14px 걸침(종이 위 여백 64px 안쪽 기준) */
+  --postit-offset-right: -2.25rem; /* token-lint-ignore: 위치 좌표 — 간격 척도와 무관. 68:2 종이 오른쪽에서 44px(좌우 여백 80px 안쪽 기준) */
+  --mini-button-height: 1.875rem; /* token-lint-ignore: 디자인 결정 4-A 작은 버튼 30px */
+  --dialog-gutter: var(--space-32); /* 좁은 화면에서 대화상자 둘레 — 디자인에 없음 */
+  --preview-width: 56rem; /* token-lint-ignore: 종이 760px + 대화상자 여백 — 디자인에 없는 화면 */
+  --preview-height: 48rem; /* token-lint-ignore: 1360×860 화면에 들어가는 높이 — 디자인에 없는 화면 */
 }
 
 /* ---------- 종이 위 제목 ---------- */
@@ -44,7 +44,7 @@
   background: transparent;
   color: var(--ink);
   font-family: var(--font-display);
-  font-size: 2.25rem; /* 68:2 제목 36px */
+  font-size: 2.25rem; /* token-lint-ignore: 68:2 제목 36px */
   line-height: var(--line-height-title);
   resize: none;
   /* 글 길이만큼 자란다 — 제목이 두 줄이어도 스크롤이 생기지 않는다 */
@@ -71,7 +71,7 @@
   background: var(--postit);
   color: var(--postit-ink);
   font-family: var(--font-hand);
-  font-size: 1.125rem; /* 68:2 포스트잇 18px */
+  font-size: 1.125rem; /* token-lint-ignore: 68:2 포스트잇 18px */
   line-height: var(--line-height-postit);
   transform: rotate(2deg);
   /* 68:2 포스트잇 그림자 */
@@ -144,7 +144,7 @@
 .post-info-heading {
   flex-grow: 1;
   margin: 0;
-  font-size: 1rem; /* 68:2 「글 정보」 16px */
+  font-size: 1rem; /* token-lint-ignore: 68:2 「글 정보」 패널 제목 16px — row-title(66:2 표 행 제목 링크, design/map.md)과 값만 같고 뜻이 다름 */
   font-weight: 600;
 }
 
@@ -254,7 +254,7 @@
 .editor-dialog-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.625rem; /* 67:2 제목 26px */
+  font-size: 1.625rem; /* token-lint-ignore: 67:2 제목 26px */
   font-weight: 400;
   line-height: var(--line-height-dialog-title);
 }

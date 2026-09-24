@@ -32,7 +32,7 @@ body {
   border: var(--border-width) solid var(--line);
   border-radius: 0.875rem;
   padding: var(--space-16);
-  font-size: 0.75rem;
+  font-size: 0.75rem; /* token-lint-ignore: JSON 미리보기 12px — 글자 크기 토큰에 없다 */
   overflow: auto;
   max-height: 85dvh;
 }

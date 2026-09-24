@@ -5,21 +5,23 @@
   "type": "module",
   "packageManager": "pnpm@11.22.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "scripts": {
     "typecheck": "pnpm -r --parallel typecheck && tsc --noEmit -p . && tsc --noEmit -p tsconfig.e2e.json",
     "lint": "eslint .",
+    "lint:css": "node scripts/check-css-tokens.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "docs:check": "bash scripts/check-docs.sh && bash scripts/openspec-context.sh --check",
-    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:e2e && pnpm docs:check",
+    "verify": "pnpm typecheck && pnpm lint && pnpm lint:css && pnpm format:check && pnpm test && pnpm test:e2e && pnpm docs:check",
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@blog-editor/design-tokens": "workspace:*",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
