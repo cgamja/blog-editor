@@ -4,12 +4,12 @@
 
 ## 1. 테스트
 
-- [ ] 1.1 `src/plugins/block-guard.test.ts` — 스펙 시나리오 6개 → verify: `pnpm vitest run apps/editor/editor-core` 빨강 · 실패 원문 보고
+- [x] 1.1 `src/plugins/block-guard.test.ts` — 스펙 시나리오 7개 → verify: `pnpm vitest run apps/editor/editor-core` 빨강 · 실패 원문 보고
 
 ## 2. 구현
 
-- [ ] 2.1 `src/plugins/block-guard.ts` — `blockGuard()` 플러그인(filterTransaction · WeakMap 판정 기억), `index.ts` export → verify: 1.1 초록 + `pnpm test` PASS_TO_PASS
+- [x] 2.1 `src/plugins/block-guard.ts` — `blockGuard()` 플러그인(filterTransaction · WeakMap 판정 기억), `index.ts` export → verify: 1.1 초록 + `pnpm test` PASS_TO_PASS
 
 ## 3. Converge
 
-- [ ] 3.1 시나리오 6개 ↔ 테스트 대조 → verify: `pnpm verify` 초록 출력
+- [x] 3.1 시나리오 7개 ↔ 테스트 대조 → verify: `pnpm verify` 초록 출력
