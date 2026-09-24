@@ -1,30 +1,23 @@
 /*
  * 편집 화면 틀(디자인 02 · 03, Figma 68:2 · 69:2, spec: editor-screen).
- * 여러 번 쓰는 값은 아래 .editor-screen 범위 변수 한 곳에 두고, 원천은 design/tokens.json이다.
- * 토큰에 없는 값은 옆에 디자인 출처(68:2 · 69:2)를 적는다. 색은 토큰 이름을 참조만 한다 — 정의는 화면(web) · 플레이그라운드.
+ * 값은 @blog-editor/design-tokens의 tokens.css 변수(`--space-*` · `--border-width` · `--focus-ring-*` · 크기 · 색)를 쓴다(adr-023).
+ * `:root` 값은 이 CSS를 불러오는 쪽(web · 플레이그라운드)이 tokens.css로 준다. 여러 번 쓰는 쓰임새 이름은 아래
+ * .editor-screen 범위 변수 한 곳에 두고, 척도에 없는 값은 옆에 디자인 출처(68:2 · 69:2)를 적는다.
  */
 
 .editor-screen {
-  /* tokens size · font */
-  --control-height: 2.75rem; /* control-height 44px */
-  --radius-button: 0.625rem; /* radius-button 10px */
-  --font-ui: 0.9375rem; /* ui 15px */
-  --font-caption: 0.8125rem; /* caption 13px */
-  --side-panel-width: 20rem; /* side-panel-width 320px */
-  --article-width: 47.5rem; /* article-width 760px */
-  --article-padding-x: 5rem; /* article-padding-x 80px */
   /* 디자인 68:2 */
-  --header-height: 4.25rem; /* 머리줄 68px */
-  --header-padding-x: 1.75rem; /* 머리줄 좌우 28px */
-  --header-gap: 0.75rem; /* 머리줄 요소 사이 12px */
-  --paper-padding-top: 4rem; /* 종이 위 64px */
+  --header-height: 4.25rem; /* 머리줄 68px — 크기 토큰에 없다 */
+  --header-padding-x: var(--space-28); /* 머리줄 좌우 */
+  --header-gap: var(--space-12); /* 머리줄 요소 사이 */
+  --paper-padding-top: 4rem; /* 종이 위 64px — 간격 척도에 없다 */
   /* 디자인 69:2 */
-  --side-padding-x: 1.5rem; /* 옆 패널 좌우 24px */
-  --side-padding-bottom: 1.5rem; /* 옆 패널 아래 24px */
+  --side-padding-x: var(--space-24); /* 옆 패널 좌우 */
+  --side-padding-bottom: var(--space-24); /* 옆 패널 아래 */
   /* 디자인에 없는 값 — 쓰임새별로 따로 둔다 */
-  --body-gutter-x: 1.5rem; /* 본문 상자 좌우, 좁은 폭에서 0 */
-  --body-scroll-room: 4rem; /* 종이 아래 스크롤 여유 */
-  --tab-gap: 1.25rem; /* 탭 사이 20px */
+  --body-gutter-x: var(--space-24); /* 본문 상자 좌우, 좁은 폭에서 0 */
+  --body-scroll-room: 4rem; /* 종이 아래 스크롤 여유 64px — 간격 척도에 없다 */
+  --tab-gap: var(--space-20); /* 탭 사이 */
 
   display: grid;
   /* 알림 띠 줄은 띠가 없으면 0 높이다 */
@@ -49,23 +42,23 @@
   gap: var(--header-gap);
   padding: 0 var(--header-padding-x);
   background: var(--paper);
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--border-width) solid var(--line);
 }
 
 .editor-screen-back,
 .editor-screen-button {
   display: inline-flex;
   align-items: center;
-  height: var(--control-height);
+  height: var(--control-height, 2.75rem);
   font: inherit;
-  font-size: var(--font-ui);
+  font-size: var(--font-size-ui);
   border-radius: var(--radius-button);
   cursor: pointer;
 }
 
 .editor-screen-back {
-  /* 아이콘과 글자 사이 6px(디자인 68:2) */
-  gap: 0.375rem;
+  /* 아이콘과 글자 사이(디자인 68:2) */
+  gap: var(--space-6);
   padding: 0;
   border: 0;
   background: transparent;
@@ -73,17 +66,17 @@
 }
 
 .editor-screen-button {
-  /* 버튼 좌우 18px(디자인 68:2) */
-  padding: 0 1.125rem;
-  border: 1px solid var(--line);
+  /* 버튼 좌우(디자인 68:2) */
+  padding: 0 var(--space-18);
+  border: var(--border-width) solid var(--line);
   background: var(--surface);
   color: var(--ink);
   font-weight: 500;
 }
 
 .editor-screen-button-primary {
-  /* 발행 버튼 좌우 22px(디자인 68:2) */
-  padding: 0 1.375rem;
+  /* 발행 버튼 좌우(디자인 68:2) */
+  padding: 0 var(--space-22);
   border-color: var(--brand-ink);
   background: var(--brand-ink);
   color: var(--surface);
@@ -107,18 +100,17 @@
 .editor-screen-header :focus-visible,
 .editor-screen-tab:focus-visible,
 .editor-screen-panel:focus-visible {
-  /* tokens focus-ring-width · focus-ring-offset (2px) */
-  outline: 2px solid var(--brand-ink);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .editor-screen-status {
   flex-grow: 1;
   margin: 0;
-  /* 오른쪽 8px(디자인 68:2) */
-  padding-right: 0.5rem;
+  /* 오른쪽(디자인 68:2) */
+  padding-right: var(--space-8);
   text-align: right;
-  font-size: var(--font-caption);
+  font-size: var(--font-size-caption);
   color: var(--ink-soft);
 }
 
@@ -137,8 +129,8 @@
   justify-content: center;
   /* stretch면 종이 높이가 이 상자 높이에 묶여 긴 글이 종이 밖으로 넘친다 — 글 길이만큼 자라게 */
   align-items: flex-start;
-  /* 위 36px(디자인 68:2) */
-  padding: 2.25rem var(--body-gutter-x) var(--body-scroll-room);
+  /* 위(디자인 68:2) */
+  padding: var(--space-36) var(--body-gutter-x) var(--body-scroll-room);
   overflow: auto;
 }
 
@@ -152,10 +144,8 @@
   background: var(--surface);
   /* 위 모서리 4px(디자인 68:2) */
   border-radius: 0.25rem 0.25rem 0 0;
-  /* 디자인 68:2 종이 그림자 — 토큰 없음 */
-  box-shadow:
-    0 18px 40px -18px color-mix(in srgb, var(--ink) 35%, transparent),
-    0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
+  /* 디자인 68:2 종이 그림자 */
+  box-shadow: var(--shadow-paper), var(--shadow-paper-contact);
 }
 
 /* ---------- 옆 패널 ---------- */
@@ -165,26 +155,26 @@
   display: flex;
   flex-direction: column;
   gap: var(--tab-gap);
-  /* 위 20px(디자인 69:2) */
-  padding: 1.25rem var(--side-padding-x) var(--side-padding-bottom);
+  /* 위(디자인 69:2) */
+  padding: var(--space-20) var(--side-padding-x) var(--side-padding-bottom);
   background: var(--paper);
-  border-left: 1px solid var(--line);
+  border-left: var(--border-width) solid var(--line);
   overflow: auto;
 }
 
 .editor-screen-tabs {
   display: flex;
   gap: var(--tab-gap);
-  border-bottom: 1px solid var(--line);
+  border-bottom: var(--border-width) solid var(--line);
 }
 
 .editor-screen-tab {
-  height: var(--control-height);
+  height: var(--control-height, 2.75rem);
   padding: 0;
   border: 0;
   background: transparent;
   font: inherit;
-  font-size: var(--font-ui);
+  font-size: var(--font-size-ui);
   color: var(--ink-soft);
   cursor: pointer;
 }
@@ -203,7 +193,7 @@
 
 .editor-screen-placeholder {
   margin: 0;
-  font-size: var(--font-caption);
+  font-size: var(--font-size-caption);
   /* 안내 문장 줄 간격 1.5(디자인 69:2) */
   line-height: 1.5;
   color: var(--ink-soft);
@@ -229,7 +219,7 @@
 
   .editor-screen-side {
     border-left: 0;
-    border-top: 1px solid var(--line);
+    border-top: var(--border-width) solid var(--line);
   }
 }
 
@@ -242,11 +232,11 @@
 @media (max-width: 40rem) {
   .editor-screen {
     /* 좁은 폭 전용 값 — 디자인에 없어 쓰임새별로 둔다 */
-    --header-padding-x: 0.75rem; /* 머리줄 좌우 12px */
-    --header-gap: 0.375rem; /* 머리줄 요소 사이 6px */
-    --button-padding-x-narrow: 0.75rem; /* 머리줄 버튼 좌우 12px */
-    --article-padding-x: 1.5rem; /* 종이 좌우 24px */
-    --paper-padding-top: 1.5rem; /* 종이 위 24px */
+    --header-padding-x: var(--space-12); /* 머리줄 좌우 */
+    --header-gap: var(--space-6); /* 머리줄 요소 사이 */
+    --button-padding-x-narrow: var(--space-12); /* 머리줄 버튼 좌우 */
+    --article-padding-x: var(--space-24); /* 종이 좌우 */
+    --paper-padding-top: var(--space-24); /* 종이 위 */
     --body-gutter-x: 0;
   }
 
@@ -265,6 +255,7 @@
 
   .editor-screen-back-label {
     position: absolute;
+    /* 화면에서 숨기는 1px 상자(시각적 숨김 관용구) — 선 두께가 아니라 토큰을 쓰지 않는다 */
     width: 1px;
     height: 1px;
     overflow: hidden;

@@ -25,6 +25,7 @@
 packages/content-schema   zod 스키마 · schemaVersion · 마이그레이션 · 정규화 · 픽스처 — ProseMirror를 모른다
 packages/content-convert  md → doc 변환 코어 (가져오기 · MCP 도구가 공유)
 packages/content-render   doc → HTML 순수 렌더러 + 본문용 CSS (미리보기와 공개 API가 같은 것을 쓴다)
+packages/design-tokens    design/tokens.json → tokens.css — web · editor-react가 같은 파일을 쓴다(아무것도 import하지 않는 잎)
 apps/editor/editor-core   TipTap 확장 + ProseMirror 순수 함수 커맨드·플러그인 — React 없음
 apps/editor/editor-react  useEditor 마운트 · NodeView · 툴바 · 꾸미기 패널
 apps/editor/web           화면 (React + Vite SPA + React Router + TanStack Query)

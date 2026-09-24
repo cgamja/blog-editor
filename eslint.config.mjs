@@ -10,7 +10,8 @@ import tseslint from "typescript-eslint";
  * 패키지 의존 방향 (plan 3-3):
  *   content-schema ← content-render · content-convert ← editor-core ← editor-react
  *   api → content-schema · content-convert · content-render
- *   web → editor-react · content-schema
+ *   web → editor-react · content-schema · design-tokens
+ *   editor-react → design-tokens (design-tokens는 아무것도 import하지 않는 잎, adr-023)
  *
  * 라이브러리 경계:
  *   - content-schema는 ProseMirror를 모른다 (저장 형식의 주인은 에디터 라이브러리가 아니다)
@@ -48,6 +49,7 @@ const ALL = [
   "content-schema",
   "content-convert",
   "content-render",
+  "design-tokens",
   "editor-core",
   "editor-react",
   "api",
@@ -100,7 +102,7 @@ const WEB_SRC = "apps/editor/web/src";
 const WEB_PACKAGE = [
   TIPTAP,
   PROSEMIRROR,
-  forbidWorkspace(...except("editor-react", "content-schema")),
+  forbidWorkspace(...except("editor-react", "content-schema", "design-tokens")),
 ];
 const WEB_SHARED_UPWARD = {
   group: withSubpaths("../**/features", "../**/app"),
@@ -184,7 +186,15 @@ export default defineConfig([
   ),
   boundary(
     ["apps/editor/editor-react/**"],
-    [forbidWorkspace(...except("editor-core", "content-render", "content-schema"))],
+    [
+      forbidWorkspace(
+        ...except("editor-core", "content-render", "content-schema", "design-tokens"),
+      ),
+    ],
+  ),
+  boundary(
+    ["packages/design-tokens/**"],
+    [TIPTAP, PROSEMIRROR, REACT, forbidWorkspace(...except())],
   ),
   boundary(
     ["apps/editor/api/**"],

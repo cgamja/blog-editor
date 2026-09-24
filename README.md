@@ -69,6 +69,8 @@ flowchart RL
   api --> render
   web["web (예정)"] --> react
   web --> schema
+  web --> tokens[design-tokens]
+  react --> tokens
 ```
 
 글이 흐르는 길:
@@ -87,6 +89,7 @@ flowchart LR
 | `packages/content-schema`  | zod 스키마 · 정규화 · 마이그레이션 · 픽스처. ProseMirror를 모른다        |
 | `packages/content-convert` | markdown → 문서 변환 코어. 가져오기와 MCP 도구가 같이 쓴다               |
 | `packages/content-render`  | 문서 → HTML 순수 렌더러와 본문 CSS. 미리보기와 공개 API가 같은 것을 쓴다 |
+| `packages/design-tokens`   | design/tokens.json → tokens.css. web과 editor-react가 같은 파일을 쓴다   |
 | `apps/editor/editor-core`  | TipTap 확장과 ProseMirror 순수 커맨드 · 플러그인. React가 없다           |
 | `apps/editor/editor-react` | 에디터 마운트 · 블록 손잡이 · 꾸미기 패널 · 편집 화면 틀                 |
 | `apps/editor/api`          | Hono(REST · `/mcp` · OAuth)와 PostStore                                  |

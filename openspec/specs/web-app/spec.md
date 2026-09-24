@@ -143,7 +143,7 @@ web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401�
 
 ### Requirement: 코드 토큰 파일은 디자인 토큰과 어긋나지 않는다
 
-web은 SHALL `src/styles/tokens.css`를 `design/tokens.json`에서 `tokensToCss`로 만든 결과와 같게 둔다. 색은 `--<이름>`, 글꼴은 `--font-sans` · `--font-display` · `--font-hand`, 크기 토큰 중 px 길이는 rem 값의 `--<이름>`(선 두께 · 포커스 고리는 px), 간격 토큰 `space.<n>`은 rem 값의 `--space-<n>`이다. 잘못된 토큰은 생성을 멈춘다.
+`@blog-editor/design-tokens`는 SHALL `src/tokens.css`를 `design/tokens.json`에서 `tokensToCss`로 만든 결과와 같게 두고, web과 editor-react(플레이그라운드)는 SHALL 이 한 파일을 불러온다 — 토큰 CSS 사본을 따로 두지 않는다(adr-023). 색은 `--<이름>`, 글꼴은 `--font-sans` · `--font-display` · `--font-hand`, 크기 토큰 중 px 길이는 rem 값의 `--<이름>`(선 두께 · 포커스 고리는 px), 간격 토큰 `space.<n>`은 rem 값의 `--space-<n>`이다. 잘못된 토큰은 생성을 멈춘다.
 
 #### Scenario: 색 토큰은 같은 이름의 CSS 변수
 
@@ -173,7 +173,7 @@ web은 SHALL `src/styles/tokens.css`를 `design/tokens.json`에서 `tokensToCss`
 #### Scenario: 저장된 토큰 파일이 지금 디자인 토큰과 같다
 
 - **WHEN** 지금 `design/tokens.json`으로 CSS를 만든다
-- **THEN** 저장된 `src/styles/tokens.css`와 글자 하나 다르지 않다
+- **THEN** `@blog-editor/design-tokens`에 저장된 `src/tokens.css`와 글자 하나 다르지 않다
 
 ### Requirement: 세션 만료를 스스로 알리는 mutation의 401은 세션을 바꾸지 않는다
 

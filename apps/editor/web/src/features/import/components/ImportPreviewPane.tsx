@@ -1,4 +1,4 @@
-import tokensCss from "../../../styles/tokens.css?raw";
+import tokensCss from "@blog-editor/design-tokens/tokens.css?raw";
 import { POST_CSS_PATH } from "../constants";
 import { IMPORT_MESSAGES as M } from "../messages";
 import type { ImportPreview } from "../types";

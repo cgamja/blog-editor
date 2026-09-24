@@ -1,7 +1,7 @@
 # ADR-009. 패키지 경계 — 의존 방향 표를 정본으로, 상대경로로 경계를 넘는 import도 막는다
 
 - 날짜: 2026-09-22
-- 상태: 승인됨 · 일부 대체 → adr-015(테스트 전용 `./testing` 진입점)
+- 상태: 승인됨 · 일부 대체 → adr-015(테스트 전용 `./testing` 진입점) · 엣지 추가 → adr-023(`design-tokens`)
 - 원천: plan 3-3 · CLAUDE.md 구조 · develop-setup 프로브(2026-09-22)
 - 별칭: `adr/0001-domain-structure.md` → 이 파일 (cgamja 플러그인이 `docs/adr/0001-domain-structure.md`를 읽는다)
 
@@ -14,14 +14,15 @@
 - 구조의 단위는 워크스페이스 패키지(`packages/*` · `apps/editor/*`)다. 패키지 사이는 **`@blog-editor/<name>`으로만** import하고, 공개 진입점은 각 패키지의 `index.ts` 하나(named export만).
 - 허용 엣지(린트 · `eslint.boundaries.test.ts`와 1:1 — 셋을 함께 고친다):
 
-| from            | to                                                | 이유                                   |
-| --------------- | ------------------------------------------------- | -------------------------------------- |
-| content-render  | content-schema                                    | 검증된 doc만 렌더한다                  |
-| content-convert | content-schema                                    | md → doc 결과가 스키마를 통과해야      |
-| editor-core     | content-schema · content-convert                  | 붙여넣기 · 가져오기가 변환 코어를 쓴다 |
-| editor-react    | editor-core · content-render · content-schema     | 미리보기가 렌더러를 쓴다               |
-| api             | content-schema · content-convert · content-render | 서버가 에디터 없이 변환 · 렌더         |
-| web             | editor-react · content-schema                     | 화면은 에디터 React 층만 안다          |
+| from            | to                                                            | 이유                                                          |
+| --------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
+| content-render  | content-schema                                                | 검증된 doc만 렌더한다                                         |
+| content-convert | content-schema                                                | md → doc 결과가 스키마를 통과해야                             |
+| editor-core     | content-schema · content-convert                              | 붙여넣기 · 가져오기가 변환 코어를 쓴다                        |
+| editor-react    | editor-core · content-render · content-schema · design-tokens | 미리보기가 렌더러를 쓴다 · 에디터 CSS가 같은 토큰 변수를 쓴다 |
+| api             | content-schema · content-convert · content-render             | 서버가 에디터 없이 변환 · 렌더                                |
+| web             | editor-react · content-schema · design-tokens                 | 화면은 에디터 React 층만 안다                                 |
+| design-tokens   | (없음)                                                        | 토큰 CSS만 가진 잎(adr-023)                                   |
 
 - 라이브러리 경계: content-schema는 ProseMirror를 모른다 · TipTap은 editor-core/editor-react 밖으로 안 나간다 · React는 editor-react/web에만.
 - **상대경로로 다른 패키지에 들어가는 import를 막는다.** `no-restricted-imports` 패턴을 `../` `./`로 앵커해(`../**/content-render/**`, `./**/packages/**` 등) 패키지 이름 import는 건드리지 않는다. `api` · `web`은 흔한 디렉터리 이름이라(`../api/client`는 정상) `<name>/src` 모양만 막는다.

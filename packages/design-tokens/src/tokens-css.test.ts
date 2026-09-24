@@ -68,7 +68,7 @@ describe("tokensToCss — 코드 토큰 파일은 디자인 토큰과 어긋나�
   });
 
   it("WHEN 지금 디자인 토큰으로 CSS를 만든다 THEN 저장된 tokens.css와 같다", () => {
-    const tokens: unknown = JSON.parse(readRepoFile("../../../../../design/tokens.json"));
+    const tokens: unknown = JSON.parse(readRepoFile("../../../design/tokens.json"));
     expect(readRepoFile("./tokens.css")).toBe(tokensToCss(tokens));
   });
 });

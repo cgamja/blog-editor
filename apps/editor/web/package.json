@@ -7,11 +7,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "dev": "vite",
-    "build": "vite build",
-    "tokens": "node scripts/generate-tokens.ts"
+    "build": "vite build"
   },
   "dependencies": {
     "@blog-editor/content-schema": "workspace:*",
+    "@blog-editor/design-tokens": "workspace:*",
     "@blog-editor/editor-react": "workspace:*",
     "@tanstack/react-query": "5.103.2",
     "react": "19.3.0",

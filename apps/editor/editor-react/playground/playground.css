@@ -1,30 +1,7 @@
 /*
  * 개발용 플레이그라운드 — 기본 화면은 편집 화면 틀(EditorScreen, 이슈 #72), `?dev`면 아래에 확인 도구.
- * 토큰 값은 design/tokens.json(캔버스에서 뽑은 값)을 옮겼다. web(M3)이 생기면 그쪽 토큰 파일이 정본이 된다.
+ * 토큰은 web과 같은 @blog-editor/design-tokens의 tokens.css를 main.tsx가 불러온다(adr-023).
  */
-
-:root {
-  --paper: #fbf6ef;
-  --surface: #ffffff;
-  --surface-2: #fbf3ee;
-  --line: #e4d9cf;
-  --paper-deep: #f3eee7;
-  --ink: #3a2b26;
-  --ink-mid: #5f514b;
-  --ink-soft: #7b6b64;
-  --toolbar: #3a2b26;
-  --brand: #b0552f;
-  --brand-ink: #b0552f;
-  --brand-soft: #ffede6;
-  --accent-soft: #eaf5ee;
-  --accent-ink: #2a4f41;
-  --toolbar: #3a2b26;
-  --danger-ink: #a3341f;
-  --postit: #fff1cc;
-  --font-sans: "IBM Plex Sans KR", system-ui, sans-serif;
-  --font-display: "Jua", "IBM Plex Sans KR", sans-serif;
-  --font-hand: "Gaegu", "IBM Plex Sans KR", sans-serif;
-}
 
 body {
   margin: 0;
@@ -38,23 +15,23 @@ body {
 .playground-dev {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid var(--line);
+  gap: var(--space-16);
+  padding: var(--space-24);
+  border-top: var(--border-width) solid var(--line);
   background: var(--paper);
 }
 
 .playground-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 
 .playground-json {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--border-width) solid var(--line);
   border-radius: 0.875rem;
-  padding: 1rem;
+  padding: var(--space-16);
   font-size: 0.75rem;
   overflow: auto;
   max-height: 85dvh;

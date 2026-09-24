@@ -67,7 +67,25 @@ const cases: { dir: string; forbidden: string[]; allowed: string[] }[] = [
   {
     dir: "apps/editor/editor-react",
     forbidden: ["@blog-editor/api", "@blog-editor/web", "../../editor-core/src/commands"],
-    allowed: ["react", "@tiptap/react", "@blog-editor/editor-core", "@blog-editor/content-render"],
+    allowed: [
+      "react",
+      "@tiptap/react",
+      "@blog-editor/editor-core",
+      "@blog-editor/content-render",
+      "@blog-editor/design-tokens/tokens.css",
+    ],
+  },
+  {
+    dir: "packages/design-tokens",
+    forbidden: [
+      "react",
+      "@tiptap/core",
+      "prosemirror-model",
+      "@blog-editor/content-schema",
+      "@blog-editor/web",
+      "../../content-schema/src/index",
+    ],
+    allowed: ["node:fs", "./tokens-css"],
   },
   {
     dir: "apps/editor/api",
@@ -76,6 +94,7 @@ const cases: { dir: string; forbidden: string[]; allowed: string[] }[] = [
       "prosemirror-model",
       "react",
       "@blog-editor/editor-core",
+      "@blog-editor/design-tokens/tokens.css",
       "../../web/src/main",
       "../../../../packages/content-render/src/index",
     ],
@@ -100,6 +119,7 @@ const cases: { dir: string; forbidden: string[]; allowed: string[] }[] = [
       "react",
       "@blog-editor/editor-react",
       "@blog-editor/content-schema",
+      "@blog-editor/design-tokens/tokens.css",
       "../api/client",
       "../../api/handlers",
     ],
