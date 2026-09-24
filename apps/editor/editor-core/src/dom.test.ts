@@ -1,0 +1,122 @@
+import type { DOMOutputSpec, Node } from "@tiptap/pm/model";
+import { fixtures } from "@blog-editor/content-schema";
+import { createEditorSchema, docToNode } from "./index";
+import { el, elementFromSpec, readWith } from "./dom.test.helpers";
+
+const schema = createEditorSchema();
+
+function toDom(node: Node): DOMOutputSpec {
+  const toDOM = node.type.spec.toDOM;
+  if (toDOM === undefined) throw new Error(`${node.type.name}에 toDOM이 없다`);
+  return toDOM(node);
+}
+
+/** 비교용 — null(없음)과 스티커(DOM으로 나가지 않음)를 뺀 attrs. */
+function comparable(attrs: object): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(attrs).filter(([key, value]) => value !== null && key !== "stickers"),
+  );
+}
+
+const sticker = { id: "heart", x: 50, y: 30, size: 20, rotate: 0 };
+
+describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고 다시 읽힌다", () => {
+  it("WHEN 꾸밈 · 스티커 문단, 폭 60 이미지, 꾸밈 없는 문단을 DOM 스펙으로 낸다 THEN 공개 HTML과 같은 래퍼로 나가고 스티커 요소는 없다", () => {
+    const decorated = schema.nodes.paragraph!.create(
+      { font: "jua", motion: "fade-up", stickers: [sticker] },
+      schema.text("가"),
+    );
+    const image = schema.nodes.image!.create({ src: "/images/a.webp", alt: "그림", width: 60 });
+    const plain = schema.nodes.paragraph!.create(null, schema.text("나"));
+
+    expect(toDom(decorated)).toEqual([
+      "div",
+      { class: "post-block", "data-font": "jua", "data-motion": "fade-up" },
+      ["p", 0],
+    ]);
+    expect(toDom(image)).toEqual([
+      "div",
+      { class: "post-block", style: "--w:60" },
+      ["figure", { class: "post-image" }, ["img", { src: "/images/a.webp", alt: "그림" }]],
+    ]);
+    expect(toDom(plain)).toEqual(["p", 0]);
+  });
+
+  it.each(["decorationMax", "allBlocks"] as const)(
+    "WHEN 픽스처 %s의 최상위 블록을 DOM 스펙으로 냈다가 파싱 규칙으로 다시 읽는다 THEN 스티커를 뺀 attrs가 같다",
+    (name) => {
+      const doc = docToNode(schema, fixtures[name].doc);
+      doc.forEach((block) => {
+        const read = readWith(schema, "nodes", block.type.name, elementFromSpec(toDom(block)));
+        expect(read, block.type.name).not.toBe(false);
+        expect(comparable(read as Record<string, unknown>), block.type.name).toEqual(
+          comparable(block.attrs),
+        );
+      });
+    },
+  );
+});
+
+describe("editor-dom: HTML 속성을 검증 없이 attrs로 읽지 않는다", () => {
+  it("WHEN attribute 이름과 같은 HTML 속성이 붙은 문단 · 이미지를 읽는다 THEN 꾸밈 · 스티커 · 원본 크기로 들어오지 않는다", () => {
+    const paragraph = el({
+      tag: "p",
+      attrs: { font: "jua", motion: "pop", stickers: "[]" },
+      children: ["가"],
+    });
+    const image = el({
+      tag: "img",
+      attrs: { src: "/images/a.webp", alt: "", width: "800", motion: "pop" },
+    });
+
+    expect(comparable(readWith(schema, "nodes", "paragraph", paragraph) as object)).toEqual({});
+    expect(comparable(readWith(schema, "nodes", "image", image) as object)).toEqual({
+      src: "/images/a.webp",
+      alt: "",
+    });
+  });
+
+  it("WHEN 허용되지 않는 꾸밈 · 톤 · 언어 값을 읽는다 THEN 없는 것으로 읽히고 콜아웃 규칙은 거부한다", () => {
+    const wrapper = el({
+      tag: "div",
+      attrs: {
+        class: "post-block",
+        "data-font": "comic",
+        "data-motion": "spin",
+        style: "--w:5",
+      },
+      children: [
+        el({
+          tag: "figure",
+          attrs: { class: "post-image" },
+          children: [el({ tag: "img", attrs: { src: "/images/a.webp", alt: "" } })],
+        }),
+      ],
+    });
+    const callout = el({
+      tag: "aside",
+      attrs: { class: "post-callout", "data-tone": "danger" },
+      children: [el({ tag: "p", children: ["가"] })],
+    });
+    const code = el({
+      tag: "pre",
+      children: [el({ tag: "code", attrs: { "data-language": "C Sharp" }, children: ["x"] })],
+    });
+
+    const paragraphWrapper = el({
+      tag: "div",
+      attrs: { class: "post-block", "data-font": "comic", "data-motion": "spin" },
+      children: [el({ tag: "p", children: ["가"] })],
+    });
+
+    expect(comparable(readWith(schema, "nodes", "image", wrapper) as object)).toEqual({
+      src: "/images/a.webp",
+      alt: "",
+    });
+    expect(comparable(readWith(schema, "nodes", "paragraph", paragraphWrapper) as object)).toEqual(
+      {},
+    );
+    expect(readWith(schema, "nodes", "callout", callout)).toBe(false);
+    expect(comparable(readWith(schema, "nodes", "codeBlock", code) as object)).toEqual({});
+  });
+});
