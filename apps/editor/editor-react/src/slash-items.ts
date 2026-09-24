@@ -79,11 +79,15 @@ function jamoOf(char: string): string {
   return `${CHO[cho]}${JUNG[jung]}${JONG[jong]}`;
 }
 
-const searchKey = (text: string) => [...text.toLowerCase()].map(jamoOf).join("");
+/** 이름의 띄어쓰기 · 가운뎃점은 비교에서 뺀다 — query에는 공백이 들어올 수 없어(공백이면 메뉴가 닫힌다) `/큰제목`처럼 친다 */
+const SEPARATORS = /[\s·]/g;
+
+const searchKey = (text: string) =>
+  [...text.toLowerCase().replace(SEPARATORS, "")].map(jamoOf).join("");
 
 /**
- * 슬래시 메뉴 항목을 거른다 — 한글 이름이나 영문 별칭에 query가 들어 있으면(대소문자 무시, 한글은 자모 단위) 남긴다.
- * 빈 query면 전부다.
+ * 슬래시 메뉴 항목을 거른다 — 한글 이름이나 영문 별칭에 query가 들어 있으면(대소문자 · 띄어쓰기 무시,
+ * 한글은 자모 단위) 남긴다. 빈 query면 전부다.
  */
 export function filterSlashItems(query: string): InsertableBlockKind[] {
   const needle = searchKey(query);
