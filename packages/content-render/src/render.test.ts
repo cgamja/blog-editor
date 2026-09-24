@@ -168,6 +168,11 @@ describe("render-safety", () => {
       "class",
       "data-font",
       "data-motion",
+      "data-align",
+      "data-weight",
+      "data-size",
+      "data-color",
+      "data-highlight",
       "data-tone",
       "data-language",
       "style",
@@ -195,15 +200,67 @@ describe("render-decoration", () => {
         attrs: { level: 2, font: "jua", motion: "fade-up" },
         content: [{ type: "text", text: "제목" }],
       },
-      { type: "image", attrs: { src: "/images/a.webp", alt: "a", width: 60 } },
+      { type: "image", attrs: { src: "/images/a.webp", alt: "a", width: 60, align: "right" } },
     );
     const html = renderHtml(file, { imageBaseUrl: BASE });
     expect(html).toContain(
       '<div class="post-block" data-font="jua" data-motion="fade-up"><h2>제목</h2></div>',
     );
     expect(html).toContain(
-      `<div class="post-block" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="a" loading="lazy" decoding="async"></figure></div>`,
+      `<div class="post-block" data-align="right" style="--w:60"><figure class="post-image"><img src="${BASE}/images/a.webp" alt="a" loading="lazy" decoding="async"></figure></div>`,
     );
+  });
+
+  it("WHEN 프리셋 · hex · 두께 · 크기 스타일과 밑줄이 겹치면 THEN span 하나와 u 로 나온다", () => {
+    const file = docOf({
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: "가",
+          marks: [
+            {
+              type: "textStyle",
+              attrs: {
+                font: "pretendard",
+                weight: "heavy",
+                size: "lg",
+                color: "brand",
+                highlight: "#fff1cc",
+              },
+            },
+            { type: "underline" },
+          ],
+        },
+      ],
+    });
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toBe(
+      '<div class="post-body"><p><span class="post-ts" data-font="pretendard" data-weight="heavy" data-size="lg" data-color="brand" data-highlight="custom" style="--ts-highlight:#fff1cc"><u>가</u></span></p></div>',
+    );
+  });
+
+  it("WHEN 검증을 건너뛴 doc의 색에 CSS를 끼우면 THEN 색 속성이 나오지 않는다", () => {
+    const file = {
+      doc: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "가",
+                marks: [{ type: "textStyle", attrs: { color: "#000;background:url(x)" } }],
+              },
+            ],
+          },
+        ],
+      },
+    } as unknown as { doc: Doc };
+    const html = renderHtml(file, { imageBaseUrl: BASE });
+    expect(html).not.toContain("url(");
+    expect(html).not.toContain("--ts-color");
+    expect(html).not.toContain("data-color");
   });
 
   it("WHEN 꾸미기가 없으면 THEN 래퍼가 없다", () => {

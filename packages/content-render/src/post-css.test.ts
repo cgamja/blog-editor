@@ -1,6 +1,15 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
-import { FONTS, MOTIONS, CALLOUT_TONES } from "@blog-editor/content-schema";
+import {
+  ALIGNS,
+  CALLOUT_TONES,
+  FONTS,
+  HIGHLIGHT_COLORS,
+  MOTIONS,
+  TEXT_COLORS,
+  TEXT_SIZES,
+  TEXT_WEIGHTS,
+} from "@blog-editor/content-schema";
 
 const css = readFileSync(new URL("./post.css", import.meta.url), "utf8");
 
@@ -54,6 +63,17 @@ describe("render-css", () => {
       ...CALLOUT_TONES.map((tone) => `[data-tone="${tone}"]`),
     ];
     expect(selectors).toHaveLength(11);
+    for (const selector of selectors) expect(css).toContain(selector);
+  });
+
+  it("WHEN 글자 스타일 · 정렬 값마다 선택자를 만들면 THEN 전부 post.css에 있다", () => {
+    const selectors = [
+      ...TEXT_WEIGHTS.map((weight) => `[data-weight="${weight}"]`),
+      ...TEXT_SIZES.map((size) => `[data-size="${size}"]`),
+      ...[...TEXT_COLORS, "custom"].map((color) => `[data-color="${color}"]`),
+      ...[...HIGHLIGHT_COLORS, "custom"].map((color) => `[data-highlight="${color}"]`),
+      ...ALIGNS.map((align) => `[data-align="${align}"]`),
+    ];
     for (const selector of selectors) expect(css).toContain(selector);
   });
 
