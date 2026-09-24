@@ -1,0 +1,63 @@
+/*
+ * 개발용 플레이그라운드 — 디자인 없음(한글 입력 · 커맨드 확인용, 이슈 #53).
+ * 토큰 값은 design/tokens.json(캔버스에서 뽑은 값)을 옮겼다. web(M3)이 생기면 그쪽 토큰 파일이 정본이 된다.
+ */
+
+:root {
+  --paper: #fbf6ef;
+  --surface: #ffffff;
+  --surface-2: #fbf3ee;
+  --line: #e4d9cf;
+  --ink: #3a2b26;
+  --ink-soft: #7b6b64;
+  --brand: #b0552f;
+  --brand-ink: #b0552f;
+  --brand-soft: #ffede6;
+  --accent-soft: #eaf5ee;
+  --accent-ink: #2a4f41;
+  --font-sans: "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-display: "Jua", "IBM Plex Sans KR", sans-serif;
+  --font-hand: "Gaegu", "IBM Plex Sans KR", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.playground {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.playground-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.playground-page {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  padding: 2rem;
+}
+
+.playground-json {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  padding: 1rem;
+  font-size: 0.75rem;
+  overflow: auto;
+  max-height: 85dvh;
+}
+
+.playground-error {
+  color: var(--brand-ink);
+}
