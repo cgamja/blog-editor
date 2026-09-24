@@ -23,6 +23,13 @@
   --font-sans: "IBM Plex Sans KR", sans-serif;
   --font-display: "Jua", sans-serif;
   --font-hand: "Gaegu", sans-serif;
+  --font-size-h2: 1.5625rem;
+  --font-size-ui: 0.9375rem;
+  --font-size-caption: 0.8125rem;
+  --font-size-page-title: 2.125rem;
+  --font-size-brand: 1.5rem;
+  --font-size-row-title: 1rem;
+  --font-size-note: 1.0625rem;
   --control-height: 2.75rem;
   --dialog-button-height: 3rem;
   --radius-input: 0.5rem;
@@ -53,5 +60,9 @@
   --space-36: 2.25rem;
   --space-40: 2.5rem;
   --space-56: 3.5rem;
+  --shadow-paper: 0 18px 40px -18px color-mix(in srgb, var(--ink) 35%, transparent);
+  --shadow-paper-contact: 0 2px 6px color-mix(in srgb, var(--ink) 8%, transparent);
+  --shadow-note: 0 6px 12px -4px color-mix(in srgb, var(--ink) 25%, transparent);
+  --shadow-note-tag: 0 2px 4px color-mix(in srgb, var(--ink) 12%, transparent);
   --brand: var(--brand-ink);
 }

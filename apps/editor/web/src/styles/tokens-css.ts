@@ -22,6 +22,13 @@ const PX_FIXED_SIZES: ReadonlySet<string> = new Set([
 ]);
 
 const SPACE_PREFIX = "space-";
+const FONT_SIZE_PREFIX = "font-size-";
+const SHADOW_PREFIX = "shadow-";
+
+// 그림자 한 겹: `<x> <y> <blur> [<spread>] <색 토큰 이름> <불투명도>%` — 색은 색 토큰을 섞어 쓴다.
+// 길이는 `0`이나 px만 — CSS는 0이 아닌 단위 없는 길이를 무효로 버린다(그림자가 조용히 사라진다)
+const SHADOW_LAYER = /^((?:(?:0|-?\d+(?:\.\d+)?px)\s+){3,4})([a-z0-9-]+)\s+(\d{1,3})%$/;
+const MAX_PERCENT = 100;
 
 const TOKEN_NAME = /^[a-z0-9-]+$/;
 const COLOR_VALUE = /^(#[0-9a-f]{3,8}|rgba?\([\d.,%\s]+\))$/i;
@@ -36,11 +43,13 @@ type Declaration = readonly [name: string, value: string];
 
 export function tokensToCss(tokens: unknown): string {
   const root = asGroup(tokens);
+  const color = asGroup(root.color);
   const declarations = [
-    ...colorDeclarations(asGroup(root.color)),
+    ...colorDeclarations(color),
     ...fontDeclarations(asGroup(root.font)),
     ...sizeDeclarations(asGroup(root.size)),
     ...spaceDeclarations(asGroup(root.space)),
+    ...shadowDeclarations(asGroup(root.shadow), new Set(Object.keys(color))),
     ...ALIASES,
   ];
   assertUniqueNames(declarations);
@@ -55,10 +64,13 @@ function colorDeclarations(color: Group): Declaration[] {
   });
 }
 
+// font에는 글꼴 이름 · 글자 크기(px) · 설명 값(`17px/1.85` · `34-36px`)이 섞여 있다 — 설명 값은 건너뛴다
 function fontDeclarations(font: Group): Declaration[] {
   return validatedEntries(font).flatMap(([name, value]): Declaration[] => {
     const variable = FONT_FAMILY_VARIABLES[name];
-    return variable === undefined ? [] : [[variable, doubleQuoted(value)]];
+    if (variable !== undefined) return [[variable, doubleQuoted(value)]];
+    const px = pxOf(value);
+    return px === null ? [] : [[`${FONT_SIZE_PREFIX}${name}`, toRem(px)]];
   });
 }
 
@@ -77,6 +89,23 @@ function spaceDeclarations(space: Group): Declaration[] {
     const px = pxOf(value);
     if (px === null) throw new TokenError(`간격 ${name}: px가 아니다 (${value})`);
     return [`${SPACE_PREFIX}${name}`, toRem(px)];
+  });
+}
+
+// 여러 겹은 `, `로 잇는다. 없는 색 이름 · 모양이 다른 겹은 조용히 빼지 않고 멈춘다
+function shadowDeclarations(shadow: Group, colorNames: ReadonlySet<string>): Declaration[] {
+  return validatedEntries(shadow).map(([name, value]) => {
+    const layers = value.split(",").map((layer) => {
+      const match = SHADOW_LAYER.exec(layer.trim());
+      if (match === null) throw new TokenError(`그림자 ${name}: 모양이 다르다 (${layer.trim()})`);
+      const [, offsets = "", colorName = "", percent = ""] = match;
+      if (!colorNames.has(colorName)) {
+        throw new TokenError(`그림자 ${name}: 색 토큰 ${colorName}이 없다`);
+      }
+      if (Number(percent) > MAX_PERCENT) throw new TokenError(`그림자 ${name}: ${percent}%`);
+      return `${offsets}color-mix(in srgb, var(--${colorName}) ${percent}%, transparent)`;
+    });
+    return [`${SHADOW_PREFIX}${name}`, layers.join(", ")];
   });
 }
 

@@ -5,8 +5,8 @@
  */
 
 /*
- * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 · 그림자는 #104 토큰이 생기면 바꾼다
- * (그때까지 규칙 안에 값과 출처 주석). 대화상자는 편집 화면 틀(.editor-screen) 밖에 뜨므로 둘 다에 건다.
+ * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16 · 14px과 대화상자 뒤 그늘은
+ * tokens.json에 아직 없어 규칙 안에 값과 출처 주석으로 둔다(토큰 추가는 후속). 대화상자는 편집 화면 틀(.editor-screen) 밖에 뜨므로 둘 다에 건다.
  */
 .editor-screen,
 .editor-dialog {
@@ -73,8 +73,8 @@
   font-size: 1.125rem; /* 68:2 포스트잇 18px */
   line-height: var(--line-height-postit);
   transform: rotate(2deg);
-  /* 68:2 포스트잇 그림자 — #104 --shadow-* 전까지 값 */
-  box-shadow: 0 0.375rem 0.75rem -0.25rem color-mix(in srgb, var(--ink) 25%, transparent);
+  /* 68:2 포스트잇 그림자 */
+  box-shadow: var(--shadow-note);
 }
 
 /* ---------- 머리줄 저장 문구 ---------- */
@@ -152,7 +152,7 @@
   border-radius: var(--radius-pill);
   background: var(--paper-deep);
   color: var(--ink-mid);
-  font-size: 0.8125rem; /* caption 13px */
+  font-size: var(--font-size-caption);
   font-weight: 500;
 }
 
@@ -163,7 +163,7 @@
 }
 
 .post-info-field label {
-  font-size: 0.8125rem; /* caption 13px */
+  font-size: var(--font-size-caption);
   font-weight: 500;
   color: var(--ink-mid);
 }
@@ -200,7 +200,7 @@
 .post-info-hint,
 .post-info-error {
   margin: 0;
-  font-size: 0.8125rem; /* caption 13px */
+  font-size: var(--font-size-caption);
   line-height: var(--line-height-hint);
   color: var(--ink-soft);
 }

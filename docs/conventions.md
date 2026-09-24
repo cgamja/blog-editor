@@ -7,6 +7,17 @@
 - 왜 상대경로까지 막나: `@blog-editor/<name>`만 막으면 `../../content-render/src/…`로 우회된다. 세팅 프로브에서 실제로 통과됐다(2026-09-22, adr-009). 정본: `eslint.config.mjs` + `eslint.boundaries.test.ts`(막는 모양을 열거한다)
 - 왜 content-schema가 ProseMirror를 모르나: 저장 형식의 주인은 에디터 라이브러리가 아니다(adr-002 · adr-003)
 
+## web 폴더 층
+
+- `apps/editor/web/src` 최상위는 `app` · `features` · `shared` · `styles`뿐이다. 의존은 app → features → shared 한 방향
+  - `features/<이름>/` — 기능 하나(auth · posts …)의 api · hooks · components · **pages** · constants · types. 밖에서는 `features/<이름>`(index.ts)만 import한다
+  - `app/` — 여러 기능을 조합하는 곳: 라우터 · QueryClient · 앱 틀(`app/layout`) · 기능에 속하지 않는 화면(`app/pages`: 404 · 오류 · 자리 표시)
+  - `shared/` — 기능을 모르는 것: 요청 도우미 · 경로 상수 · 공통 문장
+  - 서버 상태 쿼리 훅(`usePosts` 등)은 `features/<이름>/hooks/`에 둔다 — 요청 함수(`api.ts`)와 같은 기능 안
+- 기능끼리는 import하지 않는다(index도). 필요하면 app이 조합하거나 shared로 내린다. eslint web 층 블록이 기능 → app · 다른 기능을 막는다
+- 왜 최상위 `pages/`를 두지 않나: 화면 폴더가 층 밖에 있으면 어느 방향으로 import해도 되는지 규칙이 걸리지 않는다(#96 사용자 결정). 기능의 화면은 그 기능 안에, 조합은 app에 둔다
+- 정본: `eslint.config.mjs`의 web 층 블록 + `eslint.boundaries.test.ts`(막는 모양과 최상위 폴더 목록을 열거한다)
+
 ## 상태 위치
 
 - 문서 상태는 EditorState 하나(adr-006). 복제 store는 "같은 진실 두 곳"을 만든다 — 에이전트 코드베이스의 실증된 실패 2위
