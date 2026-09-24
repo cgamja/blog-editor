@@ -25,10 +25,9 @@ const sameMenu = (a: SlashMenuState | null, b: SlashMenuState | null) =>
   a?.from === b?.from && a?.query === b?.query;
 
 /**
- * `/` 슬래시 메뉴(spec: editor-slash-menu). 에디터 포커스를 둔 채 쓰는 listbox다 — contenteditable에
- * `aria-controls` · `aria-activedescendant`를 달아 고른 항목을 알린다(APG combobox,
- * https://www.w3.org/WAI/ARIA/apg/patterns/combobox/). 방향키 · Enter · Tab은 editor-core 플러그인이
- * 조합 중이 아닐 때만 `editor.storage.slashMenu.onKey`로 넘긴다. 일치 항목이 없으면 닫는다.
+ * `/` 슬래시 메뉴(spec: editor-slash-menu). 편집 영역에 포커스를 둔 채 쓰는 listbox다 — 포커스를 옮기면 조합 중인
+ * 한글 · 선택이 끊기므로, contenteditable에 `aria-controls` · `aria-activedescendant`를 달아 고른 항목을 알린다
+ * (APG combobox, https://www.w3.org/WAI/ARIA/apg/patterns/combobox/).
  */
 export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
   const run = useCommandRunner(editor);
@@ -59,13 +58,7 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
     current && optionId(current),
   );
 
-  useLayoutEffect(() => {
-    if (current !== undefined) {
-      listRef.current
-        ?.querySelector(`[id="${optionId(current)}"]`)
-        ?.scrollIntoView({ block: "nearest" });
-    }
-  });
+  useScrollActiveOptionIntoView(listRef, current && optionId(current));
 
   if (query === null || position === null || items.length === 0) return null;
 
@@ -144,4 +137,18 @@ function useComboboxAttributes(
       dom.removeAttribute("aria-activedescendant");
     };
   }, [editor, listId, activeId]);
+}
+
+/**
+ * 고른 항목이 목록 밖이면 보이게 스크롤한다 — 가장 가까운 만큼만.
+ * https://developer.mozilla.org/docs/Web/API/Element/scrollIntoView
+ */
+function useScrollActiveOptionIntoView(
+  listRef: RefObject<HTMLDivElement | null>,
+  activeId: string | undefined,
+): void {
+  useLayoutEffect(() => {
+    if (activeId === undefined) return;
+    listRef.current?.querySelector(`[id="${activeId}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [listRef, activeId]);
 }

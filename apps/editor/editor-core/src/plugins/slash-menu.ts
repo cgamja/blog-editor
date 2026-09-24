@@ -121,7 +121,7 @@ export const closeSlashMenu: Command = (state, dispatch) => {
 };
 
 /** 고른 항목을 적용한 트랜잭션 표시 — 메뉴를 닫고, 앞뒤로 되돌리기 묶음을 끊는다 */
-export const markSlashItemApplied = (tr: Transaction): Transaction =>
+export const markSlashItemAppliedAndCloseHistory = (tr: Transaction): Transaction =>
   closeHistory(tr.setMeta(slashMenuKey, APPLIED));
 
 declare module "@tiptap/core" {

@@ -3,12 +3,12 @@
  * - Command: https://prosemirror.net/docs/ref/#state.Command
  * - Transform.delete: https://prosemirror.net/docs/ref/#transform.Transform.delete
  * - EditorState.create(문서 · 선택만 다른 상태): https://prosemirror.net/docs/ref/#state.EditorState^create
- * - 되돌리기 묶음 나누기: plugins/slash-menu.ts markSlashItemApplied
+ * - 되돌리기 묶음 나누기: plugins/slash-menu.ts markSlashItemAppliedAndCloseHistory
  */
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { Transform } from "@tiptap/pm/transform";
-import { markSlashItemApplied, slashMenuKey } from "../plugins/slash-menu";
+import { markSlashItemAppliedAndCloseHistory, slashMenuKey } from "../plugins/slash-menu";
 import { TURN_INTO_TARGETS } from "./block-controls.constants";
 import type { TurnIntoKind } from "./block-controls.constants";
 import { turnTopBlockInto } from "./block-controls";
@@ -36,7 +36,7 @@ function followUp(kind: InsertableBlockKind, index: number, empty: boolean): Com
  * 슬래시 메뉴에서 고른 `kind`를 적용한다. 한 트랜잭션으로 `/`부터 커서까지를 지우고 이어서 블록을 바꾸거나 넣는다.
  * 이어지는 커맨드는 지운 뒤 상태에서 먼저 물어 보고(거절이면 아무것도 지우지 않는다), 받아들이면 step을 옮겨 담는다
  * (appendCommandStepsAndSelection — TipTap 체인의 공유 트랜잭션). 되돌리기 묶음은 앞뒤로 끊는다
- * (markSlashItemApplied) — 거르기 글자 입력이나 적용 직후 친 글자와 한 묶음이 되지 않게.
+ * (markSlashItemAppliedAndCloseHistory) — 거르기 글자 입력이나 적용 직후 친 글자와 한 묶음이 되지 않게.
  * 메뉴가 닫혀 있거나 목록 밖 kind면 false.
  */
 export function applySlashItem(kind: InsertableBlockKind): Command {
@@ -57,7 +57,7 @@ export function applySlashItem(kind: InsertableBlockKind): Command {
     if (next !== null && !next(derived)) return false;
     if (dispatch === undefined) return true;
 
-    const tr = markSlashItemApplied(state.tr.delete(from, to));
+    const tr = markSlashItemAppliedAndCloseHistory(state.tr.delete(from, to));
     tr.setSelection(TextSelection.create(tr.doc, from));
     if (next !== null) appendCommandStepsAndSelection(tr, derived, next);
     dispatch(tr.scrollIntoView());
