@@ -1,6 +1,6 @@
 import { STICKER_IDS, STICKER_RANGES } from "@blog-editor/content-schema";
 import { STICKER_HIDDEN_ATTR, wrapRotation } from "@blog-editor/editor-core";
-import type { StickerCorner, StickerId } from "./sticker-types";
+import type { LayerPoint, LayerSize, StickerCorner, StickerId } from "./sticker-types";
 
 /**
  * 스티커 오버레이의 순수 계산 — spec: editor-sticker-layer, sticker-drag design.md.
@@ -47,10 +47,8 @@ export const cornerDistance = (width: number, height: number): number =>
   Math.hypot(width / 2, height / 2);
 
 /** 점이 에디터 틀(레이어 기준 0,0 ~ 폭,높이) 안인가 — 밖에 놓으면 끌기 취소다 */
-export const isInsideLayer = (
-  { x, y }: { x: number; y: number },
-  { width, height }: { width: number; height: number },
-): boolean => x >= 0 && y >= 0 && x <= width && y <= height;
+export const isInsideLayer = ({ x, y }: LayerPoint, { width, height }: LayerSize): boolean =>
+  x >= 0 && y >= 0 && x <= width && y <= height;
 
 /**
  * 조절점은 스티커와 함께 돈다. 모서리 각도에 회전을 더한 화면 각도를 180°로 접어,

@@ -30,8 +30,8 @@ function movePreview(
 ): Preview {
   const { box, start, current } = gesture;
   const point = { x: box.centerX + current.x - start.x, y: box.centerY + current.y - start.y };
-  const inside = isInsideLayer(current, layerSize);
-  const target = inside ? placeStickerNear(blocks, point, box.width) : null;
+  const isInsideFrame = isInsideLayer(current, layerSize);
+  const target = isInsideFrame ? placeStickerNear(blocks, point, box.width) : null;
   const block = target === null ? undefined : blocks.find(({ pos }) => pos === target.blockPos);
   if (target === null || block === undefined) {
     return {
@@ -40,7 +40,7 @@ function movePreview(
       width: box.width,
       rotate: box.rotate,
       command: null,
-      cancelled: !inside,
+      cancelled: !isInsideFrame,
       next: null,
     };
   }
