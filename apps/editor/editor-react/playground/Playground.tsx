@@ -16,6 +16,7 @@ import {
   readDoc,
   useBlogEditor,
   useCommandRunner,
+  type StickerId,
 } from "../src";
 
 type FixtureName = keyof typeof fixtures;
@@ -23,6 +24,9 @@ const FIXTURE_NAMES = Object.keys(fixtures) as FixtureName[];
 
 // 스크린샷 넣기 버튼이 쓰는 저장 경로 모양의 예시 — 실제 파일은 없다(이미지 업로드는 M5)
 const SAMPLE_SCREENSHOT = { src: "/images/playground-sample.webp", caption: "플레이그라운드 예시" };
+
+/** 스티커 원본은 vite publicDir(content-render assets)가 `/stickers/{id}.png`로 서빙한다 — 에디터 DOM과 같은 주소 */
+const stickerSrc = (id: StickerId) => `/stickers/${id}.png`;
 
 type DocView = { ok: true; text: string } | { ok: false; text: string };
 
@@ -81,8 +85,7 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
           </pre>
         </details>
       </section>
-      {/* 스티커 그림 파일은 #58이 레포에 둔다 — 머지되면 stickerSrc를 잇는다 */}
-      <DecorationPanel editor={editor} />
+      <DecorationPanel editor={editor} stickerSrc={stickerSrc} />
     </div>
   );
 }
