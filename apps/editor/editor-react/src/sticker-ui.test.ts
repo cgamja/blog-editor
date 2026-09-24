@@ -78,9 +78,9 @@ describe("editor-sticker-layer: 끌기는 Esc나 에디터 틀 밖에 놓아 취
 });
 
 describe("editor-sticker-layer: 크기 · 회전 제스처는 손 위치를 허용 범위의 값으로 바꾼다", () => {
-  it("WHEN 크기 20에서 거리 40→80, 30에서 10→100, 10에서 50→1 THEN 40, 50, 5다", () => {
+  it("WHEN 크기 20에서 거리 40→80, 30에서 10→100, 10에서 50→1 THEN 40, 50, 2다", () => {
     expect([resizedSize(20, 40, 80), resizedSize(30, 10, 100), resizedSize(10, 50, 1)]).toEqual([
-      40, 50, 5,
+      40, 50, 2,
     ]);
   });
 

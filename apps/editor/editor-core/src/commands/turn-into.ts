@@ -30,7 +30,7 @@ function topTextblock(state: EditorState): { pos: number; node: Node } | null {
 }
 
 /** 새 타입이 자리를 가진 꾸미기만 옛 노드에서 들고 간다 — 폰트는 코드 블록으로 가면 떨어진다(design.md 4) */
-function carriedAttrs(old: Node, type: NodeType, attrs: Attrs | null): Attrs {
+export function carriedAttrs(old: Node, type: NodeType, attrs: Attrs | null): Attrs {
   const spec = type.spec.attrs ?? {};
   const carried = TEXTBLOCK_DECORATION_KEYS.filter(
     (key) => Object.hasOwn(spec, key) && old.attrs[key] != null,

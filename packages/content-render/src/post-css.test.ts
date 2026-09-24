@@ -1,6 +1,15 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
-import { FONTS, MOTIONS, CALLOUT_TONES } from "@blog-editor/content-schema";
+import {
+  ALIGNS,
+  CALLOUT_TONES,
+  FONTS,
+  HIGHLIGHT_COLORS,
+  MOTIONS,
+  TEXT_COLORS,
+  TEXT_SIZES,
+  TEXT_WEIGHTS,
+} from "@blog-editor/content-schema";
 
 const css = readFileSync(new URL("./post.css", import.meta.url), "utf8");
 
@@ -55,6 +64,21 @@ describe("render-css", () => {
     ];
     expect(selectors).toHaveLength(11);
     for (const selector of selectors) expect(css).toContain(selector);
+  });
+
+  it("WHEN 글자 스타일 · 정렬 값마다 선택자를 만들면 THEN 전부 post.css에 있다", () => {
+    const selectors = [
+      ...TEXT_WEIGHTS.map((weight) => `[data-weight="${weight}"]`),
+      ...TEXT_SIZES.map((size) => `[data-size="${size}"]`),
+      ...[...TEXT_COLORS, "custom"].map((color) => `[data-color="${color}"]`),
+      ...[...HIGHLIGHT_COLORS, "custom"].map((color) => `[data-highlight="${color}"]`),
+      ...ALIGNS.map((align) => `[data-align="${align}"]`),
+    ];
+    for (const selector of selectors) expect(css).toContain(selector);
+  });
+
+  it("WHEN 두께를 지정한 글자 스타일 규칙을 찾으면 THEN 브라우저가 가짜 굵기를 만들지 않게 막는다", () => {
+    expect(css).toMatch(/\.post-ts\[data-weight\]\s*\{[^}]*font-synthesis-weight:\s*none/);
   });
 
   it("WHEN 움직임 규칙의 위치를 찾으면 THEN 전부 reduced-motion 과 @supports 두 조건 안에만 있다", () => {

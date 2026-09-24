@@ -1,7 +1,6 @@
 import { naturalSizeOf, normalize } from "@blog-editor/content-schema";
 import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
-import { APP_FRAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
-import { CALLOUT_CONTAINER_NAME } from "./tokens";
+import { APP_FRAME, CALLOUT_CONTAINER_NAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
 import { serializeInline, serializePlainLabel } from "./serialize-inline";
 
 /**

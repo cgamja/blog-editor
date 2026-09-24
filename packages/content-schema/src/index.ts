@@ -17,6 +17,16 @@ export {
   STICKER_IDS,
   CALLOUT_TONES,
   HEADING_LEVELS,
+  ALIGNS,
+  TEXT_WEIGHTS,
+  WEIGHTS_BY_FONT,
+  TEXT_SIZES,
+  TEXT_COLORS,
+  HIGHLIGHT_COLORS,
+  HEX_COLOR_PATTERN,
+  textStyleAttrsSchema,
+  DEFAULT_TEXT_FONT,
+  weightFitsFont,
   MAX_STICKERS_PER_DOC,
   WIDTH_RANGE,
   NATURAL_SIZE_RANGE,
@@ -26,7 +36,16 @@ export {
   CAPTION_MAX_LENGTH,
   CODE_LANGUAGE_PATTERN,
 } from "./doc";
-export type { Doc, Block, Mark, TextNode, DecorationAttrs, Sticker, NaturalSizeAttrs } from "./doc";
+export type {
+  Doc,
+  Block,
+  Mark,
+  TextNode,
+  DecorationAttrs,
+  TextStyleAttrs,
+  Sticker,
+  NaturalSizeAttrs,
+} from "./doc";
 
 export { createPostFileSchema, migrations, migrate, MigrationError } from "./post-file";
 export type { PostFile } from "./post-file";

@@ -142,7 +142,7 @@ describe("markdown-format", () => {
   const outOfDefinitionCases: Array<[string, string]> = [
     ["h1", "# 제목"],
     ["표", ["| a | b |", "|---|---|"].join("\n")],
-    ["취소선", "~~취소~~"],
+    ["밑줄 HTML", "<u>밑줄</u>"],
     ["div", "<div>글자</div>"],
     ["br", "글자<br>"],
     ["절대 URL 이미지", "![x](https://a.com/x.png)"],
@@ -163,6 +163,87 @@ describe("markdown-format", () => {
       expect(result.messages.length).toBeGreaterThan(0);
     },
   );
+
+  it("WHEN 괄호 span과 취소선을 변환하면 THEN textStyle · underline · strike 마크가 된다", () => {
+    const result = convertMarkdown(
+      "[강조]{color=brand size=lg underline} 그리고 ~~취소~~ [**굵게**]{highlight=#FFF1CC}",
+    );
+    expectOk(result);
+    const [block] = result.doc.content;
+    if (block?.type !== "paragraph") throw new Error("paragraph가 아니다");
+    expect(block.content).toEqual([
+      {
+        type: "text",
+        text: "강조",
+        marks: [
+          { type: "textStyle", attrs: { color: "brand", size: "lg" } },
+          { type: "underline" },
+        ],
+      },
+      { type: "text", text: " 그리고 " },
+      { type: "text", text: "취소", marks: [{ type: "strike" }] },
+      { type: "text", text: " " },
+      {
+        type: "text",
+        text: "굵게",
+        marks: [{ type: "bold" }, { type: "textStyle", attrs: { highlight: "#fff1cc" } }],
+      },
+    ]);
+  });
+
+  it.each([
+    ["정의 밖 색", "[가]{color=pink}", "pink"],
+    ["정의 밖 키", "[가]{colour=brand}", "colour"],
+    ["글꼴에 없는 두께", "[가]{font=jua weight=light}", "light"],
+    ["같은 키 두 번", "[가]{size=lg size=xl}", "size=lg size=xl"],
+  ])(
+    "WHEN span 값 오류(%s)를 변환하면 THEN 줄 번호와 받은 값이 담긴 메시지로 실패한다",
+    (_name, markdown, received) => {
+      const result = convertMarkdown(`첫 문단\n\n${markdown}`);
+      expectFail(result);
+      expect(result.messages).toHaveLength(1);
+      expect(result.messages[0]).toContain("(3줄)");
+      expect(result.messages[0]).toContain(`받음: "${received}"`);
+    },
+  );
+
+  it.each([
+    ["링크 안 span", "[[글자]{color=brand}](/x)"],
+    ["span 안 링크", "[[글자](/x)]{color=brand}"],
+  ])(
+    "WHEN %s을 변환하면 THEN 링크가 사라지지 않고 링크와 글자 스타일이 함께 붙는다",
+    (_name, markdown) => {
+      const result = convertMarkdown(markdown);
+      expectOk(result);
+      const [block] = result.doc.content;
+      if (block?.type !== "paragraph") throw new Error("paragraph가 아니다");
+      expect(block.content).toEqual([
+        {
+          type: "text",
+          text: "글자",
+          marks: [
+            { type: "link", attrs: { href: "/x" } },
+            { type: "textStyle", attrs: { color: "brand" } },
+          ],
+        },
+      ]);
+    },
+  );
+
+  it("WHEN 괄호 span 안에 괄호 span을 겹쳐 쓰면 THEN 바깥 스타일을 조용히 잃지 않고 고치는 법과 함께 실패한다", () => {
+    const result = convertMarkdown("첫 문단\n\n[[가]{color=brand} 나]{size=lg}");
+    expectFail(result);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages[0]).toContain("(3줄)");
+    expect(result.messages[0]).toContain("겹쳐 쓸 수 없");
+  });
+
+  it("WHEN 이미지 대체 글자에 괄호 span 모양을 쓰면 THEN 해석하지 않고 원문 그대로 alt가 된다", () => {
+    const result = convertMarkdown("![[강조]{color=brand} 화면](/images/a.webp)");
+    expectOk(result);
+    const [image] = result.doc.content;
+    expect(image?.type === "image" && image.attrs.alt).toBe("[강조]{color=brand} 화면");
+  });
 
   it("WHEN 가이드의 example 블록을 이어 붙여 변환하면 THEN 통과하고 docSchema를 통과한다", () => {
     const result = convertMarkdown(readGuideExamples());
@@ -255,6 +336,28 @@ describe("markdown-directive", () => {
     expect(paragraph.attrs).toBeUndefined();
     expect(heading.content?.[0]?.text ?? "").not.toContain("{");
     expect(paragraph.content?.[0]?.text ?? "").not.toContain("{");
+  });
+
+  it("WHEN 문단 앞 {align=center} · 이미지 앞 {frame=app align=right}를 쓰면 THEN 정렬이 attrs가 된다", () => {
+    const markdown = [
+      "{align=center}",
+      "가운데 문단",
+      "",
+      "{frame=app align=right}",
+      "![화면](/images/a.webp)",
+    ].join("\n");
+    const result = convertMarkdown(markdown);
+    expectOk(result);
+    const [paragraph, screenshot] = result.doc.content;
+    expect(paragraph?.type === "paragraph" && paragraph.attrs?.align).toBe("center");
+    expect(screenshot?.type === "appScreenshot" && screenshot.attrs.align).toBe("right");
+  });
+
+  it.each([
+    ["목록 앞 정렬", ["{align=center}", "- 목록"].join("\n")],
+    ["정의 밖 정렬", ["{align=justify}", "문단"].join("\n")],
+  ])("WHEN 자리 밖 · 정의 밖 정렬(%s)을 변환하면 THEN 거부된다", (_name, markdown) => {
+    expectFail(convertMarkdown(markdown));
   });
 
   it("WHEN 지시어 다음 줄이 ---이면 THEN 제목이 아니라 구분선이 된다", () => {

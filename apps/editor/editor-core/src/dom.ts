@@ -1,10 +1,16 @@
 import type { Attrs, DOMOutputSpec, TagParseRule } from "@tiptap/pm/model";
-import { ALT_MAX_LENGTH } from "@blog-editor/content-schema";
+import { ALT_MAX_LENGTH, textStyleAttrsSchema } from "@blog-editor/content-schema";
 import {
+  alignOrNull,
   fontOrNull,
+  hexColorOrNull,
+  highlightPresetOrNull,
   imagePathOrNull,
   motionOrNull,
   naturalSizeFrom,
+  textColorPresetOrNull,
+  textSizeOrNull,
+  textWeightOrNull,
   widthOrNull,
 } from "./closed-values";
 
@@ -20,7 +26,7 @@ export interface ElementLike {
   querySelector(selector: string): ElementLike | null;
 }
 
-export type DecorationKey = "font" | "motion" | "width";
+export type DecorationKey = "font" | "motion" | "width" | "align";
 
 // content-render의 꾸밈 래퍼와 같은 어휘(spec: render-decoration) — 에디터 DOM도 같은 구조로 낸다
 export const WRAPPER_CLASS = "post-block";
@@ -38,6 +44,7 @@ function decorationDomAttrs(attrs: Attrs): Record<string, string> {
   const dom: Record<string, string> = {};
   if (attrs.font != null) dom["data-font"] = String(attrs.font);
   if (attrs.motion != null) dom["data-motion"] = String(attrs.motion);
+  if (attrs.align != null) dom["data-align"] = String(attrs.align);
   if (attrs.width != null) dom.style = `--w:${String(attrs.width)}`;
   return dom;
 }
@@ -81,6 +88,7 @@ function readDecoration(wrapper: ElementLike, keys: readonly DecorationKey[]): A
     font: fontOrNull(wrapper.getAttribute("data-font")),
     motion: motionOrNull(wrapper.getAttribute("data-motion")),
     width: widthOrNull(WIDTH_STYLE.exec(wrapper.getAttribute("style") ?? "")?.[1]),
+    align: alignOrNull(wrapper.getAttribute("data-align")),
   };
   return Object.fromEntries(
     keys.map((key) => [key, read[key]]).filter(([, value]) => value !== null),
@@ -129,6 +137,71 @@ export function imageAttrsOf(img: ElementLike | null, alt: string | null): Attrs
     ...(size === null ? {} : { naturalWidth: size.width, naturalHeight: size.height }),
   };
 }
+
+// content-render의 글자 스타일 어휘와 같다(spec: render-decoration, ADR-020)
+const TEXT_STYLE_CLASS = "post-ts";
+const CUSTOM_COLOR = "custom";
+const COLOR_VARS = { color: "--ts-color", highlight: "--ts-highlight" } as const;
+type ColorKey = keyof typeof COLOR_VARS;
+
+/** 프리셋은 data 값, hex는 `custom` + CSS 변수 — 공개 HTML과 같은 모양. */
+function colorDom(key: ColorKey, value: unknown): { data?: string; cssVar?: string } {
+  if (value == null) return {};
+  const hex = hexColorOrNull(value);
+  return hex === null
+    ? { data: String(value) }
+    : { data: CUSTOM_COLOR, cssVar: `${COLOR_VARS[key]}:${hex}` };
+}
+
+/** textStyle 마크 → `span.post-ts` — 속성 순서는 렌더와 같다(data-font → weight → size → color → highlight → style). */
+export function textStyleSpec(attrs: Attrs): DOMOutputSpec {
+  const color = colorDom("color", attrs.color);
+  const highlight = colorDom("highlight", attrs.highlight);
+  const dom: Record<string, string> = { class: TEXT_STYLE_CLASS };
+  if (attrs.font != null) dom["data-font"] = String(attrs.font);
+  if (attrs.weight != null) dom["data-weight"] = String(attrs.weight);
+  if (attrs.size != null) dom["data-size"] = String(attrs.size);
+  if (color.data !== undefined) dom["data-color"] = color.data;
+  if (highlight.data !== undefined) dom["data-highlight"] = highlight.data;
+  const cssVars = [color.cssVar, highlight.cssVar].filter((value) => value !== undefined);
+  if (cssVars.length > 0) dom.style = cssVars.join(";");
+  return ["span", dom, 0];
+}
+
+function cssVarOf(style: string, name: string): string | undefined {
+  return new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*([^;]*)`).exec(style)?.[1]?.trim();
+}
+
+function readColor(
+  element: ElementLike,
+  key: ColorKey,
+  presetOrNull: (value: unknown) => string | null,
+): string | null {
+  const data = element.getAttribute(`data-${key}`);
+  if (data === CUSTOM_COLOR) {
+    return hexColorOrNull(cssVarOf(element.getAttribute("style") ?? "", COLOR_VARS[key]));
+  }
+  return presetOrNull(data);
+}
+
+/**
+ * `span.post-ts` → textStyle attrs. 값은 하나씩 닫힌 집합으로 거르고, 글꼴에 없는 두께는 뺀다.
+ * 남는 것이 없으면 false(마크가 되지 않는다) — 남의 사이트 `style="color:…"`는 이 규칙에 닿지 않는다.
+ */
+export function readTextStyle(element: ElementLike): Attrs | false {
+  const read: Record<string, string | null> = {
+    font: fontOrNull(element.getAttribute("data-font")),
+    weight: textWeightOrNull(element.getAttribute("data-weight")),
+    size: textSizeOrNull(element.getAttribute("data-size")),
+    color: readColor(element, "color", textColorPresetOrNull),
+    highlight: readColor(element, "highlight", highlightPresetOrNull),
+  };
+  const style = Object.fromEntries(Object.entries(read).filter(([, value]) => value !== null));
+  if (!textStyleAttrsSchema.safeParse(style).success) delete style.weight;
+  return Object.keys(style).length > 0 ? style : false;
+}
+
+export const TEXT_STYLE_TAG = `span.${TEXT_STYLE_CLASS}`;
 
 /** 이미지 · 스크린샷 `img` 스펙 — 원본 크기는 짝일 때만 width · height로(content-render와 같다). */
 export function imgSpec(attrs: Attrs, alt: string): DOMOutputSpec {

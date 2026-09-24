@@ -44,6 +44,12 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   strong: { mark: "bold" },
   code_inline: { mark: "code", noCloseToken: true },
   link: { mark: "link", getAttrs: (tok) => ({ href: tok.attrGet("href") ?? "" }) },
+  s: { mark: "strike" },
+  underline: { mark: "underline" },
+  // 값은 span.ts가 검사해 meta에 둔 것 — check.ts가 문제를 전부 거부한 뒤라 유효한 값만 온다
+  textstyle: { mark: "textStyle", getAttrs: (tok) => (tok.meta as { attrs: object }).attrs },
+  // span_open/close는 검사용 틀이라 마크를 만들지 않는다
+  span: { ignore: true },
 });
 
 interface RawNode {
@@ -71,6 +77,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
         caption: alt,
         ...(directive.motion !== undefined ? { motion: directive.motion } : {}),
         ...(directive.width !== undefined ? { width: directive.width } : {}),
+        ...(directive.align !== undefined ? { align: directive.align } : {}),
         ...naturalSizeAttrs(directive),
       },
     };
@@ -82,6 +89,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
       alt,
       ...(directive?.motion !== undefined ? { motion: directive.motion } : {}),
       ...(directive?.width !== undefined ? { width: directive.width } : {}),
+      ...(directive?.align !== undefined ? { align: directive.align } : {}),
       ...naturalSizeAttrs(directive),
     },
   };
@@ -97,6 +105,7 @@ function withDecoration(block: RawNode, directive: ResolvedDirective | undefined
   const attrs: Record<string, unknown> = { ...(block.attrs ?? {}) };
   if (directive.font !== undefined) attrs.font = directive.font;
   if (directive.motion !== undefined) attrs.motion = directive.motion;
+  if (directive.align !== undefined) attrs.align = directive.align;
   return { ...block, attrs };
 }
 

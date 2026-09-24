@@ -51,5 +51,17 @@ export const pmSchema = new Schema({
     italic: {},
     code: {},
     link: { attrs: { href: { default: "" } }, inclusive: false },
+    strike: {},
+    underline: {},
+    // 값이 없는 속성은 toJSON에 undefined로 남고 normalize가 지운다(codeBlock.language와 같다)
+    textStyle: {
+      attrs: {
+        font: { default: undefined },
+        weight: { default: undefined },
+        size: { default: undefined },
+        color: { default: undefined },
+        highlight: { default: undefined },
+      },
+    },
   },
 });
