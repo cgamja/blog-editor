@@ -64,7 +64,7 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
       ref={toolbarRef}
       className="width-toolbar"
       role="toolbar"
-      aria-label="사진 폭"
+      aria-label={decorationMessages.widthToolbarLabel}
       style={anchor === null ? { visibility: "hidden" } : { left: anchor.left, top: anchor.top }}
       // 누르는 동안 편집 영역의 노드 선택이 풀리지 않게 한다
       onMouseDown={(event) => event.preventDefault()}

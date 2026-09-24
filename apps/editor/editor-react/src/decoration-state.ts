@@ -28,6 +28,10 @@ import type { Availability, DecorationPanelState, Font, Motion } from "./decorat
  * (#57이 can과 실행의 답이 같다고 고정), 막힌 이유는 editor-core의 같은 판정(canHoldDecoration)으로 적는다.
  */
 
+/** 막혔으면 이유 문장, 쓸 수 있으면 null — 컴포넌트가 disabled · aria-describedby에 쓴다 */
+export const reasonOf = (availability: Availability): string | null =>
+  availability.enabled ? null : availability.reason;
+
 const ENABLED: Availability = { enabled: true };
 const blocked = (reason: string): Availability => ({ enabled: false, reason });
 
