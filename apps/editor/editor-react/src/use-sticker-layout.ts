@@ -3,13 +3,15 @@ import type { RefObject } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import type { BlockRect } from "@blog-editor/editor-core";
 import { measureBlocks, measureStickers } from "./sticker-measure";
-import type { LayerPoint, StickerBox } from "./sticker-types";
+import type { LayerPoint, LayerSize, StickerBox } from "./sticker-types";
 
 export interface StickerLayout {
   layerRef: RefObject<HTMLDivElement | null>;
   boxes: StickerBox[];
   /** 지금 블록 사각형(레이어 기준) — 놓을 자리를 셀 때마다 새로 잰다 */
   measureBlocksNow: () => BlockRect[];
+  /** 지금 레이어(= 에디터 틀) 크기 */
+  measureLayerNow: () => LayerSize;
   toLayerPoint: (clientX: number, clientY: number) => LayerPoint;
 }
 
@@ -61,6 +63,10 @@ export function useStickerLayout(editor: Editor): StickerLayout {
     () => measureBlocks(editor.view, origin()),
     [editor, origin],
   );
+  const measureLayerNow = useCallback(() => {
+    const rect = layerRef.current?.getBoundingClientRect();
+    return { width: rect?.width ?? 0, height: rect?.height ?? 0 };
+  }, []);
   const toLayerPoint = useCallback(
     (clientX: number, clientY: number) => {
       const { left, top } = origin();
@@ -69,5 +75,5 @@ export function useStickerLayout(editor: Editor): StickerLayout {
     [origin],
   );
 
-  return { layerRef, boxes, measureBlocksNow, toLayerPoint };
+  return { layerRef, boxes, measureBlocksNow, measureLayerNow, toLayerPoint };
 }

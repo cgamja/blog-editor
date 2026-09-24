@@ -6,10 +6,9 @@ import {
   updateSticker,
 } from "@blog-editor/editor-core";
 import type { BlockRect } from "@blog-editor/editor-core";
-import { anchorLabel, STICKER_MESSAGES } from "./sticker-messages";
 import { refOf } from "./sticker-ref";
-import type { Gesture, LayerPoint, Preview, StickerBox } from "./sticker-types";
-import { resizedSize, rotatedAngle } from "./sticker-ui";
+import type { Gesture, LayerPoint, LayerSize, Preview, StickerBox } from "./sticker-types";
+import { cornerDistance, isInsideLayer, resizedSize, rotatedAngle } from "./sticker-ui";
 
 /**
  * 끄는 동안의 유령과 놓았을 때 실행할 커맨드 — sticker-drag design.md 1 · 3.
@@ -19,11 +18,20 @@ import { resizedSize, rotatedAngle } from "./sticker-ui";
 
 const PERCENT = 100;
 
-/** 옮기기 — 놓을 자리는 placeStickerNear가 정하고, 유령은 스냅된 자리에 그린다 */
-function movePreview(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Preview {
+/**
+ * 옮기기 — 놓을 자리는 placeStickerNear가 정하고, 유령은 스냅된 자리에 그린다.
+ * 스냅에 거리 한도가 없으므로 포인터가 에디터 틀 밖이면 놓지 않고 취소한다(sticker-polish-review).
+ */
+function movePreview(
+  editor: Editor,
+  gesture: Gesture,
+  blocks: BlockRect[],
+  layerSize: LayerSize,
+): Preview {
   const { box, start, current } = gesture;
   const point = { x: box.centerX + current.x - start.x, y: box.centerY + current.y - start.y };
-  const target = placeStickerNear(blocks, point, box.width);
+  const isInsideFrame = isInsideLayer(current, layerSize);
+  const target = isInsideFrame ? placeStickerNear(blocks, point, box.width) : null;
   const block = target === null ? undefined : blocks.find(({ pos }) => pos === target.blockPos);
   if (target === null || block === undefined) {
     return {
@@ -31,8 +39,8 @@ function movePreview(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Pre
       centerY: point.y,
       width: box.width,
       rotate: box.rotate,
-      label: STICKER_MESSAGES.cannotPlace,
       command: null,
+      cancelled: !isInsideFrame,
       next: null,
     };
   }
@@ -42,8 +50,8 @@ function movePreview(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Pre
     centerY: block.top + (target.y / PERCENT) * block.height,
     width: (target.size / PERCENT) * block.width,
     rotate: box.rotate,
-    label: anchorLabel(doc.nodeAt(target.blockPos)?.type.name ?? ""),
     command: moveStickerToBlock(box.blockPos, box.index, target),
+    cancelled: false,
     // 다른 블록이면 그 블록 끝에 붙는다(moveStickerToBlock)
     next:
       target.blockPos === box.blockPos
@@ -60,13 +68,21 @@ const angleFrom = (box: StickerBox, { x, y }: LayerPoint) =>
 const unmoved = (box: StickerBox) => ({
   centerX: box.centerX,
   centerY: box.centerY,
-  label: anchorLabel(box.nodeName),
+  cancelled: false,
   next: refOf(box),
 });
 
-/** 크기 — 중심에서 조절점까지 거리 비율만큼 */
+/**
+ * 크기 — 기준은 모서리까지 거리이고, 손이 중심에서 멀어진 만큼 더한다. 누른 점까지 거리를 기준으로 쓰면
+ * 중심 가까이를 눌렀을 때 폭주하고, 모서리까지 거리만 쓰면 조절점 칸 안쪽을 눌렀을 때 첫 움직임에 튄다.
+ */
 function resizePreview({ box, start, current }: Gesture): Preview {
-  const size = resizedSize(box.size, distanceFrom(box, start), distanceFrom(box, current));
+  const base = cornerDistance(box.width, box.height);
+  const size = resizedSize(
+    box.size,
+    base,
+    base + distanceFrom(box, current) - distanceFrom(box, start),
+  );
   return {
     ...unmoved(box),
     width: (size / PERCENT) * box.blockWidth,
@@ -86,7 +102,12 @@ function rotatePreview({ box, start, current }: Gesture): Preview {
   };
 }
 
-export function previewOf(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Preview {
-  if (gesture.kind === "move") return movePreview(editor, gesture, blocks);
+export function previewOf(
+  editor: Editor,
+  gesture: Gesture,
+  blocks: BlockRect[],
+  layerSize: LayerSize,
+): Preview {
+  if (gesture.kind === "move") return movePreview(editor, gesture, blocks, layerSize);
   return gesture.kind === "resize" ? resizePreview(gesture) : rotatePreview(gesture);
 }

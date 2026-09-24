@@ -1,5 +1,5 @@
 /*
- * 개발용 플레이그라운드 — 디자인 없음(한글 입력 · 커맨드 확인용, 이슈 #53).
+ * 개발용 플레이그라운드 — 기본 화면은 편집 화면 틀(EditorScreen, 이슈 #72), `?dev`면 아래에 확인 도구.
  * 토큰 값은 design/tokens.json(캔버스에서 뽑은 값)을 옮겼다. web(M3)이 생기면 그쪽 토큰 파일이 정본이 된다.
  */
 
@@ -27,34 +27,26 @@
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: var(--paper-deep);
   color: var(--ink);
   font-family: var(--font-sans);
 }
 
-.playground {
-  display: grid;
-  /* 디자인 69:2: 본문 옆 오른쪽 패널 320px(tokens side-panel-width) */
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 1.5rem;
+/* ---------- ?dev 확인 도구 ---------- */
+
+.playground-dev {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1.5rem;
-  align-items: start;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
 }
 
 .playground-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.playground-page {
-  /* 폭 도구줄(WidthToolbar)이 이 상자 기준으로 위치를 잰다 */
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 0.875rem;
-  padding: 2rem 2rem 2rem 5rem;
 }
 
 .playground-json {
@@ -69,16 +61,4 @@ body {
 
 .playground-error {
   color: var(--brand-ink);
-}
-
-.playground-doc {
-  margin-top: 1rem;
-}
-
-.decoration-panel {
-  /* 본문을 내려도 패널이 보이게 */
-  position: sticky;
-  top: 1.5rem;
-  border: 1px solid var(--line);
-  border-radius: 0.875rem;
 }

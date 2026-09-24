@@ -26,23 +26,6 @@ export const stickerAriaLabel = (id: string): string => `${stickerName(id)} 스�
 
 export const removeStickerLabel = (id: string): string => `${stickerName(id)} 스티커 지우기`;
 
-/** 스티커가 붙은 블록을 부르는 말 — 에디터 스키마의 노드 이름 기준 */
-const BLOCK_NAMES: Record<string, string> = {
-  paragraph: "문단",
-  heading: "제목",
-  bulletList: "목록",
-  orderedList: "목록",
-  blockquote: "인용",
-  codeBlock: "코드",
-  horizontalRule: "구분선",
-  image: "사진",
-  appScreenshot: "스크린샷",
-  callout: "콜아웃",
-};
-
-export const anchorLabel = (nodeName: string): string =>
-  `${BLOCK_NAMES[nodeName] ?? "블록"}에 붙어 있어요`;
-
 export const STICKER_MESSAGES = {
   keyboardHint:
     "방향키로 옮기고, 더하기 · 빼기로 크기를, 대괄호로 회전을 바꿔요. Delete로 지우고 Esc로 나가요.",
