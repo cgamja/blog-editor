@@ -59,11 +59,11 @@ const COOKIE_ATTRIBUTES: CookieOptions = {
   path: "/",
 };
 
-function readCredentials(body: unknown): { email: string; password: string } | null {
+function readCredentials(body: unknown): { username: string; password: string } | null {
   if (typeof body !== "object" || body === null) return null;
-  const { email, password } = body as Record<string, unknown>;
-  if (typeof email !== "string" || typeof password !== "string") return null;
-  return { email, password };
+  const { username, password } = body as Record<string, unknown>;
+  if (typeof username !== "string" || typeof password !== "string") return null;
+  return { username, password };
 }
 
 /** accountId에 점이 있어도 되도록 마지막 점으로 자른다 */
@@ -119,7 +119,7 @@ export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
     const credentials = readCredentials(body);
     if (credentials === null) return c.json({ message: LOGIN_BODY_MESSAGE }, 400);
 
-    const account = await accounts.findByEmail(credentials.email);
+    const account = await accounts.findByUsername(credentials.username);
     // 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8)
     const matched = await verifyPassword(
       credentials.password,
