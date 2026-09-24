@@ -17,7 +17,7 @@ export async function previewImport(
   return (await response.json()) as ImportPreview;
 }
 
-/** 새 글로만 저장한다(`If-None-Match: *`) — 그 주소에 글이 있으면 409(ApiError) */
+/** 새 글로만 저장한다(`If-None-Match: *`) — 그 주소에 글이 있으면 409(ConflictError) */
 export async function createDraft(slug: string, file: PostFile): Promise<void> {
   await apiRequest(`${POSTS_PATH}/${encodeURIComponent(slug)}`, {
     method: "PUT",

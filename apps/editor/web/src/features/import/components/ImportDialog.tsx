@@ -1,23 +1,19 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { generatePath, useNavigate } from "react-router";
 import { ApiError, ConflictError } from "../../../shared/api/errors";
 import { ROUTES } from "../../../shared/routes/constants";
 import { ModalDialog } from "../../../shared/ui/ModalDialog";
 import { createDraft } from "../api";
-import { BLOG_DATE_FORMAT, MARKDOWN_FILE_ACCEPT } from "../constants";
+import { BLOG_DATE_FORMAT } from "../constants";
 import { useImportPreview } from "../hooks/use-import-preview";
-import {
-  buildImportedPost,
-  canCreateDraft,
-  markdownFileProblem,
-  suggestSlug,
-} from "../import-draft";
+import { buildImportedPost, canCreateDraft, suggestSlug } from "../import-draft";
 import { IMPORT_MESSAGES as M } from "../messages";
-import type { DraftInput, EditableDraftField, ImportPreview, MarkdownFileProblem } from "../types";
+import type { DraftInput, EditableDraftField, ImportPreview } from "../types";
 import { ImportMetaFields } from "./ImportMetaFields";
 import { ImportPreviewPane } from "./ImportPreviewPane";
+import { ImportSourcePane } from "./ImportSourcePane";
 import "../import.css";
 
 interface ImportDialogProps {
@@ -27,10 +23,6 @@ interface ImportDialogProps {
   categories: readonly string[];
 }
 
-const FILE_PROBLEM_MESSAGE: Record<MarkdownFileProblem, string> = {
-  extension: M.fileExtension,
-  size: M.fileSize,
-};
 const NO_SUGGESTION = { title: "", description: "" };
 
 function apiErrorMessage(error: Error | null, fallback: string): string | null {
@@ -44,7 +36,7 @@ function createErrorMessage(error: Error | null): string | null {
   return apiErrorMessage(error, M.createFailed);
 }
 
-/** 마지막으로 성공한 변환의 제안 — 입력 중(자리 표시 결과)에도 칸이 비지 않게 한다 */
+/** 가장 최근 결과(입력 중이면 앞 입력의 자리 표시 결과)의 제안 — 변환이 막히면 빈 제안이다 */
 function suggestionOf(result: ImportPreview | undefined) {
   return result?.ok === true ? result.suggested : NO_SUGGESTION;
 }
@@ -68,12 +60,9 @@ function ImportDialogBody({
   onClose,
   categories,
 }: Omit<ImportDialogProps, "open"> & { titleId: string }) {
-  const sourceId = useId();
-  const fileId = useId();
   const errorId = useId();
   const navigate = useNavigate();
   const [markdown, setMarkdown] = useState("");
-  const [fileError, setFileError] = useState<string | null>(null);
   // 사람이 고친 칸만 기억한다 — 고치지 않은 칸은 미리보기 제안을 따라간다
   const [edited, setEdited] = useState<Partial<Record<EditableDraftField, string>>>({});
   const preview = useImportPreview(markdown);
@@ -102,23 +91,6 @@ function ImportDialogBody({
     },
   });
 
-  const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (file === undefined) return;
-    const problem = markdownFileProblem(file);
-    if (problem !== null) {
-      setFileError(FILE_PROBLEM_MESSAGE[problem]);
-      return;
-    }
-    try {
-      setMarkdown(await file.text());
-      setFileError(null);
-    } catch {
-      setFileError(M.fileFailed);
-    }
-  };
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isReady) create.mutate();
@@ -139,39 +111,7 @@ function ImportDialogBody({
       </header>
 
       <div className="import-panes">
-        <div className="import-pane">
-          <div className="import-pane-head">
-            <label htmlFor={sourceId} className="modal-dialog-label">
-              {M.source}
-            </label>
-          </div>
-          {/* 원문이 첫 포커스 자리다 — showModal()은 대화상자 안 첫 포커스 가능 요소로 옮긴다 */}
-          <textarea
-            id={sourceId}
-            className="import-source"
-            value={markdown}
-            placeholder={M.sourcePlaceholder}
-            onChange={(event) => setMarkdown(event.target.value)}
-            spellCheck={false}
-          />
-          <div className="import-file-row">
-            <input
-              id={fileId}
-              className="import-file-input"
-              type="file"
-              accept={MARKDOWN_FILE_ACCEPT}
-              onChange={handleFile}
-            />
-            <label htmlFor={fileId} className="import-file">
-              {M.pickFile}
-            </label>
-          </div>
-          {fileError !== null ? (
-            <p className="import-error" role="alert">
-              {fileError}
-            </p>
-          ) : null}
-        </div>
+        <ImportSourcePane markdown={markdown} onChange={setMarkdown} />
         <ImportPreviewPane
           hasText={preview.hasText}
           isPending={preview.isFetching || !preview.isSettled}

@@ -60,7 +60,6 @@ function ConnectContent({ settings }: { settings: WorkspaceSettings }) {
   );
 }
 
-/** 설정 읽기 상태 하나만 그린다 — 불러오는 중 · 실패 · 본문 */
 function ConnectBody() {
   const settings = useWorkspaceSettings();
   if (settings.isPending) return <p className="connect-hint">{M.loading}</p>;

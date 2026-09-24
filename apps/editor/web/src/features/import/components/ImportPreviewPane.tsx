@@ -33,7 +33,6 @@ function Blocked({ messages }: { messages: readonly string[] }) {
   );
 }
 
-/** 지금 상태 하나만 그린다 — 빈 원문 · 요청 실패 · 기다림 · 미리보기 · 막는 메시지 */
 function PreviewBody({ hasText, errorMessage, result }: Omit<ImportPreviewPaneProps, "isPending">) {
   if (!hasText) return <p className="import-placeholder">{M.previewEmpty}</p>;
   if (errorMessage !== null) {
