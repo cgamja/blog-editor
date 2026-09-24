@@ -3,7 +3,7 @@
   "commands": { "verify": "pnpm verify", "typecheck": "pnpm typecheck", "test": "pnpm test", "lint": "pnpm lint", "dev": null, "perf": null },
   "tests": {
     "patterns": ["**/*.test.*", "e2e/**"],
-    "layers": { "unit": "pnpm test", "browser": null, "e2e": null }
+    "layers": { "unit": "pnpm test", "browser": "pnpm test:e2e", "e2e": null }
   },
   "contract": null,
   "mock": { "boundary": null },

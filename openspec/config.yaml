@@ -11,7 +11,7 @@ context: |
     - editor-react → editor-core · content-render · content-schema
     - api → content-schema · content-convert · content-render
     - web → editor-react · content-schema
-  Tests: patterns ['**/*.test.*', 'e2e/**']; layers {"unit": "pnpm test", "browser": null, "e2e": null}. Test file edits are gated
+  Tests: patterns ['**/*.test.*', 'e2e/**']; layers {"unit": "pnpm test", "browser": "pnpm test:e2e", "e2e": null}. Test file edits are gated
   (red gate) and go in test: commits before feat: commits.
   Verify (definition of done): `pnpm verify`. Platform: web-desktop.
   Design source: figma:cEy6fybMcrnEfokCc8XVQB (node index: design/map.md). Not yet declared (null): contract, mock.boundary, a11y.runtime.

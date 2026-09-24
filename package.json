@@ -8,14 +8,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "pnpm -r --parallel typecheck",
+    "typecheck": "pnpm -r --parallel typecheck && tsc --noEmit -p . && tsc --noEmit -p tsconfig.e2e.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "docs:check": "bash scripts/check-docs.sh && bash scripts/openspec-context.sh --check",
-    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm docs:check",
+    "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:e2e && pnpm docs:check",
     "prepare": "lefthook install"
   },
   "devDependencies": {
@@ -23,6 +24,7 @@
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^10.0.1",
     "@fission-ai/openspec": "^1.13.1",
+    "@playwright/test": "1.63.0",
     "@types/node": "^26.6.2",
     "eslint": "^10.11.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
