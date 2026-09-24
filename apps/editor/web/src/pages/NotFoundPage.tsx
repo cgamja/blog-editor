@@ -1,6 +1,6 @@
 import { Link } from "react-router";
-import { MESSAGES } from "../messages";
-import { ROUTES } from "../routes";
+import { MESSAGES } from "../shared/messages";
+import { ROUTES } from "../shared/routes/constants";
 
 export function NotFoundPage() {
   return (

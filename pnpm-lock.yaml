@@ -130,12 +130,6 @@ importers:
 
   apps/editor/web:
     dependencies:
-      '@blog-editor/content-schema':
-        specifier: workspace:*
-        version: link:../../../packages/content-schema
-      '@blog-editor/editor-react':
-        specifier: workspace:*
-        version: link:../editor-react
       '@tanstack/react-query':
         specifier: 5.103.2
         version: 5.103.2(react@19.3.0)

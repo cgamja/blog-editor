@@ -18,7 +18,6 @@ export const MESSAGES = {
     settings: "설정",
   },
   placeholder: "이 화면은 M3 이슈에서 채워요.",
-  logout: "로그아웃",
   notFound: {
     title: "없는 화면이에요",
     home: "글 목록으로",

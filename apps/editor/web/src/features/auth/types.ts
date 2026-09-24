@@ -1,2 +1,2 @@
-// 스텁 — fix(review)에서 이 자리로 옮긴다
-export type { SessionState } from "../../auth/session";
+/** 로그인 여부 — `error`는 세션 확인 응답이 로그인 여부를 말해 주지 않을 때(403 · 5xx) */
+export type SessionState = "authenticated" | "anonymous" | "error";

@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router";
-import { MESSAGES } from "../messages";
-import { loginPathFor } from "../routes";
-import { useSession } from "./use-session";
+import { MESSAGES } from "../../../shared/messages";
+import { loginPathFor } from "../../../shared/routes/next-path";
+import { useSession } from "../hooks/use-session";
 
 /**
  * 로그인이 필요한 화면을 감싸는 레이아웃(design.md 3). 인증을 loader에 섞지 않아 화면 이슈들이 loader를 자유롭게 쓴다.

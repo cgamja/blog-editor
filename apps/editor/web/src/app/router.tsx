@@ -1,11 +1,10 @@
 import { createBrowserRouter } from "react-router";
-import { RequireSession } from "./auth/RequireSession";
-import { MESSAGES } from "./messages";
-import { LoginPage } from "./pages/LoginPage";
-import { NotFoundPage } from "./pages/NotFoundPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
-import { RouteErrorPage } from "./pages/RouteErrorPage";
-import { ROUTES } from "./routes";
+import { LoginPage, RequireSession } from "../features/auth";
+import { NotFoundPage } from "../pages/NotFoundPage";
+import { PlaceholderPage } from "../pages/PlaceholderPage";
+import { RouteErrorPage } from "../pages/RouteErrorPage";
+import { MESSAGES } from "../shared/messages";
+import { ROUTES } from "../shared/routes/constants";
 
 /**
  * 데이터 라우터(https://reactrouter.com/start/data/installation) — 오류 경계를 라우트 한 곳에 둔다.
