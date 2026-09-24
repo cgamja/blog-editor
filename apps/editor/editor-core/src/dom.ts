@@ -4,7 +4,7 @@ import {
   fontOrNull,
   imagePathOrNull,
   motionOrNull,
-  naturalSizeOrNull,
+  naturalSizeFrom,
   widthOrNull,
 } from "./closed-values";
 
@@ -88,21 +88,23 @@ export function wrapperRule(options: {
 export function imageAttrsOf(img: ElementLike | null, alt: string | null): Attrs | false {
   const src = imagePathOrNull(img?.getAttribute("src"));
   if (img === null || src === null) return false;
-  const size = naturalSizeOrNull(img.getAttribute("width"), img.getAttribute("height"));
-  return { src, ...(alt === null ? {} : { alt: alt.slice(0, ALT_MAX_LENGTH) }), ...(size ?? {}) };
+  const size = naturalSizeFrom(img.getAttribute("width"), img.getAttribute("height"));
+  return {
+    src,
+    ...(alt === null ? {} : { alt: alt.slice(0, ALT_MAX_LENGTH) }),
+    ...(size === null ? {} : { naturalWidth: size.width, naturalHeight: size.height }),
+  };
 }
 
 /** 이미지 · 스크린샷 `img` 스펙 — 원본 크기는 짝일 때만 width · height로(content-render와 같다). */
 export function imgSpec(attrs: Attrs, alt: string): DOMOutputSpec {
-  const size = naturalSizeOrNull(attrs.naturalWidth, attrs.naturalHeight);
+  const size = naturalSizeFrom(attrs.naturalWidth, attrs.naturalHeight);
   return [
     "img",
     {
       src: String(attrs.src),
       alt,
-      ...(size === null
-        ? {}
-        : { width: String(size.naturalWidth), height: String(size.naturalHeight) }),
+      ...(size === null ? {} : { width: String(size.width), height: String(size.height) }),
     },
   ];
 }

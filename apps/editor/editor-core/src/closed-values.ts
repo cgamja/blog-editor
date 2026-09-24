@@ -8,6 +8,7 @@ import {
   WIDTH_RANGE,
   hrefSchema,
   imagePathSchema,
+  naturalSizeOf,
 } from "@blog-editor/content-schema";
 
 /**
@@ -41,15 +42,13 @@ function intInRange(value: unknown, range: { min: number; max: number }): number
 
 export const widthOrNull = (value: unknown): number | null => intInRange(value, WIDTH_RANGE);
 
-/** 원본 크기는 짝이다 — 한쪽이라도 어기면 둘 다 없는 것(content-schema naturalSizeOf와 같은 규칙). */
-export function naturalSizeOrNull(
-  width: unknown,
-  height: unknown,
-): { naturalWidth: number; naturalHeight: number } | null {
-  const naturalWidth = intInRange(width, NATURAL_SIZE_RANGE);
-  const naturalHeight = intInRange(height, NATURAL_SIZE_RANGE);
-  return naturalWidth === null || naturalHeight === null ? null : { naturalWidth, naturalHeight };
-}
+/** 원본 크기 한 변 — 범위 밖 · 숫자 아님은 없는 것. ProseMirror의 null도 여기서 한 번만 undefined로 바꾼다. */
+const naturalSide = (value: unknown): number | undefined =>
+  intInRange(value, NATURAL_SIZE_RANGE) ?? undefined;
+
+/** 원본 크기 — 여기서는 범위와 문자열만 보고, 짝 판정은 content-schema naturalSizeOf 한 곳에 맡긴다. */
+export const naturalSizeFrom = (width: unknown, height: unknown) =>
+  naturalSizeOf({ naturalWidth: naturalSide(width), naturalHeight: naturalSide(height) });
 
 export const languageOrNull = (value: unknown): string | null =>
   typeof value === "string" && CODE_LANGUAGE_PATTERN.test(value) ? value : null;

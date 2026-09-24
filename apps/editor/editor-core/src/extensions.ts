@@ -3,6 +3,7 @@ import type { Attribute } from "@tiptap/core";
 import type { Schema } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
+import { pasteNormalizer } from "./plugins/paste-normalizer";
 import { headingLevelOf, hrefOrNull, languageOrNull, toneOrNull } from "./closed-values";
 import { hasClass, imageAttrsOf, imgSpec, withDecoration, wrapperRule } from "./dom";
 import type { ElementLike } from "./dom";
@@ -323,6 +324,12 @@ const StickerSafeSplit = Extension.create({
   }),
 });
 
+/** 붙여넣기 정규화를 에디터 기본으로 켠다(spec: editor-paste). */
+const PasteNormalizer = Extension.create({
+  name: "pasteNormalizer",
+  addProseMirrorPlugins: () => [pasteNormalizer()],
+});
+
 export const editorExtensions = [
   Doc,
   Text,
@@ -342,6 +349,7 @@ export const editorExtensions = [
   Italic,
   Link,
   StickerSafeSplit,
+  PasteNormalizer,
 ];
 
 export function createEditorSchema(): Schema {
