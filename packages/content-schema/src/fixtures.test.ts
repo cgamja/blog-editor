@@ -2,7 +2,7 @@ import { fixtures, invalidFixtures } from "./fixtures";
 import { createPostFileSchema, migrate, MigrationError } from "./post-file";
 import { normalize } from "./normalize";
 import { SCHEMA_VERSION } from "./meta";
-import { BLOG_CATEGORIES } from "./test-helpers";
+import { BLOG_CATEGORIES } from "./categories.test.helpers";
 
 /**
  * document-fixtures spec은 #### Scenario 3개 — 1:1로 옮긴다.
