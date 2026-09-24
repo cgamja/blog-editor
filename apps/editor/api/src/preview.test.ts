@@ -2,7 +2,7 @@ import { fixtures, normalize } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
 import { createApp } from "./app";
 import { createMemoryPostStore } from "./memory-store";
-import { MAX_PREVIEW_BODY_BYTES } from "./post-preview";
+import { MAX_PREVIEW_BODY_BYTES } from "./input-limits";
 import { testAuthOptions, withSession } from "./test-app.test.helpers";
 
 const IMAGE_BASE_URL = "https://simsimeestudio.com";
