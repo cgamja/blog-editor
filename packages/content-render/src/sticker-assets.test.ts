@@ -3,16 +3,23 @@ import { readFileSync } from "node:fs";
 import { STICKER_IDS } from "@blog-editor/content-schema";
 import { STICKER_SIZES } from "./stickers";
 
-// PNG는 8바이트 서명 뒤 첫 청크가 IHDR이고, 그 데이터의 앞 8바이트가 너비 · 높이(빅엔디언 u32)다.
+// PNG는 8바이트 서명 뒤 첫 청크가 IHDR이다. 청크는 길이(4) · 타입(4) · 데이터 순이고,
+// IHDR 데이터의 앞 8바이트가 너비 · 높이(빅엔디언 u32)다. https://www.w3.org/TR/png-3/#5Chunk-layout ·
 // https://www.w3.org/TR/png-3/#11IHDR
 const PNG_SIGNATURE = "89504e470d0a1a0a";
-const IHDR_WIDTH_OFFSET = 16;
-const IHDR_HEIGHT_OFFSET = 20;
+const PNG_SIGNATURE_LENGTH = 8;
+const CHUNK_LENGTH_SIZE = 4;
+const CHUNK_TYPE_OFFSET = PNG_SIGNATURE_LENGTH + CHUNK_LENGTH_SIZE;
+const CHUNK_TYPE_SIZE = 4;
+const IHDR_WIDTH_OFFSET = CHUNK_TYPE_OFFSET + CHUNK_TYPE_SIZE;
+const IHDR_WIDTH_SIZE = 4;
+const IHDR_HEIGHT_OFFSET = IHDR_WIDTH_OFFSET + IHDR_WIDTH_SIZE;
 
 function pngSize(bytes: Buffer): { width: number; height: number } {
-  if (bytes.subarray(0, 8).toString("hex") !== PNG_SIGNATURE) throw new Error("PNG가 아니다");
-  if (bytes.subarray(12, 16).toString("latin1") !== "IHDR")
-    throw new Error("첫 청크가 IHDR가 아니다");
+  if (bytes.subarray(0, PNG_SIGNATURE_LENGTH).toString("hex") !== PNG_SIGNATURE)
+    throw new Error("PNG가 아니다");
+  const chunkType = bytes.subarray(CHUNK_TYPE_OFFSET, CHUNK_TYPE_OFFSET + CHUNK_TYPE_SIZE);
+  if (chunkType.toString("latin1") !== "IHDR") throw new Error("첫 청크가 IHDR가 아니다");
   return {
     width: bytes.readUInt32BE(IHDR_WIDTH_OFFSET),
     height: bytes.readUInt32BE(IHDR_HEIGHT_OFFSET),

@@ -25,6 +25,11 @@
 - **WHEN** 픽스처 `decorationMax` · `allBlocks`의 최상위 블록을 DOM 스펙으로 낸 뒤 그 모양을 파싱 규칙으로 다시 읽는다
 - **THEN** 스티커를 뺀 attrs가 원래와 같다
 
+#### Scenario: 스티커 img는 파싱에서 블록이 되지 않는다
+
+- **WHEN** 스티커가 있는 문단 · 구분선의 DOM 스펙에서 스티커 `img`의 `src`를 이미지 경로 규칙을 통과하는 값(`/images/…`)으로 바꾸고, 같은 `img` 하나를 래퍼 밖에 더해 `DOMParser.fromSchema(schema).parseSlice`로 읽는다
+- **THEN** 최상위 블록은 문단 · 구분선 · 이미지 셋이고 `image` 노드는 래퍼 밖 것 하나뿐이다 — 래퍼 구조(`contentElement` · atom)가 스티커를 막는다
+
 ### Requirement: HTML 속성을 검증 없이 attrs로 읽지 않는다
 
 파싱 규칙은 SHALL attrs 값을 content-schema 상수(`FONTS` · `MOTIONS` · `WIDTH_RANGE` · `NATURAL_SIZE_RANGE` · `CALLOUT_TONES` · `CODE_LANGUAGE_PATTERN` · `imagePathSchema` · `hrefSchema`)로 검증한 것만 받는다. 모르는 값은 없는 것으로 본다. attribute 이름과 같은 HTML 속성(`font="jua"` · `stickers="…"` · `motion="pop"`)은 읽지 않는다.
