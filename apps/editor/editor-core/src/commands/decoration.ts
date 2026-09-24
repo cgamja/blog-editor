@@ -51,7 +51,9 @@ export interface TopBlock {
   node: Node;
 }
 
-const canHold = (node: Node, key: string) => Object.hasOwn(node.type.spec.attrs ?? {}, key);
+/** 이 블록 노드가 꾸미기 속성 key(font · motion · width · stickers)를 가질 수 있나 — 패널의 막힌 이유 판정도 이것을 쓴다 */
+export const canHoldDecoration = (node: Node, key: string) =>
+  Object.hasOwn(node.type.spec.attrs ?? {}, key);
 
 /**
  * 선택이 걸친 최상위 블록들. 노드 선택의 끝(깊이 0)은 다음 블록 index라 그 블록은 뺀다(design.md 1).
@@ -79,13 +81,14 @@ function topBlockAt(doc: Node, pos: number): Node | null {
   // https://prosemirror.net/docs/ref/#model.ResolvedPos.depth — 최상위 블록 사이 경계는 깊이 0
   if (doc.resolve(pos).depth !== 0) return null;
   const node = doc.nodeAt(pos);
-  return node !== null && canHold(node, "stickers") ? node : null;
+  return node !== null && canHoldDecoration(node, "stickers") ? node : null;
 }
 
 function setOnSelectedBlocks(key: string, value: unknown): Command {
   return (state, dispatch) => {
     const blocks = selectedTopBlocks(state);
-    if (blocks.length === 0 || !blocks.every(({ node }) => canHold(node, key))) return false;
+    if (blocks.length === 0 || !blocks.every(({ node }) => canHoldDecoration(node, key)))
+      return false;
     if (dispatch) {
       const tr = state.tr;
       for (const { pos } of blocks) tr.setNodeAttribute(pos, key, value);
@@ -135,7 +138,8 @@ const stickersOf = (node: Node): Sticker[] =>
 /** 빈 배열은 정규형에서 지워지는 값이라 null로 둔다 */
 const stickersAttr = (stickers: Sticker[]) => (stickers.length > 0 ? stickers : null);
 
-function stickerCount(doc: Node): number {
+/** 글 전체의 스티커 개수 — 상한(MAX_STICKERS_PER_DOC) 판정 */
+export function stickerCount(doc: Node): number {
   let count = 0;
   doc.forEach((block) => {
     count += stickersOf(block).length;

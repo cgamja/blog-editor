@@ -9,6 +9,7 @@ export {
 export type { AppScreenshotInput } from "./commands/custom-blocks";
 export {
   addSticker,
+  canHoldDecoration,
   moveStickerToBlock,
   placeOnNearestBlock,
   removeSticker,
@@ -16,6 +17,7 @@ export {
   setBlockFont,
   setBlockMotion,
   setBlockWidth,
+  stickerCount,
   updateSticker,
 } from "./commands/decoration";
 export type {
