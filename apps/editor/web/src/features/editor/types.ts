@@ -62,3 +62,9 @@ export interface EditingSession {
   sessionKey: string;
   adopted: string | null;
 }
+
+/** localDraft 저장소 — 브라우저 저장소(local-draft.ts)를 테스트에서 바꿔 끼운다 */
+export interface DraftStore {
+  write: (key: string, draft: LocalDraft) => void;
+  clear: (key: string) => void;
+}

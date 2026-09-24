@@ -12,7 +12,7 @@ import {
 import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
 import { fetchPostCategories } from "../api";
-import { POST_LIST_QUERY_KEY } from "../constants";
+import { POST_CATEGORIES_QUERY_KEY } from "../constants";
 import { EDITOR_MESSAGES } from "../messages";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
@@ -59,7 +59,10 @@ export function PostEditor({ initialStart, onAdopt, onReload }: PostEditorProps)
   // 미리보기는 연 순간의 문서를 그린다 — 렌더마다 읽으면 요청이 되풀이된다
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const uploadImage = useImageUploader();
-  const categories = useQuery({ queryKey: POST_LIST_QUERY_KEY, queryFn: fetchPostCategories });
+  const categories = useQuery({
+    queryKey: POST_CATEGORIES_QUERY_KEY,
+    queryFn: fetchPostCategories,
+  });
   const form = usePostForm(start);
   const server = useServerSave({
     getDoc,
