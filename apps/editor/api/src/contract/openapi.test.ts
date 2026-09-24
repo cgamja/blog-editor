@@ -4,6 +4,7 @@ import type { PostFile } from "@blog-editor/content-schema";
 import { createApp } from "../app";
 import { createMemoryImageStore } from "../memory-image-store";
 import { createMemoryPostStore } from "../memory-store";
+import { SESSION_COOKIE_NAME } from "../session";
 import { pngBytes, svgBytes } from "../images.test.helpers";
 import { TEST_ACCOUNT, loginRequest, testAuthOptions, withSession } from "../test-app.test.helpers";
 import { buildOpenApiDocument, contractOperations } from "./openapi";
@@ -91,6 +92,8 @@ describe("api-contract — 응답 적합성", () => {
 
     const ok = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
     expect(ok.status).toBe(204);
+    // 계약의 쿠키 이름이 핸들러가 실제로 심는 쿠키와 같다
+    expect(ok.headers.get("Set-Cookie")).toMatch(new RegExp(`^${SESSION_COOKIE_NAME}=`));
     await expectConforms("post", path, ok);
 
     const wrong = await loginRequest(app, TEST_ACCOUNT.username, "wrong-password");
