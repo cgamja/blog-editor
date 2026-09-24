@@ -8,8 +8,11 @@ import { STICKER_MESSAGES } from "./sticker-messages";
 import { readStickerDrag } from "./sticker-ui";
 import type { StickerLayout } from "./use-sticker-layout";
 
-/** 패널에서 끌어 온 스티커의 처음 폭 — 디자인 69:2 코랄 별(88px / 600px ≈ 15%, design.md 5) */
-const PANEL_DROP_WIDTH_PX = 88;
+/**
+ * 패널에서 끌어 온 스티커의 처음 폭 — 디자인 종이 글 폭 600px의 8%(커맨드 기본 크기와 같은 비율).
+ * 88px(디자인 69:2 코랄 별)는 너무 컸다(이슈 #71, sticker-polish design.md 5).
+ */
+const PANEL_DROP_WIDTH_PX = 48;
 
 interface StickerDropHandlers {
   onPlaced: (ref: StickerRef) => void;

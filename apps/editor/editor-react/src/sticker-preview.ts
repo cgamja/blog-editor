@@ -6,7 +6,6 @@ import {
   updateSticker,
 } from "@blog-editor/editor-core";
 import type { BlockRect } from "@blog-editor/editor-core";
-import { anchorLabel, STICKER_MESSAGES } from "./sticker-messages";
 import { refOf } from "./sticker-ref";
 import type { Gesture, LayerPoint, Preview, StickerBox } from "./sticker-types";
 import { resizedSize, rotatedAngle } from "./sticker-ui";
@@ -31,7 +30,6 @@ function movePreview(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Pre
       centerY: point.y,
       width: box.width,
       rotate: box.rotate,
-      label: STICKER_MESSAGES.cannotPlace,
       command: null,
       next: null,
     };
@@ -42,7 +40,6 @@ function movePreview(editor: Editor, gesture: Gesture, blocks: BlockRect[]): Pre
     centerY: block.top + (target.y / PERCENT) * block.height,
     width: (target.size / PERCENT) * block.width,
     rotate: box.rotate,
-    label: anchorLabel(doc.nodeAt(target.blockPos)?.type.name ?? ""),
     command: moveStickerToBlock(box.blockPos, box.index, target),
     // 다른 블록이면 그 블록 끝에 붙는다(moveStickerToBlock)
     next:
@@ -60,7 +57,6 @@ const angleFrom = (box: StickerBox, { x, y }: LayerPoint) =>
 const unmoved = (box: StickerBox) => ({
   centerX: box.centerX,
   centerY: box.centerY,
-  label: anchorLabel(box.nodeName),
   next: refOf(box),
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { PointerEvent } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Command } from "@tiptap/pm/state";
+import { hideSticker } from "@blog-editor/editor-core";
 import { STICKER_MESSAGES } from "./sticker-messages";
 import { previewOf } from "./sticker-preview";
 import { refOf } from "./sticker-ref";
@@ -42,16 +43,22 @@ export function useStickerGesture(
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const active = gesture !== null;
 
+  const run = (command: Command) => command(editor.state, (tr) => editor.view.dispatch(tr));
+
   useEffect(() => {
     if (!active) return;
     const cancelOnDocChange = ({ transaction }: { transaction: { docChanged: boolean } }) => {
       if (transaction.docChanged) setGesture(null);
     };
     editor.on("transaction", cancelOnDocChange);
-    return () => void editor.off("transaction", cancelOnDocChange);
+    return () => {
+      editor.off("transaction", cancelOnDocChange);
+      // 놓기 트랜잭션이면 이미 풀려 있어 false다 — 취소 · 제자리 클릭 · 놓을 수 없는 자리에서만 실제로 푼다
+      if (!editor.isDestroyed) {
+        hideSticker(null)(editor.state, (tr) => editor.view.dispatch(tr));
+      }
+    };
   }, [editor, active]);
-
-  const run = (command: Command) => command(editor.state, (tr) => editor.view.dispatch(tr));
   const isOurs = (event: PointerEvent<HTMLElement>) =>
     gesture !== null && event.pointerId === gesture.pointerId;
 
@@ -63,6 +70,8 @@ export function useStickerGesture(
     onStatus("");
     const point = layout.toLayerPoint(event.clientX, event.clientY);
     setGesture({ kind, box, pointerId: event.pointerId, start: point, current: point });
+    // 끄는 동안은 유령이 스티커다 — 원래 자리의 것이 남아 있으면 안 움직이는 것처럼 보인다(sticker-polish design.md 1)
+    run(hideSticker(refOf(box)));
   };
 
   const onMove = (event: PointerEvent<HTMLElement>) => {

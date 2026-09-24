@@ -1,6 +1,6 @@
 import { STICKER_IDS, STICKER_RANGES } from "@blog-editor/content-schema";
-import { wrapRotation } from "@blog-editor/editor-core";
-import type { StickerId } from "./sticker-types";
+import { STICKER_HIDDEN_ATTR, wrapRotation } from "@blog-editor/editor-core";
+import type { StickerCorner, StickerId } from "./sticker-types";
 
 /**
  * 스티커 오버레이의 순수 계산 — spec: editor-sticker-layer, sticker-drag design.md.
@@ -29,14 +29,34 @@ export function rotatedAngle(start: number, startRadians: number, radians: numbe
   return wrapRotation(Math.round(start + (radians - startRadians) * DEGREES_PER_RADIAN)) + 0; // + 0: -0을 0으로
 }
 
-export type StickerCorner = "nw" | "ne" | "se" | "sw";
+// ── 커서 · 숨김 규칙(sticker-polish design.md 3 · 4) ──
 
+/** 모서리의 화면 각도(도, x축에서 시계 방향 — 화면 y가 아래) */
+const CORNER_DEGREES: Record<StickerCorner, number> = { se: 45, sw: 135, nw: 225, ne: 315 };
+const HALF_TURN_DEGREES = 180;
+/** 크기 커서 네 방향이 각각 차지하는 폭 */
+const CURSOR_SECTOR_DEGREES = 45;
+/** 180°를 네 칸으로 나눈 순서 — 0° 가로부터 시계 방향 */
+const RESIZE_CURSORS = ["ew-resize", "nwse-resize", "ns-resize", "nesw-resize"] as const;
+
+/**
+ * 조절점은 스티커와 함께 돈다. 모서리 각도에 회전을 더한 화면 각도를 180°로 접어,
+ * 가장 가까운 CSS 크기 커서를 고른다(반대 방향은 같은 커서).
+ */
 export function resizeCursor(corner: StickerCorner, rotate: number): string {
-  throw new Error(`미구현: ${corner} ${rotate}`);
+  const degrees = CORNER_DEGREES[corner] + rotate;
+  const folded = ((degrees % HALF_TURN_DEGREES) + HALF_TURN_DEGREES) % HALF_TURN_DEGREES;
+  const sector = Math.round(folded / CURSOR_SECTOR_DEGREES) % RESIZE_CURSORS.length;
+  return RESIZE_CURSORS[sector] ?? RESIZE_CURSORS[0];
 }
 
+/**
+ * 끄는 동안 원래 자리의 스티커 하나를 가리는 CSS 규칙. editor-core 장식이 블록에 순번을 달고,
+ * 이 규칙이 그 블록 바로 아래 `.post-sticker` 가운데 그 순번만 고른다(`:nth-child(An+B of S)`).
+ * https://developer.mozilla.org/docs/Web/CSS/:nth-child#the_of_selector_syntax
+ */
 export function hiddenStickerRule(index: number): string {
-  throw new Error(`미구현: ${index}`);
+  return `.blog-editor [${STICKER_HIDDEN_ATTR}="${index}"] > :nth-child(${index + 1} of .post-sticker){visibility:hidden}`;
 }
 
 // ── 패널 격자 → 에디터 끌어 오기(HTML5 drag) ──
