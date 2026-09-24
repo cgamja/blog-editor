@@ -74,6 +74,7 @@ export type {
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
+export { applySlashItem } from "./commands/slash";
 export {
   wrapInBlockquote,
   wrapInBulletList,
@@ -103,3 +104,16 @@ export {
 export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
 export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
 export { previewBlockWidth, widthPreview, widthPreviewKey } from "./plugins/width-preview";
+export { closeSlashMenu, SlashMenu, slashMenu, slashMenuKey } from "./plugins/slash-menu";
+export type {
+  SlashMenuOptions,
+  SlashMenuState,
+  SlashMenuStorage,
+} from "./plugins/slash-menu.types";
+export {
+  CUSTOM_BLOCK_KEYS_PRIORITY,
+  LIST_KEYS_PRIORITY,
+  MARKDOWN_SHORTCUTS_PRIORITY,
+  SLASH_MENU_PRIORITY,
+  STICKER_SPLIT_PRIORITY,
+} from "./keymap-priority.constants";

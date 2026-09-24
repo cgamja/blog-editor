@@ -16,6 +16,7 @@ import {
   wrapperRule,
 } from "./dom";
 import type { ElementLike } from "./dom";
+import { STICKER_SPLIT_PRIORITY } from "./keymap-priority.constants";
 
 /**
  * content-schema(zod)의 닫힌 집합을 ProseMirror 스키마로 옮긴다(spec: editor-schema, design.md 2).
@@ -346,9 +347,6 @@ const Underline = Mark.create({
   parseHTML: () => [{ tag: "u" }],
   renderHTML: () => ["u", 0],
 });
-
-// 코어 Keymap(우선순위 100)보다 먼저 Enter를 본다 — 스티커 없는 블록은 커맨드가 false라 코어로 넘어간다
-const STICKER_SPLIT_PRIORITY = 1000;
 
 /**
  * 스티커가 있는 블록의 Enter를 splitBlockKeepingStickers에 넘긴다 — 등록만(design.md 6, .claude/rules/editor.md).

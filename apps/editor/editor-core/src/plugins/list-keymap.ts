@@ -6,6 +6,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import type { Command, EditorState, Plugin, Transaction } from "@tiptap/pm/state";
 import { sameStickers, stickersOf } from "../commands/sticker-query";
 import { carriedAttrs } from "../commands/turn-into";
+import { LIST_KEYS_PRIORITY } from "../keymap-priority.constants";
 
 /**
  * 목록 키 — spec: editor-list-keys, list-keys design.md.
@@ -177,9 +178,6 @@ export const listKeymap: Record<string, Command> = {
   Backspace: (state, dispatch) =>
     backspaceAtItemStart(state, dispatch) || joinIntoPreviousList(state, dispatch),
 };
-
-// 입력 규칙 되돌리기(1100)보다 뒤, 커스텀 블록 Backspace · StickerSafeSplit(1000)과 코어 Keymap(100)보다 앞(design.md 6)
-const LIST_KEYS_PRIORITY = 1050;
 
 /**
  * 한글 조합 중 keydown은 prosemirror-view가 handleKeyDown에 넘기기 전에 버린다(1.42.5 editHandlers.keydown →

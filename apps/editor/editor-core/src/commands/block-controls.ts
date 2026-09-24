@@ -7,13 +7,13 @@
  * - Transform.delete · replaceWith: https://prosemirror.net/docs/ref/#transform.Transform.delete
  */
 import { EditorState, NodeSelection, Selection } from "@tiptap/pm/state";
-import type { Command, Transaction } from "@tiptap/pm/state";
-import { Mapping } from "@tiptap/pm/transform";
+import type { Command } from "@tiptap/pm/state";
 import type { Node } from "@tiptap/pm/model";
 import { WIDTH_RANGE } from "@blog-editor/content-schema";
 import { TURN_INTO_TARGETS } from "./block-controls.constants";
 import type { TurnIntoKind } from "./block-controls.constants";
 import type { TurnIntoTarget, WidthDrag } from "./block-controls.types";
+import { appendCommandStepsAndSelection } from "./derived-command";
 import { blockStart } from "./move-block";
 import { turnIntoTextblock } from "./turn-into";
 import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "./wrap";
@@ -68,9 +68,8 @@ function selectionInTopBlock(doc: Node, index: number): Selection {
 /**
  * 선택을 최상위 `index`번째 블록으로 옮긴 상태로 `command`를 부른다(design.md 5). 블록 바꾸기 · 감싸기 · 복제는
  * 선택이 든 블록에 작동하는데, 손잡이 블록은 커서와 다를 수 있다.
- * 안쪽 커맨드가 만든 step은 `state.tr`에 옮겨 담아 보낸다 — TipTap 체인은 `state.tr`로 공유 트랜잭션을 주고
- * 커맨드가 부른 dispatch는 무시한 채 그 공유 트랜잭션만 적용하기 때문이다
- * (https://tiptap.dev/docs/editor/api/commands#chain-commands). 선택만 다른 상태라 문서가 같아 step이 그대로 맞는다.
+ * 안쪽 커맨드가 만든 step은 `state.tr`에 옮겨 담아 보낸다(appendCommandStepsAndSelection — TipTap 체인의 공유 트랜잭션).
+ * 선택만 다른 상태라 문서가 같아 step이 그대로 맞는다.
  * 되돌리면 커서는 원래 자리로 돌아온다.
  */
 export function atTopBlock(index: number, command: Command): Command {
@@ -82,17 +81,12 @@ export function atTopBlock(index: number, command: Command): Command {
       selection: selectionInTopBlock(state.doc, index),
       plugins: state.plugins,
     });
-    const inner: Transaction[] = [];
-    const ok = command(selected, dispatch === undefined ? undefined : (tr) => inner.push(tr));
-    if (!ok || dispatch === undefined || inner.length === 0) return ok;
+    if (dispatch === undefined) return command(selected);
 
     const tr = state.tr;
-    for (const innerTr of inner) for (const step of innerTr.steps) tr.step(step);
-    const last = inner.at(-1)!;
-    tr.setSelection(last.selection.map(tr.doc, new Mapping()));
-    if (last.scrolledIntoView) tr.scrollIntoView();
-    dispatch(tr);
-    return true;
+    const outcome = appendCommandStepsAndSelection(tr, selected, command);
+    if (outcome === "applied") dispatch(tr);
+    return outcome !== "rejected";
   };
 }
 

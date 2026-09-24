@@ -8,6 +8,11 @@ export const BLOCK_HANDLE_MESSAGES = {
   moveHint: "끌어서 옮기기 · 누르면 블록 메뉴 · 키보드는 Ctrl/⌘ + Shift + ↑/↓",
 } as const;
 
+/** `/` 슬래시 메뉴(spec: editor-slash-menu). 항목 이름은 「+」 메뉴와 같은 INSERTABLE_BLOCK_LABELS */
+export const SLASH_MENU_MESSAGES = {
+  menu: "블록 넣기",
+} as const;
+
 /** 손잡이를 누르면 여는 블록 메뉴(Notion의 블록 메뉴 — 바꾸기 · 복제 · 지우기) */
 export const BLOCK_MENU_MESSAGES = {
   menu: "블록 메뉴",
