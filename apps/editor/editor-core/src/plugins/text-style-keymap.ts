@@ -1,10 +1,9 @@
 import { Extension } from "@tiptap/core";
-import { toggleMark } from "@tiptap/pm/commands";
 import { keymap } from "@tiptap/pm/keymap";
 import { Plugin } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { swallowing } from "../commands/move-block";
-import { applyLastColor } from "../commands/text-style";
+import { applyLastColor, toggleToolbarMark } from "../commands/text-style";
 import { lastColorKey } from "../commands/text-style.constants";
 import type { LastColor } from "../commands/text-style.types";
 
@@ -12,18 +11,9 @@ import type { LastColor } from "../commands/text-style.types";
  * 글자 서식 단축키 · 마지막 색 기억 — spec: editor-text-style, text-toolbar design.md 4.
  * 기준: https://www.notion.com/help/keyboard-shortcuts (⌘U · ⌘⇧S · ⌘⇧H)
  */
-
-const toggle =
-  (markName: string): Command =>
-  (state, dispatch) => {
-    const type = state.schema.marks[markName];
-    // https://prosemirror.net/docs/ref/#commands.toggleMark
-    return type === undefined ? false : toggleMark(type)(state, dispatch);
-  };
-
 export const textStyleKeymap: Record<string, Command> = {
-  "Mod-u": toggle("underline"),
-  "Mod-Shift-s": toggle("strike"),
+  "Mod-u": toggleToolbarMark("underline"),
+  "Mod-Shift-s": toggleToolbarMark("strike"),
   // 거절돼도 키를 삼킨다 — 빠져나가면 macOS Chrome이 ⌘⇧H로 홈 페이지를 연다
   "Mod-Shift-h": swallowing(applyLastColor),
 };

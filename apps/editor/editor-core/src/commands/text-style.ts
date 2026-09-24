@@ -1,4 +1,5 @@
 import { textStyleAttrsSchema, weightFitsFont } from "@blog-editor/content-schema";
+import { toggleMark } from "@tiptap/pm/commands";
 import type { MarkType, Node } from "@tiptap/pm/model";
 import type { Command, EditorState } from "@tiptap/pm/state";
 import { lastColorKey } from "./text-style.constants";
@@ -134,6 +135,17 @@ export function textStyleSummary(state: EditorState): TextStyleSummary {
       ToolbarMark,
       boolean
     >,
+  };
+}
+
+/**
+ * 도구줄 · 단축키의 마크 켜고 끄기(굵게 · 기울임 · 밑줄 · 취소선 · 코드).
+ * https://prosemirror.net/docs/ref/#commands.toggleMark
+ */
+export function toggleToolbarMark(name: ToolbarMark): Command {
+  return (state, dispatch) => {
+    const type = state.schema.marks[name];
+    return type === undefined ? false : toggleMark(type)(state, dispatch);
   };
 }
 

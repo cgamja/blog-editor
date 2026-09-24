@@ -41,7 +41,12 @@ export type { InsertableBlockKind } from "./commands/drag-block.constants";
 export type { BlockBand, InsertableBlock } from "./commands/drag-block.types";
 export { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./commands/link";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
-export { applyLastColor, setTextStyle, textStyleSummary } from "./commands/text-style";
+export {
+  applyLastColor,
+  setTextStyle,
+  textStyleSummary,
+  toggleToolbarMark,
+} from "./commands/text-style";
 export { MIXED, TOOLBAR_MARKS } from "./commands/text-style.types";
 export type {
   LastColor,
