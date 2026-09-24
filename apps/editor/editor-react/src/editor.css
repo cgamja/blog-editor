@@ -29,6 +29,260 @@
 }
 
 /*
+ * 움직임 미리 보기(spec: decoration-panel). editor-core 장식이 붙은 블록만 시간 기반으로 한 번 재생한다.
+ * 위 규칙(animation-name: none)을 명시도 0,4,0으로 이긴다. 키프레임은 에디터 전용이다 — post.css의 것은
+ * `@supports (animation-timeline: view())` 안에만 있어 미지원 브라우저에서 사라지고, 장식이 붙을 때마다
+ * none → 이 이름으로 바뀌어 매번 새 애니메이션이 시작된다. 모양은 post.css 키프레임과 같게 둔다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion] {
+    /* editor-core motion-preview PREVIEW_MS(1초)보다 짧게 — 장식이 떨어지기 전에 끝나야 한다 */
+    animation-duration: 0.6s;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+    animation-timeline: auto;
+    animation-range: normal;
+  }
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion="fade-in"] {
+    animation-name: editor-preview-fade-in;
+  }
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion="fade-up"] {
+    animation-name: editor-preview-fade-up;
+  }
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion="slide-left"] {
+    animation-name: editor-preview-slide-left;
+  }
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion="slide-right"] {
+    animation-name: editor-preview-slide-right;
+  }
+  .blog-editor .ProseMirror .editor-motion-preview[data-motion="pop"] {
+    animation-name: editor-preview-pop;
+  }
+}
+@keyframes editor-preview-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes editor-preview-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes editor-preview-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes editor-preview-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes editor-preview-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- 꾸미기 패널 (디자인 69:2) ---------- */
+
+.decoration-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  word-break: keep-all;
+}
+.decoration-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.decoration-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.decoration-panel legend,
+.decoration-panel label {
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-mid);
+}
+.decoration-panel-target {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+.decoration-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+/* 디자인: 높이 60px 카드, 고른 것은 2px 브랜드 테두리 + 옅은 브랜드 바탕 */
+.decoration-panel-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: 3.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.decoration-panel-choice[aria-pressed="true"] {
+  border: 2px solid var(--brand-ink);
+  background: var(--brand-soft);
+}
+.decoration-panel-choice:disabled {
+  cursor: not-allowed;
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+.decoration-panel-sample {
+  font-size: 0.9375rem;
+  line-height: 1.2;
+}
+.decoration-panel-sample[data-font="pretendard"] {
+  font-family: var(--font-sans);
+}
+.decoration-panel-sample[data-font="jua"] {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+}
+.decoration-panel-sample[data-font="gaegu"] {
+  font-family: var(--font-hand);
+  font-size: 1.1875rem;
+}
+.decoration-panel-caption {
+  font-size: 0.75rem;
+  color: var(--ink-mid);
+}
+.decoration-panel-sticker {
+  align-items: center;
+  text-align: center;
+}
+.decoration-panel-sticker img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+.decoration-panel-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.decoration-panel select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+.decoration-panel-preview {
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.decoration-panel-preview:disabled {
+  cursor: not-allowed;
+  color: var(--ink-soft);
+}
+.decoration-panel :focus-visible,
+.width-toolbar :focus-visible {
+  outline: 0.125rem solid var(--brand-ink);
+  outline-offset: 0.125rem;
+}
+
+/* ---------- 폭 도구줄 (디자인 69:2 — 사진 위 가운데, 어두운 줄) ---------- */
+
+.width-toolbar {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.125rem;
+  border-radius: 0.625rem;
+  background: var(--toolbar);
+  box-shadow: 0 0.5rem 1.25rem -0.375rem color-mix(in srgb, var(--ink) 50%, transparent);
+  white-space: nowrap;
+  /* 블록 위 가운데, 블록과 0.875rem 띄운다 */
+  transform: translate(-50%, calc(-100% - 0.875rem));
+}
+.width-toolbar button {
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--surface);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.width-toolbar button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+.width-toolbar-value {
+  padding: 0 0.875rem 0 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--line);
+}
+
+/*
  * 블록 손잡이(디자인 68:2, 이슈 #59). 값은 design/tokens.json — 컨트롤 44px, 추가 버튼 -104px · 옮기기 -56px.
  * 손잡이 줄은 블록 왼쪽 가장자리까지 이어져서 버튼으로 옮겨 가는 사이에 마우스가 틀을 벗어나지 않는다.
  */
