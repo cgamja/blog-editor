@@ -2,7 +2,7 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { createEditorSchema, docToNode } from "../index";
 import { blockGuard } from "../plugins/block-guard";
-import { removeLink, setLink } from "./link";
+import { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./link";
 
 const schema = createEditorSchema();
 
@@ -58,5 +58,24 @@ describe("editor-markdown-shortcuts: 링크는 허용 목록 주소로만", () =
     expect(ok).toBe(true);
     expect(linkMarksOf(state)).toEqual([]);
     expect(state.doc.child(0).textContent).toBe("앞링크글자");
+  });
+});
+
+describe("editor-markdown-shortcuts: 링크 대상 조회", () => {
+  const link = { type: "link", attrs: { href: "https://example.com" } };
+  const withLink = [
+    { type: "text", text: "앞" },
+    { type: "text", text: "링크", marks: [link] },
+    { type: "text", text: "뒤" },
+  ];
+
+  it("WHEN 링크 글자를 정확히 고르면 THEN linkHrefAt이 그 주소를 찾는다", () => {
+    expect(linkHrefAt(stateWith(withLink, 2, 4))).toBe("https://example.com");
+  });
+
+  it("WHEN 고른 글자도 링크 안 커서도 아니면 THEN hasLinkTarget은 false, 둘 중 하나면 true다", () => {
+    expect(hasLinkTarget(stateWith(withLink, 1))).toBe(false);
+    expect(hasLinkTarget(stateWith(withLink, 1, 2))).toBe(true);
+    expect(hasLinkTarget(stateWith(withLink, 3))).toBe(true);
   });
 });

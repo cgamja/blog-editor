@@ -63,6 +63,16 @@ export function setLink(href: string): Command {
   };
 }
 
+export function linkHrefAt(state: EditorState): string | null {
+  void state;
+  throw new Error("미구현");
+}
+
+export function hasLinkTarget(state: EditorState): boolean {
+  void state;
+  throw new Error("미구현");
+}
+
 /** 고른 글자(또는 커서가 든 링크)에서 링크를 뺀다. 링크가 없으면 false */
 export const removeLink: Command = (state, dispatch) => {
   const type = state.schema.marks.link;

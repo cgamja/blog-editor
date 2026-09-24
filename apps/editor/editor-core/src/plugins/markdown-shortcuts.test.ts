@@ -1,9 +1,15 @@
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
-import { createEditorSchema, docFromNode, docToNode } from "../index";
+import {
+  createEditorSchema,
+  docFromNode,
+  docToNode,
+  duplicateTopBlock,
+  markdownShortcutKeymap,
+  markdownShortcutPlugins,
+} from "../index";
 import { blockGuard } from "./block-guard";
-import { markdownShortcutKeymap, markdownShortcutPlugins } from "./markdown-shortcuts";
-import { typeText } from "./markdown-shortcuts.test.helpers";
+import { endComposition, typeText } from "./markdown-shortcuts.test.helpers";
 
 const schema = createEditorSchema();
 
@@ -153,7 +159,51 @@ describe("editor-markdown-shortcuts: 인라인 입력 규칙", () => {
   });
 });
 
+describe("editor-markdown-shortcuts: 인라인 규칙이 걸리지 않는 자리", () => {
+  it("WHEN 글자를 고른 채로 닫는 `*`를 입력하면 THEN 규칙이 처리하지 않는다", () => {
+    const before = start([paragraph("앞**굵게*끝")]);
+    const selected = before.apply(before.tr.setSelection(TextSelection.create(before.doc, 7, 8)));
+    const { handled } = typeText(selected, "*");
+
+    expect(handled).toBe(false);
+  });
+
+  it.each([["2*3"], ["a*b"]])(
+    "WHEN 라틴 문자 · 숫자 바로 뒤 %j에 닫는 `*`를 입력하면 THEN 기울임이 걸리지 않는다",
+    (before) => {
+      const { handled } = typeText(start([paragraph(before)]), "*");
+
+      expect(handled).toBe(false);
+    },
+  );
+
+  it("WHEN 한글 뒤에 붙여 쓴 `정말*중요`에 `*`를 입력하면 THEN `중요`에 기울임이 걸린다", () => {
+    const { handled, state } = typeText(start([paragraph("정말*중요")]), "*");
+
+    expect(handled).toBe(true);
+    expect(state.doc.child(0).textContent).toBe("정말중요");
+    expect(
+      state.doc
+        .child(0)
+        .child(1)
+        .marks.map((mark) => mark.type.name),
+    ).toEqual(["italic"]);
+  });
+});
+
 describe("editor-markdown-shortcuts: 조합 · Backspace 되돌리기", () => {
+  it("WHEN 조합으로 `앞**굵게**`가 다 들어간 뒤 조합이 끝나면 THEN `굵게`에 굵게가 걸린다", async () => {
+    const state = await endComposition(start([paragraph("앞**굵게**")]));
+
+    expect(state.doc.child(0).textContent).toBe("앞굵게");
+    expect(
+      state.doc
+        .child(0)
+        .child(1)
+        .marks.map((mark) => mark.type.name),
+    ).toEqual(["bold"]);
+  });
+
   it("WHEN 조합 중인 뷰에서 빈 문단에 `- `를 입력하면 THEN 규칙이 처리하지 않고 문서는 그대로다", () => {
     const before = start([paragraph()]);
     const { handled, state } = typeText(before, "- ", { composing: true });
@@ -222,10 +272,33 @@ describe("editor-markdown-shortcuts: 단축키", () => {
     expect(state.selection.$from.index(0)).toBe(2);
   });
 
-  it("WHEN 스티커가 12개인 문서에서 스티커 블록에 Mod-d를 부르면 THEN false이고 문서는 그대로다", () => {
+  it("WHEN 스티커가 12개인 문서에서 스티커 블록을 복제하면 THEN duplicateTopBlock은 false이고 Mod-d는 키를 삼키며 문서는 그대로다", () => {
     const stickers = Array.from({ length: 12 }, () => HEART);
     const before = start([paragraph("꽉", { stickers })]);
-    const { ok, state } = run(markdownShortcutKeymap["Mod-d"], before);
+    const command = run(duplicateTopBlock, before);
+    const key = run(markdownShortcutKeymap["Mod-d"], before);
+
+    expect(command.ok).toBe(false);
+    expect(key.ok).toBe(true);
+    expect(key.state.doc.eq(before.doc)).toBe(true);
+  });
+
+  const codeLines = { type: "codeBlock", content: [{ type: "text", text: "첫 줄\n둘째 줄" }] };
+
+  it("WHEN 여러 줄 코드 블록에서 Mod-Alt-0을 부르면 THEN 줄마다 문단 하나가 된다", () => {
+    const { ok, state } = run(markdownShortcutKeymap["Mod-Alt-0"], start([codeLines], 2));
+
+    expect(ok).toBe(true);
+    expect(state.doc.childCount).toBe(2);
+    expect(state.doc.child(0).type.name).toBe("paragraph");
+    expect(state.doc.child(0).textContent).toBe("첫 줄");
+    expect(state.doc.child(1).type.name).toBe("paragraph");
+    expect(state.doc.child(1).textContent).toBe("둘째 줄");
+  });
+
+  it("WHEN 여러 줄 코드 블록에서 Mod-Alt-2를 부르면 THEN false이고 문서는 그대로다", () => {
+    const before = start([codeLines], 2);
+    const { ok, state } = run(markdownShortcutKeymap["Mod-Alt-2"], before);
 
     expect(ok).toBe(false);
     expect(state.doc.eq(before.doc)).toBe(true);
