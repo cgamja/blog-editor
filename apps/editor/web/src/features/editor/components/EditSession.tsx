@@ -39,6 +39,8 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
     queryFn: () => fetchPost(initialSlug ?? NEW_POST_KEY),
     enabled: initialSlug !== null,
     staleTime: Infinity,
+    // 세션이 끝나면 버린다 — 남겨 두면 다시 열 때(목록에서 · 다시 로그인 뒤) 옛 revision으로 에디터를 만든다
+    gcTime: 0,
     refetchOnWindowFocus: false,
     retry: (failureCount, error) =>
       !(error instanceof ApiError && error.status < 500) && failureCount < MAX_RETRIES,

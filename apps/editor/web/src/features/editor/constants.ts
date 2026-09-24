@@ -14,6 +14,23 @@ export const PREVIEW_PATH = "/api/preview";
 export const IMAGE_UPLOAD_PATH = "/api/images";
 /** 공개 렌더러 스타일 — 미리보기 iframe이 불러온다(공개 API와 같은 파일) */
 export const POST_CSS_PATH = "/public/post.css";
+/** post.css가 이름으로 참조하는 사이트 토큰 — 미리보기 iframe에 옮긴다(content-render post.css의 var() 목록) */
+export const PREVIEW_TOKEN_NAMES = [
+  "ink",
+  "ink-soft",
+  "line",
+  "surface-2",
+  "brand",
+  "brand-ink",
+  "brand-soft",
+  "accent-ink",
+  "accent-soft",
+  "danger-ink",
+  "postit",
+  "font-sans",
+  "font-display",
+  "font-hand",
+] as const;
 
 export const POST_QUERY_KEY = "post";
 export const POST_LIST_QUERY_KEY = ["posts"] as const;
