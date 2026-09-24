@@ -14,27 +14,53 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { imagePathOrNull, naturalSizeFrom } from "../closed-values";
 import type { ImageUploadEntry, ImageUploadRender, UploadedImageAttrs } from "./image-upload.types";
 
-export const imageUploadKey = new PluginKey<readonly ImageUploadEntry[]>("imageUpload");
+/**
+ * 플러그인 상태의 자리 — 밖에 보이는 ImageUploadEntry에 더해, 자리를 둘 때의 선택을 매핑하며 들고 있다.
+ * 끝났을 때 선택이 그대로면(사용자가 다른 데서 쓰지 않았다면) 넣은 그림을 고르고, 아니면 커서를 뺏지 않는다.
+ */
+interface TrackedUpload extends ImageUploadEntry {
+  selection: { anchor: number; head: number };
+}
+
+export const imageUploadKey = new PluginKey<readonly TrackedUpload[]>("imageUpload");
 
 type UploadMeta =
-  | { type: "start"; id: string; pos: number }
+  | { type: "start"; id: string; pos: number; selection: TrackedUpload["selection"] }
   | { type: "fail"; id: string; message: string }
   | { type: "remove"; id: string };
 
 /** 자리는 뒤 블록 쪽에 붙는다 — 같은 자리에 앞 그림이 들어가면 뒤 자리는 그 뒤로 밀린다(파일 순서 유지) */
 const STICK_TO_NEXT = 1;
 
-/** 삭제가 자리를 가로지르면(되돌리기로 그 자리가 지워진 경우 포함) 자리는 사라진다 — 끝난 결과는 버린다 */
-function mapEntries(entries: readonly ImageUploadEntry[], tr: Transaction): ImageUploadEntry[] {
+/**
+ * 삭제가 자리를 가로지르면(되돌리기로 그 자리가 지워진 경우 포함) 자리는 사라진다 — 끝난 결과는 버린다.
+ * 문서 맨 앞 · 맨 끝 자리는 한쪽이 문서 경계라 가로지름이 잡히지 않는다 — 경계 아닌 쪽이 지워지면 버린다
+ * (전체를 지우고 새로 쓴 문서에 옛 그림이 끼어들지 않게).
+ */
+function survives(entry: TrackedUpload, tr: Transaction): { pos: number } | null {
+  const result = tr.mapping.mapResult(entry.pos, STICK_TO_NEXT);
+  const atStart = entry.pos === 0;
+  const atEnd = entry.pos === tr.before.content.size;
+  const lost =
+    result.deletedAcross || (atStart && result.deletedAfter) || (atEnd && result.deletedBefore);
+  return lost ? null : { pos: result.pos };
+}
+
+function mapEntries(entries: readonly TrackedUpload[], tr: Transaction): TrackedUpload[] {
   return entries.flatMap((entry) => {
-    const result = tr.mapping.mapResult(entry.pos, STICK_TO_NEXT);
-    return result.deletedAcross ? [] : [{ ...entry, pos: result.pos }];
+    const mapped = survives(entry, tr);
+    if (mapped === null) return [];
+    const { anchor, head } = entry.selection;
+    const selection = { anchor: tr.mapping.map(anchor), head: tr.mapping.map(head) };
+    return [{ ...entry, pos: mapped.pos, selection }];
   });
 }
 
-function applyMeta(entries: ImageUploadEntry[], meta: UploadMeta): ImageUploadEntry[] {
-  if (meta.type === "start")
-    return [...entries, { id: meta.id, pos: meta.pos, status: "uploading" }];
+function applyMeta(entries: TrackedUpload[], meta: UploadMeta): TrackedUpload[] {
+  if (meta.type === "start") {
+    const { id, pos, selection } = meta;
+    return [...entries, { id, pos, status: "uploading", selection }];
+  }
   if (meta.type === "fail") {
     return entries.map((entry) =>
       entry.id === meta.id ? { ...entry, status: "failed", message: meta.message } : entry,
@@ -44,8 +70,8 @@ function applyMeta(entries: ImageUploadEntry[], meta: UploadMeta): ImageUploadEn
 }
 
 /** 자리 장식은 render가 있을 때만 그린다 — 상태 계산(테스트)은 DOM 없이 돈다 */
-export function imageUpload(render?: ImageUploadRender): Plugin<readonly ImageUploadEntry[]> {
-  return new Plugin<readonly ImageUploadEntry[]>({
+export function imageUpload(render?: ImageUploadRender): Plugin<readonly TrackedUpload[]> {
+  return new Plugin<readonly TrackedUpload[]>({
     key: imageUploadKey,
     state: {
       init: () => [],
@@ -62,7 +88,7 @@ export function imageUpload(render?: ImageUploadRender): Plugin<readonly ImageUp
         return DecorationSet.create(
           state.doc,
           entries.map((entry) =>
-            Decoration.widget(entry.pos, render(entry), {
+            Decoration.widget(entry.pos, render(publicEntry(entry)), {
               // 상태가 바뀌면 key가 달라져 DOM을 새로 그린다(실패 문장 · 버튼)
               key: `${entry.id}:${entry.status}:${entry.message ?? ""}`,
               side: STICK_TO_NEXT,
@@ -74,8 +100,12 @@ export function imageUpload(render?: ImageUploadRender): Plugin<readonly ImageUp
   });
 }
 
+function publicEntry({ id, pos, status, message }: TrackedUpload): ImageUploadEntry {
+  return message === undefined ? { id, pos, status } : { id, pos, status, message };
+}
+
 export function imageUploadsOf(state: EditorState): readonly ImageUploadEntry[] {
-  return imageUploadKey.getState(state) ?? [];
+  return (imageUploadKey.getState(state) ?? []).map(publicEntry);
 }
 
 /**
@@ -101,7 +131,7 @@ const isTopGap = (doc: PmNode, pos: number) =>
 const hasPlugin = (state: EditorState) => imageUploadKey.getState(state) !== undefined;
 
 const findEntry = (state: EditorState, id: string) =>
-  imageUploadsOf(state).find((entry) => entry.id === id);
+  (imageUploadKey.getState(state) ?? []).find((entry) => entry.id === id);
 
 /** 최상위 자리 pos에 올리는 중 자리를 더한다 — 문서는 그대로다(메타만) */
 export function startImageUpload(id: string, pos: number): Command {
@@ -109,7 +139,15 @@ export function startImageUpload(id: string, pos: number): Command {
     if (!hasPlugin(state) || !isTopGap(state.doc, pos) || findEntry(state, id) !== undefined) {
       return false;
     }
-    dispatch?.(state.tr.setMeta(imageUploadKey, { type: "start", id, pos } satisfies UploadMeta));
+    const { anchor, head } = state.selection;
+    dispatch?.(
+      state.tr.setMeta(imageUploadKey, {
+        type: "start",
+        id,
+        pos,
+        selection: { anchor, head },
+      } satisfies UploadMeta),
+    );
     return true;
   };
 }
@@ -135,7 +173,9 @@ export function cancelImageUpload(id: string): Command {
 
 /**
  * 올리기가 끝나면 자리에 image 노드를 넣고 자리를 지운다 — 한 트랜잭션이라 undo 한 번에 돌아간다.
- * 자리가 없으면(지워졌거나 취소) false — 끝난 결과는 버린다. 넣은 그림을 노드로 골라 대체 텍스트 입력이 바로 뜬다.
+ * 자리가 없으면(지워졌거나 취소) false — 끝난 결과는 버린다. 자리를 둔 뒤 선택이 그대로면 넣은 그림을 노드로 골라
+ * 대체 텍스트 입력이 바로 뜨게 하고 그림으로 스크롤한다. 그사이 다른 데서 쓰고 있었다면 커서를 뺏지 않는다
+ * (선택은 삽입에 맞춰 매핑될 뿐이고 스크롤도 하지 않는다).
  */
 export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Command {
   return (state, dispatch) => {
@@ -156,8 +196,12 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
     const tr = state.tr
       .insert(gap, image)
       .setMeta(imageUploadKey, { type: "remove", id } satisfies UploadMeta);
-    tr.setSelection(NodeSelection.create(tr.doc, gap));
-    dispatch(tr.scrollIntoView());
+    const { anchor, head } = state.selection;
+    const untouched = anchor === entry.selection.anchor && head === entry.selection.head;
+    if (untouched) {
+      tr.setSelection(NodeSelection.create(tr.doc, gap)).scrollIntoView();
+    }
+    dispatch(tr);
     return true;
   };
 }
