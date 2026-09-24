@@ -4,6 +4,7 @@ import {
   blockGuard,
   editorExtensions,
   History,
+  MarkdownShortcuts,
   motionPreview,
   MoveBlock,
   stickerHiding,
@@ -48,7 +49,7 @@ const StickerHiding = Extension.create({
 
 /**
  * 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에
- * 가드 · 되돌리기 · 옮기기 · 키맵 · 미리 보기 · 스티커 숨김을 더한다.
+ * 가드 · 되돌리기 · 옮기기 · 키맵 · 입력 규칙 · 미리 보기 · 스티커 숨김을 더한다.
  */
 export function blogEditorExtensions(): AnyExtension[] {
   return [
@@ -57,6 +58,7 @@ export function blogEditorExtensions(): AnyExtension[] {
     History,
     MoveBlock,
     CustomBlockKeys,
+    MarkdownShortcuts,
     MotionPreview,
     StickerHiding,
   ];

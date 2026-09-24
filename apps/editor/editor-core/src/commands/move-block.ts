@@ -108,7 +108,7 @@ export const moveBlockDown: Command = moveBlock(planDown);
  * 양 끝에서도 키를 삼킨다(true) — 커맨드 자체는 false라 can()은 맞게 나오지만, 키가 빠져나가면 macOS의
  * "Cmd-Shift-Up = 문서 끝까지 선택"이 뜻밖에 실행된다(design.md 4).
  */
-function swallowing(command: Command): Command {
+export function swallowing(command: Command): Command {
   return (state, dispatch, view) => {
     command(state, dispatch, view);
     return true;
