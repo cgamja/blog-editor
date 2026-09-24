@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { Doc } from "@blog-editor/content-schema";
 import { SESSION_EXPIRY_META } from "../../../shared/api/constants";
 import { fetchPreviewHtml } from "../api";
 import { POST_CSS_PATH, PREVIEW_TOKEN_NAMES } from "../constants";
 import { EDITOR_MESSAGES } from "../messages";
-import { ModalDialog } from "./ModalDialog";
+import { ModalDialog } from "../../../shared/ui/ModalDialog";
 
 export interface PreviewDialogProps {
   title: string;
@@ -39,6 +39,7 @@ function previewDocument(title: string, bodyHtml: string): string {
 
 export function PreviewDialog({ title, doc, onClose }: PreviewDialogProps) {
   const { preview } = EDITOR_MESSAGES;
+  const titleId = useId();
   const { mutate, data, isError } = useMutation({
     mutationFn: fetchPreviewHtml,
     meta: { [SESSION_EXPIRY_META]: false },
@@ -49,7 +50,15 @@ export function PreviewDialog({ title, doc, onClose }: PreviewDialogProps) {
   }, [mutate, doc]);
 
   return (
-    <ModalDialog title={preview.title} onClose={onClose} className="editor-dialog-preview">
+    <ModalDialog
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      className="editor-dialog editor-dialog-preview"
+    >
+      <h2 id={titleId} className="editor-dialog-title">
+        {preview.title}
+      </h2>
       {data === undefined ? (
         <p className="editor-dialog-body" role="status">
           {isError ? preview.failed : preview.loading}

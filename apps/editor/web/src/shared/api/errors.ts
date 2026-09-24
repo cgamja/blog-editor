@@ -1,20 +1,15 @@
 import { HTTP_CONFLICT, HTTP_UNAUTHORIZED } from "./constants";
 
-/**
- * API가 거절한 요청 — `userMessage`는 API가 본문 `message`로 보낸 사용자용 문장(없으면 null),
- * `reason`은 같은 상태 코드를 화면이 나눠 다룰 때 쓰는 본문 `reason` 코드(예: 주소 바꾸기 409, 없으면 null).
- */
+/** API가 거절한 요청 — `userMessage`는 API가 본문 `message`로 보낸 사용자용 문장(없으면 null). */
 export class ApiError extends Error {
   readonly status: number;
   readonly userMessage: string | null;
-  readonly reason: string | null;
 
-  constructor(status: number, userMessage: string | null, reason: string | null = null) {
+  constructor(status: number, userMessage: string | null) {
     super(`API ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.userMessage = userMessage;
-    this.reason = reason;
   }
 }
 

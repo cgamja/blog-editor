@@ -3,6 +3,7 @@ import { bodyLimit } from "hono/body-limit";
 import { z } from "zod";
 import { docSchema, normalize } from "@blog-editor/content-schema";
 import { renderHtml } from "@blog-editor/content-render";
+import { MAX_PREVIEW_BODY_BYTES } from "./input-limits";
 import { issuesOf } from "./schema-issues";
 import {
   BODY_NOT_JSON_MESSAGE,
@@ -11,9 +12,6 @@ import {
 } from "./messages";
 
 export const previewBodySchema = z.strictObject({ doc: docSchema });
-
-/** 미리보기 본문 상한(바이트) — 한 편의 글 문서로 충분한 양. 넘으면 읽지 않고 413 */
-export const MAX_PREVIEW_BODY_BYTES = 1024 * 1024;
 
 /**
  * 편집 화면 미리보기(edit-screen design 6) — 공개 API와 같은 렌더러 · imageBaseUrl로 그린다. web은

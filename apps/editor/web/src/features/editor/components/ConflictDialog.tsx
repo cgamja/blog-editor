@@ -1,5 +1,6 @@
+import { useId } from "react";
 import { EDITOR_MESSAGES } from "../messages";
-import { ModalDialog } from "./ModalDialog";
+import { ModalDialog } from "../../../shared/ui/ModalDialog";
 
 export interface ConflictDialogProps {
   onCopyAndOpenLatest: () => void;
@@ -14,8 +15,17 @@ export function ConflictDialog({
   onOverwrite,
 }: ConflictDialogProps) {
   const { conflict } = EDITOR_MESSAGES;
+  const titleId = useId();
   return (
-    <ModalDialog title={conflict.title} onClose={onKeepWriting} className="editor-dialog-conflict">
+    <ModalDialog
+      open
+      onClose={onKeepWriting}
+      labelledBy={titleId}
+      className="editor-dialog editor-dialog-conflict"
+    >
+      <h2 id={titleId} className="editor-dialog-title">
+        {conflict.title}
+      </h2>
       <p className="editor-dialog-body">{conflict.body}</p>
       <div className="editor-dialog-stack">
         <button type="button" className="editor-dialog-primary" onClick={onCopyAndOpenLatest}>

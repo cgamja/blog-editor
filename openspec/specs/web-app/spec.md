@@ -121,10 +121,10 @@ web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401�
 - **WHEN** `message`가 든 JSON 409를 받는다
 - **THEN** 상태 409와 그 문장을 가진 `ApiError`다
 
-#### Scenario: 이유 코드가 든 실패는 그 이유를 가진 ApiError
+#### Scenario: 이유 코드가 든 409는 그 본문을 가진 ConflictError
 
 - **WHEN** `reason: "published"`가 든 409를 받는다
-- **THEN** 상태 409 · 이유 `published`인 `ApiError`다
+- **THEN** `ConflictError`이고 `body.reason`이 `published`다
 
 #### Scenario: JSON이 아닌 실패는 문장 없는 ApiError
 

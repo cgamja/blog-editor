@@ -5,7 +5,7 @@
  */
 
 /*
- * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16 · 14px과 대화상자 뒤 그늘은
+ * 토큰에 없는 값 — 한 곳에 이름을 붙여 두고 출처를 적는다. 글자 크기 36 · 26 · 18 · 16 · 14px은
  * tokens.json에 아직 없어 규칙 안에 값과 출처 주석으로 둔다(토큰 추가는 후속). 대화상자는 편집 화면 틀(.editor-screen) 밖에 뜨므로 둘 다에 건다.
  */
 .editor-screen,
@@ -22,7 +22,6 @@
   --postit-offset-top: -3.5rem; /* 68:2 종이 위로 14px 걸침(종이 위 여백 64px 안쪽 기준) */
   --postit-offset-right: -2.25rem; /* 68:2 종이 오른쪽에서 44px(좌우 여백 80px 안쪽 기준) */
   --mini-button-height: 1.875rem; /* 디자인 결정 4-A 작은 버튼 30px */
-  --dialog-width: 40rem; /* viewport.dialog 640px(67:2) */
   --dialog-gutter: 2rem; /* 좁은 화면에서 대화상자 둘레 — 디자인에 없음 */
   --preview-width: 56rem; /* 종이 760px + 대화상자 여백 — 디자인에 없는 화면 */
   --preview-height: 48rem; /* 1360×860 화면에 들어가는 높이 — 디자인에 없는 화면 */
@@ -242,23 +241,7 @@
   outline-offset: var(--focus-ring-offset);
 }
 
-/* ---------- 대화상자(충돌 67:2 · 발행 확인 · 미리보기) ---------- */
-
-.editor-dialog {
-  box-sizing: border-box;
-  /* 67:2 대화상자 폭 640px(viewport.dialog) */
-  width: min(var(--dialog-width), calc(100vw - var(--dialog-gutter)));
-  padding: var(--space-36) var(--space-40);
-  border: 0;
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font-sans);
-}
-
-.editor-dialog::backdrop {
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
-}
+/* ---------- 대화상자(충돌 67:2 · 발행 확인 · 미리보기) — 틀은 shared/ui modal-dialog.css ---------- */
 
 .editor-dialog[open] {
   display: flex;
@@ -330,7 +313,7 @@
   min-height: var(--dialog-button-height);
 }
 
-.editor-dialog-preview {
+.modal-dialog.editor-dialog-preview {
   /* 미리보기는 종이 폭(760px)에 여백을 더한 넓이 — 디자인에 없는 화면 */
   width: min(var(--preview-width), calc(100vw - var(--dialog-gutter)));
   height: min(var(--preview-height), calc(100dvh - var(--dialog-gutter)));

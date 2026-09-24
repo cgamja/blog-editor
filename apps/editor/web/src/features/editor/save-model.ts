@@ -1,5 +1,5 @@
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../shared/api/constants";
-import { ApiError, UnauthorizedError } from "../../shared/api/errors";
+import { HTTP_BAD_REQUEST } from "../../shared/api/constants";
+import { ApiError, ConflictError, UnauthorizedError } from "../../shared/api/errors";
 import { EDITOR_MESSAGES } from "./messages";
 import type { RenameErrorKind, SaveErrorKind, SaveStatus } from "./types";
 
@@ -16,9 +16,7 @@ export function saveHeadersOf(revision: string | null): Record<string, string> {
  */
 export function saveErrorKindOf(error: unknown, isNew: boolean): SaveErrorKind {
   if (error instanceof UnauthorizedError) return "expired";
-  if (error instanceof ApiError && error.status === HTTP_CONFLICT) {
-    return isNew ? "slugTaken" : "conflict";
-  }
+  if (error instanceof ConflictError) return isNew ? "slugTaken" : "conflict";
   if (error instanceof ApiError && error.status === HTTP_BAD_REQUEST) return "rejected";
   return "failed";
 }
@@ -38,10 +36,17 @@ function objectParticleOf(word: string): string {
  * 대화상자, 발행 글 · 이미 있는 주소면 주소 칸 문장. 그 밖은 저장 실패와 같다.
  */
 export function renameErrorKindOf(error: unknown): RenameErrorKind {
-  if (error instanceof ApiError && error.status === HTTP_CONFLICT) {
-    return error.reason === "stale" ? "conflict" : "slugRejected";
+  if (error instanceof ConflictError) {
+    return reasonOf(error.body) === "stale" ? "conflict" : "slugRejected";
   }
   return saveErrorKindOf(error, false);
+}
+
+/** 409 본문의 `reason`(post-rename-api) — 없거나 문자열이 아니면 null */
+function reasonOf(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("reason" in body)) return null;
+  const { reason } = body as { reason: unknown };
+  return typeof reason === "string" ? reason : null;
 }
 
 /** "오후 3시 42분" — 디자인 68:2 머리줄 표기(Intl의 "오후 3:42"와 다르다) */

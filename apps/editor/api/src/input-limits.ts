@@ -8,3 +8,6 @@ export const MAX_GUIDE_LENGTH = 20_000;
 export const MAX_BYTES_PER_CHAR = 4;
 export const MAX_IMPORT_BODY_BYTES = MAX_MARKDOWN_LENGTH * MAX_BYTES_PER_CHAR;
 export const MAX_SETTINGS_BODY_BYTES = MAX_GUIDE_LENGTH * MAX_BYTES_PER_CHAR;
+
+/** 미리보기 본문 상한(바이트) — 한 편의 글 문서로 충분한 양. 넘으면 읽지 않고 413 */
+export const MAX_PREVIEW_BODY_BYTES = 1024 * 1024;

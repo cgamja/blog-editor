@@ -1,6 +1,7 @@
+import { useId } from "react";
 import { EDITOR_MESSAGES } from "../messages";
 import type { MetaField } from "../types";
-import { ModalDialog } from "./ModalDialog";
+import { ModalDialog } from "../../../shared/ui/ModalDialog";
 
 export interface PublishDialogProps {
   /** 이미 발행한 글을 고쳐 다시 공개하는가 */
@@ -15,8 +16,12 @@ export interface PublishDialogProps {
 export function PublishDialog({ isUpdate, missing, onConfirm, onCancel }: PublishDialogProps) {
   const { publish, fieldNames } = EDITOR_MESSAGES;
   const isBlocked = missing.length > 0;
+  const titleId = useId();
   return (
-    <ModalDialog title={isUpdate ? publish.updateTitle : publish.title} onClose={onCancel}>
+    <ModalDialog open onClose={onCancel} labelledBy={titleId} className="editor-dialog">
+      <h2 id={titleId} className="editor-dialog-title">
+        {isUpdate ? publish.updateTitle : publish.title}
+      </h2>
       {isBlocked ? (
         <p className="editor-dialog-body">
           {publish.incomplete} {missing.map((field) => fieldNames[field]).join(" · ")}
