@@ -140,5 +140,14 @@ export {
   imageAltReminder,
   imageAltReminderKey,
 } from "./plugins/image-alt-reminder";
-export { imageFilesOf, shouldTakePastedFiles } from "./plugins/image-file-input";
-export type { ImageFileLike, PastedContent } from "./plugins/image-file-input";
+export {
+  imageFileInput,
+  imageFileInputKey,
+  imageFilesOf,
+  shouldTakePastedFiles,
+} from "./plugins/image-file-input";
+export type {
+  ImageFileInputOptions,
+  ImageFileLike,
+  PastedContent,
+} from "./plugins/image-file-input";

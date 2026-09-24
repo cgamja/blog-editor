@@ -16,6 +16,7 @@ import { appendCommandStepsAndSelection } from "./derived-command";
 import { INSERTABLE_BLOCKS } from "./drag-block.constants";
 import type { InsertableBlockKind } from "./drag-block.constants";
 import { insertBlockAfter, replaceEmptyTopParagraph } from "./drag-block";
+import { blockStart } from "./move-block";
 
 const isTurnIntoKind = (kind: InsertableBlockKind): kind is InsertableBlockKind & TurnIntoKind =>
   Object.hasOwn(TURN_INTO_TARGETS, kind);
@@ -65,10 +66,33 @@ export function applySlashItem(kind: InsertableBlockKind): Command {
   };
 }
 
-const unimplemented = (...args: unknown[]): never => {
-  void args;
-  throw new Error("미구현");
-};
+/**
+ * 동작 항목(블록 종류가 아닌 것 — 이미지 고르기)이 결과를 넣을 최상위 자리. `/거르기`를 지운 뒤 기준이다:
+ * 문단이 비면 그 문단 앞(그림 뒤로 이어 쓰게), 글자가 남으면 그 문단 뒤. 메뉴가 닫혀 있으면 null.
+ */
+export function slashActionGap(state: EditorState): number | null {
+  const menu = slashMenuKey.getState(state);
+  if (menu == null) return null;
+  const { from } = menu;
+  const removed = state.selection.from - from;
+  const index = state.doc.resolve(from).index(0);
+  const start = blockStart(state.doc, index);
+  const block = state.doc.child(index);
+  if (block.content.size === removed) return start;
+  return start + block.nodeSize - removed;
+}
 
-export const slashActionGap = (state: EditorState): number | null => unimplemented(state);
-export const clearSlashQuery: Command = (state, dispatch) => unimplemented(state, dispatch);
+/**
+ * 동작 항목을 고르면 `/거르기`를 지우고 메뉴를 닫는다 — 결과(그림)는 나중에 따로 들어오므로 여기서는 글자만 정리한다.
+ * 되돌리기 묶음은 applySlashItem과 같이 앞뒤로 끊는다. 메뉴가 닫혀 있으면 false.
+ */
+export const clearSlashQuery: Command = (state, dispatch) => {
+  const menu = slashMenuKey.getState(state);
+  if (menu == null) return false;
+  if (dispatch === undefined) return true;
+  const { from } = menu;
+  const tr = markSlashItemAppliedAndCloseHistory(state.tr.delete(from, state.selection.from));
+  tr.setSelection(TextSelection.create(tr.doc, from));
+  dispatch(tr);
+  return true;
+};
