@@ -159,7 +159,7 @@ describe("editor-sticker-edit: 고른 스티커 참조는 트랜잭션을 따라
   });
 });
 
-describe("editor-sticker-edit: 놓은 점은 붙을 수 있는 가장 가까운 자리에 붙는다", () => {
+describe("editor-sticker-edit: 놓은 점은 거리와 상관없이 가장 가까운 허용 자리에 붙는다", () => {
   const block = (pos: number, rect: Omit<BlockRect, "pos">): BlockRect => ({ pos, ...rect });
 
   it("WHEN 폭 600 · 높이 100 블록의 (300, 50)에 폭 60 스티커를 놓는다 THEN x 50 · y 50 · size 10이다", () => {
