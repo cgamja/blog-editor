@@ -108,6 +108,19 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
     },
     {
       method: "get",
+      path: "/api/session",
+      operationId: "checkSession",
+      tag: "session",
+      summary: "세션 확인",
+      description: "화면이 로그인 여부를 묻는다. 본문은 없다.",
+      requiresSession: true,
+      responses: {
+        204: { description: "로그인됨" },
+        401: unauthorized,
+      },
+    },
+    {
+      method: "get",
       path: "/api/posts",
       operationId: "listPosts",
       tag: "posts",
