@@ -61,7 +61,7 @@ export function contrastRatio(foreground: string, background: string): number {
 const hexOf = (value: string, presets: Record<string, string>): string | undefined =>
   value.startsWith("#") ? value : presets[value];
 
-/** 글자색(없으면 본문 잉크)과 바탕(배경색, 없으면 종이)의 대비가 4.5:1 미만인가 — 막지는 않는다 */
+/** 글자색(없으면 본문 잉크)과 바탕(배경색, 없으면 종이)의 대비가 READABLE_CONTRAST 미만인가 — 막지는 않는다 */
 export function isHardToRead(style: { color?: string | null; highlight?: string | null }): boolean {
   const foreground = (style.color && hexOf(style.color, TEXT_COLOR_HEX)) || DEFAULT_TEXT_HEX;
   const background = (style.highlight && hexOf(style.highlight, HIGHLIGHT_HEX)) || PAPER_HEX;

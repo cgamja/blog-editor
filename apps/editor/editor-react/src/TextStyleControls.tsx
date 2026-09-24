@@ -72,20 +72,24 @@ export function TextStyleControls({
   return (
     <>
       <ToolbarMenu
-        label={textToolbarMessages.font}
-        current={summaryLabel(summary.font, FONT_LABELS)}
-        options={FONT_OPTIONS}
-        selected={selectedOf(summary.font)}
+        menu={{
+          label: textToolbarMessages.font,
+          current: summaryLabel(summary.font, FONT_LABELS),
+          options: FONT_OPTIONS,
+          selected: selectedOf(summary.font),
+        }}
         open={openMenu === "font"}
         onOpenChange={openChange("font")}
         onChoose={choose("font")}
         item={itemProps("font")}
       />
       <ToolbarMenu
-        label={textToolbarMessages.weight}
-        current={summaryLabel(summary.weight, WEIGHT_LABELS)}
-        options={weightOptions}
-        selected={selectedOf(summary.weight)}
+        menu={{
+          label: textToolbarMessages.weight,
+          current: summaryLabel(summary.weight, WEIGHT_LABELS),
+          options: weightOptions,
+          selected: selectedOf(summary.weight),
+        }}
         open={openMenu === "weight"}
         onOpenChange={openChange("weight")}
         onChoose={choose("weight")}
@@ -93,10 +97,12 @@ export function TextStyleControls({
         item={itemProps("weight")}
       />
       <ToolbarMenu
-        label={textToolbarMessages.size}
-        current={summaryLabel(summary.size, SIZE_LABELS)}
-        options={SIZE_OPTIONS}
-        selected={selectedOf(summary.size)}
+        menu={{
+          label: textToolbarMessages.size,
+          current: summaryLabel(summary.size, SIZE_LABELS),
+          options: SIZE_OPTIONS,
+          selected: selectedOf(summary.size),
+        }}
         open={openMenu === "size"}
         onOpenChange={openChange("size")}
         onChoose={choose("size")}

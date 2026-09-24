@@ -2,7 +2,8 @@ import { useEffect, useId, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { ToolbarItemProps, ToolbarMenuOption } from "./text-toolbar-types";
 
-export interface ToolbarMenuProps {
+/** 메뉴가 보여 줄 값 */
+export interface ToolbarMenuContent {
   /** 무엇을 고르는 메뉴인가 — 접근성 이름의 앞부분 */
   label: string;
   /** 지금 값의 이름 — 여러 값이면 "여러 값" */
@@ -10,6 +11,10 @@ export interface ToolbarMenuProps {
   options: readonly ToolbarMenuOption[];
   /** 지금 값 — 없으면 null, 여러 값이면 undefined */
   selected: string | null | undefined;
+}
+
+export interface ToolbarMenuProps {
+  menu: ToolbarMenuContent;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChoose: (value: string | null) => void;
@@ -38,10 +43,7 @@ const MENU_KEYS: Record<string, (current: number, count: number) => number> = {
  * https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
  */
 export function ToolbarMenu({
-  label,
-  current,
-  options,
-  selected,
+  menu: { label, current, options, selected },
   open,
   onOpenChange,
   onChoose,

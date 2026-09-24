@@ -38,7 +38,7 @@ function contrastOf(kind: ColorKind, value: string, other: SummaryValue<string>)
 }
 
 /**
- * 글자색 · 배경색 고르기 — 디자인 토큰 프리셋 칩 + `#` 직접 입력(ADR-020). 대비가 4.5:1 미만이면
+ * 글자색 · 배경색 고르기 — 디자인 토큰 프리셋 칩 + `#` 직접 입력(ADR-020). 대비가 READABLE_CONTRAST 미만이면
  * 경고하지만 적용은 막지 않는다(design.md 6). 편집 영역이 포커스를 잃어도 선택은 EditorState에 남는다.
  */
 export function ColorPicker({
