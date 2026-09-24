@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { BlockHandles } from "./BlockHandles";
 import { LinkPopover } from "./LinkPopover";
+import { SlashMenu } from "./SlashMenu";
 import { StickerLayer } from "./StickerLayer";
 import { TextToolbar } from "./TextToolbar";
 import { useImageUpload } from "./use-image-upload";
@@ -36,6 +37,7 @@ export function BlogEditor({ editor }: BlogEditorProps) {
       <WidthResizeHandles editor={editor} />
       <TextToolbar editor={editor} frameRef={frameRef} />
       <LinkPopover editor={editor} frameRef={frameRef} />
+      <SlashMenu editor={editor} frameRef={frameRef} />
     </div>
   );
 }
