@@ -7,4 +7,5 @@ export {
   setCalloutTone,
 } from "./commands/custom-blocks";
 export type { AppScreenshotInput } from "./commands/custom-blocks";
+export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { blockGuard } from "./plugins/block-guard";
