@@ -50,12 +50,9 @@ export {
 } from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
-export {
-  MarkdownShortcuts,
-  markdownInputRules,
-  markdownShortcutKeymap,
-  markdownShortcutPlugins,
-} from "./plugins/markdown-shortcuts";
+export { markdownInputRules } from "./plugins/markdown-input-rules";
+export { markdownShortcutKeymap } from "./plugins/markdown-shortcut-keymap";
+export { MarkdownShortcuts, markdownShortcutPlugins } from "./plugins/markdown-shortcuts";
 export {
   MOTION_PREVIEW_CLASS,
   endMotionPreview,

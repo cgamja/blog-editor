@@ -9,6 +9,12 @@ import { stickerCount, stickersOf } from "./sticker-query";
  * 꾸미기 자리는 최상위 블록에만 있어서(adr-008) 대상은 커서가 든 최상위 블록이다.
  */
 
+/** pos가 최상위(깊이 1) 블록 안이고 그 블록 타입이 types 중 하나인가 — 목록 · 인용 · 콜아웃 안은 아니다(design.md 3) */
+export function isInTopBlock(state: EditorState, pos: number, types: readonly string[]): boolean {
+  const $pos = state.doc.resolve(pos);
+  return $pos.depth === 1 && types.includes($pos.parent.type.name);
+}
+
 /** 텍스트 블록이 가질 수 있는 꾸미기 — width는 이미지 · 스크린샷만 가진다 */
 const TEXTBLOCK_DECORATION_KEYS = ["font", "motion", "stickers"] as const;
 
