@@ -400,13 +400,35 @@
   touch-action: none;
 }
 
+/* 포인터를 잡고 끄는 중 — 캡처한 버튼의 커서가 화면 전체에 보인다 */
+.sticker-hit[data-dragging] {
+  cursor: grabbing;
+}
+
 .sticker-hit:focus-visible,
 .sticker-remove:focus-visible {
   outline: 0.125rem solid var(--brand-ink, currentColor);
   outline-offset: 0.125rem;
 }
 
+/*
+ * 손잡이 자리 계산은 이 변수들로만 한다(PR #76 리뷰). push의 %는 쓰는 자리에서 풀린다 —
+ * left · right에서는 폭, top · bottom · height에서는 높이 기준이라 한 식으로 가로 · 세로를 함께 쓴다.
+ * - handle-size: 누르는 칸(디자인 control-height 44px), dot: 보이는 점(디자인 69:2 모서리 점 14px)
+ * - handle-push: 스티커가 칸보다 작으면(< 2.75rem) 칸끼리 겹치지 않게 바깥으로 미는 양(≤ 0)
+ * - corner-offset: 모서리 칸의 바깥 변, top-row: 회전 손잡이 · 지우기 줄의 위 변(모서리 칸 위로 칸 + 틈)
+ */
 .sticker-frame {
+  --sticker-handle-size: 2.75rem;
+  --sticker-handle-half: calc(var(--sticker-handle-size) / 2);
+  --sticker-handle-gap: 0.25rem;
+  --sticker-handle-dot: 0.875rem;
+  --sticker-handle-push: min(0px, 50% - var(--sticker-handle-half));
+  --sticker-corner-offset: calc(var(--sticker-handle-push) - var(--sticker-handle-half));
+  --sticker-top-row: calc(
+    var(--sticker-corner-offset) - var(--sticker-handle-size) - var(--sticker-handle-gap)
+  );
+
   position: absolute;
   outline: 1px dashed var(--brand-ink, currentColor);
   outline-offset: 0.25rem;
@@ -423,52 +445,87 @@
   position: absolute;
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--sticker-handle-size);
+  height: var(--sticker-handle-size);
   pointer-events: auto;
   touch-action: none;
 }
 
 .sticker-handle::after {
   content: "";
-  width: 0.875rem;
-  height: 0.875rem;
+  width: var(--sticker-handle-dot);
+  height: var(--sticker-handle-dot);
   box-sizing: border-box;
   border: 0.125rem solid var(--brand-ink, currentColor);
   border-radius: 50%;
   background: var(--surface, Canvas);
 }
 
-.sticker-handle-resize {
-  right: -1.375rem;
-  bottom: -1.375rem;
+/*
+ * 네 모서리 조절점 — 칸 가운데가 모서리이고, 작은 스티커는 handle-push만큼 바깥으로 민다.
+ * 커서는 회전에 따라 StickerFrame이 inline으로 고른다(resizeCursor) — 여기 값은 회전 0의 대체값.
+ */
+.sticker-handle-nw {
+  top: var(--sticker-corner-offset);
+  left: var(--sticker-corner-offset);
   cursor: nwse-resize;
 }
 
-.sticker-handle-rotate {
-  top: -3.25rem;
-  left: 50%;
-  transform: translateX(-50%);
-  cursor: grab;
+.sticker-handle-ne {
+  top: var(--sticker-corner-offset);
+  right: var(--sticker-corner-offset);
+  cursor: nesw-resize;
 }
 
+.sticker-handle-se {
+  right: var(--sticker-corner-offset);
+  bottom: var(--sticker-corner-offset);
+  cursor: nwse-resize;
+}
+
+.sticker-handle-sw {
+  bottom: var(--sticker-corner-offset);
+  left: var(--sticker-corner-offset);
+  cursor: nesw-resize;
+}
+
+/*
+ * 회전 손잡이 · 지우기는 위 조절점 줄 위에 한 줄로 둔다(top-row) — 스티커 크기와 상관없이 조절점 칸과 겹치지 않는다.
+ * 회전 커서는 둥근 화살표 SVG, 가운데(12 12)가 기준점. 커서 이미지 안에서는 CSS 변수를 못 쓰므로 토큰 대신
+ * 시스템 커서 관례(검은 선 + 흰 테두리)를 따른다. 이미지를 못 쓰는 브라우저는 grab.
+ */
+.sticker-handle-rotate {
+  top: var(--sticker-top-row);
+  left: 50%;
+  transform: translateX(-50%);
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M18.5 13a6.5 6.5 0 1 1-2-4.7' fill='none' stroke='%23fff' stroke-width='4.5' stroke-linecap='round'/%3E%3Cpath d='M18.5 13a6.5 6.5 0 1 1-2-4.7' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M20 3.5v6h-6z' fill='%23000' stroke='%23fff' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E")
+      12 12,
+    grab;
+}
+
+/* 스티커 윗변에서 회전 손잡이 점(지름 0.875rem)의 아래 끝까지 — 손잡이를 민 만큼 길어진다 */
 .sticker-stem {
   position: absolute;
   bottom: 100%;
   left: 50%;
   width: 1px;
-  height: 1.5rem;
+  height: calc(
+    var(--sticker-handle-size) + var(--sticker-handle-gap) - var(--sticker-handle-dot) / 2 -
+      var(--sticker-handle-push)
+  );
   background: var(--brand-ink, currentColor);
 }
 
+/* 오른쪽 위 모서리는 크기 조절점 자리라, 지우기는 회전 손잡이 줄에서 그 칸 바로 오른쪽(틈 하나) */
 .sticker-remove {
   position: absolute;
-  top: -1.375rem;
-  right: -1.375rem;
+  top: var(--sticker-top-row);
+  left: calc(50% + var(--sticker-handle-half) + var(--sticker-handle-gap));
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--sticker-handle-size);
+  height: var(--sticker-handle-size);
   padding: 0;
   border: 0;
   background: transparent;
@@ -488,23 +545,10 @@
   line-height: 1;
 }
 
-/* 「…에 붙어 있어요」 — 디자인 69:2의 어두운 알약(radius-pill). 스티커 아래 가운데 */
-.sticker-tag {
-  position: absolute;
-  transform: translate(-50%, 0.75rem);
-  padding: 0.25rem 0.625rem;
-  border-radius: 999px;
-  background: var(--toolbar, CanvasText);
-  color: var(--surface, Canvas);
-  /* 디자인 caption 13px */
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-
+/* 끄는 동안 원래 자리의 스티커는 숨으므로 유령이 곧 스티커다 — 불투명하게 */
 .sticker-ghost {
   position: absolute;
   height: auto;
-  opacity: 0.6;
   pointer-events: none;
 }
 

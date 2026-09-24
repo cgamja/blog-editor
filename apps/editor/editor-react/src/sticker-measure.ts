@@ -38,7 +38,7 @@ export function measureBlocks(view: EditorView, origin: Origin): BlockRect[] {
 
 export function measureStickers(view: EditorView, origin: Origin): StickerBox[] {
   const boxes: StickerBox[] = [];
-  view.state.doc.forEach((node, blockPos) => {
+  view.state.doc.forEach((_node, blockPos) => {
     const stickers = stickersIn(view.state.doc, blockPos);
     const block = stickers.length > 0 ? topBlockElement(view, blockPos) : null;
     if (block === null) return;
@@ -56,7 +56,6 @@ export function measureStickers(view: EditorView, origin: Origin): StickerBox[] 
         src: image.currentSrc || image.src,
         size: sticker.size,
         rotate: sticker.rotate,
-        nodeName: node.type.name,
         width: image.offsetWidth,
         height: image.offsetHeight,
         centerX: rect.left + rect.width / 2 - origin.left,

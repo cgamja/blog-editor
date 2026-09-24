@@ -2,14 +2,27 @@ import { useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
-import { addSticker, placeStickerNear, stickerCount, stickersIn } from "@blog-editor/editor-core";
+import {
+  addSticker,
+  DEFAULT_COORDINATES,
+  placeStickerNear,
+  stickerCount,
+  stickersIn,
+} from "@blog-editor/editor-core";
 import type { StickerRef } from "@blog-editor/editor-core";
 import { STICKER_MESSAGES } from "./sticker-messages";
 import { readStickerDrag } from "./sticker-ui";
 import type { StickerLayout } from "./use-sticker-layout";
 
-/** 패널에서 끌어 온 스티커의 처음 폭 — 디자인 69:2 코랄 별(88px / 600px ≈ 15%, design.md 5) */
-const PANEL_DROP_WIDTH_PX = 88;
+/** 디자인 종이의 글 폭 — tokens.json article-width 760px − article-padding-x 80px × 2 */
+const DESIGN_TEXT_WIDTH_PX = 600;
+const PERCENT = 100;
+
+/**
+ * 패널에서 끌어 온 스티커의 처음 폭 — 커맨드 기본 크기(블록 폭의 %)를 디자인 글 폭에 적용한 값(600 × 8% = 48px).
+ * 놓은 블록의 폭으로 %를 다시 재므로 px로 한 번 정해 둔다(이슈 #71).
+ */
+const PANEL_DROP_WIDTH_PX = (DESIGN_TEXT_WIDTH_PX * DEFAULT_COORDINATES.size) / PERCENT;
 
 interface StickerDropHandlers {
   onPlaced: (ref: StickerRef) => void;

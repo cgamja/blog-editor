@@ -6,6 +6,7 @@ import {
   History,
   motionPreview,
   MoveBlock,
+  stickerHiding,
 } from "@blog-editor/editor-core";
 
 // 코어 Keymap(우선순위 100)의 Backspace(joinBackward)보다 먼저 본다 — 커맨드가 false면 코어로 넘어간다
@@ -39,7 +40,24 @@ const MotionPreview = Extension.create({
   addProseMirrorPlugins: () => [motionPreview()],
 });
 
-/** 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에 가드 · 되돌리기 · 옮기기 · 키맵 · 미리 보기를 더한다. */
+/** 스티커를 끄는 동안 원래 자리의 스티커를 숨기는 장식(spec: editor-sticker-edit). 등록만 한다 */
+const StickerHiding = Extension.create({
+  name: "stickerHiding",
+  addProseMirrorPlugins: () => [stickerHiding()],
+});
+
+/**
+ * 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에
+ * 가드 · 되돌리기 · 옮기기 · 키맵 · 미리 보기 · 스티커 숨김을 더한다.
+ */
 export function blogEditorExtensions(): AnyExtension[] {
-  return [...editorExtensions, BlockGuard, History, MoveBlock, CustomBlockKeys, MotionPreview];
+  return [
+    ...editorExtensions,
+    BlockGuard,
+    History,
+    MoveBlock,
+    CustomBlockKeys,
+    MotionPreview,
+    StickerHiding,
+  ];
 }
