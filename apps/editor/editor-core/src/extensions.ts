@@ -5,7 +5,16 @@ import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
 import { headingLevelOf, hrefOrNull, languageOrNull, toneOrNull } from "./closed-values";
-import { hasClass, imageAttrsOf, imgSpec, withDecoration, wrapperRule } from "./dom";
+import {
+  TEXT_STYLE_TAG,
+  hasClass,
+  imageAttrsOf,
+  imgSpec,
+  readTextStyle,
+  textStyleSpec,
+  withDecoration,
+  wrapperRule,
+} from "./dom";
 import type { ElementLike } from "./dom";
 
 /**
@@ -32,12 +41,15 @@ const required: Attribute = { isRequired: true, rendered: false, parseHTML: igno
 const stickers: Attribute = { ...optional, keepOnSplit: false };
 
 const decoration = { font: optional, motion: optional, stickers };
+// 정렬은 문단 · 제목 · 이미지 · 스크린샷만(ADR-020) — 목록 · 인용 · 콜아웃은 정렬하지 않는다
+const alignedText = { ...decoration, align: optional };
 const motionOnly = { motion: optional, stickers };
 const media = {
   naturalWidth: optional,
   naturalHeight: optional,
   motion: optional,
   width: optional,
+  align: optional,
   stickers,
 };
 
@@ -52,8 +64,11 @@ const Paragraph = Node.create({
   name: "paragraph",
   group: "block",
   content: "text*",
-  addAttributes: () => decoration,
-  parseHTML: () => [wrapperRule({ matches: isTag("P"), keys: ["font", "motion"] }), { tag: "p" }],
+  addAttributes: () => alignedText,
+  parseHTML: () => [
+    wrapperRule({ matches: isTag("P"), keys: ["font", "motion", "align"] }),
+    { tag: "p" },
+  ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["p", 0]),
 });
 
@@ -67,11 +82,11 @@ const Heading = Node.create({
   name: "heading",
   group: "block",
   content: "text*",
-  addAttributes: () => ({ level: required, ...decoration }),
+  addAttributes: () => ({ level: required, ...alignedText }),
   parseHTML: () => [
     wrapperRule({
       matches: (inner) => HEADING_TAG.test(inner.tagName),
-      keys: ["font", "motion"],
+      keys: ["font", "motion", "align"],
       attrs: headingAttrs,
     }),
     ...["h1", "h2", "h3", "h4", "h5", "h6"].map((tag) => ({
@@ -178,7 +193,7 @@ const Image = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-image"),
-      keys: ["motion", "width"],
+      keys: ["motion", "width", "align"],
       attrs: imageFromFigure,
       hasContent: false,
     }),
@@ -215,7 +230,7 @@ const AppScreenshot = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-screenshot"),
-      keys: ["motion", "width"],
+      keys: ["motion", "width", "align"],
       attrs: screenshotFromFigure,
       hasContent: false,
     }),
@@ -307,6 +322,32 @@ const Link = Mark.create({
   renderHTML: ({ mark }) => ["a", { href: String(mark.attrs.href) }, 0],
 });
 
+const Strike = Mark.create({
+  name: "strike",
+  parseHTML: () => [{ tag: "s" }, { tag: "del" }, { tag: "strike" }],
+  renderHTML: () => ["s", 0],
+});
+
+// 우리 어휘(span.post-ts)만 읽는다 — 남의 사이트 인라인 색 · 크기는 닫힌 집합 밖이라 마크가 되지 않는다
+const TextStyle = Mark.create({
+  name: "textStyle",
+  addAttributes: () => ({
+    font: optional,
+    weight: optional,
+    size: optional,
+    color: optional,
+    highlight: optional,
+  }),
+  parseHTML: () => [{ tag: TEXT_STYLE_TAG, getAttrs: readTextStyle }],
+  renderHTML: ({ mark }) => textStyleSpec(mark.attrs),
+});
+
+const Underline = Mark.create({
+  name: "underline",
+  parseHTML: () => [{ tag: "u" }],
+  renderHTML: () => ["u", 0],
+});
+
 // 코어 Keymap(우선순위 100)보다 먼저 Enter를 본다 — 스티커 없는 블록은 커맨드가 false라 코어로 넘어간다
 const STICKER_SPLIT_PRIORITY = 1000;
 
@@ -348,6 +389,9 @@ export const editorExtensions = [
   Code,
   Italic,
   Link,
+  Strike,
+  TextStyle,
+  Underline,
   StickerSafeSplit,
   PasteNormalizer,
 ];
