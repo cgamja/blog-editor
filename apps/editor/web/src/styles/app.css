@@ -1,20 +1,9 @@
 /*
- * 앱 공통 바탕과 화면별 모양.
- * 디자인 원천(design/tokens.json)에 간격 척도 · 테두리 두께가 없어 여기서 한 번만 정한다(Figma 토큰을 지어내지 않는다).
- * 포커스 고리는 tokens.json `size.focus-ring`("2px solid #b0552f, offset 2px") 설명을 옮겼다 — 길이 토큰이 아니라 생성되지 않는다.
- * 글자 크기는 tokens.json `font.ui` · `font.caption` · `font.h1`(설명 문자열)과 캔버스 66:2 값을 옮겼고, 그림자도 캔버스 값이다.
+ * 앱 공통 바탕과 화면별 모양. 간격 · 선 두께 · 포커스 고리는 생성 토큰(tokens.css, #101)을 쓴다.
+ * 글자 크기와 그림자는 아직 토큰이 없다 — tokens.json `font.ui` · `font.caption` · `font.h1`(설명 문자열)과
+ * 캔버스 66:2 값을 여기 한 곳에 옮겼다.
  */
 :root {
-  --app-space-2: 0.5rem;
-  --app-space-3: 0.75rem;
-  --app-space-4: 1rem;
-  --app-space-6: 1.5rem;
-  --app-space-10: 2.5rem;
-  --app-button-padding-x: 1.125rem;
-  --app-border-width: 1px;
-  --app-focus-ring-width: 0.125rem;
-  --app-focus-ring-offset: 0.125rem;
-
   --app-font-caption: 0.8125rem;
   --app-font-ui: 0.9375rem;
   --app-font-row-title: 1rem;
@@ -35,8 +24,8 @@ body {
 }
 
 :focus-visible {
-  outline: var(--app-focus-ring-width) solid var(--brand-ink);
-  outline-offset: var(--app-focus-ring-offset);
+  outline: var(--focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--focus-ring-offset);
 }
 
 a {
@@ -64,21 +53,21 @@ a {
 .app-page {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-4);
+  gap: var(--space-16);
   max-width: var(--article-width);
   margin-inline: auto;
-  padding: var(--app-space-10) var(--app-space-6);
+  padding: var(--space-40) var(--space-24);
 }
 
 .app-placeholder {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-4);
+  gap: var(--space-16);
 }
 
 .app-status {
   margin: 0;
-  padding: var(--app-space-10) var(--app-space-6);
+  padding: var(--space-40) var(--space-24);
   color: var(--ink-soft);
 }
 
@@ -89,8 +78,8 @@ a {
   justify-content: center;
   box-sizing: border-box;
   min-height: var(--control-height);
-  padding: 0 var(--app-button-padding-x);
-  border: var(--app-border-width) solid var(--line);
+  padding: 0 var(--space-18);
+  border: var(--border-width) solid var(--line);
   border-radius: var(--radius-button);
   background: var(--surface);
   color: var(--ink);
@@ -109,6 +98,7 @@ a {
 }
 
 .app-button--primary {
+  padding: 0 var(--space-22);
   border-color: var(--brand-ink);
   background: var(--brand-ink);
   color: var(--surface);
@@ -140,7 +130,7 @@ a {
 .postit {
   display: inline-block;
   margin: 0;
-  padding: var(--app-space-2) var(--app-space-3);
+  padding: var(--space-10) var(--space-12);
   background: var(--postit);
   color: var(--postit-ink);
   font-family: var(--font-hand);
@@ -152,14 +142,8 @@ a {
 }
 
 .postit--tag {
-  margin-left: var(--app-space-3);
-  padding-block: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .postit {
-    transition: transform 150ms ease;
-  }
+  margin-left: var(--space-14);
+  padding: var(--space-2) var(--space-12) var(--space-4);
 }
 
 /* 로그인(결정 아티팩트 1 · A안) */
@@ -167,7 +151,7 @@ a {
   display: grid;
   min-height: 100dvh;
   place-items: center;
-  padding: var(--app-space-6) var(--app-space-4);
+  padding: var(--space-24) var(--space-16);
   box-sizing: border-box;
   background: var(--paper-deep);
 }
@@ -175,12 +159,12 @@ a {
 .login-card {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-4);
+  gap: var(--space-12);
   box-sizing: border-box;
   width: 100%;
   max-width: 22rem;
-  padding: var(--app-space-6);
-  border: var(--app-border-width) solid var(--line);
+  padding: var(--space-22);
+  border: var(--border-width) solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--app-shadow-card);
@@ -189,13 +173,13 @@ a {
 .login-card__brand {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-2);
+  gap: var(--space-6);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-2);
+  gap: var(--space-4);
   font-size: var(--app-font-caption);
   font-weight: 500;
   color: var(--ink-mid);
@@ -203,8 +187,8 @@ a {
 
 .field input {
   min-height: var(--control-height);
-  padding: 0 var(--app-space-3);
-  border: var(--app-border-width) solid var(--line);
+  padding: 0 var(--space-12);
+  border: var(--border-width) solid var(--line);
   border-radius: var(--radius-input);
   background: var(--surface);
   color: var(--ink);
@@ -234,25 +218,25 @@ a {
 .app-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-6);
+  gap: var(--space-32);
   flex-shrink: 0;
   box-sizing: border-box;
   width: var(--nav-width);
-  padding: var(--app-space-6) var(--app-space-4);
-  border-right: var(--app-border-width) solid var(--line);
+  padding: var(--space-32) var(--space-20) var(--space-24);
+  border-right: var(--border-width) solid var(--line);
 }
 
 .app-nav__brand {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-2);
-  padding: 0 var(--app-space-3);
+  gap: var(--space-2);
+  padding: 0 var(--space-14);
 }
 
 .app-nav__items {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-2);
+  gap: var(--space-4);
   flex-grow: 1;
 }
 
@@ -260,8 +244,8 @@ a {
   display: flex;
   align-items: center;
   min-height: var(--control-height);
-  padding: 0 var(--app-space-3);
-  border: var(--app-border-width) solid transparent;
+  padding: 0 var(--space-14);
+  border: var(--border-width) solid transparent;
   border-radius: var(--radius-button);
   color: var(--ink-soft);
 }
@@ -280,7 +264,7 @@ a {
 .app-nav__logout {
   align-self: flex-start;
   min-height: var(--control-height);
-  padding: 0 var(--app-space-3);
+  padding: 0 var(--space-14);
   border: 0;
   background: transparent;
   color: var(--ink-soft);
@@ -296,21 +280,21 @@ a {
   flex-grow: 1;
   min-width: 0;
   box-sizing: border-box;
-  padding: var(--app-space-10);
+  padding: var(--space-40) var(--space-56);
 }
 
 /* 글 목록(Figma 66:2) */
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-6);
+  gap: var(--space-20);
 }
 
 .post-list__header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--app-space-3);
+  gap: var(--space-12);
 }
 
 .post-list__header .page-title {
@@ -320,28 +304,28 @@ a {
 .post-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--app-space-3);
+  gap: var(--space-12);
 }
 
 .post-tabs {
   display: flex;
-  gap: var(--app-space-6);
-  border-bottom: var(--app-border-width) solid var(--line);
+  gap: var(--space-24);
+  border-bottom: var(--border-width) solid var(--line);
 }
 
 .post-tab {
   display: flex;
   align-items: center;
-  gap: var(--app-space-2);
+  gap: var(--space-8);
   min-height: var(--control-height);
-  padding: 0 var(--app-space-2);
+  padding: 0 var(--space-4);
   color: var(--ink-soft);
 }
 
 .post-tab[aria-current="page"] {
   color: var(--ink);
   font-weight: 600;
-  box-shadow: inset 0 calc(-1 * var(--app-focus-ring-width)) 0 var(--brand-ink);
+  box-shadow: inset 0 calc(-1 * var(--focus-ring-width)) 0 var(--brand-ink);
 }
 
 .post-tab__count {
@@ -352,7 +336,7 @@ a {
 
 .post-table {
   width: 100%;
-  border: var(--app-border-width) solid var(--line);
+  border: var(--border-width) solid var(--line);
   border-radius: var(--radius-card);
   border-spacing: 0;
   overflow: hidden;
@@ -361,8 +345,8 @@ a {
 
 .post-table th {
   height: var(--control-height);
-  padding: 0 var(--app-space-6);
-  border-bottom: var(--app-border-width) solid var(--line-soft);
+  padding: 0 var(--space-28);
+  border-bottom: var(--border-width) solid var(--line-soft);
   background: var(--surface-2);
   color: var(--ink-soft);
   font-size: var(--app-font-caption);
@@ -371,8 +355,8 @@ a {
 }
 
 .post-table td {
-  padding: var(--app-space-4) var(--app-space-6);
-  border-top: var(--app-border-width) solid var(--line-soft);
+  padding: var(--space-20) var(--space-28);
+  border-top: var(--border-width) solid var(--line-soft);
   vertical-align: middle;
 }
 
@@ -401,13 +385,12 @@ a {
 
 .status-pill {
   display: inline-block;
-  padding: var(--app-space-2) var(--app-space-3);
+  padding: var(--space-4) var(--space-12);
   border-radius: var(--radius-pill);
   background: var(--paper-deep);
   color: var(--ink-mid);
   font-size: var(--app-font-caption);
   font-weight: 500;
-  line-height: 1;
   white-space: nowrap;
 }
 
@@ -426,8 +409,8 @@ a {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--app-space-4);
-  padding: var(--app-space-10) var(--app-space-4);
+  gap: var(--space-12);
+  padding: var(--space-40) var(--space-16);
   text-align: center;
 }
 
@@ -451,10 +434,11 @@ a {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    gap: var(--space-16);
     width: auto;
-    padding: var(--app-space-3) var(--app-space-4);
+    padding: var(--space-12) var(--space-16);
     border-right: 0;
-    border-bottom: var(--app-border-width) solid var(--line);
+    border-bottom: var(--border-width) solid var(--line);
   }
 
   .app-nav__items {
@@ -463,7 +447,7 @@ a {
   }
 
   .app-main {
-    padding: var(--app-space-6) var(--app-space-4);
+    padding: var(--space-24) var(--space-16);
   }
 
   .post-table__optional {
@@ -472,7 +456,7 @@ a {
 
   .post-table th,
   .post-table td {
-    padding-inline: var(--app-space-3);
+    padding-inline: var(--space-12);
   }
 }
 

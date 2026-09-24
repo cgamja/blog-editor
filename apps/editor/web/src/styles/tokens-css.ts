@@ -13,6 +13,8 @@ const FONT_FAMILY_VARIABLES: Readonly<Record<string, string>> = {
 // post.css는 사이트 쪽 이름 `--brand`를 쓴다 — 에디터 토큰에서는 `brand-ink`와 같은 색이다
 const ALIASES: ReadonlyArray<readonly [string, string]> = [["brand", "var(--brand-ink)"]];
 
+const SPACE_PREFIX = "space-";
+
 const PX_LENGTH = /^(\d+(?:\.\d+)?)px$/;
 const ROOT_FONT_SIZE_PX = 16;
 
@@ -26,7 +28,8 @@ export function tokensToCss(tokens: unknown): string {
   const lines = [
     ...colorLines(asGroup(root.color)),
     ...fontLines(asGroup(root.font)),
-    ...sizeLines(asGroup(root.size)),
+    ...lengthLines(asGroup(root.size), ""),
+    ...lengthLines(asGroup(root.space), SPACE_PREFIX),
     ...ALIASES.map(([name, value]) => declaration(name, value)),
   ];
   return `${HEADER}\n\n:root {\n${lines.join("\n")}\n}\n`;
@@ -43,10 +46,11 @@ function fontLines(font: Group): string[] {
   });
 }
 
-function sizeLines(size: Group): string[] {
-  return stringEntries(size).flatMap(([name, value]) => {
+// 간격 척도는 px 값이 이름이다(`space.8` → `--space-8`) — 단계 번호와 헷갈리지 않게 접두사를 붙인다
+function lengthLines(group: Group, prefix: string): string[] {
+  return stringEntries(group).flatMap(([name, value]) => {
     const rem = pxToRem(value);
-    return rem === null ? [] : [declaration(name, rem)];
+    return rem === null ? [] : [declaration(`${prefix}${name}`, rem)];
   });
 }
 
