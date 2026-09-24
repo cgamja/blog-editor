@@ -66,10 +66,8 @@ export function BlockHandles({ editor, frameRef }: BlockHandlesProps) {
         frameRef={frameRef}
         buttonRef={moveButtonRef}
         from={hovered.index}
-        menuOpen={blockMenuOpen}
-        onMenuToggle={() => setBlockMenuOpen((open) => !open)}
-        onDraggingChange={setDragging}
-        onDrop={onDrop}
+        menu={{ open: blockMenuOpen, onToggle: () => setBlockMenuOpen((open) => !open) }}
+        dragEvents={{ onDraggingChange: setDragging, onDrop }}
       />
       {blockMenuOpen && (
         <BlockMenu
