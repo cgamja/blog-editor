@@ -5,6 +5,7 @@ import type { Command } from "@tiptap/pm/state";
 import { blockStart, insertBlockAfter, moveTopBlockTo } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { BlockAddMenu } from "./BlockAddMenu";
+import type { BlockMenuAction } from "./block-menu-actions";
 import { BlockMenu } from "./BlockMenu";
 import { BlockMoveHandle } from "./BlockMoveHandle";
 import { useHoveredBlock } from "./use-hovered-block";
@@ -12,8 +13,8 @@ import { useHoveredBlock } from "./use-hovered-block";
 export interface BlockHandlesProps {
   editor: Editor;
   frameRef: RefObject<HTMLDivElement | null>;
-  /** 「이미지」를 고르면 이 블록 뒤 자리(gap)를 넘긴다 — 파일 고르기와 올리기는 부르는 쪽이 한다 */
-  onChooseImage?: ((gap: number) => void) | undefined;
+  /** 「+」 메뉴의 동작 항목 — 이 블록 뒤 자리(gap)를 넘긴다. 파일 고르기와 올리기는 부르는 쪽이 한다 */
+  actions?: Partial<Record<BlockMenuAction, (gap: number) => void>> | undefined;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface BlockHandlesProps {
  * 둔다. 옮기기 손잡이를 끌지 않고 누르면 블록 메뉴가 열린다. 문서를 바꾸는 일은 editor-core 커맨드 한 번이고,
  * 여기는 어느 블록 옆에 띄울지만 정한다.
  */
-export function BlockHandles({ editor, frameRef, onChooseImage }: BlockHandlesProps) {
+export function BlockHandles({ editor, frameRef, actions }: BlockHandlesProps) {
   const [dragging, setDragging] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
@@ -65,14 +66,16 @@ export function BlockHandles({ editor, frameRef, onChooseImage }: BlockHandlesPr
     runAndDropHandle(insertBlockAfter(hovered.index, kind));
   };
 
-  const chooseImage =
-    onChooseImage === undefined
-      ? undefined
-      : () => {
-          setAddMenuOpen(false);
-          setHovered(null);
-          onChooseImage(blockStart(editor.state.doc, hovered.index + 1));
-        };
+  const addMenuActions = Object.fromEntries(
+    Object.entries(actions ?? {}).map(([action, handle]) => [
+      action,
+      () => {
+        setAddMenuOpen(false);
+        setHovered(null);
+        handle(blockStart(editor.state.doc, hovered.index + 1));
+      },
+    ]),
+  ) as Partial<Record<BlockMenuAction, () => void>>;
 
   return (
     <div className="block-handles" style={{ top: hovered.top, left: hovered.left }}>
@@ -80,7 +83,7 @@ export function BlockHandles({ editor, frameRef, onChooseImage }: BlockHandlesPr
         open={addMenuOpen}
         onOpenChange={setAddMenuOpen}
         onChoose={onChoose}
-        onChooseImage={chooseImage}
+        actions={addMenuActions}
       />
       <BlockMoveHandle
         editor={editor}

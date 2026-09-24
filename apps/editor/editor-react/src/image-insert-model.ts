@@ -1,9 +1,11 @@
 /**
  * 이미지 넣기의 순수 계산(DOM 없음) — spec: editor-image-insert, image-insert design.md 2.
- * 굽기 · 올리기(브라우저 API)는 encode-image.ts · upload-image.ts가 하고, 여기는 무엇을 할지만 정한다.
+ * 굽기(브라우저 API)는 encode-image.ts, 올리기(서버 통신)는 부르는 쪽이 준 ImageUploader가 하고,
+ * 여기는 무엇을 할지와 올리기 API 응답을 어떻게 읽을지만 정한다.
  */
 import { IMAGE_MAX_BYTES, NATURAL_SIZE_RANGE, imagePathSchema } from "@blog-editor/content-schema";
 import type { UploadedImageAttrs } from "@blog-editor/editor-core";
+import type { UploadResult } from "./image-upload-types";
 import { IMAGE_INSERT_MESSAGES } from "./image-insert-messages";
 
 export interface Size {
@@ -19,9 +21,6 @@ export interface FileLike {
 
 /** WebP 품질을 이 순서로 낮춰 다시 굽는다 — 마지막에도 한도를 넘으면 포기하고 이유를 보인다 */
 const QUALITY_STEPS = [0.85, 0.75, 0.65, 0.55] as const;
-
-/** 서버가 받는 형식이 아니어도 브라우저가 풀 수 있으면 다시 구워 올린다(HEIC 등). SVG는 풀어도 막는다 */
-const REFUSED_TYPES: ReadonlySet<string> = new Set(["image/svg+xml"]);
 
 /** API가 사람에게 보일 문장을 `message`로 주는 상태 — 그대로 보인다 */
 const API_MESSAGE_STATUSES: ReadonlySet<number> = new Set([413, 415, 422]);
@@ -54,10 +53,6 @@ export function passesThrough(file: FileLike, size: Size): boolean {
   );
 }
 
-export function imageFilesOf<T extends FileLike>(files: readonly T[]): T[] {
-  return files.filter((file) => file.type.startsWith("image/") && !REFUSED_TYPES.has(file.type));
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -76,4 +71,16 @@ export function uploadErrorMessage(status: number, body: unknown): string {
   const message = isRecord(body) ? body.message : undefined;
   if (API_MESSAGE_STATUSES.has(status) && typeof message === "string") return message;
   return IMAGE_INSERT_MESSAGES.uploadFailed;
+}
+
+/**
+ * 올리기 API 응답(`POST /api/images`) → UploadResult. 통신은 모르고 응답 모양만 안다 — web · 플레이그라운드의
+ * ImageUploader가 fetch 뒤에 부른다.
+ */
+export function uploadResultFrom(status: number, ok: boolean, body: unknown): UploadResult {
+  if (!ok) return { ok: false, message: uploadErrorMessage(status, body) };
+  const attrs = imageAttrsFrom(body);
+  return attrs === null
+    ? { ok: false, message: IMAGE_INSERT_MESSAGES.uploadFailed }
+    : { ok: true, attrs };
 }

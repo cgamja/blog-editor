@@ -1,4 +1,5 @@
 import type { InsertableBlockKind, TurnIntoKind } from "@blog-editor/editor-core";
+import type { BlockMenuAction } from "./block-menu-actions";
 
 /** 에디터 화면의 사용자 문장 — 한 곳에서 고친다. */
 
@@ -53,4 +54,9 @@ export const INSERTABLE_BLOCK_LABELS: Record<InsertableBlockKind, string> = {
   calloutTip: "콜아웃 · 팁",
   calloutWarning: "콜아웃 · 주의",
   horizontalRule: "구분선",
+};
+
+/** 「+」 · `/` 메뉴의 동작 항목 이름(block-menu-actions.ts). 키 타입이 동작 목록과 같아 빠지면 typecheck가 잡는다 */
+export const BLOCK_MENU_ACTION_LABELS: Record<BlockMenuAction, string> = {
+  image: "이미지",
 };

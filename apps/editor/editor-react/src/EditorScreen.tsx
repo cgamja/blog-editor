@@ -3,6 +3,7 @@ import type { Editor } from "@tiptap/react";
 import { BlogEditor } from "./BlogEditor";
 import { DecorationPanel } from "./DecorationPanel";
 import type { StickerId } from "./decoration-types";
+import type { ImageUploader } from "./image-upload-types";
 import { ScreenHeader } from "./ScreenHeader";
 import { screenMessages } from "./screen-messages";
 import type { EditorScreenActions, SideTab } from "./screen-types";
@@ -18,6 +19,8 @@ export interface EditorScreenProps {
   postInfo?: ReactNode;
   stickerSrc?: (id: StickerId) => string;
   initialTab?: SideTab;
+  /** 이미지 올리기 — 없으면 이미지 넣기 길을 열지 않는다(BlogEditorProps.uploadImage) */
+  uploadImage?: ImageUploader | undefined;
 }
 
 const NO_ACTIONS: EditorScreenActions = {};
@@ -33,13 +36,14 @@ export function EditorScreen({
   postInfo,
   stickerSrc,
   initialTab = "decorate",
+  uploadImage,
 }: EditorScreenProps) {
   return (
     <div className="editor-screen">
       <ScreenHeader actions={actions} status={status} />
       <main className="editor-screen-body">
         <article className="editor-screen-paper">
-          <BlogEditor editor={editor} />
+          <BlogEditor editor={editor} uploadImage={uploadImage} />
           <WidthToolbar editor={editor} />
         </article>
       </main>
