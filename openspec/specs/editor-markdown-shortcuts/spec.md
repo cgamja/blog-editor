@@ -8,7 +8,7 @@ Notion처럼 타이핑으로 서식을 바꾼다 — 줄 맨 앞 입력 규칙(�
 
 ### Requirement: 줄 맨 앞 입력 규칙이 블록을 바꾼다
 
-editor-core는 SHALL `markdownShortcutPlugins()`와 `MarkdownShortcuts` 확장을 export하고, 커서가 최상위 문단 맨 앞일 때 다음 입력을 블록으로 바꾼다: `- `·`* `·`+ ` → 점 목록, `1. ` → 번호 목록, `# `·`## ` → 큰 제목(h2), `### ` → 작은 제목(h3), `" `·`> ` → 인용, ` ``` ` → 코드 블록, `--`만 있는 문단의 `-` → 구분선과 그 뒤 새 문단. 표시 글자는 문서에 남지 않고, 결과는 blockGuard를 통과한다.
+editor-core는 SHALL `markdownShortcutPlugins()`와 `MarkdownShortcuts` 확장을 export하고, 커서가 최상위 문단 맨 앞일 때 다음 입력을 블록으로 바꾼다: `- `·`* `·`+ ` → 점 목록, `n. ` → n부터 세는 번호 목록(editor-ordered-list-input-rule), `# `·`## ` → 큰 제목(h2), `### ` → 작은 제목(h3), `" `·`> ` → 인용, ` ``` ` → 코드 블록, `--`만 있는 문단의 `-` → 구분선과 그 뒤 새 문단. 표시 글자는 문서에 남지 않고, 결과는 blockGuard를 통과한다.
 
 #### Scenario: 목록 규칙
 
