@@ -6,19 +6,17 @@ import { createHash } from "node:crypto";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
+import { IMAGE_HASH_LENGTH, MAX_IMAGE_BYTES } from "./image-constants";
 import { probeImage } from "./image-probe";
-import type { ImageFormat } from "./image-probe";
-import { IMAGE_HASH_LENGTH, isImageName } from "./image-store";
-import type { ImageExtension, ImageStore } from "./image-store";
+import { isImageName } from "./image-store";
+import type { ImageStore } from "./image-store";
+import type { ImageExtension, ImageFormat } from "./image-types";
 import {
   IMAGE_FORMAT_MESSAGE,
   IMAGE_ROTATED_MESSAGE,
   IMAGE_TOO_LARGE_MESSAGE,
   IMAGE_TOO_WIDE_MESSAGE,
 } from "./messages";
-
-/** plan 3-8 "1MB 이하" — 브라우저가 1600px WebP로 줄인 결과가 들어갈 크기 */
-export const MAX_IMAGE_BYTES = 1024 * 1024;
 
 const UPLOAD_PATH = "/api/images";
 const PUBLIC_PREFIX = "/images/";
