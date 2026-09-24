@@ -1,16 +1,19 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { FocusEvent, KeyboardEvent, MouseEvent, RefObject } from "react";
-import { TextSelection } from "@tiptap/pm/state";
+import { AllSelection, NodeSelection, TextSelection } from "@tiptap/pm/state";
+import type { Selection } from "@tiptap/pm/state";
 import { useEditorState, type Editor } from "@tiptap/react";
 import { TOOLBAR_MARKS, textStyleSummary, toggleToolbarMark } from "@blog-editor/editor-core";
 import type { ToolbarMark } from "@blog-editor/editor-core";
 import { tabIndexAfterKey } from "./screen-tabs";
 import { MARK_LABELS, textToolbarMessages } from "./text-toolbar-messages";
+import { shouldShowToolbar } from "./text-toolbar-model";
+import type { TextStyleMenu, ToolbarItemProps, ToolbarVisibility } from "./text-toolbar-types";
 import { TextStyleControls } from "./TextStyleControls";
-import type { TextStyleMenu, ToolbarItemProps } from "./TextStyleControls";
 import { useCommandRunner } from "./use-command-runner";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
 import { OPEN_LINK_EVENT } from "./use-link-shortcut";
+import { usePointerSelecting } from "./use-pointer-selecting";
 import { useTextToolbarAnchor } from "./use-text-toolbar-anchor";
 
 export interface TextToolbarProps {
@@ -33,10 +36,17 @@ const MARK_GLYPHS: Record<ToolbarMark, string> = {
   code: "</>",
 };
 
+function selectionKindOf(selection: Selection): ToolbarVisibility["selection"] {
+  if (selection instanceof TextSelection) return "text";
+  if (selection instanceof AllSelection) return "all";
+  if (selection instanceof NodeSelection) return "node";
+  return "other";
+}
+
 /**
  * 글자를 고르면 선택 위에 뜨는 서식 도구줄(디자인 68:2 인라인 툴바를 넓혔다, spec: editor-text-style).
  * APG toolbar — 한 칸만 Tab으로 들어오고 ←/→ · Home/End로 옮긴다. 버튼은 누를 때 편집 영역의 선택을
- * 빼앗지 않는다. 한글 조합 중에는 감춘다(.claude/rules/editor.md).
+ * 빼앗지 않는다. 한글 조합 중 · 마우스로 끌어 고르는 중에는 감춘다(.claude/rules/editor.md).
  * https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/
  */
 export function TextToolbar({ editor, frameRef }: TextToolbarProps) {
@@ -44,7 +54,7 @@ export function TextToolbar({ editor, frameRef }: TextToolbarProps) {
     editor,
     selector: ({ editor: current }) => ({
       summary: textStyleSummary(current.state),
-      isText: current.state.selection instanceof TextSelection,
+      selection: selectionKindOf(current.state.selection),
       focused: current.isFocused,
       composing: current.view.composing,
       editable: current.isEditable,
@@ -56,13 +66,16 @@ export function TextToolbar({ editor, frameRef }: TextToolbarProps) {
   const [active, setActive] = useState(0);
   const [openMenu, setOpenMenu] = useState<TextStyleMenu | null>(null);
   const [hasFocus, setHasFocus] = useState(false);
+  const pointerSelecting = usePointerSelecting(editor);
 
-  const visible =
-    state.summary.canStyle &&
-    state.isText &&
-    !state.composing &&
-    state.editable &&
-    (state.focused || hasFocus);
+  const visible = shouldShowToolbar({
+    canStyle: state.summary.canStyle,
+    selection: state.selection,
+    composing: state.composing,
+    editable: state.editable,
+    focused: state.focused || hasFocus,
+    pointerSelecting,
+  });
   const anchor = useTextToolbarAnchor(editor, frameRef, toolbarRef, visible);
   const closeMenu = useCallback(() => setOpenMenu(null), []);
   const insideRefs = useMemo(() => [toolbarRef], []);

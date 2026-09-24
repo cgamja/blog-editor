@@ -8,6 +8,7 @@ import {
   TEXT_COLOR_HEX,
 } from "./text-toolbar-constants";
 import { FONT_LABELS, textToolbarMessages } from "./text-toolbar-messages";
+import type { ToolbarVisibility } from "./text-toolbar-types";
 
 /** 글자 서식 도구줄의 순수 계산 — spec: editor-text-style, text-toolbar design.md 6 · 7. */
 
@@ -101,18 +102,21 @@ export function weightOptionsFor(font: TextStyleSummary["font"]): WeightOptions 
     : { weights: [], reason: textToolbarMessages.noWeight(FONT_LABELS[effective]) };
 }
 
-export interface ToolbarVisibility {
-  canStyle: boolean;
-  selection: "text" | "all" | "node" | "other";
-  composing: boolean;
-  editable: boolean;
-  focused: boolean;
-  pointerSelecting: boolean;
+/**
+ * 도구줄을 띄울지 — 글자 선택 · 전체 선택(⌘A)에서, 조합 중 · 편집 불가 · 포커스 없음이 아니고,
+ * 마우스로 끌어 고르는 중이 아닐 때(끌기를 마친 뒤에 뜬다 — Notion과 같다)
+ */
+export function shouldShowToolbar(state: ToolbarVisibility): boolean {
+  const selectsText = state.selection === "text" || state.selection === "all";
+  return (
+    state.canStyle &&
+    selectsText &&
+    !state.composing &&
+    state.editable &&
+    state.focused &&
+    !state.pointerSelecting
+  );
 }
-
-export const shouldShowToolbar: (state: ToolbarVisibility) => boolean = () => {
-  throw new Error("미구현");
-};
 
 /** 도구줄 버튼에 보일 지금 값의 이름 — 여러 값 · 기본(없음) · 이름표(없으면 값 그대로, 직접 입력 색) */
 export function summaryLabel(

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import { hasLinkTarget, linkHrefAt } from "@blog-editor/editor-core";
+import { SELECTION_POPUP_GAP_PX } from "./popup-constants";
 
 export interface LinkPopoverAnchor {
   /** 기준 틀 안 좌표 */
@@ -10,9 +11,6 @@ export interface LinkPopoverAnchor {
   /** 선택에 이미 걸린 링크 주소, 없으면 "" */
   href: string;
 }
-
-// 선택 글자 바로 아래에 띄운다 — 디자인 68:2 인라인 툴바와 글자 사이 간격
-const GAP_BELOW_TEXT = 8;
 
 /**
  * 글자 서식 도구줄의 링크 버튼이 기준 틀에 보내는 사건 — 팝오버를 한 벌만 두고 ⌘K와 같은 길로 연다.
@@ -54,7 +52,7 @@ export function useLinkShortcut(
       const coords = editor.view.coordsAtPos(editor.state.selection.from);
       const origin = frame.getBoundingClientRect();
       const opened = {
-        top: coords.bottom - origin.top + GAP_BELOW_TEXT,
+        top: coords.bottom - origin.top + SELECTION_POPUP_GAP_PX,
         left: coords.left - origin.left,
         href: linkHrefAt(editor.state) ?? "",
       };

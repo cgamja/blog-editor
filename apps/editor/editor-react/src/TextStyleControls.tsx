@@ -1,5 +1,5 @@
 import { FONTS, TEXT_SIZES } from "@blog-editor/content-schema";
-import { MIXED, setTextStyle } from "@blog-editor/editor-core";
+import { MIXED, rememberColor, setTextStyle } from "@blog-editor/editor-core";
 import type { SummaryValue, TextStylePatch, TextStyleSummary } from "@blog-editor/editor-core";
 import type { Command } from "@tiptap/pm/state";
 import { ColorPicker } from "./ColorPicker";
@@ -11,16 +11,12 @@ import {
 } from "./text-toolbar-messages";
 import { summaryLabel, weightOptionsFor } from "./text-toolbar-model";
 import { ToolbarMenu } from "./ToolbarMenu";
-import type { ToolbarMenuOption } from "./ToolbarMenu";
-
-/** 도구줄 안에서 펼치는 것들 — 한 번에 하나만 열린다 */
-export type TextStyleMenu = "font" | "weight" | "size" | "color" | "highlight";
-
-/** 로빙 tabindex 한 칸(APG toolbar) — 도구줄이 순서와 포커스를 맡는다 */
-export interface ToolbarItemProps {
-  tabIndex: number;
-  registerButton: (button: HTMLButtonElement | null) => void;
-}
+import type {
+  ColorKind,
+  TextStyleMenu,
+  ToolbarItemProps,
+  ToolbarMenuOption,
+} from "./text-toolbar-types";
 
 export interface TextStyleControlsProps {
   summary: TextStyleSummary;
@@ -60,6 +56,10 @@ export function TextStyleControls({
     onOpenMenuChange(open ? menu : null);
   const choose = (key: keyof TextStylePatch) => (value: string | null) =>
     run(setTextStyle({ [key]: value } as TextStylePatch));
+  // 색은 걸고 나서 ⌘⇧H가 다시 걸 수 있게 기억한다 — 스타일과 기억은 따로 부른다(spec: 마지막 색)
+  const applyColor = (key: ColorKind) => (value: string | null) => {
+    if (run(setTextStyle({ [key]: value })) && value !== null) run(rememberColor({ key, value }));
+  };
   const weights = weightOptionsFor(summary.font);
   const weightOptions: readonly ToolbarMenuOption[] = [
     { value: null, label: textToolbarMessages.none },
@@ -79,7 +79,7 @@ export function TextStyleControls({
         open={openMenu === "font"}
         onOpenChange={openChange("font")}
         onChoose={choose("font")}
-        {...itemProps("font")}
+        item={itemProps("font")}
       />
       <ToolbarMenu
         label={textToolbarMessages.weight}
@@ -90,7 +90,7 @@ export function TextStyleControls({
         onOpenChange={openChange("weight")}
         onChoose={choose("weight")}
         disabledReason={weights.reason}
-        {...itemProps("weight")}
+        item={itemProps("weight")}
       />
       <ToolbarMenu
         label={textToolbarMessages.size}
@@ -100,7 +100,7 @@ export function TextStyleControls({
         open={openMenu === "size"}
         onOpenChange={openChange("size")}
         onChoose={choose("size")}
-        {...itemProps("size")}
+        item={itemProps("size")}
       />
       <ColorPicker
         kind="color"
@@ -108,8 +108,8 @@ export function TextStyleControls({
         other={summary.highlight}
         open={openMenu === "color"}
         onOpenChange={openChange("color")}
-        onApply={choose("color")}
-        {...itemProps("color")}
+        onApply={applyColor("color")}
+        item={itemProps("color")}
       />
       <ColorPicker
         kind="highlight"
@@ -117,8 +117,8 @@ export function TextStyleControls({
         other={summary.color}
         open={openMenu === "highlight"}
         onOpenChange={openChange("highlight")}
-        onApply={choose("highlight")}
-        {...itemProps("highlight")}
+        onApply={applyColor("highlight")}
+        item={itemProps("highlight")}
       />
     </>
   );

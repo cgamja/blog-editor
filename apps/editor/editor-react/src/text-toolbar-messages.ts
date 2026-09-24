@@ -6,6 +6,10 @@ import type {
   TEXT_WEIGHTS,
 } from "@blog-editor/content-schema";
 import type { ToolbarMark } from "@blog-editor/editor-core";
+import { READABLE_CONTRAST } from "./text-toolbar-constants";
+
+/** 직접 입력 칸의 예시 색 — placeholder와 오류 문장이 같은 값을 쓴다 */
+export const HEX_EXAMPLE = "#3366aa";
 
 /** 글자 서식 도구줄의 사용자 문장 — 한 곳에서 고친다(spec: editor-text-style). */
 export const textToolbarMessages = {
@@ -19,11 +23,10 @@ export const textToolbarMessages = {
   mixed: "여러 값",
   none: "기본",
   sizeNormal: "보통",
-  clearColor: "색 지우기",
   hexLabel: "직접 입력(#RRGGBB)",
   hexApply: "적용",
-  hexInvalid: "#과 16진수 6자리로 적어 주세요. 예: #3366aa",
-  hardToRead: "읽기 어려울 수 있어요 — 바탕과 대비가 4.5:1보다 낮아요.",
+  hexInvalid: `#과 16진수 6자리로 적어 주세요. 예: ${HEX_EXAMPLE}`,
+  hardToRead: `읽기 어려울 수 있어요 — 바탕과 대비가 ${READABLE_CONTRAST}:1보다 낮아요.`,
   mixedFontWeight: "글꼴이 섞여 있어 두께를 고를 수 없어요.",
   noWeight: (font: string) => `${font}에는 고를 두께가 없어요.`,
 } as const;

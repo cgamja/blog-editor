@@ -1,13 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type { KeyboardEvent } from "react";
-
-export interface ToolbarMenuOption {
-  /** null은 "기본"(속성 지우기) */
-  value: string | null;
-  label: string;
-  /** 항목을 그 글꼴로 보여 준다(text-toolbar.css) */
-  previewFont?: string;
-}
+import type { ToolbarItemProps, ToolbarMenuOption } from "./text-toolbar-types";
 
 export interface ToolbarMenuProps {
   /** 무엇을 고르는 메뉴인가 — 접근성 이름의 앞부분 */
@@ -22,10 +15,8 @@ export interface ToolbarMenuProps {
   onChoose: (value: string | null) => void;
   /** 고를 수 없는 이유 — 있으면 버튼을 막고 설명으로 잇는다 */
   disabledReason?: string | null;
-  /** 도구줄의 로빙 tabindex(APG toolbar) */
-  tabIndex: number;
-  /** 도구줄이 방향키로 포커스를 옮길 버튼을 등록한다 */
-  registerButton: (button: HTMLButtonElement | null) => void;
+  /** 도구줄의 로빙 칸 */
+  item: ToolbarItemProps;
 }
 
 const menuItemsOf = (menu: HTMLElement | null) => [
@@ -42,7 +33,8 @@ const MENU_KEYS: Record<string, (current: number, count: number) => number> = {
 
 /**
  * 도구줄 안 드롭다운(글꼴 · 두께 · 크기). 메뉴 버튼 패턴 — 열면 고른 항목(없으면 첫 항목)에 포커스,
- * 방향키 · Home/End로 옮기고 Enter로 고르며 Esc로 닫고 버튼으로 돌아간다.
+ * 방향키 · Home/End로 옮기고 Enter로 고르며 Esc로 닫는다. 고르거나 닫으면 포커스는 메뉴 버튼으로
+ * 돌아간다 — 포커스가 사라지면 도구줄도 닫혀 다음 서식을 이어 걸 수 없다.
  * https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
  */
 export function ToolbarMenu({
@@ -54,8 +46,7 @@ export function ToolbarMenu({
   onOpenChange,
   onChoose,
   disabledReason = null,
-  tabIndex,
-  registerButton,
+  item,
 }: ToolbarMenuProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,17 +58,21 @@ export function ToolbarMenu({
   useEffect(() => {
     if (!open) return;
     const items = menuItemsOf(menuRef.current);
-    const checked = items.find((item) => item.getAttribute("aria-checked") === "true");
+    const checked = items.find((element) => element.getAttribute("aria-checked") === "true");
     (checked ?? items[0])?.focus();
   }, [open]);
+
+  const closeToButton = () => {
+    onOpenChange(false);
+    buttonRef.current?.focus();
+  };
 
   const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // 도구줄의 ←/→ 이동이 메뉴 안 키를 가로채지 않게 한다
     event.stopPropagation();
     if (event.key === "Escape") {
       event.preventDefault();
-      onOpenChange(false);
-      buttonRef.current?.focus();
+      closeToButton();
       return;
     }
     if (event.key === "Tab") {
@@ -97,10 +92,10 @@ export function ToolbarMenu({
       <button
         ref={(button) => {
           buttonRef.current = button;
-          registerButton(button);
+          item.registerButton(button);
         }}
         type="button"
-        tabIndex={tabIndex}
+        tabIndex={item.tabIndex}
         aria-label={`${label}: ${current}`}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -139,7 +134,7 @@ export function ToolbarMenu({
               data-preview-font={option.previewFont}
               onClick={() => {
                 onChoose(option.value);
-                onOpenChange(false);
+                closeToButton();
               }}
             >
               {option.label}

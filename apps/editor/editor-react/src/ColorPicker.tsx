@@ -2,11 +2,15 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { HIGHLIGHT_COLORS, TEXT_COLORS } from "@blog-editor/content-schema";
 import { MIXED, type SummaryValue } from "@blog-editor/editor-core";
-import { HIGHLIGHT_LABELS, TEXT_COLOR_LABELS, textToolbarMessages } from "./text-toolbar-messages";
+import {
+  HEX_EXAMPLE,
+  HIGHLIGHT_LABELS,
+  TEXT_COLOR_LABELS,
+  textToolbarMessages,
+} from "./text-toolbar-messages";
 import { isHardToRead, normalizeHexInput, summaryLabel } from "./text-toolbar-model";
+import type { ColorKind, ToolbarItemProps } from "./text-toolbar-types";
 import { useEscapeKey } from "./use-dismiss";
-
-export type ColorKind = "color" | "highlight";
 
 export interface ColorPickerProps {
   kind: ColorKind;
@@ -17,8 +21,8 @@ export interface ColorPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onApply: (value: string | null) => void;
-  tabIndex: number;
-  registerButton: (button: HTMLButtonElement | null) => void;
+  /** 도구줄의 로빙 칸 */
+  item: ToolbarItemProps;
 }
 
 const PRESETS = {
@@ -44,8 +48,7 @@ export function ColorPicker({
   open,
   onOpenChange,
   onApply,
-  tabIndex,
-  registerButton,
+  item,
 }: ColorPickerProps) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,9 +68,23 @@ export function ColorPicker({
   const warnFor = typed ?? (selected === MIXED ? null : selected);
   const hardToRead = warnFor !== null && contrastOf(kind, warnFor, other);
 
+  // 닫히면 입력 칸을 비운다 — 다시 열 때 지난 입력 · 오류가 남지 않게
+  const close = useCallback(() => {
+    setInput("");
+    setInvalid(false);
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  // 고르거나 닫으면 포커스를 색 버튼으로 돌린다 — 포커스가 사라지면 도구줄도 닫혀 다음 서식을 이어 걸 수 없다
+  const closeToButton = useCallback(() => {
+    close();
+    buttonRef.current?.focus();
+  }, [close]);
+  useEscapeKey(open, closeToButton);
+
   const apply = (value: string | null) => {
     onApply(value);
-    onOpenChange(false);
+    closeToButton();
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -76,12 +93,6 @@ export function ColorPicker({
     else apply(typed);
   };
 
-  const closeToButton = useCallback(() => {
-    onOpenChange(false);
-    buttonRef.current?.focus();
-  }, [onOpenChange]);
-  useEscapeKey(open, closeToButton);
-
   const currentLabel = summaryLabel(selected, labels);
 
   return (
@@ -89,17 +100,17 @@ export function ColorPicker({
       <button
         ref={(button) => {
           buttonRef.current = button;
-          registerButton(button);
+          item.registerButton(button);
         }}
         type="button"
-        tabIndex={tabIndex}
+        tabIndex={item.tabIndex}
         className="text-toolbar-color"
         data-kind={kind}
         aria-label={`${title}: ${currentLabel}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        onClick={() => onOpenChange(!open)}
+        onClick={() => (open ? close() : onOpenChange(true))}
       >
         {title}
       </button>
@@ -140,7 +151,7 @@ export function ColorPicker({
                 type="text"
                 autoComplete="off"
                 spellCheck={false}
-                placeholder="#3366aa"
+                placeholder={HEX_EXAMPLE}
                 value={input}
                 aria-invalid={invalid}
                 aria-describedby={invalid ? errorId : undefined}
