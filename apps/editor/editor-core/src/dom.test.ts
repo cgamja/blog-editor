@@ -1,7 +1,8 @@
+import { DOMParser } from "@tiptap/pm/model";
 import type { DOMOutputSpec, Node } from "@tiptap/pm/model";
 import { fixtures } from "@blog-editor/content-schema";
 import { createEditorSchema, docToNode } from "./index";
-import { el, elementFromSpec, readWith } from "./dom.test.helpers";
+import { el, elementFromSpec, miniDomFromSpecs, readWith } from "./dom.test.helpers";
 
 const schema = createEditorSchema();
 
@@ -89,6 +90,32 @@ describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고
       });
     },
   );
+
+  it("WHEN 스티커가 있는 문단 · 구분선의 DOM 스펙을 DOMParser.parseSlice로 읽는다 THEN 블록은 둘뿐이고 스티커 img가 이미지 블록이 되지 않는다", () => {
+    const paragraph = schema.nodes.paragraph!.create(
+      { font: "jua", stickers: [sticker] },
+      schema.text("가"),
+    );
+    const rule = schema.nodes.horizontalRule!.create({ stickers: [sticker, sticker] });
+
+    const slice = DOMParser.fromSchema(schema).parseSlice(
+      // 가짜 DOM은 파서가 읽는 표면만 가졌다(dom.test.helpers MiniNode) — 파서의 DOM 타입으로 단언한다
+      miniDomFromSpecs([toDom(paragraph), toDom(rule)]) as unknown as Parameters<
+        DOMParser["parseSlice"]
+      >[0],
+    );
+
+    const types: string[] = [];
+    slice.content.descendants((node) => {
+      types.push(node.type.name);
+    });
+    expect(slice.content.childCount).toBe(2);
+    expect(types).not.toContain("image");
+    expect([slice.content.child(0).type.name, slice.content.child(1).type.name]).toEqual([
+      "paragraph",
+      "horizontalRule",
+    ]);
+  });
 });
 
 describe("editor-dom: HTML 속성을 검증 없이 attrs로 읽지 않는다", () => {

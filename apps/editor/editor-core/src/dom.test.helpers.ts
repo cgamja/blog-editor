@@ -104,6 +104,93 @@ export function readWith(
   return false;
 }
 
+/**
+ * ProseMirror DOMParser가 파싱하며 읽는 만큼만 흉내 낸 노드 — 텍스트(nodeType 3)와 요소(1).
+ * 읽는 표면은 prosemirror-model 1.25.12 ParseContext 소스로 확인했다(addAll · addDOM · addElement ·
+ * readStyles · matchTag): nodeType · nodeName · tagName · childNodes · firstChild · next/previousSibling ·
+ * parentNode · nodeValue · style(length) · matches · namespaceURI · getAttribute · firstElementChild.
+ */
+export interface MiniNode {
+  readonly nodeType: 1 | 3;
+  readonly nodeName: string;
+  readonly nodeValue: string | null;
+  parentNode: MiniNode | null;
+  nextSibling: MiniNode | null;
+  previousSibling: MiniNode | null;
+  readonly childNodes: MiniNode[];
+  readonly firstChild: MiniNode | null;
+}
+
+function miniText(text: string): MiniNode {
+  return {
+    nodeType: 3,
+    nodeName: "#text",
+    nodeValue: text,
+    parentNode: null,
+    nextSibling: null,
+    previousSibling: null,
+    childNodes: [],
+    firstChild: null,
+  };
+}
+
+function miniElement(tag: string, attrs: Record<string, string>, children: MiniNode[]): MiniNode {
+  const elements = () => children.filter((child) => child.nodeType === 1);
+  const self = {
+    nodeType: 1 as const,
+    nodeName: tag.toUpperCase(),
+    tagName: tag.toUpperCase(),
+    nodeValue: null,
+    namespaceURI: "http://www.w3.org/1999/xhtml",
+    parentNode: null as MiniNode | null,
+    nextSibling: null as MiniNode | null,
+    previousSibling: null as MiniNode | null,
+    childNodes: children,
+    firstChild: children[0] ?? null,
+    style: { length: 0, getPropertyValue: () => "" },
+    get firstElementChild() {
+      return elements()[0] ?? null;
+    },
+    get textContent() {
+      return "";
+    },
+    getAttribute: (name: string) => (Object.hasOwn(attrs, name) ? attrs[name]! : null),
+    querySelector: () => null,
+    matches(selector: string) {
+      return matchesSelector(self as unknown as FakeElement, selector);
+    },
+  };
+  children.forEach((child, index) => {
+    child.parentNode = self;
+    child.previousSibling = children[index - 1] ?? null;
+    child.nextSibling = children[index + 1] ?? null;
+  });
+  return self;
+}
+
+/**
+ * toDOM 스펙 여러 개를 한 부모(div) 아래의 가짜 DOM으로 — `DOMParser.parseSlice`에 그대로 넘긴다.
+ * 구멍(0)은 글자 "글"로 채운다. https://prosemirror.net/docs/ref/#model.DOMParser.parseSlice
+ */
+export function miniDomFromSpecs(specs: readonly DOMOutputSpec[]): MiniNode {
+  const build = (spec: DOMOutputSpec): MiniNode => {
+    if (!Array.isArray(spec)) throw new Error("dom.test.helpers: 배열 스펙만 다룬다");
+    const [tag, ...rest] = spec as [string, ...unknown[]];
+    const first = rest[0];
+    const hasAttrs = first !== null && typeof first === "object" && !Array.isArray(first);
+    const attrs = hasAttrs ? (first as Record<string, string>) : {};
+    const children = (hasAttrs ? rest.slice(1) : rest).map((child) =>
+      child === 0
+        ? miniText("글")
+        : typeof child === "string"
+          ? miniText(child)
+          : build(child as DOMOutputSpec),
+    );
+    return miniElement(tag, attrs, children);
+  };
+  return miniElement("div", {}, specs.map(build));
+}
+
 /** 스키마 전체에서 이 태그 이름을 받는 규칙이 있는가. */
 export function hasRuleForTag(schema: Schema, tag: string): boolean {
   const specs = [
