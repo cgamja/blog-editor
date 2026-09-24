@@ -25,7 +25,8 @@ interface MovePlan {
   shift: number;
 }
 
-function blockStart(doc: Node, index: number): number {
+/** 최상위 `index`번째 블록이 시작하는 위치(블록 바로 앞) — drag-block도 쓴다 */
+export function blockStart(doc: Node, index: number): number {
   let pos = 0;
   for (let i = 0; i < index; i += 1) pos += doc.child(i).nodeSize;
   return pos;
