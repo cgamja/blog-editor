@@ -50,7 +50,7 @@
 .block-handle-add {
   border: 1px solid var(--line, currentColor);
   border-radius: 50%;
-  background: var(--surface, #fff);
+  background: var(--surface);
 }
 
 .block-handle-move {
@@ -81,8 +81,8 @@
   padding: 0.25rem;
   border: 1px solid var(--line, currentColor);
   border-radius: 0.75rem;
-  background: var(--surface, #fff);
-  box-shadow: 0 12px 28px -12px rgb(58 43 38 / 35%);
+  background: var(--surface);
+  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
 }
 
 .block-handles .block-add-menu button {
