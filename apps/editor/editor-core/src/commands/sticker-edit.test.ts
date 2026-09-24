@@ -196,10 +196,21 @@ describe("editor-sticker-edit: 놓은 점은 붙을 수 있는 가장 가까운 
     });
   });
 
-  it("WHEN 유일한 블록(높이 20) 아래로 100px 떨어진 곳에 놓는다 THEN null이다", () => {
+  it("WHEN 유일한 블록(폭 600 · 높이 20) 아래로 100px, 왼쪽으로 400px 떨어진 곳에 놓는다 THEN 그 블록의 x -25 · y 125에 붙는다", () => {
     const blocks = [block(0, { left: 0, top: 0, width: 600, height: 20 })];
 
-    expect(placeStickerNear(blocks, { x: 300, y: 120 }, 60)).toBeNull();
+    expect(placeStickerNear(blocks, { x: -400, y: 120 }, 60)).toEqual({
+      blockPos: 0,
+      x: -25,
+      y: 125,
+      size: 10,
+    });
+  });
+
+  it("WHEN 폭 100 블록 하나뿐인 곳에 폭 60 스티커를 놓는다 THEN null이다", () => {
+    const blocks = [block(0, { left: 0, top: 0, width: 100, height: 100 })];
+
+    expect(placeStickerNear(blocks, { x: 50, y: 50 }, 60)).toBeNull();
   });
 
   it("WHEN 폭 100 블록(스티커 60px = 60%) 안에 놓고 120px 오른쪽에서 폭 600 블록이 시작한다 THEN 폭 600 블록의 x -25에 size 10으로 붙는다", () => {

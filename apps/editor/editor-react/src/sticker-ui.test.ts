@@ -1,6 +1,8 @@
-import { anchorLabel, stickerName } from "./sticker-messages";
+import { stickerName } from "./sticker-messages";
 import {
+  hiddenStickerRule,
   readStickerDrag,
+  resizeCursor,
   resizedSize,
   rotatedAngle,
   STICKER_DRAG_TYPE,
@@ -22,14 +24,33 @@ function fakeDataTransfer(initial: Record<string, string> = {}): StickerDragData
   };
 }
 
-describe("editor-sticker-layer: 스티커 이름과 붙은 블록을 사람 말로 보여 준다", () => {
-  it("WHEN stickerName('star-coral') · anchorLabel(paragraph · image · mystery) THEN 코랄 별 · 문단/사진/블록에 붙어 있어요다", () => {
+describe("editor-sticker-layer: 스티커 이름을 사람 말로 보여 준다", () => {
+  it("WHEN stickerName(star-coral · foot-mint · unicorn) THEN 코랄 별 · 민트 발자국 · unicorn이다", () => {
+    expect([stickerName("star-coral"), stickerName("foot-mint"), stickerName("unicorn")]).toEqual([
+      "코랄 별",
+      "민트 발자국",
+      "unicorn",
+    ]);
+  });
+});
+
+describe("editor-sticker-layer: 크기 조절점의 커서는 화면에서 보이는 방향을 따른다", () => {
+  it("WHEN resizeCursor(se 0 · ne 0 · se 45 · se 90 · nw -45) THEN nwse · nesw · ns · nesw · ew다", () => {
     expect([
-      stickerName("star-coral"),
-      anchorLabel("paragraph"),
-      anchorLabel("image"),
-      anchorLabel("mystery"),
-    ]).toEqual(["코랄 별", "문단에 붙어 있어요", "사진에 붙어 있어요", "블록에 붙어 있어요"]);
+      resizeCursor("se", 0),
+      resizeCursor("ne", 0),
+      resizeCursor("se", 45),
+      resizeCursor("se", 90),
+      resizeCursor("nw", -45),
+    ]).toEqual(["nwse-resize", "nesw-resize", "ns-resize", "nesw-resize", "ew-resize"]);
+  });
+});
+
+describe("editor-sticker-layer: 끄는 동안 원래 자리의 스티커를 가리는 규칙은 순번 하나만 고른다", () => {
+  it("WHEN hiddenStickerRule(2) THEN 순번 2(셋째 .post-sticker)만 가리는 규칙이다", () => {
+    expect(hiddenStickerRule(2)).toContain(
+      '[data-sticker-hidden="2"] > :nth-child(3 of .post-sticker){visibility:hidden}',
+    );
   });
 });
 

@@ -60,3 +60,4 @@ export {
   pasteNormalizer,
   pasteNormalizerKey,
 } from "./plugins/paste-normalizer";
+export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";

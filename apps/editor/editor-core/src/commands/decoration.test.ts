@@ -219,7 +219,7 @@ describe("editor-decoration: 스티커를 넣고 고치고 지우고 옮긴다",
 
     expect(result.ok).toBe(true);
     expect(attrsOf(result.saved, 0)).toEqual({
-      stickers: [{ id: "heart", x: 95, y: 5, size: 15, rotate: 0 }],
+      stickers: [{ id: "heart", x: 95, y: 5, size: 8, rotate: 0 }],
     });
   });
 

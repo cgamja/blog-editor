@@ -29,6 +29,16 @@ export function rotatedAngle(start: number, startRadians: number, radians: numbe
   return wrapRotation(Math.round(start + (radians - startRadians) * DEGREES_PER_RADIAN)) + 0; // + 0: -0을 0으로
 }
 
+export type StickerCorner = "nw" | "ne" | "se" | "sw";
+
+export function resizeCursor(corner: StickerCorner, rotate: number): string {
+  throw new Error(`미구현: ${corner} ${rotate}`);
+}
+
+export function hiddenStickerRule(index: number): string {
+  throw new Error(`미구현: ${index}`);
+}
+
 // ── 패널 격자 → 에디터 끌어 오기(HTML5 drag) ──
 
 /** 이 앱만 읽는 형식 — 다른 곳(메모장 등)에 놓아도 글자가 들어가지 않는다 */
