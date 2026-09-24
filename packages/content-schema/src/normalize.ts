@@ -99,6 +99,12 @@ function normalizeNode(node: Node): Node {
   });
 }
 
+/** 스텁 — test 커밋이 typecheck를 통과하게 한다. 구현은 다음 커밋 */
+export function defaultAlignOf(type: string): string {
+  void type;
+  throw new Error("미구현");
+}
+
 /**
  * 문서를 정규형으로 만든다(spec: document-normalize) — 마크 사전순 · 인접 텍스트 병합 ·
  * 키 순서 고정 · 빈 marks/attrs/content 삭제. 입력은 바꾸지 않고(재귀 내내 새 객체만 만든다) 항상 새

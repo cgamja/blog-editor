@@ -124,6 +124,26 @@ describe("꾸미기 패널 정렬 상태", () => {
     expect(panel.align).toEqual({ value: "center", availability: { enabled: true } });
   });
 
+  it("WHEN 모양이 다른 두 문단(가운데 · 기본)에 걸쳐 고르면 THEN 정렬 값은 null이다(아무것도 눌리지 않음)", () => {
+    const panel = decorationPanelStateOf(
+      stateOf([paragraph("가", { align: "center" }), paragraph("나")], (doc) =>
+        TextSelection.create(doc, 1, doc.content.size - 1),
+      ),
+    );
+
+    expect(panel.align).toEqual({ value: null, availability: { enabled: true } });
+  });
+
+  it("WHEN 둘 다 오른쪽 정렬인 두 문단에 걸쳐 고르면 THEN 정렬 값은 right다", () => {
+    const panel = decorationPanelStateOf(
+      stateOf([paragraph("가", { align: "right" }), paragraph("나", { align: "right" })], (doc) =>
+        TextSelection.create(doc, 1, doc.content.size - 1),
+      ),
+    );
+
+    expect(panel.align.value).toBe("right");
+  });
+
   it("WHEN 목록 항목에 커서를 두면 THEN 정렬은 이유와 함께 막힌다", () => {
     const panel = decorationPanelStateOf(
       stateOf([bulletList("가")], (doc) => TextSelection.create(doc, 3)),
