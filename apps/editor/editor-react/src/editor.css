@@ -36,6 +36,7 @@
  */
 @media (prefers-reduced-motion: no-preference) {
   .blog-editor .ProseMirror .editor-motion-preview[data-motion] {
+    /* editor-core motion-preview PREVIEW_MS(1초)보다 짧게 — 장식이 떨어지기 전에 끝나야 한다 */
     animation-duration: 0.6s;
     animation-timing-function: ease-out;
     animation-fill-mode: both;
