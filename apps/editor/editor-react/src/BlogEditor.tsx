@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { BlockHandles } from "./BlockHandles";
+import { LinkPopover } from "./LinkPopover";
 import { StickerLayer } from "./StickerLayer";
 
 export interface BlogEditorProps {
@@ -20,6 +21,7 @@ export function BlogEditor({ editor }: BlogEditorProps) {
       <EditorContent editor={editor} className="blog-editor post-body" />
       <BlockHandles editor={editor} frameRef={frameRef} />
       <StickerLayer editor={editor} />
+      <LinkPopover editor={editor} frameRef={frameRef} />
     </div>
   );
 }
