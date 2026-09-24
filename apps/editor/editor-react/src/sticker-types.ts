@@ -14,6 +14,12 @@ export interface LayerPoint {
   y: number;
 }
 
+/** 레이어(= 에디터 틀) 크기 — 이 밖에 놓으면 끌기 취소다 */
+export interface LayerSize {
+  width: number;
+  height: number;
+}
+
 export interface StickerBox {
   key: string;
   blockPos: number;
@@ -23,7 +29,6 @@ export interface StickerBox {
   src: string;
   size: number;
   rotate: number;
-  nodeName: string;
   /** 회전을 뺀 그려진 크기(px) — 테두리 · 조절점을 스티커와 함께 돌리려고 */
   width: number;
   height: number;
@@ -34,6 +39,9 @@ export interface StickerBox {
 }
 
 export type GestureKind = "move" | "resize" | "rotate";
+
+/** 크기 조절점이 있는 모서리 — 회전 전 기준 */
+export type StickerCorner = "nw" | "ne" | "se" | "sw";
 
 export interface Gesture {
   kind: GestureKind;
@@ -50,10 +58,10 @@ export interface Preview {
   centerY: number;
   width: number;
   rotate: number;
-  /** 꼬리표 — 어디에 붙는지, 또는 놓을 수 없는 이유 */
-  label: string;
   /** null이면 놓을 수 없는 자리 */
   command: Command | null;
+  /** 에디터 틀 밖이라 놓으면 취소(제자리)다 — 「놓을 수 없어요」를 알리지 않는다 */
+  cancelled: boolean;
   /** 놓은 뒤 고를 스티커 */
   next: StickerRef | null;
 }

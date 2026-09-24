@@ -13,6 +13,7 @@ import { StickerFrame } from "./StickerFrame";
 import { STICKER_MESSAGES, stickerAriaLabel } from "./sticker-messages";
 import { refOf, sameRef } from "./sticker-ref";
 import type { StickerBox } from "./sticker-types";
+import { hiddenStickerRule } from "./sticker-ui";
 import { useStickerDrop } from "./use-sticker-drop";
 import { useStickerGesture } from "./use-sticker-gesture";
 import { useStickerLayout } from "./use-sticker-layout";
@@ -21,7 +22,8 @@ import { useStickerSelection } from "./use-sticker-selection";
 /**
  * 에디터 위 스티커 오버레이 — spec: editor-sticker-layer, sticker-drag design.md.
  * ProseMirror DOM 밖 형제 요소라 포인터 · 키가 에디터에 닿지 않는다(design.md 1).
- * 끄는 동안은 유령만 그리고, 놓을 때 커맨드 1번 = 트랜잭션 1번 = undo 1번이다.
+ * 끄는 동안은 원래 자리의 스티커를 숨기고 불투명한 유령만 그린다(sticker-polish design.md 3).
+ * 놓을 때 커맨드 1번 = 트랜잭션 1번 = undo 1번이다.
  */
 
 /**
@@ -85,6 +87,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
       {layout.boxes.map((box) => {
         // 회전해도 스티커를 덮도록 긴 변 기준 정사각형
         const side = Math.max(box.width, box.height);
+        const isDraggingThis = gesture?.kind === "move" && gesture.box.key === box.key;
         return (
           <button
             key={box.key}
@@ -94,6 +97,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
             aria-label={stickerAriaLabel(box.id)}
             aria-describedby={hintId}
             aria-pressed={sameRef(selection.selected, refOf(box))}
+            data-dragging={isDraggingThis ? "" : undefined}
             style={{
               left: box.centerX - side / 2,
               top: box.centerY - side / 2,
@@ -119,6 +123,7 @@ export function StickerLayer({ editor }: StickerLayerProps) {
       )}
       {gesture !== null && preview !== null && (
         <>
+          <style>{hiddenStickerRule(gesture.box.index)}</style>
           <img
             src={gesture.box.src}
             alt=""
@@ -131,12 +136,6 @@ export function StickerLayer({ editor }: StickerLayerProps) {
               transform: `translate(-50%, -50%) rotate(${preview.rotate}deg)`,
             }}
           />
-          <span
-            className="sticker-tag"
-            style={{ left: preview.centerX, top: preview.centerY + preview.width / 2 }}
-          >
-            {preview.label}
-          </span>
         </>
       )}
       <p role="status" className="sticker-status">
