@@ -4,6 +4,7 @@ import { BlockHandles } from "./BlockHandles";
 import { LinkPopover } from "./LinkPopover";
 import { SlashMenu } from "./SlashMenu";
 import { StickerLayer } from "./StickerLayer";
+import { TextToolbar } from "./TextToolbar";
 import { WidthResizeHandles } from "./WidthResizeHandles";
 
 export interface BlogEditorProps {
@@ -24,6 +25,7 @@ export function BlogEditor({ editor }: BlogEditorProps) {
       <BlockHandles editor={editor} frameRef={frameRef} />
       <StickerLayer editor={editor} />
       <WidthResizeHandles editor={editor} />
+      <TextToolbar editor={editor} frameRef={frameRef} />
       <LinkPopover editor={editor} frameRef={frameRef} />
       <SlashMenu editor={editor} frameRef={frameRef} />
     </div>

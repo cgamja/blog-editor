@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./editor.css": "./src/editor.css",
-    "./editor-screen.css": "./src/editor-screen.css"
+    "./editor-screen.css": "./src/editor-screen.css",
+    "./text-toolbar.css": "./src/text-toolbar.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

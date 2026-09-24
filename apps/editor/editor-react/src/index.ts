@@ -7,6 +7,8 @@ export { BlogEditor } from "./BlogEditor";
 export { STICKER_DRAG_TYPE, writeStickerDrag } from "./sticker-ui";
 export { stickerName } from "./sticker-messages";
 export type { BlogEditorProps } from "./BlogEditor";
+export { TextToolbar } from "./TextToolbar";
+export type { TextToolbarProps } from "./TextToolbar";
 export { DecorationPanel } from "./DecorationPanel";
 export type { DecorationPanelProps } from "./DecorationPanel";
 export { WidthToolbar } from "./WidthToolbar";

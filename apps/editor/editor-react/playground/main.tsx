@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@blog-editor/content-render/post.css";
 import "../src/editor.css";
 import "../src/editor-screen.css";
+import "../src/text-toolbar.css";
 import "./playground.css";
 import { Playground } from "./Playground";
 
