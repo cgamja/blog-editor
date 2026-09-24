@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import type { InsertableBlockKind } from "@blog-editor/editor-core";
+import type { SlashItem } from "./slash-items";
 
 /** 고른 항목 번호 — query가 바뀌면 첫 항목부터 */
 interface ActiveItem {
@@ -10,7 +10,7 @@ interface ActiveItem {
 
 export interface SlashMenuKeys {
   /** 지금 고른 항목. 목록이 비었으면 undefined */
-  current: InsertableBlockKind | undefined;
+  current: SlashItem | undefined;
 }
 
 /**
@@ -22,8 +22,8 @@ export interface SlashMenuKeys {
 export function useSlashMenuKeys(
   editor: Editor,
   query: string | null,
-  items: readonly InsertableBlockKind[],
-  onChoose: (kind: InsertableBlockKind) => void,
+  items: readonly SlashItem[],
+  onChoose: (kind: SlashItem) => void,
 ): SlashMenuKeys {
   const [active, setActive] = useState<ActiveItem>({ query: "", index: 0 });
   const index = active.query === query ? Math.min(active.index, items.length - 1) : 0;

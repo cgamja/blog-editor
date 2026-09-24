@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
-import { applySlashItem, slashMenuKey } from "@blog-editor/editor-core";
-import type { InsertableBlockKind, SlashMenuState } from "@blog-editor/editor-core";
-import { INSERTABLE_BLOCK_LABELS, SLASH_MENU_MESSAGES } from "./messages";
+import {
+  applySlashItem,
+  clearSlashQuery,
+  slashActionGap,
+  slashMenuKey,
+} from "@blog-editor/editor-core";
+import type { SlashMenuState } from "@blog-editor/editor-core";
+import type { BlockMenuAction } from "./block-menu-actions";
+import { SLASH_MENU_MESSAGES } from "./messages";
 import { SELECTION_POPUP_GAP_PX } from "./popup-constants";
-import { filterSlashItems } from "./slash-items";
+import { filterSlashItems, isAction, slashItemLabel } from "./slash-items";
+import type { SlashItem } from "./slash-items";
 import { useCommandRunner } from "./use-command-runner";
 import { useSlashMenuAutoClose } from "./use-slash-menu-auto-close";
 import { useSlashMenuKeys } from "./use-slash-menu-keys";
@@ -14,6 +21,8 @@ export interface SlashMenuProps {
   editor: Editor;
   /** 목록 좌표의 기준(BlogEditor 바깥 틀, position: relative) */
   frameRef: RefObject<HTMLDivElement | null>;
+  /** 쓸 수 있는 동작 항목과 그 동작 — 결과를 넣을 최상위 자리(gap)를 받는다. 없는 동작은 목록에서 빠진다 */
+  actions?: Partial<Record<BlockMenuAction, (gap: number) => void>> | undefined;
 }
 
 interface Position {
@@ -29,7 +38,9 @@ const sameMenu = (a: SlashMenuState | null, b: SlashMenuState | null) =>
  * 한글 · 선택이 끊기므로, contenteditable에 `aria-controls` · `aria-activedescendant`를 달아 고른 항목을 알린다
  * (APG combobox, https://www.w3.org/WAI/ARIA/apg/patterns/combobox/).
  */
-export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
+const NO_ACTIONS: Partial<Record<BlockMenuAction, (gap: number) => void>> = {};
+
+export function SlashMenu({ editor, frameRef, actions = NO_ACTIONS }: SlashMenuProps) {
   const run = useCommandRunner(editor);
   const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
@@ -39,15 +50,28 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
     equalityFn: sameMenu,
   });
   const query = menu?.query ?? null;
-  const items = useMemo(() => (query === null ? [] : filterSlashItems(query)), [query]);
-  const optionId = (kind: InsertableBlockKind) => `${listId}-${kind}`;
+  const available = useMemo(
+    () => (Object.keys(actions) as BlockMenuAction[]).filter((action) => actions[action]),
+    [actions],
+  );
+  const items = useMemo(
+    () => (query === null ? [] : filterSlashItems(query, available)),
+    [query, available],
+  );
+  const optionId = (item: SlashItem) => `${listId}-${item}`;
   const position = useSlashMenuPosition(editor, frameRef, menu?.from ?? null, query);
 
   const choose = useCallback(
-    (kind: InsertableBlockKind) => {
-      run(applySlashItem(kind));
+    (item: SlashItem) => {
+      if (!isAction(item)) {
+        run(applySlashItem(item));
+        return;
+      }
+      // 동작 항목은 /거르기를 지운 자리를 먼저 재 두고, 글자를 지운 뒤 동작(파일 고르기)을 부른다
+      const gap = slashActionGap(editor.state);
+      if (gap !== null && run(clearSlashQuery)) actions[item]?.(gap);
     },
-    [run],
+    [actions, editor, run],
   );
   const { current } = useSlashMenuKeys(editor, query, items, choose);
   useSlashMenuAutoClose(editor, query, items.length);
@@ -71,20 +95,20 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
       aria-label={SLASH_MENU_MESSAGES.menu}
       style={{ top: position.top, left: position.left }}
     >
-      {items.map((kind) => (
+      {items.map((item) => (
         <div
-          key={kind}
-          id={optionId(kind)}
+          key={item}
+          id={optionId(item)}
           role="option"
           tabIndex={-1}
-          aria-selected={kind === current}
+          aria-selected={item === current}
           // 누르는 순간 고른다 — mousedown을 막아 편집 영역 포커스와 선택이 그대로 남는다
           onMouseDown={(event) => {
             event.preventDefault();
-            choose(kind);
+            choose(item);
           }}
         >
-          {INSERTABLE_BLOCK_LABELS[kind]}
+          {slashItemLabel(item)}
         </div>
       ))}
     </div>

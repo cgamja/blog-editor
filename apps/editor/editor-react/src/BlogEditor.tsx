@@ -50,7 +50,7 @@ export function BlogEditor({ editor, uploadImage }: BlogEditorProps) {
       <WidthResizeHandles editor={editor} />
       <TextToolbar editor={editor} frameRef={frameRef} />
       <LinkPopover editor={editor} frameRef={frameRef} />
-      <SlashMenu editor={editor} frameRef={frameRef} />
+      <SlashMenu editor={editor} frameRef={frameRef} actions={actions} />
     </div>
   );
 }
