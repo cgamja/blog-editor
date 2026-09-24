@@ -6,6 +6,8 @@
 - 선택이 걸친 최상위 블록 전부에 같은 값을 넣는다. 하나라도 그 속성을 못 가지면(코드 블록에 `font` 등) 전체를 `false`로 거절한다. 일부만 바뀌면 사용자가 무엇이 바뀌었는지 알 수 없다.
 - 최상위 노드 선택의 끝은 깊이 0이라 다음 블록 index를 가리킨다. 그 블록은 빼고 센다.
 - GapCursor(깊이 0 빈 선택)와 AllSelection은 `false`다. 기존 커스텀 블록 · 감싸기 커맨드와 같다.
+- 대상이 모두 이미 같은 값이면(font 없는 블록에 `null`, `jua`에 `jua`) `true`를 돌려주되 dispatch하지 않는다. 버튼을 다시 눌러도 빈 undo 단계가 쌓이지 않고, `can`은 "이 속성을 가질 수 있나"로 남아 패널이 비활성 판정에 쓴다(PR #62 리뷰).
+- 스티커 순번은 `stickers[index]`가 있어야 한다. 비정수(0.5) · 범위 밖 순번은 `false`다.
 - 속성은 `tr.setNodeAttribute`(AttrStep)로 바꾼다. 위치를 움직이지 않아 노드 선택이 그대로 남는다(https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute). `null`은 "없음"이다(zod 쪽 생략).
 
 ## 2. 스티커는 블록 위치 + 순번으로 가리킨다

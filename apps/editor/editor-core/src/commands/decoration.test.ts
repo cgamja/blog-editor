@@ -159,6 +159,27 @@ describe("editor-decoration: 블록의 글꼴 · 움직임을 바꾼다", () => 
   });
 
   it.each([
+    [
+      "jua 문단에 setBlockFont('jua')",
+      stateAt(doc(paragraph("가", { font: "jua" }))),
+      setBlockFont("jua"),
+    ],
+    ["font 없는 문단에 setBlockFont(null)", stateAt(doc(paragraph("가"))), setBlockFont(null)],
+  ] as const)(
+    "WHEN 이미 같은 값인 블록에 %s THEN true이지만 dispatch하지 않는다(undo 단계가 쌓이지 않는다)",
+    (_name, state, command) => {
+      let dispatched = 0;
+      const ok = command(state, () => {
+        dispatched += 1;
+      });
+
+      expect(command(state)).toBe(true);
+      expect(ok).toBe(true);
+      expect(dispatched).toBe(0);
+    },
+  );
+
+  it.each([
     ["코드 블록에 font", stateAt(doc(codeBlock("x")), at(0)), setBlockFont("jua")],
     ["집합 밖 font", stateAt(doc(paragraph("가"))), setBlockFont("comic")],
     ["집합 밖 motion", stateAt(doc(paragraph("가"))), setBlockMotion("spin")],
@@ -259,6 +280,31 @@ describe("editor-decoration: 스티커를 넣고 고치고 지우고 옮긴다",
     expect(attrsOf(result.saved, 0)).toEqual({});
   });
 
+  it.each([
+    ["정수 아닌 순번 0.5", 0.5],
+    ["없는 순번 1", 1],
+  ] as const)(
+    "WHEN 스티커 하나인 블록에서 removeSticker(pos, %s) THEN false이고 문서가 그대로다",
+    (_name, index) => {
+      const state = stateAt(doc(paragraph("가", { stickers: [heart] })));
+
+      expectRejected(state, removeSticker(0, index));
+    },
+  );
+
+  it("WHEN 같은 블록 안으로 moveStickerToBlock THEN 제자리에서 좌표만 바뀌고 회전은 유지된다 — 없는 순번은 false", () => {
+    const state = stateAt(doc(paragraph("가", { stickers: [heart, cloud] })));
+    const target = { blockPos: 0, x: 60, y: 70, size: 25 };
+
+    const result = run(state, moveStickerToBlock(0, 1, target));
+
+    expect(result.ok).toBe(true);
+    expect(attrsOf(result.saved, 0)).toEqual({
+      stickers: [heart, { id: "cloud", x: 60, y: 70, size: 25, rotate: 90 }],
+    });
+    expectRejected(state, moveStickerToBlock(0, 2, target));
+  });
+
   it("WHEN rotate 90 스티커를 moveStickerToBlock으로 둘째 블록에 옮긴다 THEN 첫 블록에서 빠지고 둘째 블록 끝에 새 좌표 · 같은 회전으로 붙는다", () => {
     const state = stateAt(
       doc(paragraph("가", { stickers: [cloud] }), paragraph("나", { stickers: [heart] })),
@@ -307,6 +353,15 @@ describe("editor-decoration: 놓은 자리에서 가장 가까운 블록과 % �
       blockPos: 7,
       x: 50,
       y: -10,
+      size: 15,
+    });
+  });
+
+  it("WHEN 두 블록까지 거리가 같은 점에 놓는다 THEN 앞 블록에 붙는다", () => {
+    expect(placeOnNearestBlock([upper, lower], { x: 400, y: 120 }, 90)).toEqual({
+      blockPos: 0,
+      x: 50,
+      y: 120,
       size: 15,
     });
   });

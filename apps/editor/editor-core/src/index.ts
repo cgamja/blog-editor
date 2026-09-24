@@ -22,7 +22,7 @@ export type {
   StickerPatch,
   StickerPlacement,
   StickerTarget,
-} from "./commands/decoration";
+} from "./commands/decoration.types";
 export {
   mapStickerRef,
   placeStickerNear,
