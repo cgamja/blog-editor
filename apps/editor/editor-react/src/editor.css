@@ -309,12 +309,14 @@
   /*
    * 에디터 위에 뜨는 것들의 공통 값 — 한 곳에서 고친다. 그림자 토큰이 없어 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다.
    * 층: 블록 메뉴(손잡이 옆)보다 링크 팝오버(선택 아래)가 위다 — 둘이 겹치면 지금 입력 중인 팝오버가 보여야 한다.
+   * 슬래시 메뉴는 링크 팝오버와 같은 이유로 같은 높이다 — 둘 다 입력 중에 뜨고 동시에 열리지 않는다.
    */
   --shadow-popover: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
   /* design/tokens.json size.radius-pill */
   --radius-pill: 999px;
   --layer-block-menu: 1;
   --layer-link-popover: 2;
+  --layer-slash-menu: 2;
 }
 
 .block-handles {
@@ -749,7 +751,7 @@
  */
 .slash-menu {
   position: absolute;
-  z-index: var(--layer-link-popover);
+  z-index: var(--layer-slash-menu);
   display: flex;
   flex-direction: column;
   min-width: 11rem;

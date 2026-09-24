@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
-import { applySlashItem, closeSlashMenu, slashMenuKey } from "@blog-editor/editor-core";
+import { applySlashItem, slashMenuKey } from "@blog-editor/editor-core";
 import type { InsertableBlockKind, SlashMenuState } from "@blog-editor/editor-core";
 import { INSERTABLE_BLOCK_LABELS, SLASH_MENU_MESSAGES } from "./messages";
+import { SELECTION_POPUP_GAP_PX } from "./popup-constants";
 import { filterSlashItems } from "./slash-items";
 import { useCommandRunner } from "./use-command-runner";
+import { useSlashMenuAutoClose } from "./use-slash-menu-auto-close";
+import { useSlashMenuKeys } from "./use-slash-menu-keys";
 
 export interface SlashMenuProps {
   editor: Editor;
   /** 목록 좌표의 기준(BlogEditor 바깥 틀, position: relative) */
   frameRef: RefObject<HTMLDivElement | null>;
 }
-
-// `/` 글자 바로 아래에 띄운다 — 링크 팝오버와 같은 간격. #89의 SELECTION_POPUP_GAP_PX가 머지되면 그것으로 바꾼다
-const GAP_BELOW_TEXT_PX = 8;
 
 interface Position {
   top: number;
@@ -23,12 +23,6 @@ interface Position {
 
 const sameMenu = (a: SlashMenuState | null, b: SlashMenuState | null) =>
   a?.from === b?.from && a?.query === b?.query;
-
-/** 고른 항목 번호 — query가 바뀌면 첫 항목부터, 목록 끝을 넘으면 돌아간다 */
-interface ActiveItem {
-  query: string;
-  index: number;
-}
 
 /**
  * `/` 슬래시 메뉴(spec: editor-slash-menu). 에디터 포커스를 둔 채 쓰는 listbox다 — contenteditable에
@@ -47,9 +41,6 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
   });
   const query = menu?.query ?? null;
   const items = useMemo(() => (query === null ? [] : filterSlashItems(query)), [query]);
-  const [active, setActive] = useState<ActiveItem>({ query: "", index: 0 });
-  const index = active.query === query ? Math.min(active.index, items.length - 1) : 0;
-  const current = items[index];
   const optionId = (kind: InsertableBlockKind) => `${listId}-${kind}`;
   const position = useSlashMenuPosition(editor, frameRef, menu?.from ?? null, query);
 
@@ -59,41 +50,8 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
     },
     [run],
   );
-
-  // 걸러서 남은 항목이 없으면 메뉴를 찾는 중이 아니다 — 닫고 입력한 글자는 그대로 둔다
-  useEffect(() => {
-    if (query !== null && items.length === 0) run(closeSlashMenu);
-  }, [query, items, run]);
-
-  // 키 처리기는 최신 목록 · 고른 번호를 봐야 한다 — 렌더가 끝난 뒤 ref로 넘긴다
-  const onKeyRef = useRef<(key: string) => boolean>(() => false);
-  useEffect(() => {
-    onKeyRef.current = (key) => {
-      if (query === null || current === undefined) return false;
-      if (key === "Enter" || key === "Tab") {
-        choose(current);
-        return true;
-      }
-      const step = key === "ArrowDown" ? 1 : -1;
-      setActive({ query, index: (index + step + items.length) % items.length });
-      return true;
-    };
-  }, [query, current, index, items, choose]);
-  useEffect(() => {
-    const storage = editor.storage.slashMenu;
-    storage.onKey = (key) => onKeyRef.current(key);
-    return () => {
-      storage.onKey = null;
-    };
-  }, [editor]);
-
-  // 편집 영역을 떠나면 닫는다 — 항목 누르기는 mousedown을 막아 포커스가 남으니 여기에 걸리지 않는다
-  useEffect(() => {
-    const dom = editor.view.dom;
-    const close = () => run(closeSlashMenu);
-    dom.addEventListener("blur", close);
-    return () => dom.removeEventListener("blur", close);
-  }, [editor, run]);
+  const { current } = useSlashMenuKeys(editor, query, items, choose);
+  useSlashMenuAutoClose(editor, query, items.length);
 
   useComboboxAttributes(
     editor,
@@ -141,7 +99,7 @@ export function SlashMenu({ editor, frameRef }: SlashMenuProps) {
 }
 
 /**
- * `/` 글자 아래 자리. 레이아웃을 읽으므로 그리기 직전(layout effect)에 잰다.
+ * `/` 글자 아래 자리(링크 팝오버 · 서식 도구줄과 같은 간격). 레이아웃을 읽으므로 그리기 직전(layout effect)에 잰다.
  * https://prosemirror.net/docs/ref/#view.EditorView.coordsAtPos
  */
 function useSlashMenuPosition(
@@ -160,7 +118,7 @@ function useSlashMenuPosition(
     const coords = editor.view.coordsAtPos(from);
     const origin = frame.getBoundingClientRect();
     setPosition({
-      top: coords.bottom - origin.top + GAP_BELOW_TEXT_PX,
+      top: coords.bottom - origin.top + SELECTION_POPUP_GAP_PX,
       left: coords.left - origin.left,
     });
   }, [editor, frameRef, from, query]);
