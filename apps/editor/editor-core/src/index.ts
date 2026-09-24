@@ -6,3 +6,4 @@ export {
   insertCallout,
   setCalloutTone,
 } from "./commands/custom-blocks";
+export type { AppScreenshotInput } from "./commands/custom-blocks";
