@@ -1,7 +1,8 @@
-import { Mark, Node, getSchema } from "@tiptap/core";
+import { Extension, Mark, Node, getSchema } from "@tiptap/core";
 import type { Attribute } from "@tiptap/core";
 import type { Schema } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
+import { splitBlockKeepingStickers } from "./commands/split-block";
 import { headingLevelOf, hrefOrNull, languageOrNull, toneOrNull } from "./closed-values";
 import { hasClass, imageAttrsOf, imgSpec, withDecoration, wrapperRule } from "./dom";
 import type { ElementLike } from "./dom";
@@ -25,15 +26,18 @@ const optional: Attribute = { default: null, rendered: false, parseHTML: ignoreH
 // 채우므로(design.md 2) 누락의 최종 방어는 zod다 — 여기서는 키만 빠진 attrs를 막는다.
 // 이 동작은 공식 문서에 없다 — @tiptap/core 3.31.3 buildAttributeSpec · prosemirror-model 1.25.12 computeAttrs 소스로 확인
 const required: Attribute = { isRequired: true, rendered: false, parseHTML: ignoreHtml };
+// 나눈 블록에 스티커가 복제되면 문서 상한을 넘어 blockGuard가 Enter를 거부한다 — 앞 블록에만 남긴다.
+// TipTap splitBlock이 끝에서 나눌 때만 효력이 있다(스티커 있는 블록의 Enter는 StickerSafeSplit). https://tiptap.dev/docs/editor/extensions/custom-extensions/extend-existing#attributes
+const stickers: Attribute = { ...optional, keepOnSplit: false };
 
-const decoration = { font: optional, motion: optional, stickers: optional };
-const motionOnly = { motion: optional, stickers: optional };
+const decoration = { font: optional, motion: optional, stickers };
+const motionOnly = { motion: optional, stickers };
 const media = {
   naturalWidth: optional,
   naturalHeight: optional,
   motion: optional,
   width: optional,
-  stickers: optional,
+  stickers,
 };
 
 const isTag = (tag: string) => (element: ElementLike) => element.tagName === tag;
@@ -302,6 +306,23 @@ const Link = Mark.create({
   renderHTML: ({ mark }) => ["a", { href: String(mark.attrs.href) }, 0],
 });
 
+// 코어 Keymap(우선순위 100)보다 먼저 Enter를 본다 — 스티커 없는 블록은 커맨드가 false라 코어로 넘어간다
+const STICKER_SPLIT_PRIORITY = 1000;
+
+/**
+ * 스티커가 있는 블록의 Enter를 splitBlockKeepingStickers에 넘긴다 — 등록만(design.md 6, .claude/rules/editor.md).
+ * TipTap chain은 중간 커맨드가 실패해도 dispatch하므로 체인으로 잇지 않는다.
+ * https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension#keyboard-shortcuts
+ */
+const StickerSafeSplit = Extension.create({
+  name: "stickerSafeSplit",
+  priority: STICKER_SPLIT_PRIORITY,
+  addKeyboardShortcuts: () => ({
+    Enter: ({ editor }) =>
+      editor.commands.command(({ state, dispatch }) => splitBlockKeepingStickers(state, dispatch)),
+  }),
+});
+
 export const editorExtensions = [
   Doc,
   Text,
@@ -320,6 +341,7 @@ export const editorExtensions = [
   Code,
   Italic,
   Link,
+  StickerSafeSplit,
 ];
 
 export function createEditorSchema(): Schema {
