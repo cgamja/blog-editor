@@ -7,6 +7,22 @@ export {
   setCalloutTone,
 } from "./commands/custom-blocks";
 export type { AppScreenshotInput } from "./commands/custom-blocks";
+export {
+  addSticker,
+  moveStickerToBlock,
+  placeOnNearestBlock,
+  removeSticker,
+  setBlockFont,
+  setBlockMotion,
+  setBlockWidth,
+  updateSticker,
+} from "./commands/decoration";
+export type {
+  BlockRect,
+  StickerPatch,
+  StickerPlacement,
+  StickerTarget,
+} from "./commands/decoration.types";
 export { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./commands/drag-block";
 export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
 export type { InsertableBlockKind } from "./commands/drag-block.constants";
