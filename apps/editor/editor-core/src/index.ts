@@ -40,6 +40,7 @@ export {
   wrapInOrderedList,
 } from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
+export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export {
   MOTION_PREVIEW_CLASS,
   endMotionPreview,

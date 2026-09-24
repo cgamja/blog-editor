@@ -21,6 +21,12 @@ describe("에디터 확장 조립", () => {
     );
   });
 
+  it("WHEN blogEditorExtensions()의 이름을 보면 THEN 되돌리기(history)가 있다", () => {
+    const names = blogEditorExtensions().map((extension) => extension.name);
+
+    expect(names).toContain("history");
+  });
+
   it("WHEN blogEditorExtensions()로 스키마를 만들면 THEN 노드 · 마크 이름이 createEditorSchema()와 같다", () => {
     const assembled = getSchema(blogEditorExtensions());
     const core = createEditorSchema();

@@ -50,6 +50,15 @@ React에 TipTap 에디터를 마운트한다 — 초기 문서는 docToNode를 �
 
 실패 의미론: 해당 없음 — 순수 조립(서버 상태 없음). 마운트 · 조합 입력은 실브라우저(#44 체크리스트) 몫이다.
 
+### Requirement: 조립한 에디터에 되돌리기가 있다
+
+`blogEditorExtensions()`는 SHALL editor-core의 `History` 확장을 포함한다.
+
+#### Scenario: 조립한 목록에 history가 있다
+
+- **WHEN** `blogEditorExtensions()`의 확장 이름을 본다
+- **THEN** `history`가 있다
+
 ### Requirement: 편집 중에는 움직임을 재생하지 않는다
 
 `@blog-editor/editor-react/editor.css`는 SHALL 편집 영역(`.blog-editor .ProseMirror`) 안의 `[data-motion]` 요소에 `animation-name: none`을 준다. 본문 CSS(post.css)의 움직임 규칙보다 명시도가 높아 불러오는 순서와 무관하다. 미리보기 · 공개 HTML의 움직임은 그대로다.
