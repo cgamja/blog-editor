@@ -9,3 +9,6 @@ export const CONFLICT_MESSAGE = "다른 곳에서 수정됐다 — 다시 불러
 export const LOGIN_BODY_MESSAGE = "username과 password 문자열이 필요하다";
 export const LOGIN_FAILED_MESSAGE = "아이디 또는 비밀번호가 맞지 않는다";
 export const UNAUTHORIZED_MESSAGE = "로그인이 필요하다";
+export const IMAGE_TOO_LARGE_MESSAGE = "이미지는 1MB 이하만 올릴 수 있다";
+export const IMAGE_FORMAT_MESSAGE = "JPEG · PNG · WebP · GIF 이미지만 올릴 수 있다";
+export const IMAGE_TOO_WIDE_MESSAGE = "긴 변을 1600px 이하로 줄여서 올린다";

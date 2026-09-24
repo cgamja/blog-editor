@@ -25,6 +25,7 @@ import type { McpOptions } from "./mcp/route";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 import type { ImageStore } from "./image-store";
+import { registerImageRoutes } from "./images";
 
 export interface AppOptions extends SessionOptions {
   store: PostStore;
@@ -179,6 +180,8 @@ export function createApp(options: AppOptions): Hono {
     c.header("Cache-Control", PUBLIC_CACHE_CONTROL);
     return c.body(postCss, 200, { "Content-Type": "text/css; charset=utf-8" });
   });
+
+  if (options.images !== undefined) registerImageRoutes(app, options.images);
 
   if (options.mcp !== undefined) {
     registerMcpRoute(app, { ...options.mcp, store, categories, session });
