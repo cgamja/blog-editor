@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FocusEvent, RefObject } from "react";
-import { useEditorState, type Editor } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
 import type { Command } from "@tiptap/pm/state";
 import {
   atTopBlock,
@@ -39,11 +39,11 @@ export function BlockMenu({ editor, index, onClose, buttonRef, onRun }: BlockMen
   const { placement, needsScroll } = useMenuPlacement(menuRef, true);
   useScrollMenuIntoView(menuRef, needsScroll);
 
-  const enabledKinds = useEditorState({
-    editor,
-    selector: ({ editor: current }) =>
-      KINDS.filter((kind) => turnTopBlockInto(index, kind)(current.state)),
-  });
+  // 열 때 한 번만 잰다 — 메뉴가 포커스를 가진 동안 문서는 메뉴 항목으로만 바뀌고, 고르면 메뉴가 닫힌다.
+  // 트랜잭션마다 다시 재면 항목마다 선택만 옮긴 EditorState를 새로 만든다(atTopBlock)
+  const [enabledKinds] = useState(() =>
+    KINDS.filter((kind) => turnTopBlockInto(index, kind)(editor.state)),
+  );
 
   // APG menu-button 패턴: 메뉴를 열면 포커스는 첫 항목으로 간다 — 방향키 탐색이 거기서 시작한다
   useEffect(() => {
