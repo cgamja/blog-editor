@@ -43,6 +43,7 @@ export { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./commands/link"
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export {
   applyLastColor,
+  rememberColor,
   setTextStyle,
   textStyleSummary,
   toggleToolbarMark,

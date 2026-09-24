@@ -101,6 +101,19 @@ export function weightOptionsFor(font: TextStyleSummary["font"]): WeightOptions 
     : { weights: [], reason: textToolbarMessages.noWeight(FONT_LABELS[effective]) };
 }
 
+export interface ToolbarVisibility {
+  canStyle: boolean;
+  selection: "text" | "all" | "node" | "other";
+  composing: boolean;
+  editable: boolean;
+  focused: boolean;
+  pointerSelecting: boolean;
+}
+
+export const shouldShowToolbar: (state: ToolbarVisibility) => boolean = () => {
+  throw new Error("미구현");
+};
+
 /** 도구줄 버튼에 보일 지금 값의 이름 — 여러 값 · 기본(없음) · 이름표(없으면 값 그대로, 직접 입력 색) */
 export function summaryLabel(
   value: SummaryValue<string>,

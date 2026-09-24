@@ -5,6 +5,7 @@ import type { Command, EditorState } from "@tiptap/pm/state";
 import { lastColorKey } from "./text-style.constants";
 import { MIXED, TOOLBAR_MARKS } from "./text-style.types";
 import type {
+  LastColor,
   SummaryValue,
   TextStylePatch,
   TextStyleSummary,
@@ -148,6 +149,10 @@ export function toggleToolbarMark(name: ToolbarMark): Command {
     return type === undefined ? false : toggleMark(type)(state, dispatch);
   };
 }
+
+export const rememberColor: (color: LastColor) => Command = () => {
+  throw new Error("미구현");
+};
 
 /** 마지막에 건 글자색 · 배경색을 고른 글자에 다시 건다. 기억이 없으면 false */
 export const applyLastColor: Command = (state, dispatch) => {

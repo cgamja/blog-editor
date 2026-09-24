@@ -3,7 +3,7 @@ import type { Command } from "@tiptap/pm/state";
 import { createEditorSchema, docFromNode, docToNode } from "../index";
 import { blockGuard } from "../plugins/block-guard";
 import { textStyleKeymap, textStyleMemory } from "../plugins/text-style-keymap";
-import { applyLastColor, setTextStyle, textStyleSummary } from "./text-style";
+import { applyLastColor, rememberColor, setTextStyle, textStyleSummary } from "./text-style";
 import { MIXED } from "./text-style.types";
 
 const schema = createEditorSchema();
@@ -187,27 +187,54 @@ describe("editor-text-style: 도구줄이 보일 값을 요약한다", () => {
 });
 
 describe("editor-text-style: 마지막 색을 다시 건다", () => {
-  it("WHEN 한 글자에 highlight #3366aa를 건 뒤 다른 글자를 고르고 applyLastColor를 부른다 THEN 그 글자는 { highlight: '#3366aa' }다", () => {
-    const first = run(
-      setTextStyle({ highlight: "#3366aa" }),
-      stateOf([paragraph([text("가나다라")])], 1, 2),
+  it("WHEN rememberColor(highlight #3366aa) 뒤 글자를 고르고 applyLastColor를 부른다 THEN 그 글자는 { highlight: '#3366aa' }다", () => {
+    const remembered = run(
+      rememberColor({ key: "highlight", value: "#3366aa" }),
+      stateOf([paragraph([text("가나다라")])], 3, 5),
     ).state;
-    const moved = first.apply(first.tr.setSelection(TextSelection.create(first.doc, 3, 5)));
-    const { ok, state } = run(applyLastColor, moved);
+    const { ok, state } = run(applyLastColor, remembered);
 
     expect(ok).toBe(true);
     expect(styleRuns(state)).toEqual([
-      ["가", { highlight: "#3366aa" }],
-      ["나", undefined],
+      ["가나", undefined],
       ["다라", { highlight: "#3366aa" }],
     ]);
   });
 
-  it("WHEN 색을 건 적 없는 상태에서 applyLastColor를 부른다 THEN false다", () => {
+  it("WHEN 색을 기억한 적 없는 상태에서 applyLastColor를 부른다 THEN false다", () => {
     expect(run(applyLastColor, stateOf([paragraph([text("글자")])], 1, 3)).ok).toBe(false);
+  });
+
+  it("WHEN setTextStyle({ color: 'brand' })만 부른 뒤 applyLastColor를 부른다 THEN false다", () => {
+    const styled = run(
+      setTextStyle({ color: "brand" }),
+      stateOf([paragraph([text("글자")])], 1, 3),
+    );
+
+    expect(run(applyLastColor, styled.state).ok).toBe(false);
+  });
+
+  it("WHEN 이미 brand인 글자에서 rememberColor(color brand)를 부른다 THEN true · 문서 그대로이고 다른 글자에 applyLastColor가 brand를 건다", () => {
+    const before = stateOf([paragraph([styled("가나", { color: "brand" }), text("다라")])], 1, 3);
+    const remembered = run(rememberColor({ key: "color", value: "brand" }), before);
+    const moved = remembered.state.apply(
+      remembered.state.tr.setSelection(TextSelection.create(remembered.state.doc, 3, 5)),
+    );
+
+    expect(remembered.ok).toBe(true);
+    expect(remembered.state.doc.eq(before.doc)).toBe(true);
+    expect(styleRuns(run(applyLastColor, moved).state)).toEqual([["가나다라", { color: "brand" }]]);
   });
 
   it("WHEN textStyleKeymap을 본다 THEN Mod-u · Mod-Shift-s · Mod-Shift-h가 있다", () => {
     expect(Object.keys(textStyleKeymap).sort()).toEqual(["Mod-Shift-h", "Mod-Shift-s", "Mod-u"]);
+  });
+
+  it("WHEN 코드 블록 글자에서 Mod-u 커맨드를 부른다 THEN true이고 문서는 그대로다", () => {
+    const before = stateOf([{ type: "codeBlock", content: [text("const a")] }], 1, 4);
+    const { ok, state } = run(textStyleKeymap["Mod-u"]!, before);
+
+    expect(ok).toBe(true);
+    expect(state.doc.eq(before.doc)).toBe(true);
   });
 });

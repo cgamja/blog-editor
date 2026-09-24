@@ -4,9 +4,32 @@ import {
   contrastRatio,
   isHardToRead,
   normalizeHexInput,
+  shouldShowToolbar,
   toolbarPlacement,
   weightOptionsFor,
 } from "./text-toolbar-model";
+
+describe("editor-text-style: 도구줄 표시 조건", () => {
+  const ready = {
+    canStyle: true,
+    selection: "text" as const,
+    composing: false,
+    editable: true,
+    focused: true,
+    pointerSelecting: false,
+  };
+
+  it("WHEN 조건이 모두 맞고 선택이 text, 또는 all이다 THEN 둘 다 true다", () => {
+    expect(shouldShowToolbar(ready)).toBe(true);
+    expect(shouldShowToolbar({ ...ready, selection: "all" })).toBe(true);
+  });
+
+  it("WHEN 마우스로 끄는 중이거나, 조합 중이거나, 선택이 node다 THEN 셋 다 false다", () => {
+    expect(shouldShowToolbar({ ...ready, pointerSelecting: true })).toBe(false);
+    expect(shouldShowToolbar({ ...ready, composing: true })).toBe(false);
+    expect(shouldShowToolbar({ ...ready, selection: "node" })).toBe(false);
+  });
+});
 
 describe("editor-text-style: 색 대비가 낮으면 경고한다", () => {
   it("WHEN contrastRatio('#000000', '#ffffff')를 잰다 THEN 21이다", () => {
