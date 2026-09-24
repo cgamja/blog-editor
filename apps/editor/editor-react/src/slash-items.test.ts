@@ -21,4 +21,12 @@ describe("editor-slash-menu: 목록 거르기", () => {
     expect(filterSlashItems("젬")).toEqual(["heading2", "heading3"]);
     expect(filterSlashItems("으")).toEqual(expect.arrayContaining(["calloutWarning"]));
   });
+
+  it("WHEN 이미지 동작이 있을 때 '이미지' · 'image' · '사진'으로 거른다 THEN 이미지 동작이 맞고, 동작이 없으면 빠진다", () => {
+    expect(filterSlashItems("이미지", ["image"])).toEqual(["image"]);
+    expect(filterSlashItems("image", ["image"])).toEqual(["image"]);
+    expect(filterSlashItems("사진", ["image"])).toEqual(["image"]);
+    expect(filterSlashItems("", ["image"]).at(-1)).toBe("image");
+    expect(filterSlashItems("이미지")).toEqual([]);
+  });
 });

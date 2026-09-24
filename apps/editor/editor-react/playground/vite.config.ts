@@ -24,6 +24,12 @@ function readPort(raw: string | undefined): number {
   return port;
 }
 
+/**
+ * 로컬 API(`pnpm --filter @blog-editor/api dev`) — 에디터가 같은 출처로 부르도록 `/api` · `/images`를 넘긴다
+ * (이미지 올리기 #92). 세션 쿠키가 같은 출처에 붙는다. 포트를 바꿨으면 API_ORIGIN으로 준다.
+ */
+const API_ORIGIN = process.env.API_ORIGIN ?? "http://127.0.0.1:8787";
+
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   // 스티커 원본(content-render assets/stickers)을 에디터 DOM의 `/stickers/{id}.png`(에디터 출처 기준)로 서빙한다 —
@@ -34,5 +40,6 @@ export default defineConfig({
     host: "127.0.0.1",
     port: readPort(process.env.PORT),
     strictPort: true,
+    proxy: { "/api": API_ORIGIN, "/images": API_ORIGIN },
   },
 });

@@ -3,6 +3,7 @@ import { fixtures } from "@blog-editor/content-schema";
 import { EditorScreen, useBlogEditor, type StickerId } from "../src";
 import { DevTools } from "./DevTools";
 import { FIXTURE_NAMES, type FixtureName } from "./fixtures";
+import { uploadImage } from "./upload-image";
 
 /** 스티커 원본은 vite publicDir(content-render assets)가 `/stickers/{id}.png`로 서빙한다 — 에디터 DOM과 같은 주소 */
 const stickerSrc = (id: StickerId) => `/stickers/${id}.png`;
@@ -27,7 +28,7 @@ function EditorPane({ fixture, onFixtureChange }: EditorPaneProps) {
   const { editor } = useBlogEditor({ doc: fixtures[fixture].doc, key: fixture, label: "본문" });
   return (
     <>
-      <EditorScreen editor={editor} stickerSrc={stickerSrc} />
+      <EditorScreen editor={editor} stickerSrc={stickerSrc} uploadImage={uploadImage} />
       {DEV && <DevTools editor={editor} fixture={fixture} onFixtureChange={onFixtureChange} />}
     </>
   );

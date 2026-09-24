@@ -5,8 +5,8 @@
 import { createHash } from "node:crypto";
 import type { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
-import { IMAGE_HASH_LENGTH, MAX_IMAGE_BYTES } from "./image-constants";
+import { IMAGE_MAX_BYTES, NATURAL_SIZE_RANGE } from "@blog-editor/content-schema";
+import { IMAGE_HASH_LENGTH } from "./image-constants";
 import { probeImage } from "./image-probe";
 import { isImageName } from "./image-store";
 import type { ImageStore } from "./image-store";
@@ -58,7 +58,7 @@ export function registerImageRoutes(app: Hono, images: ImageStore): void {
   app.post(
     UPLOAD_PATH,
     bodyLimit({
-      maxSize: MAX_IMAGE_BYTES,
+      maxSize: IMAGE_MAX_BYTES,
       onError: (c) => c.json({ message: IMAGE_TOO_LARGE_MESSAGE }, 413),
     }),
     async (c) => {

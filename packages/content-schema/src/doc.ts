@@ -60,6 +60,12 @@ export const STICKER_RANGES = {
 /** 원본 이미지 픽셀 크기(plan 3-8) — 업로드가 긴 변을 1600px로 줄이므로 그보다 큰 값은 자리가 없다. */
 export const NATURAL_SIZE_RANGE = { min: 1, max: 1600 } as const;
 
+/**
+ * 올릴 수 있는 이미지 한 장의 최대 바이트(plan 3-8 "1MB 이하", ADR-021) — API가 거절하는 한도와
+ * 브라우저가 줄일 때 맞추는 한도가 같은 값이어야 해서 여기 둔다.
+ */
+export const IMAGE_MAX_BYTES = 1024 * 1024;
+
 export const ALT_MAX_LENGTH = 200;
 export const CAPTION_MAX_LENGTH = 120;
 

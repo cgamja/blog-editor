@@ -827,3 +827,119 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+/*
+ * 이미지 넣기(이슈 #92, spec: editor-image-insert). 값은 design/tokens.json —
+ * radius-card 14px, radius-button 10px, radius-input 8px, control-height 44px = 2.75rem,
+ * ui 15px · caption 13px, danger-ink, line, paper-deep.
+ */
+
+/* 올리는 중 자리(장식) — 문서가 아니라 widget이라 편집되지 않는다. 그림이 들어갈 자리를 비워 둔다 */
+.image-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  /* 디자인 69:2 사진 자리 높이(270px)의 절반 — 줄여 올리는 동안 본문이 크게 튀지 않을 만큼 */
+  min-height: 8.4375rem;
+  padding: 1rem;
+  border: 1px dashed var(--line, currentColor);
+  border-radius: 0.875rem;
+  background: var(--paper-deep, transparent);
+  color: var(--ink-mid, currentColor);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.image-upload-placeholder p {
+  margin: 0;
+}
+.image-upload-placeholder[data-status="failed"] {
+  border-style: solid;
+  border-color: var(--danger-ink, currentColor);
+  color: var(--danger-ink, currentColor);
+}
+.image-upload-placeholder-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.image-upload-placeholder-actions button {
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--line, currentColor);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--ink, currentColor);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* 대체 텍스트가 빈 그림 — 장식 속성(data-alt-missing)에 배지를 단다. 공개 HTML에는 나가지 않는다 */
+.blog-editor [data-alt-missing] {
+  position: relative;
+}
+.blog-editor [data-alt-missing]::after {
+  /* 문장은 image-insert-messages.ts — 장식이 속성 값으로 싣는다 */
+  content: attr(data-alt-missing);
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--danger-ink, currentColor);
+  color: var(--surface);
+  font-size: 0.8125rem;
+  pointer-events: none;
+}
+
+/* 폭 도구줄의 「대체 텍스트」 — 비어 있으면 점을 단다(색만으로 알리지 않게 aria-label에도 적는다) */
+.image-alt-control {
+  position: relative;
+  display: inline-flex;
+}
+.width-toolbar .image-alt-control button[data-missing]::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.375rem;
+  border-radius: 50%;
+  background: var(--danger-ink, currentColor);
+}
+/*
+ * 폭 도구줄은 편집 틀(.blog-editor-frame) 밖(편집 화면 종이)에 있어 틀의 공통 변수를 물려받지 않는다 —
+ * 그림자는 도구줄과 같은 값, 층은 도구줄(1) 위
+ */
+.image-alt-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: min(20rem, 80vw);
+  padding: 0.75rem;
+  border: 1px solid var(--line, currentColor);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  box-shadow: 0 0.5rem 1.25rem -0.375rem color-mix(in srgb, var(--ink) 50%, transparent);
+  color: var(--ink, currentColor);
+  font-size: 0.8125rem;
+  white-space: normal;
+}
+.image-alt-popover label {
+  color: var(--ink-mid, currentColor);
+  font-weight: 500;
+}
+.image-alt-popover input {
+  height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line, currentColor);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 0.9375rem;
+}
+.image-alt-hint {
+  color: var(--ink-soft, currentColor);
+}
