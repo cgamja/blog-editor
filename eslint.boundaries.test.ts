@@ -176,6 +176,45 @@ describe("import 경계: 생성기(fast-check)는 런타임 파일에 들어오�
   });
 });
 
+describe("import 경계: web 안의 층(app → features → shared)", () => {
+  const WEB = "apps/editor/web/src";
+
+  it.each([
+    [`${WEB}/shared/api/__probe__.ts`, "../../features/auth"],
+    [`${WEB}/shared/api/__probe__.ts`, "../../features/auth/session-cache"],
+    [`${WEB}/shared/__probe__.ts`, "../app/query-client"],
+    [`${WEB}/shared/routes/__probe__.test.ts`, "../../app/router"],
+  ])(
+    "WHEN shared(%s)가 features · app을 import하면(%s) THEN 막힌다",
+    async (filePath, specifier) => {
+      expect((await restrictedImports(filePath, [specifier])).length).toBeGreaterThanOrEqual(1);
+    },
+  );
+
+  it.each([
+    [`${WEB}/app/__probe__.ts`, "../features/auth/session-cache"],
+    [`${WEB}/app/__probe__.test.ts`, "../features/auth/components/RequireSession"],
+    [`${WEB}/pages/__probe__.tsx`, "../features/auth/pages/LoginPage"],
+  ])(
+    "WHEN 기능 밖(%s)에서 기능 안쪽 경로를 import하면(%s) THEN 막힌다",
+    async (filePath, specifier) => {
+      expect((await restrictedImports(filePath, [specifier])).length).toBeGreaterThanOrEqual(1);
+    },
+  );
+
+  it("WHEN 기능 밖에서 기능의 index · shared를 import하고 기능 안에서 자기 파일을 import하면 THEN 통과한다", async () => {
+    const results = await Promise.all([
+      restrictedImports(`${WEB}/app/__probe__.ts`, ["../features/auth", "../shared/messages"]),
+      restrictedImports(`${WEB}/pages/__probe__.tsx`, ["../shared/routes/constants"]),
+      restrictedImports(`${WEB}/features/auth/pages/__probe__.tsx`, [
+        "../session-cache",
+        "../../../shared/api/errors",
+      ]),
+    ]);
+    expect(results).toEqual([[], [], []]);
+  });
+});
+
 describe("import 경계: 패키지 밖(루트 도구)", () => {
   it.each(["./packages/content-schema", "./apps/editor/api/src/app"])(
     "상대경로로 패키지에 들어가는 것을 막는다: %s",

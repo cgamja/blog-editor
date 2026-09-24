@@ -1,0 +1,77 @@
+/*
+ * 앱 공통 바탕 — 화면별 모양은 각 화면 이슈가 채운다.
+ * 디자인 원천(design/tokens.json)에 간격 척도 · 테두리 두께가 없어 여기서 한 번만 정한다(Figma 토큰을 지어내지 않는다).
+ * 포커스 고리는 tokens.json `size.focus-ring`("2px solid #b0552f, offset 2px") 설명을 옮겼다 — 길이 토큰이 아니라 생성되지 않는다.
+ */
+:root {
+  --app-space-2: 0.5rem;
+  --app-space-3: 0.75rem;
+  --app-space-4: 1rem;
+  --app-space-6: 1.5rem;
+  --app-space-10: 2.5rem;
+  --app-button-padding-x: 1.125rem;
+  --app-border-width: 1px;
+  --app-focus-ring-width: 0.125rem;
+  --app-focus-ring-offset: 0.125rem;
+}
+
+body {
+  margin: 0;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: var(--app-focus-ring-width) solid var(--brand-ink);
+  outline-offset: var(--app-focus-ring-offset);
+}
+
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+  max-width: var(--article-width);
+  margin-inline: auto;
+  padding: var(--app-space-10) var(--app-space-6);
+}
+
+.app-login form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+}
+
+.app-login input,
+.app-page button {
+  min-height: var(--control-height);
+  border: var(--app-border-width) solid var(--line);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.app-login input {
+  padding: 0 var(--app-space-3);
+}
+
+.app-login input[aria-invalid="true"] {
+  border-color: var(--danger-ink);
+}
+
+.app-page button {
+  border-radius: var(--radius-button);
+  padding: 0 var(--app-button-padding-x);
+  cursor: pointer;
+}
+
+.app-error {
+  margin: 0;
+  color: var(--danger-ink);
+}
+
+.app-status {
+  padding: var(--app-space-10) var(--app-space-6);
+  color: var(--ink-soft);
+}
