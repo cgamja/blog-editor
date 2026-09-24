@@ -119,3 +119,13 @@ describe("import-preview-api — 요청 본문 크기", () => {
     expect(declared?.schema?.safeParse(body).success).toBe(true);
   });
 });
+
+describe("import-preview-api — 모르는 키", () => {
+  it("WHEN markdown 밖의 키가 든 본문으로 부르면 THEN 계약(additionalProperties: false)대로 400이다", async () => {
+    const { client } = setup();
+
+    const res = await client.request(PATH, postJson({ markdown: "문단", title: "덤" }));
+
+    expect(res.status).toBe(400);
+  });
+});
