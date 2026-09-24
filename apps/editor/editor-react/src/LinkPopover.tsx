@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import { removeLink, setLink } from "@blog-editor/editor-core";
@@ -6,6 +6,7 @@ import { LINK_MESSAGES } from "./messages";
 import { useCommandRunner } from "./use-command-runner";
 import { useCloseOnOutsidePointer, useEscapeKey } from "./use-dismiss";
 import { useLinkShortcut } from "./use-link-shortcut";
+import type { LinkPopoverAnchor } from "./use-link-shortcut";
 
 export interface LinkPopoverProps {
   editor: Editor;
@@ -20,11 +21,15 @@ export interface LinkPopoverProps {
  */
 export function LinkPopover({ editor, frameRef }: LinkPopoverProps) {
   const run = useCommandRunner(editor);
-  const [anchor, setAnchor] = useLinkShortcut(editor, frameRef);
-  const formRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const fillForm = useCallback((opened: LinkPopoverAnchor) => {
+    setValue(opened.href);
+    setInvalid(false);
+  }, []);
+  const [anchor, setAnchor] = useLinkShortcut(editor, frameRef, fillForm);
+  const formRef = useRef<HTMLFormElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const errorId = useId();
 
@@ -37,12 +42,9 @@ export function LinkPopover({ editor, frameRef }: LinkPopoverProps) {
   useEscapeKey(anchor !== null, closeToEditor);
   useCloseOnOutsidePointer(anchor !== null, insideRefs, close);
 
-  // 열릴 때마다 입력칸을 선택 주소로 채우고 고른다 — 바로 새 주소를 칠 수 있게
-  useEffect(() => {
-    if (anchor === null) return;
-    setValue(anchor.href);
-    setInvalid(false);
-    inputRef.current?.select();
+  // 열리면 채워진 주소를 통째로 고른다 — 바로 새 주소를 치면 교체된다. 값이 DOM에 들어간 뒤(그리기 전) 고른다
+  useLayoutEffect(() => {
+    if (anchor !== null) inputRef.current?.select();
   }, [anchor]);
 
   if (anchor === null) return null;
