@@ -21,6 +21,8 @@ import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "./wrap";
 const PERCENT = 100;
 /** 가운데 정렬 블록은 한쪽을 dx 끌면 양쪽이 함께 dx씩 — 폭은 2dx 바뀐다(design.md 6) */
 const SYMMETRIC = 2;
+/** 왼쪽 · 오른쪽 정렬 블록은 반대쪽이 고정이라 끈 만큼만 바뀐다 */
+const ONE_SIDED = 1;
 
 const WRAPPERS: Record<Extract<TurnIntoTarget, { via: "wrap" }>["wrapper"], Command> = {
   bulletList: wrapInBulletList,
@@ -106,16 +108,21 @@ export function turnTopBlockInto(index: number, kind: TurnIntoKind): Command {
   return atTopBlock(index, command);
 }
 
-/** 폭 손잡이를 끈 만큼의 새 폭(%) — 반올림하고 WIDTH_RANGE 끝에서 멈춘다(UI 입력이라 잘라도 된다, design.md 6) */
+/**
+ * 폭 손잡이를 끈 만큼의 새 폭(%) — 반올림하고 WIDTH_RANGE 끝에서 멈춘다(UI 입력이라 잘라도 된다, design.md 6).
+ * 정렬이 없으면 가운데(그림 · 스크린샷의 기본 모양)로 본다.
+ */
 export function resizedWidthPercent({
   startPercent,
   startX,
   x,
   side,
   containerWidth,
+  align = "center",
 }: WidthDrag): number {
   if (containerWidth <= 0) return startPercent;
   const direction = side === "right" ? 1 : -1;
-  const delta = (((x - startX) * direction * SYMMETRIC) / containerWidth) * PERCENT;
+  const scale = align === "center" ? SYMMETRIC : ONE_SIDED;
+  const delta = (((x - startX) * direction * scale) / containerWidth) * PERCENT;
   return Math.min(WIDTH_RANGE.max, Math.max(WIDTH_RANGE.min, Math.round(startPercent + delta)));
 }
