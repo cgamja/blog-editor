@@ -3,6 +3,7 @@ import {
   backspaceAfterCustomBlock,
   blockGuard,
   editorExtensions,
+  History,
   MoveBlock,
 } from "@blog-editor/editor-core";
 
@@ -31,7 +32,7 @@ const CustomBlockKeys = Extension.create({
   }),
 });
 
-/** 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에 가드 · 옮기기 · 키맵을 더한다. */
+/** 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에 가드 · 되돌리기 · 옮기기 · 키맵을 더한다. */
 export function blogEditorExtensions(): AnyExtension[] {
-  return [...editorExtensions, BlockGuard, MoveBlock, CustomBlockKeys];
+  return [...editorExtensions, BlockGuard, History, MoveBlock, CustomBlockKeys];
 }
