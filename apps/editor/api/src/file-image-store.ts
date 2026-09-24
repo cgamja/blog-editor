@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isImageName } from "./image-store";
 import type { ImageStore } from "./image-store";
@@ -34,8 +34,13 @@ export function createFileImageStore(options: { root: string }): ImageStore {
       // 임시 파일 → rename: 쓰다 멈춰도 반쯤 쓴 이미지가 남지 않는다. 같은 이름은 같은 내용이라 겹쳐 써도 된다
       const temp = `${path}.${randomUUID()}.tmp`;
       await mkdir(dir, { recursive: true });
-      await writeFile(temp, bytes);
-      await rename(temp, path);
+      try {
+        await writeFile(temp, bytes);
+        await rename(temp, path);
+      } catch (error) {
+        await rm(temp, { force: true });
+        throw error;
+      }
     },
     async get(name) {
       const path = pathOf(name);

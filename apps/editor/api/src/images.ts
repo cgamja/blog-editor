@@ -10,13 +10,27 @@ import { probeImage } from "./image-probe";
 import type { ImageFormat } from "./image-probe";
 import { IMAGE_HASH_LENGTH, isImageName } from "./image-store";
 import type { ImageExtension, ImageStore } from "./image-store";
-import { IMAGE_FORMAT_MESSAGE, IMAGE_TOO_LARGE_MESSAGE, IMAGE_TOO_WIDE_MESSAGE } from "./messages";
+import {
+  IMAGE_FORMAT_MESSAGE,
+  IMAGE_ROTATED_MESSAGE,
+  IMAGE_TOO_LARGE_MESSAGE,
+  IMAGE_TOO_WIDE_MESSAGE,
+} from "./messages";
 
 /** plan 3-8 "1MB 이하" — 브라우저가 1600px WebP로 줄인 결과가 들어갈 크기 */
 export const MAX_IMAGE_BYTES = 1024 * 1024;
 
 const UPLOAD_PATH = "/api/images";
 const PUBLIC_PREFIX = "/images/";
+/**
+ * EXIF 방향 5~8은 가로 · 세로가 뒤바뀌어 보인다 — 헤더 크기 그대로 저장하면 원본 크기가 틀린다.
+ * 브라우저가 캔버스로 다시 그려 방향을 구운 뒤 올린다(ADR-021).
+ */
+const ROTATED_ORIENTATIONS: ReadonlySet<number> = new Set([5, 6, 7, 8]);
+/** 이미지로만 쓰이는 응답 — 문서로 열려도 스크립트 · 하위 자원을 막는다 */
+const IMAGE_CSP = "default-src 'none'; sandbox";
+/** 에디터(editor.)와 사이트는 같은 사이트다. 공개 사이트는 CloudFront 주소를 쓰므로 로컬 제공은 same-site로 충분하다 */
+const IMAGE_CORP = "same-site";
 /** 내용 해시 이름이라 같은 주소의 내용은 바뀌지 않는다 */
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
@@ -56,6 +70,9 @@ export function registerImageRoutes(app: Hono, images: ImageStore): void {
       if (Math.max(probe.width, probe.height) > NATURAL_SIZE_RANGE.max) {
         return c.json({ message: IMAGE_TOO_WIDE_MESSAGE }, 422);
       }
+      if (probe.orientation !== undefined && ROTATED_ORIENTATIONS.has(probe.orientation)) {
+        return c.json({ message: IMAGE_ROTATED_MESSAGE }, 422);
+      }
 
       const extension = EXTENSION_OF[probe.format];
       const name = `${contentHash(bytes)}.${extension}`;
@@ -82,6 +99,8 @@ export function registerImageRoutes(app: Hono, images: ImageStore): void {
     return c.body(new Uint8Array(bytes), 200, {
       "Content-Type": CONTENT_TYPE_OF[extensionOfName(name)],
       "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": IMAGE_CSP,
+      "Cross-Origin-Resource-Policy": IMAGE_CORP,
       "Cache-Control": IMMUTABLE_CACHE_CONTROL,
     });
   });

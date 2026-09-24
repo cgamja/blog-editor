@@ -12,3 +12,5 @@ export const UNAUTHORIZED_MESSAGE = "로그인이 필요하다";
 export const IMAGE_TOO_LARGE_MESSAGE = "이미지는 1MB 이하만 올릴 수 있다";
 export const IMAGE_FORMAT_MESSAGE = "JPEG · PNG · WebP · GIF 이미지만 올릴 수 있다";
 export const IMAGE_TOO_WIDE_MESSAGE = "긴 변을 1600px 이하로 줄여서 올린다";
+export const IMAGE_ROTATED_MESSAGE =
+  "사진 방향(EXIF)이 돌아가 있다 — 방향을 적용해 다시 그린 뒤 올린다";

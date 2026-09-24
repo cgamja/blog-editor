@@ -11,6 +11,8 @@ export interface ImageProbe {
   format: ImageFormat;
   width: number;
   height: number;
+  /** JPEG EXIF Orientation(1~8) — 태그가 있을 때만 */
+  orientation?: number;
 }
 
 type Probe = (bytes: Uint8Array, view: DataView) => ImageProbe | null;
@@ -19,6 +21,7 @@ const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const PNG_WIDTH_OFFSET = 16;
 const PNG_HEIGHT_OFFSET = 20;
 const PNG_HEADER_END = 24;
+const PNG_FIRST_CHUNK_TYPE_OFFSET = 12;
 
 const GIF_SIGNATURES = ["GIF87a", "GIF89a"];
 const GIF_WIDTH_OFFSET = 6;
@@ -47,6 +50,12 @@ const JPEG_SOF_WIDTH_OFFSET = 7;
 const JPEG_NOT_SOF = new Set([0xc4, 0xc8, 0xcc]);
 const JPEG_SOF_FIRST = 0xc0;
 const JPEG_SOF_LAST = 0xcf;
+const JPEG_APP1 = 0xe1;
+const EXIF_HEADER = "Exif\0\0";
+const TIFF_IFD_OFFSET_FIELD = 4;
+const IFD_ENTRY_SIZE = 12;
+const IFD_ENTRY_VALUE_OFFSET = 8;
+const EXIF_ORIENTATION_TAG = 0x0112;
 /** 길이 필드가 없는 마커(TEM · RST0–7) */
 const JPEG_STANDALONE = new Set([0x01, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7]);
 
@@ -68,6 +77,8 @@ function u24le(bytes: Uint8Array, offset: number): number {
 
 const probePng: Probe = (bytes, view) => {
   if (!startsWith(bytes, PNG_SIGNATURE) || bytes.length < PNG_HEADER_END) return null;
+  // 명세상 첫 청크는 IHDR이다 — 아니면 가로 · 세로 자리에 다른 값이 있다
+  if (asciiAt(bytes, PNG_FIRST_CHUNK_TYPE_OFFSET, 4) !== "IHDR") return null;
   return sized("png", view.getUint32(PNG_WIDTH_OFFSET), view.getUint32(PNG_HEIGHT_OFFSET));
 };
 
@@ -107,10 +118,36 @@ const probeWebp: Probe = (bytes, view) => {
   return null;
 };
 
+/**
+ * APP1 Exif 세그먼트(`start`~`end`)의 IFD0에서 Orientation 태그를 읽는다. 모든 읽기는 세그먼트 안에서만 한다.
+ * TIFF 구조: CIPA DC-008(Exif 2.32) 4.5 · 4.6.4 — https://www.cipa.jp/std/documents/e/DC-X008-Translation-2019-E.pdf
+ */
+function exifOrientation(bytes: Uint8Array, view: DataView, start: number, end: number) {
+  if (asciiAt(bytes, start, EXIF_HEADER.length) !== EXIF_HEADER) return undefined;
+  const tiff = start + EXIF_HEADER.length;
+  const order = asciiAt(bytes, tiff, 2);
+  if (order !== "II" && order !== "MM") return undefined;
+  const little = order === "II";
+  const inside = (offset: number, size: number) => offset >= tiff && offset + size <= end;
+  if (!inside(tiff + TIFF_IFD_OFFSET_FIELD, 4)) return undefined;
+  const ifd = tiff + view.getUint32(tiff + TIFF_IFD_OFFSET_FIELD, little);
+  if (!inside(ifd, 2)) return undefined;
+  const count = view.getUint16(ifd, little);
+  for (let index = 0; index < count; index += 1) {
+    const entry = ifd + 2 + index * IFD_ENTRY_SIZE;
+    if (!inside(entry, IFD_ENTRY_SIZE)) return undefined;
+    if (view.getUint16(entry, little) === EXIF_ORIENTATION_TAG) {
+      return view.getUint16(entry + IFD_ENTRY_VALUE_OFFSET, little);
+    }
+  }
+  return undefined;
+}
+
 /** 마커를 차례로 건너뛰며 첫 프레임 헤더(SOF)를 찾는다 */
 const probeJpeg: Probe = (bytes, view) => {
   if (!startsWith(bytes, JPEG_SOI)) return null;
   let offset = JPEG_FIRST_SEGMENT;
+  let orientation: number | undefined;
   while (offset + 4 <= bytes.length) {
     if (bytes[offset] !== JPEG_MARKER_PREFIX) return null;
     const marker = bytes[offset + 1] ?? 0;
@@ -126,15 +163,20 @@ const probeJpeg: Probe = (bytes, view) => {
     const isSof = marker >= JPEG_SOF_FIRST && marker <= JPEG_SOF_LAST && !JPEG_NOT_SOF.has(marker);
     if (isSof) {
       if (offset + JPEG_SOF_WIDTH_OFFSET + 2 > bytes.length) return null;
-      return sized(
+      const found = sized(
         "jpeg",
         view.getUint16(offset + JPEG_SOF_WIDTH_OFFSET),
         view.getUint16(offset + JPEG_SOF_HEIGHT_OFFSET),
       );
+      return found === null || orientation === undefined ? found : { ...found, orientation };
     }
     const length = view.getUint16(offset + 2);
     // 길이 필드는 자기 2바이트를 포함한다 — 2 미만이면 깨진 파일이고 무한 루프를 막는다
     if (length < 2) return null;
+    if (marker === JPEG_APP1 && orientation === undefined) {
+      const segmentEnd = Math.min(offset + 2 + length, bytes.length);
+      orientation = exifOrientation(bytes, view, offset + 4, segmentEnd);
+    }
     offset += 2 + length;
   }
   return null;
