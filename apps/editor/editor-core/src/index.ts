@@ -9,12 +9,15 @@ export {
 export type { AppScreenshotInput } from "./commands/custom-blocks";
 export {
   addSticker,
+  canHoldDecoration,
   moveStickerToBlock,
   placeOnNearestBlock,
   removeSticker,
+  selectedTopBlocks,
   setBlockFont,
   setBlockMotion,
   setBlockWidth,
+  stickerCount,
   updateSticker,
 } from "./commands/decoration";
 export type {
@@ -22,6 +25,7 @@ export type {
   StickerPatch,
   StickerPlacement,
   StickerTarget,
+  TopBlock,
 } from "./commands/decoration.types";
 export { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./commands/drag-block";
 export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
@@ -37,6 +41,13 @@ export {
 } from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
+export {
+  MOTION_PREVIEW_CLASS,
+  endMotionPreview,
+  motionPreview,
+  motionPreviewKey,
+  previewMotion,
+} from "./plugins/motion-preview";
 export {
   normalizePastedSlice,
   pasteNormalizer,
