@@ -19,8 +19,18 @@ export const CONTAINER_LABEL: Record<ContainerKind, string> = {
   callout: "콜아웃",
 };
 
+/** 콜아웃 컨테이너 이름(`:::callout`) — tokens.ts(파서 설정) · check.ts · message.ts · serialize.ts가 같이 쓴다. */
+export const CALLOUT_CONTAINER_NAME = "callout";
+
 /** 지시어 키 — 이 순서가 직렬화(serialize.ts)가 지시어 줄에 쓰는 순서다. */
-export const DIRECTIVE_KEYS = ["frame", "font", "motion", "width", "size"] as const;
+export const DIRECTIVE_KEYS = ["frame", "font", "motion", "align", "width", "size"] as const;
+
+/**
+ * 괄호 span의 스타일 키 — 이 순서가 직렬화(serialize-inline.ts)가 `{…}`에 쓰는 순서이고, 키 이름은
+ * 스키마 textStyle 속성 이름과 같다(ADR-020). 밑줄은 값 없는 켜기 키로 맨 끝에 쓴다.
+ */
+export const SPAN_STYLE_KEYS = ["font", "weight", "size", "color", "highlight"] as const;
+export const SPAN_UNDERLINE_KEY = "underline";
 
 export const KNOWN_KEYS: ReadonlySet<string> = new Set(DIRECTIVE_KEYS);
 

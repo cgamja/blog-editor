@@ -1,4 +1,5 @@
 import {
+  ALIGNS,
   CAPTION_MAX_LENGTH,
   FONTS,
   MOTIONS,
@@ -9,6 +10,8 @@ import { APP_FRAME, KNOWN_KEYS, SIZE_SEPARATOR } from "./constants";
 import { computeFenceMask } from "./fence";
 import {
   blockMessage,
+  DIRECTIVE_ALIGN_VALUE_FIX,
+  directiveAlignValueRule,
   DIRECTIVE_CAPTION_LENGTH_FIX,
   DIRECTIVE_DUPLICATE_KEY_FIX,
   DIRECTIVE_DUPLICATE_KEY_RULE,
@@ -52,15 +55,15 @@ export interface DirectiveCandidate {
 
 /** 블록 의미별로 허용하는 지시어 키(frame은 image에서 따로 검사한다) — directives.ts만 쓴다. */
 const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
-  paragraph: new Set(["font", "motion"]),
-  heading: new Set(["font", "motion"]),
+  paragraph: new Set(["font", "motion", "align"]),
+  heading: new Set(["font", "motion", "align"]),
   bulletList: new Set(["font", "motion"]),
   orderedList: new Set(["font", "motion"]),
   blockquote: new Set(["font", "motion"]),
   callout: new Set(["font", "motion"]),
   codeBlock: new Set(["motion"]),
   horizontalRule: new Set(["motion"]),
-  image: new Set(["motion", "width", "size", "frame"]),
+  image: new Set(["motion", "width", "size", "frame", "align"]),
 };
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
@@ -259,6 +262,17 @@ function validateDirective(
         }
         break;
       }
+      case "align":
+        if (!(ALIGNS as readonly string[]).includes(value)) {
+          issues.push({
+            rule: directiveAlignValueRule(),
+            received: value,
+            fix: DIRECTIVE_ALIGN_VALUE_FIX,
+          });
+        } else {
+          resolved.align = value as (typeof ALIGNS)[number];
+        }
+        break;
       case "frame":
         if (value !== APP_FRAME) {
           issues.push({

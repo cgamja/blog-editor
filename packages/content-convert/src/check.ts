@@ -7,7 +7,7 @@ import {
   hrefSchema,
   imagePathSchema,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, DEFAULT_CALLOUT_TONE } from "./constants";
+import { ALLOWED_IN, CALLOUT_CONTAINER_NAME, DEFAULT_CALLOUT_TONE } from "./constants";
 import {
   calloutContainerNameMessage,
   calloutEmptyMessage,
@@ -31,12 +31,13 @@ import {
   listItemMustStartWithParagraphMessage,
   listItemRepeatedBlockMessage,
   orderedListStartMessage,
-  strikethroughMessage,
+  blockMessage,
   tableNotAllowedMessage,
   taskListMessage,
   type FoundMessage,
 } from "./message";
-import { CALLOUT_CONTAINER_NAME, imageAltText } from "./tokens";
+import type { SpanOpenMeta } from "./span";
+import { imageAltText } from "./tokens";
 import type { BlockRecord, ContainerKind, SemanticType } from "./types";
 
 const FOOTNOTE_INLINE = /\[\^[^\]\s]+\]/;
@@ -428,8 +429,13 @@ function checkInline(
         messages.push(hardBreakMessage(block.topLevel, currentLine, lineText));
         currentLine += 1;
         return;
-      case "s_open":
-        messages.push(strikethroughMessage(block.topLevel, currentLine, lineText));
+      case "span_open":
+        // 괄호 span의 값 검사는 span.ts가 토큰을 만들 때 한 번 했다 — 여기서는 메시지로만 바꾼다
+        for (const issue of (child.meta as SpanOpenMeta).issues) {
+          messages.push(
+            blockMessage(block.topLevel, currentLine, issue.rule, issue.received, issue.fix),
+          );
+        }
         return;
       case "html_inline":
         messages.push(htmlNotAllowedMessage(block.topLevel, currentLine, child.content));

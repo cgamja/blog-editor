@@ -8,16 +8,30 @@
  */
 
 import {
+  ALIGNS,
   ALT_MAX_LENGTH,
   CALLOUT_TONES,
   CAPTION_MAX_LENGTH,
   FONTS,
+  HIGHLIGHT_COLORS,
   MOTIONS,
   NATURAL_SIZE_RANGE,
+  TEXT_COLORS,
+  TEXT_SIZES,
+  TEXT_WEIGHTS,
+  WEIGHTS_BY_FONT,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, APP_FRAME, CONTAINER_LABEL, KNOWN_KEYS, SIZE_SEPARATOR } from "./constants";
-import { CALLOUT_CONTAINER_NAME } from "./tokens";
+import {
+  ALLOWED_IN,
+  APP_FRAME,
+  CALLOUT_CONTAINER_NAME,
+  CONTAINER_LABEL,
+  KNOWN_KEYS,
+  SIZE_SEPARATOR,
+  SPAN_STYLE_KEYS,
+  SPAN_UNDERLINE_KEY,
+} from "./constants";
 import type { ContainerKind, SemanticType } from "./types";
 
 export interface FoundMessage {
@@ -244,14 +258,6 @@ export function hardBreakMessage(topLevel: number, line: number, received: strin
   );
 }
 
-export function strikethroughMessage(
-  topLevel: number,
-  line: number,
-  received: string,
-): FoundMessage {
-  return blockMessage(topLevel, line, "취소선(~~)은 정의 밖이다", received, "취소선을 지운다");
-}
-
 export function footnoteDefinitionMessage(line: number, received: string): FoundMessage {
   return docMessage(line, "각주는 정의 밖이다", received, "각주 없이 문단으로 쓴다");
 }
@@ -453,6 +459,58 @@ export function directiveCaptionLengthRule(): string {
   return `캡션은 ${CAPTION_MAX_LENGTH}자 이내로 쓴다`;
 }
 export const DIRECTIVE_CAPTION_LENGTH_FIX = "캡션을 줄인다";
+
+export function directiveAlignValueRule(): string {
+  return `align은 ${ALIGNS.join(" · ")}만 쓴다`;
+}
+export const DIRECTIVE_ALIGN_VALUE_FIX = "center";
+
+// ── 괄호 span `[글자]{…}`(span.ts, ADR-020) ─────────────────────────────
+
+export const SPAN_DUPLICATE_KEY_RULE = "글자 스타일에 같은 키를 두 번 쓸 수 없다";
+export const SPAN_DUPLICATE_KEY_FIX = "키마다 한 번만 쓴다";
+
+export function spanUnknownKeyRule(): string {
+  return `글자 스타일 키는 ${[...SPAN_STYLE_KEYS, SPAN_UNDERLINE_KEY].join(" · ")}만 쓴다`;
+}
+export const SPAN_UNKNOWN_KEY_FIX = "[글자]{color=brand size=lg underline}";
+
+export const SPAN_UNDERLINE_VALUE_RULE = "underline은 값 없이 쓴다";
+export const SPAN_UNDERLINE_VALUE_FIX = "[글자]{underline}";
+
+type SpanStyleKey = (typeof SPAN_STYLE_KEYS)[number];
+
+const SPAN_VALUE_LIST: Record<SpanStyleKey, string> = {
+  font: FONTS.join(" · "),
+  weight: TEXT_WEIGHTS.join(" · "),
+  size: TEXT_SIZES.join(" · "),
+  color: `${TEXT_COLORS.join(" · ")} 또는 #rrggbb`,
+  highlight: `${HIGHLIGHT_COLORS.join(" · ")} 또는 #rrggbb`,
+};
+
+const SPAN_VALUE_EXAMPLE: Record<SpanStyleKey, string> = {
+  font: FONTS[0],
+  weight: TEXT_WEIGHTS[1],
+  size: TEXT_SIZES[1],
+  color: TEXT_COLORS[1],
+  highlight: HIGHLIGHT_COLORS[2],
+};
+
+export function spanValueRule(key: SpanStyleKey): string {
+  return `${key}는 ${SPAN_VALUE_LIST[key]}만 쓴다`;
+}
+export function spanValueFix(key: SpanStyleKey): string {
+  return `[글자]{${key}=${SPAN_VALUE_EXAMPLE[key]}}`;
+}
+
+/** 글꼴마다 있는 두께가 다르다 — 허용 목록은 WEIGHTS_BY_FONT에서 파생한다. */
+export function spanWeightRule(font: (typeof FONTS)[number]): string {
+  const weights = WEIGHTS_BY_FONT[font];
+  return weights.length === 0
+    ? `${font} 글꼴은 두께를 바꿀 수 없다`
+    : `${font} 글꼴의 weight는 ${weights.join(" · ")}만 쓴다`;
+}
+export const SPAN_WEIGHT_FIX = "weight를 지우거나 그 글꼴에 있는 두께로 바꾼다";
 
 // ── 참조 정의(references.ts) ────────────────────────────────────────────
 
