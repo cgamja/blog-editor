@@ -18,17 +18,17 @@ jobs:
           node-version: 22.x # engines ">=22.18" — scripts/*.ts를 Node 타입 제거로 바로 돌린다
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # 실브라우저 층(adr-024)의 Chromium — 브라우저 파일은 Playwright 버전별로 캐시하고, 시스템 라이브러리는 매번 깐다
+      # 실브라우저 층(adr-024 · adr-026)의 Chromium · WebKit — 브라우저 파일은 Playwright 버전별로 캐시하고, 시스템 라이브러리는 매번 깐다
       - id: playwright
         run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
       - id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - run: pnpm exec playwright install --with-deps chromium
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
+      - run: pnpm exec playwright install --with-deps chromium webkit
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - run: pnpm exec playwright install-deps chromium
+      - run: pnpm exec playwright install-deps chromium webkit
         if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: pnpm verify # typecheck · lint · lint:css · format:check · test · test:e2e · docs:check — package.json과 같은 한 줄
       - uses: actions/upload-artifact@v4

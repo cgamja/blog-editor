@@ -5,6 +5,8 @@
  */
 import { randomBytes } from "node:crypto";
 import { hashPassword, isValidPasswordHash } from "./password";
+import { readIssuer } from "./mcp/env";
+import type { SessionCookieMode } from "./session-types";
 
 export interface LocalConfig {
   username: string;
@@ -12,6 +14,7 @@ export interface LocalConfig {
   sessionSecret: string;
   /** SESSION_SECRET이 없어 새로 만들었다 — 재시작하면 세션이 끊긴다 */
   generatedSecret: boolean;
+  sessionCookie: SessionCookieMode;
 }
 
 const DEFAULT_USERNAME = "admin";
@@ -38,18 +41,35 @@ async function readPasswordHash(env: Record<string, string | undefined>): Promis
   return hash ?? "";
 }
 
+/**
+ * 루프백 http면 Secure 없는 쿠키(Safari가 http 루프백에서 Secure 쿠키를 버린다, #118). OAuth 공개 주소
+ * (PUBLIC_BASE_URL)가 있으면 이 서버가 공개 터널 뒤에도 서므로 "이 기기만 닿는다"는 전제가 깨진다 — 배포와 같은
+ * secure로 둔다(adr-026). OAuth를 여는 판정(mcp/env)과 같은 해석을 써서 둘이 어긋나지 않는다.
+ */
+function sessionCookieModeOf(env: Record<string, string | undefined>): SessionCookieMode {
+  return readIssuer(env.PUBLIC_BASE_URL) === null ? "loopback-http" : "secure";
+}
+
 export async function readLocalConfig(
   env: Record<string, string | undefined>,
 ): Promise<LocalConfig> {
   const passwordHash = await readPasswordHash(env);
   const username = env.ADMIN_USERNAME?.trim() || DEFAULT_USERNAME;
+  const sessionCookie = sessionCookieModeOf(env);
   const givenSecret = env.SESSION_SECRET;
   if (givenSecret !== undefined && givenSecret !== "") {
-    return { username, passwordHash, sessionSecret: givenSecret, generatedSecret: false };
+    return {
+      username,
+      passwordHash,
+      sessionSecret: givenSecret,
+      generatedSecret: false,
+      sessionCookie,
+    };
   }
   return {
     username,
     passwordHash,
+    sessionCookie,
     sessionSecret: randomBytes(GENERATED_SECRET_BYTES).toString("base64"),
     generatedSecret: true,
   };
