@@ -85,8 +85,14 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
   );
 }
 
+/** `?fixture=decorationMax`처럼 주소로 첫 픽스처를 고른다 — 클릭 없는 headless 스크린샷 증거용. 모르는 이름은 무시 */
+function initialFixture(): FixtureName {
+  const requested = new URLSearchParams(window.location.search).get("fixture");
+  return FIXTURE_NAMES.find((name) => name === requested) ?? "allBlocks";
+}
+
 export function Playground() {
-  const [fixture, setFixture] = useState<FixtureName>("allBlocks");
+  const [fixture, setFixture] = useState<FixtureName>(initialFixture);
 
   return (
     <main>
