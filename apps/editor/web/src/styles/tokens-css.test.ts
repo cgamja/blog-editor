@@ -22,6 +22,24 @@ describe("tokensToCss — 코드 토큰 파일은 디자인 토큰과 어긋나�
     expect(css).toContain("--space-8: 0.5rem;");
   });
 
+  it("WHEN 선 두께 · 포커스 고리 토큰을 바꾼다 THEN 글자 크기를 따라 커지지 않게 px 그대로다", () => {
+    const css = tokensToCss({
+      size: { "border-width": "1px", "focus-ring-width": "2px", "focus-ring-offset": "2px" },
+    });
+    expect(css).toContain("--border-width: 1px;");
+    expect(css).toContain("--focus-ring-width: 2px;");
+    expect(css).toContain("--focus-ring-offset: 2px;");
+  });
+
+  it.each([
+    ["이름에 허용 밖 글자", { color: { "Brand Ink": "#b0552f" } }],
+    ["같은 CSS 변수 이름이 두 번", { size: { "space-8": "8px" }, space: { "8": "8px" } }],
+    ["간격이 px가 아니다", { space: { "8": "0.5rem" } }],
+    ["색이 hex · rgb가 아니다", { color: { ink: "red; background: url(x)" } }],
+  ])("WHEN 잘못된 토큰(%s) THEN 생성이 멈춘다", (_case, tokens) => {
+    expect(() => tokensToCss(tokens)).toThrow();
+  });
+
   it("WHEN 지금 디자인 토큰으로 CSS를 만든다 THEN 저장된 tokens.css와 같다", () => {
     const tokens: unknown = JSON.parse(readRepoFile("../../../../../design/tokens.json"));
     expect(readRepoFile("./tokens.css")).toBe(tokensToCss(tokens));
