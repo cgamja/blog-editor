@@ -49,7 +49,13 @@ export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
 export type { InsertableBlockKind } from "./commands/drag-block.constants";
 export type { BlockBand, InsertableBlock } from "./commands/drag-block.types";
 export { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./commands/link";
-export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
+export {
+  blockStart,
+  MoveBlock,
+  moveBlockDown,
+  moveBlockKeymap,
+  moveBlockUp,
+} from "./commands/move-block";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
