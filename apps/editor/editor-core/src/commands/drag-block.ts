@@ -7,13 +7,15 @@
  * - NodeType.createAndFill: https://prosemirror.net/docs/ref/#model.NodeType.createAndFill
  * - Selection.findFrom: https://prosemirror.net/docs/ref/#state.Selection^findFrom
  */
+import type { Node } from "@tiptap/pm/model";
 import { Selection } from "@tiptap/pm/state";
-import type { Command } from "@tiptap/pm/state";
+import type { Command, EditorState, Transaction } from "@tiptap/pm/state";
 import { StepMap } from "@tiptap/pm/transform";
 import { INSERTABLE_BLOCKS } from "./drag-block.constants";
 import type { InsertableBlockKind } from "./drag-block.constants";
 import type { BlockBand, InsertableBlock } from "./drag-block.types";
 import { blockStart } from "./move-block";
+import { carriedAttrs } from "./turn-into";
 
 const isIndex = (value: number, size: number) =>
   Number.isInteger(value) && value >= 0 && value < size;
@@ -53,25 +55,63 @@ export function moveTopBlockTo(from: number, gap: number): Command {
  */
 export function insertBlockAfter(index: number, kind: InsertableBlockKind): Command {
   return (state, dispatch) => {
-    const { doc, schema } = state;
-    // 타입이 막아도 실행 중에는 문자열이 올 수 있다 — 목록 밖이면 거부
-    if (!Object.hasOwn(INSERTABLE_BLOCKS, kind) || !isIndex(index, doc.childCount)) return false;
-    const spec: InsertableBlock = INSERTABLE_BLOCKS[kind];
-    const block = schema.nodes[spec.type]?.createAndFill(spec.attrs ?? null);
-    if (block === undefined || block === null) return false;
+    const { doc } = state;
+    if (!isIndex(index, doc.childCount)) return false;
+    const block = insertableBlock(state, kind, null);
+    if (block === null) return false;
     if (dispatch === undefined) return true;
 
     const at = blockStart(doc, index + 1);
-    const tr = state.tr.insert(at, block);
-    const after = at + block.nodeSize;
-    if (block.isLeaf && tr.doc.nodeAt(after)?.type.name !== "paragraph") {
-      tr.insert(after, schema.node("paragraph"));
-    }
-    const cursor = Selection.findFrom(tr.doc.resolve(at), 1, true);
-    if (cursor !== null) tr.setSelection(cursor);
-    dispatch(tr.scrollIntoView());
+    dispatch(placeBlock(state.tr.insert(at, block), at, block).scrollIntoView());
     return true;
   };
+}
+
+/**
+ * 최상위 `index`번째 빈 문단 자리를 `kind`의 빈 블록으로 바꾼다(슬래시 메뉴, spec: editor-slash-menu).
+ * 문단의 꾸미기는 새 블록이 자리를 가진 것만 옮긴다(carriedAttrs — 스티커가 사라지지 않게).
+ * 커서 규칙은 insertBlockAfter와 같다. 빈 문단이 아니면 false.
+ */
+export function replaceEmptyTopParagraph(index: number, kind: InsertableBlockKind): Command {
+  return (state, dispatch) => {
+    const { doc } = state;
+    if (!isIndex(index, doc.childCount)) return false;
+    const old = doc.child(index);
+    if (old.type.name !== "paragraph" || old.content.size > 0) return false;
+    const block = insertableBlock(state, kind, old);
+    if (block === null) return false;
+    if (dispatch === undefined) return true;
+
+    const at = blockStart(doc, index);
+    const tr = state.tr.replaceWith(at, at + old.nodeSize, block);
+    dispatch(placeBlock(tr, at, block).scrollIntoView());
+    return true;
+  };
+}
+
+/** `kind`의 빈 블록. `from`이 있으면 그 블록의 꾸미기를 옮긴다. 목록 밖 kind면 null */
+function insertableBlock(state: EditorState, kind: InsertableBlockKind, from: Node | null) {
+  // 타입이 막아도 실행 중에는 문자열이 올 수 있다 — 목록 밖이면 거부
+  if (!Object.hasOwn(INSERTABLE_BLOCKS, kind)) return null;
+  const spec: InsertableBlock = INSERTABLE_BLOCKS[kind];
+  const type = state.schema.nodes[spec.type];
+  if (type === undefined) return null;
+  const attrs = from === null ? (spec.attrs ?? null) : carriedAttrs(from, type, spec.attrs ?? null);
+  return type.createAndFill(attrs);
+}
+
+/**
+ * `at`에 막 놓인 블록 안 첫 글자 자리에 커서를 둔다. 글자를 품지 않는 블록(구분선)이면 바로 뒤가 문단이 아닐 때
+ * 이어 쓸 빈 문단을 두고 거기에 둔다(insertAppScreenshot과 같은 규칙).
+ */
+function placeBlock(tr: Transaction, at: number, block: Node): Transaction {
+  const after = at + block.nodeSize;
+  if (block.isLeaf && tr.doc.nodeAt(after)?.type.name !== "paragraph") {
+    tr.insert(after, tr.doc.type.schema.node("paragraph"));
+  }
+  const cursor = Selection.findFrom(tr.doc.resolve(at), 1, true);
+  if (cursor !== null) tr.setSelection(cursor);
+  return tr;
 }
 
 /** y를 품은 블록 번호. 블록 사이 여백 · 바깥이면 가장 가까운 블록(같으면 앞), 블록이 없으면 null. */

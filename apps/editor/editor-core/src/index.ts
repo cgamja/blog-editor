@@ -88,5 +88,5 @@ export {
 export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
 export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
 export { previewBlockWidth, widthPreview, widthPreviewKey } from "./plugins/width-preview";
-export { closeSlashMenu, slashMenu, slashMenuKey } from "./plugins/slash-menu";
-export type { SlashMenuOptions, SlashMenuState } from "./plugins/slash-menu";
+export { closeSlashMenu, SlashMenu, slashMenu, slashMenuKey } from "./plugins/slash-menu";
+export type { SlashMenuOptions, SlashMenuState, SlashMenuStorage } from "./plugins/slash-menu";
