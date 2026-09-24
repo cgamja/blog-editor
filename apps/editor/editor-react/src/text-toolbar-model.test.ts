@@ -42,6 +42,18 @@ describe("editor-text-style: 도구줄은 선택 위, 자리가 없으면 아래
       toolbarPlacement({ selectionTop: 20, selectionBottom: 40, toolbarHeight: 48, gap: 8 }),
     ).toEqual({ top: 48, below: true });
   });
+
+  it("WHEN 선택 위쪽 0(첫 줄), 보이는 영역 위쪽 -64(종이 여백), 도구줄 48, 틈 8 THEN top -56이고 위다", () => {
+    expect(
+      toolbarPlacement({
+        selectionTop: 0,
+        selectionBottom: 20,
+        toolbarHeight: 48,
+        gap: 8,
+        boundaryTop: -64,
+      }),
+    ).toEqual({ top: -56, below: false });
+  });
 });
 
 describe("editor-text-style: 두께 선택지는 글꼴을 따른다", () => {
