@@ -1,8 +1,17 @@
+import { DEFAULT_ORDERED_LIST_START } from "@blog-editor/content-schema";
 import { InputRule, inputRules } from "@tiptap/pm/inputrules";
+import type { Node } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import type { Command, EditorState, Plugin, Transaction } from "@tiptap/pm/state";
+import { canJoin } from "@tiptap/pm/transform";
+import { orderedListNumberOrNull } from "../closed-values";
 import { isInTopBlock, turnIntoTextblock } from "../commands/turn-into";
-import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "../commands/wrap";
+import {
+  carriesDecoration,
+  wrapInBlockquote,
+  wrapInBulletList,
+  wrapInOrderedListFrom,
+} from "../commands/wrap";
 
 /**
  * Notion식 입력 규칙 — spec: editor-markdown-shortcuts, markdown-shortcuts design.md.
@@ -40,6 +49,51 @@ function blockRule(pattern: RegExp, types: readonly string[], command: Command):
     isInTopBlock(state, start, types) ? afterDeleting(state, start, end, command) : null,
   );
 }
+
+/**
+ * 앞 목록 start + 항목 수 = n — TipTap OrderedList 입력 규칙의 joinPredicate와 같은 조건
+ * (https://github.com/ueberdosis/tiptap/blob/main/packages/extension-list/src/ordered-list/ordered-list.ts)
+ */
+const isNextNumber = (before: Node, number: number) =>
+  (before.attrs.start ?? DEFAULT_ORDERED_LIST_START) + before.childCount === number;
+
+/** join은 앞 목록 attrs만 남긴다 — 새 목록이 문단에서 받은 꾸미기가 있으면 합치면 잃는다 */
+const keepsDecoration = (list: Node) => !carriesDecoration(list);
+
+/** 감싼 새 목록(pos)을 바로 앞 번호 목록에 합칠까 — 다음 번호이고, 꾸미기를 잃지 않고, 합칠 수 있을 때 */
+function joinsListBefore(doc: Node, pos: number, number: number): boolean {
+  const { nodeBefore: before, nodeAfter: list } = doc.resolve(pos);
+  return (
+    before !== null &&
+    list !== null &&
+    before.type === list.type &&
+    isNextNumber(before, number) &&
+    keepsDecoration(list) &&
+    // https://prosemirror.net/docs/ref/#transform.canJoin
+    canJoin(doc, pos)
+  );
+}
+
+/**
+ * 입력 규칙이 번호 목록으로 바꾸는 번호는 1~3자리뿐이다. 한국어 날짜 「2025. 9. 25.」가 start 2025 목록이 되지 않게 하고,
+ * 앞자리 0이 붙은 긴 숫자가 markdown-it 번호 상한(9자리)과 어긋나는 일도 없앤다. 큰 번호는 가져오기 · 붙여넣기로 들어온다.
+ */
+const TYPED_ORDERED_LIST_MARKER = /^(\d{1,3})\.\s$/;
+
+/**
+ * `n. ` → n부터 세는 번호 목록(spec: editor-ordered-list-input-rule). 범위 밖 번호는 글자로 남는다.
+ * 앞 목록에 이어지면 합치는 방식은 prosemirror-inputrules wrappingInputRule과 같다 — 감싼 뒤 앞 노드와 join
+ * (https://prosemirror.net/docs/ref/#inputrules.wrappingInputRule). 감싸기는 원래 문단 자리에 새 목록을 세운다.
+ */
+const orderedListRule = new InputRule(TYPED_ORDERED_LIST_MARKER, (state, match, start, end) => {
+  const number = orderedListNumberOrNull(match[1]);
+  if (number === null || !isInTopBlock(state, start, PARAGRAPH)) return null;
+  const tr = afterDeleting(state, start, end, wrapInOrderedListFrom(number));
+  const listPos = state.doc.resolve(start).before(1);
+  // https://prosemirror.net/docs/ref/#transform.Transform.join — 선택은 뒤 단계로 매핑된다
+  if (tr !== null && joinsListBefore(tr.doc, listPos, number)) tr.join(listPos);
+  return tr;
+});
 
 /**
  * `--`만 있는 최상위 문단에서 세 번째 `-` — 그 자리에 구분선, 바로 뒤 새 문단에 커서(design.md 5).
@@ -99,7 +153,7 @@ function markRule(pattern: RegExp, markName: string, delimiter: string): InputRu
 
 const inputRuleList = [
   blockRule(/^[-*+]\s$/, PARAGRAPH, wrapInBulletList),
-  blockRule(/^1\.\s$/, PARAGRAPH, wrapInOrderedList),
+  orderedListRule,
   blockRule(/^#{1,2}\s$/, TEXT_BLOCKS, turnIntoTextblock("heading", { level: 2 })),
   blockRule(/^###\s$/, TEXT_BLOCKS, turnIntoTextblock("heading", { level: 3 })),
   blockRule(/^[">]\s$/, PARAGRAPH, wrapInBlockquote),

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-에디터가 번호 목록 시작 번호(ordered-list-start)를 DOM으로 오가게 하고, 목록 가운데 항목을 빼내 목록이 갈려도 뒤 조각이 1부터 다시 세지 않게 한다(이슈 #80).
+에디터가 번호 목록 시작 번호(ordered-list-start)를 DOM으로 오가게 하고, 목록 가운데 항목을 빼내 목록이 갈려도 뒤 조각이 1부터 다시 세지 않게 한다(이슈 #80). 입력 규칙 `n. `은 editor-ordered-list-input-rule.
 
 ## Requirements
 

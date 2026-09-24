@@ -61,9 +61,13 @@ function intInRange(value: unknown, range: { min: number; max: number }): number
 
 export const widthOrNull = (value: unknown): number | null => intInRange(value, WIDTH_RANGE);
 
+/** 번호 목록 번호 — 범위 밖 · 정수 아님은 없음. 기본(1)도 번호로 남는다 */
+export const orderedListNumberOrNull = (value: unknown): number | null =>
+  intInRange(value, ORDERED_LIST_START_RANGE);
+
 /** 번호 목록 시작 번호 — 범위 밖 · 정수 아님은 없음, 기본(1)도 없음(정규형과 같은 모양) */
 export function orderedListStartOrNull(value: unknown): number | null {
-  const start = intInRange(value, ORDERED_LIST_START_RANGE);
+  const start = orderedListNumberOrNull(value);
   return start === DEFAULT_ORDERED_LIST_START ? null : start;
 }
 
