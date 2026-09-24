@@ -49,14 +49,14 @@ export function tokensToCss(tokens: unknown): string {
 }
 
 function colorDeclarations(color: Group): Declaration[] {
-  return namedEntries(color).map(([name, value]) => {
+  return validatedEntries(color).map(([name, value]) => {
     if (!COLOR_VALUE.test(value)) throw new TokenError(`색 ${name}: hex · rgb가 아니다 (${value})`);
     return [name, value];
   });
 }
 
 function fontDeclarations(font: Group): Declaration[] {
-  return namedEntries(font).flatMap(([name, value]): Declaration[] => {
+  return validatedEntries(font).flatMap(([name, value]): Declaration[] => {
     const variable = FONT_FAMILY_VARIABLES[name];
     return variable === undefined ? [] : [[variable, doubleQuoted(value)]];
   });
@@ -64,7 +64,7 @@ function fontDeclarations(font: Group): Declaration[] {
 
 // size에는 길이가 아닌 설명 값(article-body 같은 글꼴 줄 등)도 있다 — px 길이만 내보낸다
 function sizeDeclarations(size: Group): Declaration[] {
-  return namedEntries(size).flatMap(([name, value]): Declaration[] => {
+  return validatedEntries(size).flatMap(([name, value]): Declaration[] => {
     const px = pxOf(value);
     if (px === null) return [];
     return [[name, PX_FIXED_SIZES.has(name) ? `${px}px` : toRem(px)]];
@@ -73,7 +73,7 @@ function sizeDeclarations(size: Group): Declaration[] {
 
 // 간격 척도는 px 값이 이름이다(`space.8` → `--space-8`) — 단계 번호와 헷갈리지 않게 접두사를 붙인다
 function spaceDeclarations(space: Group): Declaration[] {
-  return namedEntries(space).map(([name, value]) => {
+  return validatedEntries(space).map(([name, value]) => {
     const px = pxOf(value);
     if (px === null) throw new TokenError(`간격 ${name}: px가 아니다 (${value})`);
     return [`${SPACE_PREFIX}${name}`, toRem(px)];
@@ -102,7 +102,7 @@ function toRem(px: number): string {
   return `${px / ROOT_FONT_SIZE_PX}rem`;
 }
 
-function namedEntries(group: Group): Array<[string, string]> {
+function validatedEntries(group: Group): Array<[string, string]> {
   return Object.entries(group)
     .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([name, value]) => {
