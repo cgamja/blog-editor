@@ -39,7 +39,9 @@ export { blockIndexAt, dropGapAt, insertBlockAfter, moveTopBlockTo } from "./com
 export { INSERTABLE_BLOCKS } from "./commands/drag-block.constants";
 export type { InsertableBlockKind } from "./commands/drag-block.constants";
 export type { BlockBand, InsertableBlock } from "./commands/drag-block.types";
+export { hasLinkTarget, linkHrefAt, removeLink, setLink } from "./commands/link";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
+export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
   wrapInBlockquote,
@@ -49,6 +51,9 @@ export {
 } from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
+export { markdownInputRules } from "./plugins/markdown-input-rules";
+export { markdownShortcutKeymap } from "./plugins/markdown-shortcut-keymap";
+export { MarkdownShortcuts, markdownShortcutPlugins } from "./plugins/markdown-shortcuts";
 export {
   MOTION_PREVIEW_CLASS,
   endMotionPreview,

@@ -8,6 +8,15 @@ export const BLOCK_HANDLE_MESSAGES = {
   moveHint: "끌어서 옮기기 · 키보드는 Ctrl/⌘ + Shift + ↑/↓",
 } as const;
 
+/** ⌘K 링크 팝오버. 허용 목록은 content-schema hrefSchema — http(s) · mailto · 사이트 안 경로 */
+export const LINK_MESSAGES = {
+  dialog: "링크",
+  address: "링크 주소",
+  apply: "적용",
+  remove: "링크 빼기",
+  invalid: "https://, mailto:, 또는 /로 시작하는 주소만 넣을 수 있어요.",
+} as const;
+
 /** 「블록 추가」 메뉴 이름. 키 타입이 INSERTABLE_BLOCKS와 같아서 종류가 늘면 typecheck가 빠진 이름을 잡는다. */
 export const INSERTABLE_BLOCK_LABELS: Record<InsertableBlockKind, string> = {
   paragraph: "문단",
