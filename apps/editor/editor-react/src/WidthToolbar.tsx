@@ -6,6 +6,7 @@ import { AlignIcon } from "./AlignIcon";
 import { ALIGN_OPTIONS, WIDTH_PRESETS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
 import { widthTargetOf } from "./decoration-state";
+import { ImageAltControl } from "./ImageAltControl";
 import { useCommandRunner } from "./use-command-runner";
 
 export interface WidthToolbarProps {
@@ -32,6 +33,16 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
     selector: ({ editor: current }) => {
       const { selection } = current.state;
       return selection instanceof NodeSelection ? alignOf(selection.node) : null;
+    },
+  });
+  // 그림이면 대체 텍스트도 도구줄에서 넣는다(스크린샷은 캡션이라 대상이 아니다) — 아니면 null
+  const imageAlt = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const { selection } = current.state;
+      return selection instanceof NodeSelection && selection.node.type.name === "image"
+        ? String(selection.node.attrs.alt)
+        : null;
     },
   });
   const run = useCommandRunner(editor);
@@ -114,6 +125,12 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
           <AlignIcon align={value} />
         </button>
       ))}
+      {imageAlt !== null && (
+        <>
+          <span className="width-toolbar-divider" aria-hidden="true" />
+          <ImageAltControl editor={editor} pos={target.pos} alt={imageAlt} />
+        </>
+      )}
     </div>
   );
 }

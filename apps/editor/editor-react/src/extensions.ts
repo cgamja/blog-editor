@@ -5,6 +5,7 @@ import {
   blockGuard,
   editorExtensions,
   History,
+  imageAltReminder,
   ListKeys,
   MarkdownShortcuts,
   motionPreview,
@@ -13,6 +14,8 @@ import {
   TextStyleKeys,
   widthPreview,
 } from "@blog-editor/editor-core";
+
+import { IMAGE_INSERT_MESSAGES } from "./image-insert-messages";
 
 // 코어 Keymap(우선순위 100)의 Backspace(joinBackward)보다 먼저 본다 — 커맨드가 false면 코어로 넘어간다
 const CUSTOM_BLOCK_KEYS_PRIORITY = 1000;
@@ -57,9 +60,15 @@ const WidthPreview = Extension.create({
   addProseMirrorPlugins: () => [widthPreview()],
 });
 
+/** 대체 텍스트가 빈 그림에 경고 배지를 다는 장식(spec: editor-image-insert). 등록만 한다 */
+const ImageAltReminder = Extension.create({
+  name: "imageAltReminder",
+  addProseMirrorPlugins: () => [imageAltReminder(IMAGE_INSERT_MESSAGES.altMissing)],
+});
+
 /**
  * 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에
- * 가드 · 되돌리기 · 옮기기 · 정렬 · 키맵 · 입력 규칙 · 목록 키 · 미리 보기 · 스티커 숨김 · 폭 미리보기 · 글자 서식 키를 더한다.
+ * 가드 · 되돌리기 · 옮기기 · 정렬 · 키맵 · 입력 규칙 · 목록 키 · 미리 보기 · 스티커 숨김 · 폭 미리보기 · 글자 서식 키 · 대체 텍스트 알림을 더한다.
  */
 export function blogEditorExtensions(): AnyExtension[] {
   return [
@@ -75,5 +84,6 @@ export function blogEditorExtensions(): AnyExtension[] {
     StickerHiding,
     TextStyleKeys,
     WidthPreview,
+    ImageAltReminder,
   ];
 }

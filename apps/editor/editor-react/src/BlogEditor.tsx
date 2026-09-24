@@ -4,6 +4,7 @@ import { BlockHandles } from "./BlockHandles";
 import { LinkPopover } from "./LinkPopover";
 import { StickerLayer } from "./StickerLayer";
 import { TextToolbar } from "./TextToolbar";
+import { useImageUpload } from "./use-image-upload";
 import { WidthResizeHandles } from "./WidthResizeHandles";
 
 export interface BlogEditorProps {
@@ -18,10 +19,19 @@ export interface BlogEditorProps {
  */
 export function BlogEditor({ editor }: BlogEditorProps) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const images = useImageUpload(editor);
   return (
     <div ref={frameRef} className="blog-editor-frame">
       <EditorContent editor={editor} className="blog-editor post-body" />
-      <BlockHandles editor={editor} frameRef={frameRef} />
+      <BlockHandles editor={editor} frameRef={frameRef} onChooseImage={images.openPicker} />
+      <input
+        ref={images.pickerRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={images.onPickerChange}
+      />
       <StickerLayer editor={editor} />
       <WidthResizeHandles editor={editor} />
       <TextToolbar editor={editor} frameRef={frameRef} />

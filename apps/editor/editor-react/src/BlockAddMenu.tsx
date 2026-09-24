@@ -3,6 +3,7 @@ import type { FocusEvent } from "react";
 import { INSERTABLE_BLOCKS } from "@blog-editor/editor-core";
 import type { InsertableBlockKind } from "@blog-editor/editor-core";
 import { menuItemsOf, onMenuKeyDown } from "./menu-keys";
+import { IMAGE_INSERT_MESSAGES } from "./image-insert-messages";
 import { BLOCK_HANDLE_MESSAGES, INSERTABLE_BLOCK_LABELS } from "./messages";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
 import { useMenuPlacement, useScrollMenuIntoView } from "./use-menu-placement";
@@ -13,6 +14,8 @@ export interface BlockAddMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChoose: (kind: InsertableBlockKind) => void;
+  /** 「이미지」 — 블록 종류가 아니라 파일을 고르는 동작이라 따로 받는다. 없으면 항목도 없다 */
+  onChooseImage?: (() => void) | undefined;
 }
 
 /**
@@ -20,7 +23,7 @@ export interface BlockAddMenuProps {
  * + 버튼으로 포커스를 돌린다. 메뉴 밖을 누르거나 Tab으로 포커스가 나가면 닫힌다.
  * https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
  */
-export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps) {
+export function BlockAddMenu({ open, onOpenChange, onChoose, onChooseImage }: BlockAddMenuProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
@@ -92,6 +95,11 @@ export function BlockAddMenu({ open, onOpenChange, onChoose }: BlockAddMenuProps
               {INSERTABLE_BLOCK_LABELS[kind]}
             </button>
           ))}
+          {onChooseImage !== undefined && (
+            <button type="button" role="menuitem" tabIndex={-1} onClick={onChooseImage}>
+              {IMAGE_INSERT_MESSAGES.menuItem}
+            </button>
+          )}
         </div>
       )}
     </>
