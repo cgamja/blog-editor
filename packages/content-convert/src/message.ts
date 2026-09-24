@@ -512,6 +512,16 @@ export function spanWeightRule(font: (typeof FONTS)[number]): string {
 }
 export const SPAN_WEIGHT_FIX = "weight를 지우거나 그 글꼴에 있는 두께로 바꾼다";
 
+export function nestedSpanMessage(topLevel: number, line: number, received: string): FoundMessage {
+  return blockMessage(
+    topLevel,
+    line,
+    "괄호 span은 겹쳐 쓸 수 없다",
+    received,
+    "span을 나란히 나눠 각자 키를 다 적는다: [가]{color=brand size=lg}[ 나]{size=lg}",
+  );
+}
+
 // ── 참조 정의(references.ts) ────────────────────────────────────────────
 
 export function unusedReferenceMessage(line: number, received: string): FoundMessage {

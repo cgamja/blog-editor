@@ -32,6 +32,7 @@ import {
   listItemRepeatedBlockMessage,
   orderedListStartMessage,
   blockMessage,
+  nestedSpanMessage,
   tableNotAllowedMessage,
   taskListMessage,
   type FoundMessage,
@@ -411,6 +412,7 @@ function checkInline(
   const children = tok.children ?? [];
   let currentLine = block.mapStart0 + 1;
   let activeLinkTextLength: number | null = null;
+  let spanDepth = 0;
 
   children.forEach((child, index) => {
     checkInlineChild(child, index, block);
@@ -430,12 +432,20 @@ function checkInline(
         currentLine += 1;
         return;
       case "span_open":
+        spanDepth += 1;
+        // 겹친 span은 바깥 스타일이 안쪽 글자에 이어지지 않는다(마크 하나에 속성 한 벌) — 조용히 잃지 않게 거부
+        if (spanDepth > 1) {
+          messages.push(nestedSpanMessage(block.topLevel, currentLine, lineText));
+        }
         // 괄호 span의 값 검사는 span.ts가 토큰을 만들 때 한 번 했다 — 여기서는 메시지로만 바꾼다
         for (const issue of (child.meta as SpanOpenMeta).issues) {
           messages.push(
             blockMessage(block.topLevel, currentLine, issue.rule, issue.received, issue.fix),
           );
         }
+        return;
+      case "span_close":
+        spanDepth -= 1;
         return;
       case "html_inline":
         messages.push(htmlNotAllowedMessage(block.topLevel, currentLine, child.content));
