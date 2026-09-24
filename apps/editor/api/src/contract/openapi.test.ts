@@ -36,11 +36,17 @@ async function expectConforms(method: HttpMethod, path: string, res: Response) {
   if (operation === undefined) throw new Error(`계약에 없는 연산: ${method} ${path}`);
   const declared = operation.responses[res.status];
   if (declared === undefined) throw new Error(`계약에 없는 상태: ${method} ${path} ${res.status}`);
+  for (const header of Object.keys(declared.headers ?? {})) {
+    expect(res.headers.get(header), `${method} ${path} ${res.status} ${header}`).not.toBeNull();
+  }
   if (declared.schema !== undefined) {
+    expect(res.headers.get("content-type")).toContain("application/json");
     const parsed = declared.schema.safeParse(await res.json());
     expect(parsed.success, `${method} ${path} ${res.status} ${JSON.stringify(parsed.error)}`).toBe(
       true,
     );
+  } else if (declared.contentTypePrefix !== undefined) {
+    expect(res.headers.get("content-type")).toMatch(new RegExp(`^${declared.contentTypePrefix}`));
   } else if (declared.contentType !== undefined) {
     expect(res.headers.get("content-type")).toContain(declared.contentType);
   } else {
@@ -146,6 +152,35 @@ describe("api-contract — 응답 적합성", () => {
     expect(invalid.status).toBe(400);
     await expectConforms("put", post, invalid);
 
+    const notJson = await client.request("/api/posts/other", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "If-None-Match": "*" },
+      body: "{",
+    });
+    expect(notJson.status).toBe(400);
+    await expectConforms("put", post, notJson);
+
+    const putBadSlug = await client.request(
+      "/api/posts/Bad_Slug",
+      jsonPut(fixtures.minimal, { "If-None-Match": "*" }),
+    );
+    expect(putBadSlug.status).toBe(400);
+    await expectConforms("put", post, putBadSlug);
+
+    const exists = await client.request(
+      "/api/posts/hello",
+      jsonPut(fixtures.minimal, { "If-None-Match": "*" }),
+    );
+    expect(exists.status).toBe(409);
+    await expectConforms("put", post, exists);
+
+    const editMissing = await client.request(
+      "/api/posts/nothing-here",
+      jsonPut(fixtures.minimal, { "If-Match": etag }),
+    );
+    expect(editMissing.status).toBe(409);
+    await expectConforms("put", post, editMissing);
+
     const missing = await client.request("/api/posts/nothing-here");
     expect(missing.status).toBe(404);
     await expectConforms("get", post, missing);
@@ -167,6 +202,13 @@ describe("api-contract — 응답 적합성", () => {
     const { store, app, client } = setup();
     const upload = (bytes: Uint8Array) =>
       client.request("/api/images", { method: "POST", body: bytes });
+
+    const anonymous = await app.request("/api/images", {
+      method: "POST",
+      body: pngBytes(800, 600),
+    });
+    expect(anonymous.status).toBe(401);
+    await expectConforms("post", "/api/images", anonymous);
 
     const first = await upload(pngBytes(800, 600));
     expect(first.status).toBe(201);
