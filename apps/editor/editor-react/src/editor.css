@@ -288,6 +288,13 @@
  */
 .blog-editor-frame {
   position: relative;
+  /*
+   * 에디터 위에 뜨는 것들의 공통 값 — 한 곳에서 고친다. 그림자 토큰이 없어 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다.
+   * 층: 블록 메뉴(손잡이 옆)보다 링크 팝오버(선택 아래)가 위다 — 둘이 겹치면 지금 입력 중인 팝오버가 보여야 한다.
+   */
+  --shadow-popover: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+  --layer-block-menu: 1;
+  --layer-link-popover: 2;
 }
 
 .block-handles {
@@ -337,7 +344,7 @@
   position: absolute;
   top: 3rem;
   left: 0;
-  z-index: 1;
+  z-index: var(--layer-block-menu);
   display: flex;
   flex-direction: column;
   min-width: 11rem;
@@ -346,8 +353,7 @@
   /* radius-card 14px */
   border-radius: 0.875rem;
   background: var(--surface);
-  /* 그림자 토큰이 없다 — 디자인 68:2 인라인 툴바 그림자 계열을 옮겼다 */
-  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+  box-shadow: var(--shadow-popover);
 }
 
 .block-handles .block-add-menu button {
@@ -541,7 +547,7 @@
  */
 .link-popover {
   position: absolute;
-  z-index: 2;
+  z-index: var(--layer-link-popover);
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
@@ -550,8 +556,7 @@
   border: 1px solid var(--line, currentColor);
   border-radius: 0.875rem;
   background: var(--surface);
-  /* 그림자 토큰이 없다 — 블록 추가 메뉴와 같은 디자인 68:2 툴바 그림자 계열 */
-  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ink) 35%, transparent);
+  box-shadow: var(--shadow-popover);
   color: var(--ink, currentColor);
   font-size: 0.8125rem;
 }
