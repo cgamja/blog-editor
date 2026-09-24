@@ -5,6 +5,8 @@ import {
   HEADING_LEVELS,
   MOTIONS,
   NATURAL_SIZE_RANGE,
+  STICKER_IDS,
+  STICKER_RANGES,
   WIDTH_RANGE,
   hrefSchema,
   imagePathSchema,
@@ -41,6 +43,14 @@ function intInRange(value: unknown, range: { min: number; max: number }): number
 }
 
 export const widthOrNull = (value: unknown): number | null => intInRange(value, WIDTH_RANGE);
+
+export const stickerIdOrNull = oneOf(STICKER_IDS);
+
+/** 스티커 좌표 한 칸(x · y · size · rotate) — 범위 밖 · 정수 아님은 없는 것 */
+export const stickerFieldOrNull = (
+  key: keyof typeof STICKER_RANGES,
+  value: unknown,
+): number | null => intInRange(value, STICKER_RANGES[key]);
 
 /** 원본 크기 한 변 — 범위 밖 · 숫자 아님은 없는 것. ProseMirror의 null도 여기서 한 번만 undefined로 바꾼다. */
 const naturalSide = (value: unknown): number | undefined =>

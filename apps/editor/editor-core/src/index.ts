@@ -7,6 +7,22 @@ export {
   setCalloutTone,
 } from "./commands/custom-blocks";
 export type { AppScreenshotInput } from "./commands/custom-blocks";
+export {
+  addSticker,
+  moveStickerToBlock,
+  placeOnNearestBlock,
+  removeSticker,
+  setBlockFont,
+  setBlockMotion,
+  setBlockWidth,
+  updateSticker,
+} from "./commands/decoration";
+export type {
+  BlockRect,
+  StickerPatch,
+  StickerPlacement,
+  StickerTarget,
+} from "./commands/decoration.types";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
