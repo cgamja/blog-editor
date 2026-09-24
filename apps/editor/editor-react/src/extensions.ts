@@ -10,6 +10,7 @@ import {
   motionPreview,
   MoveBlock,
   stickerHiding,
+  TextStyleKeys,
   widthPreview,
 } from "@blog-editor/editor-core";
 
@@ -58,7 +59,7 @@ const WidthPreview = Extension.create({
 
 /**
  * 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에
- * 가드 · 되돌리기 · 옮기기 · 정렬 · 키맵 · 입력 규칙 · 목록 키 · 미리 보기 · 스티커 숨김 · 폭 미리보기를 더한다.
+ * 가드 · 되돌리기 · 옮기기 · 정렬 · 키맵 · 입력 규칙 · 목록 키 · 미리 보기 · 스티커 숨김 · 폭 미리보기 · 글자 서식 키를 더한다.
  */
 export function blogEditorExtensions(): AnyExtension[] {
   return [
@@ -72,6 +73,7 @@ export function blogEditorExtensions(): AnyExtension[] {
     ListKeys,
     MotionPreview,
     StickerHiding,
+    TextStyleKeys,
     WidthPreview,
   ];
 }

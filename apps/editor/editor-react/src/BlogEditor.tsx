@@ -3,6 +3,7 @@ import { EditorContent, type Editor } from "@tiptap/react";
 import { BlockHandles } from "./BlockHandles";
 import { LinkPopover } from "./LinkPopover";
 import { StickerLayer } from "./StickerLayer";
+import { TextToolbar } from "./TextToolbar";
 import { WidthResizeHandles } from "./WidthResizeHandles";
 
 export interface BlogEditorProps {
@@ -23,6 +24,7 @@ export function BlogEditor({ editor }: BlogEditorProps) {
       <BlockHandles editor={editor} frameRef={frameRef} />
       <StickerLayer editor={editor} />
       <WidthResizeHandles editor={editor} />
+      <TextToolbar editor={editor} frameRef={frameRef} />
       <LinkPopover editor={editor} frameRef={frameRef} />
     </div>
   );
