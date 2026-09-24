@@ -1,7 +1,7 @@
 # ADR-016. MCP는 공식 SDK v2(`@modelcontextprotocol/server`)의 무상태 fetch 핸들러로 Hono에 붙이고, 첫 인증은 연결용 토큰(Bearer)이다
 
 - 날짜: 2026-09-24
-- 상태: 승인됨
+- 상태: 승인됨 · OAuth 부분 → adr-018
 - 원천: adr-007(초안만 · 발행 도구 없음 · 연결용 토큰 · OAuth) · adr-014(Hono · 재검토 조건 "MCP SDK가 같은 요청 모델에서 못 돌 때") · plan 3-12 · 이슈 #32 · 스파이크 #4
 
 ## 문제 (맥락)
