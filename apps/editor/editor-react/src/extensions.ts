@@ -3,6 +3,7 @@ import {
   backspaceAfterCustomBlock,
   blockGuard,
   editorExtensions,
+  motionPreview,
   MoveBlock,
 } from "@blog-editor/editor-core";
 
@@ -31,7 +32,13 @@ const CustomBlockKeys = Extension.create({
   }),
 });
 
-/** 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에 가드 · 옮기기 · 키맵을 더한다. */
+/** 꾸미기 패널의 「움직임 미리 보기」 장식(spec: decoration-panel). 등록만 한다 */
+const MotionPreview = Extension.create({
+  name: "motionPreview",
+  addProseMirrorPlugins: () => [motionPreview()],
+});
+
+/** 에디터 한 벌에 싣는 확장 전부 — 스키마 · 분할 · 붙여넣기(editorExtensions)에 가드 · 옮기기 · 키맵 · 미리 보기를 더한다. */
 export function blogEditorExtensions(): AnyExtension[] {
-  return [...editorExtensions, BlockGuard, MoveBlock, CustomBlockKeys];
+  return [...editorExtensions, BlockGuard, MoveBlock, CustomBlockKeys, MotionPreview];
 }

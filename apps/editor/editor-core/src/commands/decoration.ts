@@ -46,7 +46,7 @@ const DEFAULT_COORDINATES: Coordinates = { x: 95, y: 5, size: 15, rotate: 0 };
 
 const PERCENT = 100;
 
-interface TopBlock {
+export interface TopBlock {
   pos: number;
   node: Node;
 }
@@ -57,7 +57,7 @@ const canHold = (node: Node, key: string) => Object.hasOwn(node.type.spec.attrs 
  * 선택이 걸친 최상위 블록들. 노드 선택의 끝(깊이 0)은 다음 블록 index라 그 블록은 뺀다(design.md 1).
  * AllSelection과 깊이 0 빈 선택(GapCursor)은 대상이 없다.
  */
-function selectedTopBlocks(state: EditorState): TopBlock[] {
+export function selectedTopBlocks(state: EditorState): TopBlock[] {
   const { selection, doc } = state;
   const { $from, $to, empty } = selection;
   if (selection instanceof AllSelection || (empty && $from.depth === 0)) return [];

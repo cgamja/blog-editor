@@ -9,7 +9,7 @@ import {
   moveBlockUp,
   setCalloutTone,
 } from "@blog-editor/editor-core";
-import { BlogEditor, readDoc, useBlogEditor } from "../src";
+import { BlogEditor, DecorationPanel, WidthToolbar, readDoc, useBlogEditor } from "../src";
 
 type FixtureName = keyof typeof fixtures;
 const FIXTURE_NAMES = Object.keys(fixtures) as FixtureName[];
@@ -70,13 +70,17 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
         </div>
         <div className="playground-page">
           <BlogEditor editor={editor} />
+          <WidthToolbar editor={editor} />
         </div>
+        <details className="playground-doc">
+          <summary>현재 문서(JSON)</summary>
+          <pre className={view.ok ? "playground-json" : "playground-json playground-error"}>
+            {view.text}
+          </pre>
+        </details>
       </section>
-      <section aria-label="현재 문서">
-        <pre className={view.ok ? "playground-json" : "playground-json playground-error"}>
-          {view.text}
-        </pre>
-      </section>
+      {/* 스티커 그림 파일은 #58이 레포에 둔다 — 머지되면 stickerSrc를 잇는다 */}
+      <DecorationPanel editor={editor} />
     </div>
   );
 }

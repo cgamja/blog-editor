@@ -18,3 +18,206 @@
   outline: 0.125rem solid var(--brand-ink, currentColor);
   outline-offset: 0.125rem;
 }
+
+/*
+ * 움직임 미리 보기(spec: decoration-panel). 편집 화면은 움직임을 재생하지 않는다 — editor-core 장식이
+ * 붙은 블록만 시간 기반으로 한 번 재생한다. 키프레임은 post.css의 것을 이름으로 쓴다(글과 같은 움직임).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .blog-editor .editor-motion-preview[data-motion] {
+    animation-timeline: auto;
+    animation-range: normal;
+    animation-duration: 0.6s;
+    animation-fill-mode: both;
+    animation-timing-function: ease-out;
+  }
+  .blog-editor .editor-motion-preview[data-motion="fade-in"] {
+    animation-name: post-fade-in;
+  }
+  .blog-editor .editor-motion-preview[data-motion="fade-up"] {
+    animation-name: post-fade-up;
+  }
+  .blog-editor .editor-motion-preview[data-motion="slide-left"] {
+    animation-name: post-slide-left;
+  }
+  .blog-editor .editor-motion-preview[data-motion="slide-right"] {
+    animation-name: post-slide-right;
+  }
+  .blog-editor .editor-motion-preview[data-motion="pop"] {
+    animation-name: post-pop;
+  }
+}
+
+/* ---------- 꾸미기 패널 (디자인 69:2) ---------- */
+
+.decoration-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  word-break: keep-all;
+}
+.decoration-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.decoration-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.decoration-panel legend,
+.decoration-panel label {
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-mid);
+}
+.decoration-panel-target {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+.decoration-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+/* 디자인: 높이 60px 카드, 고른 것은 2px 브랜드 테두리 + 옅은 브랜드 바탕 */
+.decoration-panel-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: 3.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.decoration-panel-choice[aria-pressed="true"] {
+  border: 2px solid var(--brand-ink);
+  background: var(--brand-soft);
+}
+.decoration-panel-choice:disabled {
+  cursor: not-allowed;
+  color: var(--ink-soft);
+  background: var(--paper);
+}
+.decoration-panel-sample {
+  font-size: 0.9375rem;
+  line-height: 1.2;
+}
+.decoration-panel-sample[data-font="pretendard"] {
+  font-family: var(--font-sans);
+}
+.decoration-panel-sample[data-font="jua"] {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+}
+.decoration-panel-sample[data-font="gaegu"] {
+  font-family: var(--font-hand);
+  font-size: 1.1875rem;
+}
+.decoration-panel-caption {
+  font-size: 0.75rem;
+  color: var(--ink-mid);
+}
+.decoration-panel-sticker {
+  align-items: center;
+  text-align: center;
+}
+.decoration-panel-sticker img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+.decoration-panel-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.decoration-panel select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+.decoration-panel-preview {
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  border: 1px solid var(--line);
+  border-radius: 0.625rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.decoration-panel-preview:disabled {
+  cursor: not-allowed;
+  color: var(--ink-soft);
+}
+.decoration-panel :focus-visible,
+.width-toolbar :focus-visible {
+  outline: 0.125rem solid var(--brand-ink);
+  outline-offset: 0.125rem;
+}
+
+/* ---------- 폭 도구줄 (디자인 69:2 — 사진 위 가운데, 어두운 줄) ---------- */
+
+.width-toolbar {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.125rem;
+  border-radius: 0.625rem;
+  background: var(--toolbar);
+  box-shadow: 0 0.5rem 1.25rem -0.375rem color-mix(in srgb, var(--ink) 50%, transparent);
+  white-space: nowrap;
+  /* 블록 위 가운데, 블록과 0.875rem 띄운다 */
+  transform: translate(-50%, calc(-100% - 0.875rem));
+}
+.width-toolbar button {
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--surface);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.width-toolbar button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+.width-toolbar-value {
+  padding: 0 0.875rem 0 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--line);
+}

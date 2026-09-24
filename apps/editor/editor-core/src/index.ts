@@ -12,6 +12,7 @@ export {
   moveStickerToBlock,
   placeOnNearestBlock,
   removeSticker,
+  selectedTopBlocks,
   setBlockFont,
   setBlockMotion,
   setBlockWidth,
@@ -22,6 +23,7 @@ export type {
   StickerPatch,
   StickerPlacement,
   StickerTarget,
+  TopBlock,
 } from "./commands/decoration";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
@@ -32,6 +34,13 @@ export {
   wrapInOrderedList,
 } from "./commands/wrap";
 export { blockGuard } from "./plugins/block-guard";
+export {
+  MOTION_PREVIEW_CLASS,
+  endMotionPreview,
+  motionPreview,
+  motionPreviewKey,
+  previewMotion,
+} from "./plugins/motion-preview";
 export {
   normalizePastedSlice,
   pasteNormalizer,
