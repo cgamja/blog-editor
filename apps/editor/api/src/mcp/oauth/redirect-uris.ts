@@ -19,10 +19,15 @@ function parse(uri: string): URL | null {
   }
 }
 
+/**
+ * 표준 모양만 받는다 — URL 파서가 `127.1` · `0x7f000001` · 전각 숫자를 `127.0.0.1`로 고쳐 읽으므로
+ * `href`가 입력과 글자 그대로 같을 때만 루프백이다(허용 목록을 우회하는 표기를 막는다).
+ */
 export function isLoopbackRedirect(uri: string): boolean {
   const url = parse(uri);
   return (
     url !== null &&
+    url.href === uri &&
     url.protocol === "http:" &&
     LOOPBACK_HOSTS.has(url.hostname) &&
     url.pathname === LOOPBACK_PATH &&

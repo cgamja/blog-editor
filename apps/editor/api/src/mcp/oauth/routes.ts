@@ -9,6 +9,7 @@ import {
   DEFAULT_CLIENT_NAME,
   INVALID_CLIENT_METADATA_DESCRIPTION,
   INVALID_REDIRECT_URI_DESCRIPTION,
+  REGISTRATION_FULL_DESCRIPTION,
 } from "./messages";
 import { isAllowedRedirectUri } from "./redirect-uris";
 import type { OAuthClient } from "./store";
@@ -23,7 +24,7 @@ function isSubsetOf(value: unknown, allowed: readonly string[]): boolean {
   return Array.isArray(value) && value.every((item) => allowed.includes(item as string));
 }
 
-function registrationError(c: Context, error: string, description: string, status: 400) {
+function registrationError(c: Context, error: string, description: string, status: 400 | 503) {
   return c.json({ error, error_description: description }, status, NO_STORE_HEADERS);
 }
 
@@ -100,12 +101,15 @@ export function registerOAuthRoutes(
       clientId: randomUUID(),
       clientName: rawName.slice(0, MAX_CLIENT_NAME_LENGTH) || DEFAULT_CLIENT_NAME,
       redirectUris: redirectUris as string[],
+      registeredAt: session.nowSeconds(),
     };
-    await store.saveClient(client);
+    if (!(await store.saveClient(client, client.registeredAt))) {
+      return registrationError(c, "temporarily_unavailable", REGISTRATION_FULL_DESCRIPTION, 503);
+    }
     return c.json(
       {
         client_id: client.clientId,
-        client_id_issued_at: session.nowSeconds(),
+        client_id_issued_at: client.registeredAt,
         client_name: client.clientName,
         redirect_uris: client.redirectUris,
         grant_types: GRANT_TYPES,

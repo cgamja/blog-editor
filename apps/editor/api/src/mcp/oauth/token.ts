@@ -44,10 +44,9 @@ async function exchangeAuthorizationCode(
   ) {
     return { ok: false, error: "invalid_request" };
   }
-  const stored = await store.takeCode(hashOpaqueToken(code));
+  const stored = await store.takeCode(hashOpaqueToken(code), nowSeconds);
   const valid =
     stored !== null &&
-    stored.expiresAt > nowSeconds &&
     stored.clientId === clientId &&
     stored.redirectUri === redirectUri &&
     resourceMatches(form, stored.resource) &&
@@ -55,7 +54,7 @@ async function exchangeAuthorizationCode(
   return valid ? { ok: true, grant: grantOf(stored) } : invalidGrant;
 }
 
-/** refresh 회전 — 쓴 refresh는 지우고 새 쌍을 준다(OAuth 2.1 공개 클라이언트) */
+/** refresh 회전 — 쓴 refresh와 그와 함께 발급한 액세스 토큰을 지우고 새 쌍을 준다(OAuth 2.1 공개 클라이언트) */
 async function rotateRefreshToken(
   store: OAuthStore,
   form: TokenForm,
@@ -65,12 +64,10 @@ async function rotateRefreshToken(
   if (refreshToken === undefined || clientId === undefined) {
     return { ok: false, error: "invalid_request" };
   }
-  const stored = await store.takeRefreshToken(hashOpaqueToken(refreshToken));
-  const valid =
-    stored !== null &&
-    stored.expiresAt > nowSeconds &&
-    stored.clientId === clientId &&
-    resourceMatches(form, stored.resource);
+  const stored = await store.takeRefreshToken(hashOpaqueToken(refreshToken), nowSeconds);
+  if (stored === null) return invalidGrant;
+  await store.deleteAccessToken(stored.accessTokenHash);
+  const valid = stored.clientId === clientId && resourceMatches(form, stored.resource);
   return valid ? { ok: true, grant: grantOf(stored) } : invalidGrant;
 }
 
@@ -83,14 +80,17 @@ export function registerTokenRoute(
     const now = session.nowSeconds();
     const accessToken = newOpaqueToken();
     const refreshToken = newOpaqueToken();
-    await store.saveAccessToken(hashOpaqueToken(accessToken), {
+    const accessTokenHash = hashOpaqueToken(accessToken);
+    await store.saveAccessToken(accessTokenHash, {
       ...grant,
       expiresAt: now + ACCESS_TOKEN_TTL_SECONDS,
     });
     await store.saveRefreshToken(hashOpaqueToken(refreshToken), {
       ...grant,
+      accessTokenHash,
       expiresAt: now + REFRESH_TOKEN_TTL_SECONDS,
     });
+    await store.markClientConnected(grant.clientId);
     return c.json(
       {
         access_token: accessToken,

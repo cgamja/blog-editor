@@ -26,7 +26,15 @@ function readFormatGuide(): string {
  */
 export function readMcpOptionsFromEnv(env: NodeJS.ProcessEnv): McpOptions | null {
   const token = env.MCP_CONNECTION_TOKEN;
-  if (token === undefined || token === "") return null;
+  if (token === undefined || token === "") {
+    // OAuth는 `/mcp` 위에 붙는다 — 토큰 없이 주소만 주면 OAuth도 열리지 않는다는 것을 조용히 넘기지 않는다
+    if (env.PUBLIC_BASE_URL) {
+      throw new Error(
+        "PUBLIC_BASE_URL(OAuth)은 MCP_CONNECTION_TOKEN이 있을 때만 쓴다 — .env에 MCP_CONNECTION_TOKEN=$(openssl rand -hex 32)도 넣는다",
+      );
+    }
+    return null;
+  }
   if (token.length < MIN_TOKEN_LENGTH || !TOKEN_CHARS.test(token)) {
     throw new Error(
       `MCP_CONNECTION_TOKEN은 ${MIN_TOKEN_LENGTH}자 이상 · 공백 없이 — openssl rand -hex 32`,

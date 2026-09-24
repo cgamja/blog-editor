@@ -24,14 +24,16 @@ export function sameResource(requested: string, resource: string): boolean {
   return requested.replace(/\/$/, "") === resource;
 }
 
-/** `/mcp`가 부른다 — 살아 있고 이 서버의 MCP URL로 발급된 액세스 토큰이면 초안 출처 이름, 아니면 null */
+/**
+ * `/mcp`가 부른다 — 살아 있고 이 서버의 MCP URL로 발급된 액세스 토큰이면 초안 출처 이름, 아니면 null.
+ * 만료는 저장소가 거른다.
+ */
 export async function findAccessTokenSourceName(
   { issuer, store }: OAuthOptions,
   token: string,
   nowSeconds: number,
 ): Promise<string | null> {
-  const found = await store.findAccessToken(hashOpaqueToken(token));
-  if (found === null || found.expiresAt <= nowSeconds) return null;
-  if (found.resource !== mcpResourceOf(issuer)) return null;
+  const found = await store.findAccessToken(hashOpaqueToken(token), nowSeconds);
+  if (found === null || found.resource !== mcpResourceOf(issuer)) return null;
   return found.sourceName;
 }

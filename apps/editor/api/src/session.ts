@@ -7,6 +7,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { Context, Hono, MiddlewareHandler } from "hono";
 import { deleteCookie, getSignedCookie, setSignedCookie } from "hono/cookie";
 import type { Account, AccountStore } from "./accounts";
+import { createLoginLockout } from "./login-lockout";
+import type { LoginLockout } from "./login-lockout";
 import {
   BODY_NOT_JSON_MESSAGE,
   LOGIN_BODY_MESSAGE,
@@ -33,6 +35,8 @@ export interface SessionConfig {
   sessionTtlSeconds: number;
   loginFailureDelayMs: number;
   nowSeconds: () => number;
+  /** 앱 하나에 하나 — 재시작하면 초기화된다 */
+  lockout: LoginLockout;
 }
 
 const SESSION_COOKIE = "session";
@@ -41,6 +45,8 @@ const MIN_SECRET_BYTES = 32;
 const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60;
 const DEFAULT_FAILURE_DELAY_MS = 1000;
 const MS_PER_SECOND = 1000;
+/** 계정 id와 겹치지 않는 값 — 계정 id는 시드 · 저장소가 정하고 공백을 쓰지 않는다 */
+const UNKNOWN_ACCOUNT_KEY = " unknown-account";
 
 /** `hono/cookie`는 옵션 타입을 따로 내보내지 않는다(패키지 exports에 utils 경로 없음) */
 type CookieOptions = NonNullable<Parameters<typeof setSignedCookie>[4]>;
@@ -85,7 +91,14 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
     throw new Error(`sessionSecret은 ${MIN_SECRET_BYTES}바이트 이상이어야 한다`);
   }
   const nowSeconds = () => Math.floor(now() / MS_PER_SECOND);
-  return { accounts, sessionSecret, sessionTtlSeconds, loginFailureDelayMs, nowSeconds };
+  return {
+    accounts,
+    sessionSecret,
+    sessionTtlSeconds,
+    loginFailureDelayMs,
+    nowSeconds,
+    lockout: createLoginLockout(),
+  };
 }
 
 /**
@@ -108,19 +121,27 @@ export async function sessionAccountId(
 
 /**
  * 아이디 · 비밀번호 확인 — `/api/session`과 OAuth `/authorize`가 같은 것을 쓴다. 실패하면 고정 지연 뒤 null.
- * 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8)
+ * 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8). 잠긴 계정은 비밀번호가
+ * 맞아도 실패다(login-lockout) — 잠긴 동안에도 scrypt와 지연을 똑같이 거쳐 응답으로 잠금 여부가 갈리지 않는다.
  */
 export async function authenticate(
-  { accounts, loginFailureDelayMs }: SessionConfig,
+  { accounts, loginFailureDelayMs, lockout, nowSeconds }: SessionConfig,
   username: string,
   password: string,
 ): Promise<Account | null> {
   const account = await accounts.findByUsername(username);
   const matched = await verifyPassword(password, account?.passwordHash ?? DUMMY_PASSWORD_HASH);
-  if (account === null || !matched) {
+  // 없는 아이디는 하나로 묶어 센다 — 잠금으로도 계정 유무가 드러나지 않게
+  const key = account?.id ?? UNKNOWN_ACCOUNT_KEY;
+  const now = nowSeconds();
+  const locked = lockout.isLocked(key, now);
+  if (account === null || !matched || locked) {
+    // 잠긴 동안의 시도는 세지 않는다 — 잠금이 끝없이 늘어나지 않게
+    if (!locked) lockout.recordFailure(key, now);
     await sleep(loginFailureDelayMs);
     return null;
   }
+  lockout.recordSuccess(key);
   return account;
 }
 

@@ -1,5 +1,6 @@
 import {
   ALLOW_LABEL,
+  CLIENT_NAME_LABEL,
   CONSENT_LEAD,
   DENY_LABEL,
   LOOPBACK_WARNING,
@@ -27,7 +28,8 @@ function escapeHtml(value: string): string {
 
 const STYLE = `body{margin:0;background:#fbf6ef;color:#3a2b26;font:15px/1.6 system-ui,sans-serif}
 main{max-width:420px;margin:48px auto;padding:28px 24px;background:#fff;border:1px solid #e4d9cf;border-radius:14px}
-h1{font-size:1.4rem;margin:0 0 12px}p{margin:0 0 12px}.redirect{font-family:ui-monospace,monospace;font-size:13px;word-break:break-all}
+h1{font-size:1.4rem;margin:0 0 12px}p{margin:0 0 12px}.redirect{font-family:ui-monospace,monospace;font-size:13px;word-break:break-all;color:#7b6b64}
+.host{font-size:1.6rem;font-weight:700;margin:0 0 4px;word-break:break-all}.client{font-size:13px;color:#7b6b64}
 .warn,.error{background:#fff1cc;padding:10px 12px;border-radius:8px}.error{background:#ffede6;color:#a3341f}
 label{display:block;margin:12px 0 4px;font-weight:600}input[type=text],input[type=password]{width:100%;box-sizing:border-box;height:44px;padding:0 12px;border:1px solid #e4d9cf;border-radius:8px;font:inherit}
 .actions{display:flex;gap:8px;margin-top:20px}button{flex:1;height:44px;border-radius:10px;border:1px solid #e4d9cf;font:inherit;cursor:pointer;background:#fff}
@@ -64,9 +66,13 @@ export function consentPage(input: ConsentPageInput): string {
       ? ""
       : `<p class="error" role="alert">${escapeHtml(input.errorMessage)}</p>`;
   const warning = input.loopback ? `<p class="warn">${LOOPBACK_WARNING}</p>` : "";
+  // 제목은 고정 문구, 가장 크게 보이는 것은 돌아갈 곳의 호스트다 — 앱이 적은 이름은 믿을 수 없어 보조로만
+  const host = new URL(input.redirectUri).host;
   return layout(
-    `<h1>${escapeHtml(input.clientName)}</h1>${error}<p>${CONSENT_LEAD}</p>` +
-      `<p>${REDIRECT_LABEL}: <span class="redirect">${escapeHtml(input.redirectUri)}</span></p>${warning}` +
+    `<h1>${PAGE_TITLE}</h1>${error}<p>${CONSENT_LEAD}</p>` +
+      `<p>${REDIRECT_LABEL}</p><p class="host">${escapeHtml(host)}</p>` +
+      `<p class="redirect">${escapeHtml(input.redirectUri)}</p>${warning}` +
+      `<p class="client">${CLIENT_NAME_LABEL}: ${escapeHtml(input.clientName)}</p>` +
       `<form method="post" action="/authorize">${hidden}${login}` +
       `<div class="actions"><button type="submit" name="decision" value="deny" formnovalidate>${DENY_LABEL}</button>` +
       `<button type="submit" name="decision" value="allow">${ALLOW_LABEL}</button></div></form>`,
