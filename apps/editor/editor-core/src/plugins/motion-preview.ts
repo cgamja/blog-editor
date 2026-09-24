@@ -13,6 +13,9 @@ import { selectedTopBlocks } from "../commands/decoration";
 /** 장식이 다는 클래스 — editor-react editor.css가 이 클래스에만 시간 기반 애니메이션을 준다 */
 export const MOTION_PREVIEW_CLASS = "editor-motion-preview";
 
+/** 장식을 떼기까지 — editor-react editor.css 애니메이션(0.6초)보다 조금 길게 */
+const PREVIEW_MS = 1000;
+
 /** 플러그인 상태 = 미리 보는 최상위 블록의 시작 위치, 없으면 null */
 export const motionPreviewKey = new PluginKey<number | null>("motionPreview");
 
@@ -32,6 +35,28 @@ export function motionPreview(): Plugin<number | null> {
         const mapped = tr.mapping.mapResult(previous, 1);
         return mapped.deleted ? null : mapped.pos;
       },
+    },
+    // 타이머는 에디터 수명에 묶는다 — 패널이 먼저 사라져도 장식이 남지 않고, 에디터가 없어지면 타이머도 없다
+    // https://prosemirror.net/docs/ref/#state.PluginSpec.view
+    view(editorView) {
+      // editor-core는 DOM lib 없이 컴파일된다 — 타이머는 에디터가 붙은 창의 것을 쓴다
+      const win = editorView.dom.ownerDocument.defaultView;
+      let timer: number | undefined;
+      const clear = () => {
+        if (timer !== undefined) win?.clearTimeout(timer);
+        timer = undefined;
+      };
+      return {
+        update(view, previousState) {
+          const pos = motionPreviewKey.getState(view.state) ?? null;
+          if (pos === (motionPreviewKey.getState(previousState) ?? null)) return;
+          clear();
+          if (pos !== null) {
+            timer = win?.setTimeout(() => endMotionPreview(view.state, view.dispatch), PREVIEW_MS);
+          }
+        },
+        destroy: clear,
+      };
     },
     props: {
       decorations(state) {

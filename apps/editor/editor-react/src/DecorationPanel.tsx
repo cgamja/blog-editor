@@ -1,8 +1,7 @@
-import { useEffect, useId, useSyncExternalStore } from "react";
+import { useId, useSyncExternalStore } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import {
   addSticker,
-  endMotionPreview,
   motionPreviewKey,
   previewMotion,
   setBlockFont,
@@ -24,8 +23,6 @@ export interface DecorationPanelProps {
   stickerSrc?: (id: StickerId) => string;
 }
 
-/** 미리 보기 장식을 떼기까지 — editor.css 애니메이션(0.6초)보다 조금 길게 */
-const PREVIEW_MS = 1000;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** https://react.dev/reference/react/useSyncExternalStore#subscribing-to-a-browser-api */
@@ -59,14 +56,6 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
   const run = useEditorCommand(editor);
   const reducedMotion = usePrefersReducedMotion();
   const ids = { font: useId(), sticker: useId(), motion: useId(), preview: useId() };
-
-  useEffect(() => {
-    if (!panel.previewing) return undefined;
-    const timer = window.setTimeout(() => {
-      editor.commands.command(({ state, dispatch }) => endMotionPreview(state, dispatch));
-    }, PREVIEW_MS);
-    return () => window.clearTimeout(timer);
-  }, [editor, panel.previewing]);
 
   const fontReason = reasonOf(panel.font.availability);
   const stickerReason = reasonOf(panel.sticker.availability);
