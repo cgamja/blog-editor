@@ -1,7 +1,8 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import type { Node } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import { previewBlockWidth, resizedWidthPercent, setBlockWidth } from "@blog-editor/editor-core";
 import type { WidthDrag } from "@blog-editor/editor-core";
 import { decorationMessages } from "./decoration-messages";
@@ -85,6 +86,17 @@ export function WidthResizeHandles({ editor }: { editor: Editor }) {
     };
   }, [editor, target?.pos]);
 
+  // 끄는 중에 대상 블록이 바뀌거나(선택 이동 · 문서 변경) 손잡이가 사라지면 끌기와 미리보기를 푼다 —
+  // 남으면 장식이 옛 블록에 붙은 채이고, 놓을 때 엉뚱한 블록에 폭이 들어간다
+  const targetPos = target?.pos;
+  useEffect(
+    () => () => {
+      setResize(null);
+      if (!editor.isDestroyed) run(previewBlockWidth(targetPos ?? 0, null));
+    },
+    [editor, run, targetPos],
+  );
+
   const cancel = useCallback(() => {
     if (resize !== null) run(previewBlockWidth(resize.pos, null));
     setResize(null);
@@ -99,8 +111,10 @@ export function WidthResizeHandles({ editor }: { editor: Editor }) {
     // 그림의 노드 선택이 풀리지 않게 — 폭은 선택된 블록에 적용된다
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    const align = editor.state.doc.nodeAt(target.pos)?.attrs.align as WidthDrag["align"] | null;
     setResize({
       pos: target.pos,
+      ...(align === null || align === undefined ? {} : { align }),
       side,
       startX: event.clientX,
       startPercent: target.value,
@@ -123,7 +137,9 @@ export function WidthResizeHandles({ editor }: { editor: Editor }) {
     if (resize === null) return;
     const { pos, value, startPercent, doc } = resize;
     setResize(null);
-    const unchanged = editor.state.doc === doc && !editor.view.composing;
+    const { selection } = editor.state;
+    const stillSelected = selection instanceof NodeSelection && selection.from === pos;
+    const unchanged = editor.state.doc === doc && stillSelected && !editor.view.composing;
     // 폭이 바뀌면 문서가 바뀌어 미리보기는 스스로 풀린다(width-preview). 그대로면 미리보기만 푼다
     if (unchanged && value !== startPercent) run(setBlockWidth(value));
     else run(previewBlockWidth(pos, null));
