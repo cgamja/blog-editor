@@ -7,45 +7,13 @@
  * - NodeType.createAndFill: https://prosemirror.net/docs/ref/#model.NodeType.createAndFill
  * - Selection.findFrom: https://prosemirror.net/docs/ref/#state.Selection^findFrom
  */
-import type { Node } from "@tiptap/pm/model";
 import { Selection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { StepMap } from "@tiptap/pm/transform";
-
-/** 최상위 블록 하나의 화면 세로 범위(getBoundingClientRect의 top · bottom). */
-export interface BlockBand {
-  top: number;
-  bottom: number;
-}
-
-export interface InsertableBlock {
-  /** 스키마 노드 이름 */
-  type: string;
-  attrs?: Readonly<Record<string, unknown>>;
-}
-
-/**
- * 「블록 추가」 메뉴에서 넣을 수 있는 블록 — 닫힌 목록. 값은 스키마의 닫힌 집합(HEADING_LEVELS · CALLOUT_TONES)
- * 안에서만 고른다. 그림 · 앱 스크린샷은 저장 경로가 있어야 해서 사진 올리기(M5) 뒤에 더한다.
- */
-export const INSERTABLE_BLOCKS: Readonly<Record<string, InsertableBlock>> = {
-  paragraph: { type: "paragraph" },
-  heading2: { type: "heading", attrs: { level: 2 } },
-  heading3: { type: "heading", attrs: { level: 3 } },
-  bulletList: { type: "bulletList" },
-  orderedList: { type: "orderedList" },
-  blockquote: { type: "blockquote" },
-  calloutNote: { type: "callout", attrs: { tone: "note" } },
-  calloutTip: { type: "callout", attrs: { tone: "tip" } },
-  calloutWarning: { type: "callout", attrs: { tone: "warning" } },
-  horizontalRule: { type: "horizontalRule" },
-};
-
-function blockStart(doc: Node, index: number): number {
-  let pos = 0;
-  for (let i = 0; i < index; i += 1) pos += doc.child(i).nodeSize;
-  return pos;
-}
+import { INSERTABLE_BLOCKS } from "./drag-block.constants";
+import type { InsertableBlockKind } from "./drag-block.constants";
+import type { BlockBand, InsertableBlock } from "./drag-block.types";
+import { blockStart } from "./move-block";
 
 const isIndex = (value: number, size: number) =>
   Number.isInteger(value) && value >= 0 && value < size;
@@ -53,6 +21,7 @@ const isIndex = (value: number, size: number) =>
 /**
  * 최상위 `from`번째 블록을 gap(0 = 맨 앞 … childCount = 맨 끝)으로 옮긴다. 노드 객체를 그대로 다시 넣으니
  * attrs · 스티커(블록 상대 좌표, adr-008)가 바뀔 틈이 없고, 한 트랜잭션이라 undo 한 번에 되돌아간다.
+ * HTML5 DnD의 Slice 붙여넣기 경로(정규화)를 타지 않으니 꾸미기가 걸러지지 않는다.
  * 선택이 옮긴 블록 안이면 같은 거리만큼 평행 이동하고(#43과 같은 방식), 그 밖이면 기본 매핑을 따른다.
  */
 export function moveTopBlockTo(from: number, gap: number): Command {
@@ -82,11 +51,12 @@ export function moveTopBlockTo(from: number, gap: number): Command {
  * 글자를 품지 않는 블록(구분선)이면 바로 뒤가 문단이 아닐 때 이어 쓸 빈 문단을 두고 거기에 커서를 둔다
  * (insertAppScreenshot과 같은 규칙).
  */
-export function insertBlockAfter(index: number, kind: string): Command {
+export function insertBlockAfter(index: number, kind: InsertableBlockKind): Command {
   return (state, dispatch) => {
     const { doc, schema } = state;
-    const spec = Object.hasOwn(INSERTABLE_BLOCKS, kind) ? INSERTABLE_BLOCKS[kind] : undefined;
-    if (spec === undefined || !isIndex(index, doc.childCount)) return false;
+    // 타입이 막아도 실행 중에는 문자열이 올 수 있다 — 목록 밖이면 거부
+    if (!Object.hasOwn(INSERTABLE_BLOCKS, kind) || !isIndex(index, doc.childCount)) return false;
+    const spec: InsertableBlock = INSERTABLE_BLOCKS[kind];
     const block = schema.nodes[spec.type]?.createAndFill(spec.attrs ?? null);
     if (block === undefined || block === null) return false;
     if (dispatch === undefined) return true;
@@ -109,7 +79,7 @@ export function blockIndexAt(rects: readonly BlockBand[], y: number): number | n
   let best: number | null = null;
   let bestDistance = Infinity;
   rects.forEach(({ top, bottom }, index) => {
-    const distance = y < top ? top - y : y > bottom ? y - bottom : 0;
+    const distance = Math.max(top - y, y - bottom, 0);
     if (distance < bestDistance) {
       best = index;
       bestDistance = distance;
