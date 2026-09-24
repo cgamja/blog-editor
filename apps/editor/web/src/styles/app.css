@@ -1,7 +1,8 @@
 /*
- * 앱 공통 바탕 — 화면별 모양은 각 화면 이슈가 채운다.
+ * 앱 공통 바탕과 화면별 모양.
  * 디자인 원천(design/tokens.json)에 간격 척도 · 테두리 두께가 없어 여기서 한 번만 정한다(Figma 토큰을 지어내지 않는다).
  * 포커스 고리는 tokens.json `size.focus-ring`("2px solid #b0552f, offset 2px") 설명을 옮겼다 — 길이 토큰이 아니라 생성되지 않는다.
+ * 글자 크기는 tokens.json `font.ui` · `font.caption` · `font.h1`(설명 문자열)과 캔버스 66:2 값을 옮겼고, 그림자도 캔버스 값이다.
  */
 :root {
   --app-space-2: 0.5rem;
@@ -13,18 +14,51 @@
   --app-border-width: 1px;
   --app-focus-ring-width: 0.125rem;
   --app-focus-ring-offset: 0.125rem;
+
+  --app-font-caption: 0.8125rem;
+  --app-font-ui: 0.9375rem;
+  --app-font-row-title: 1rem;
+  --app-font-note: 1.0625rem;
+  --app-font-brand: 1.5rem;
+  --app-font-h1: 2.125rem;
+  --app-shadow-card: 0 1.125rem 2.5rem -1.5rem rgb(58 43 38 / 35%);
+  --app-shadow-note: 0 0.125rem 0.25rem rgb(58 43 38 / 12%);
+  --app-note-tilt: -2deg;
 }
 
 body {
   margin: 0;
-  background: var(--paper-deep);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-size: var(--app-font-ui);
 }
 
 :focus-visible {
   outline: var(--app-focus-ring-width) solid var(--brand-ink);
   outline-offset: var(--app-focus-ring-offset);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--app-font-h1);
+  font-weight: 400;
+  line-height: 1.25;
 }
 
 .app-page {
@@ -36,42 +70,414 @@ body {
   padding: var(--app-space-10) var(--app-space-6);
 }
 
-.app-login form {
+.app-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+}
+
+.app-status {
+  margin: 0;
+  padding: var(--app-space-10) var(--app-space-6);
+  color: var(--ink-soft);
+}
+
+/* 버튼 — 링크와 버튼이 같은 모양(목록 머리의 세 동작) */
+.app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--control-height);
+  padding: 0 var(--app-button-padding-x);
+  border: var(--app-border-width) solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.app-button:hover {
+  color: var(--brand-ink);
+}
+
+.app-button:disabled {
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.app-button--primary {
+  border-color: var(--brand-ink);
+  background: var(--brand-ink);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.app-button--primary:hover {
+  background: var(--brand-ink-deep);
+  color: var(--surface);
+}
+
+.app-button--full {
+  width: 100%;
+}
+
+.brand-logo {
+  font-family: var(--font-display);
+  font-size: var(--app-font-brand);
+  line-height: 1;
+  color: var(--brand-ink);
+}
+
+.brand-sub {
+  font-size: var(--app-font-caption);
+  color: var(--ink-soft);
+}
+
+/* 포스트잇 — 빈 목록 안내와 "AI가 올린 초안" 표시 */
+.postit {
+  display: inline-block;
+  margin: 0;
+  padding: var(--app-space-2) var(--app-space-3);
+  background: var(--postit);
+  color: var(--postit-ink);
+  font-family: var(--font-hand);
+  font-size: var(--app-font-note);
+  font-weight: 700;
+  line-height: 1.3;
+  transform: rotate(var(--app-note-tilt));
+  box-shadow: var(--app-shadow-note);
+}
+
+.postit--tag {
+  margin-left: var(--app-space-3);
+  padding-block: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .postit {
+    transition: transform 150ms ease;
+  }
+}
+
+/* 로그인(결정 아티팩트 1 · A안) */
+.login {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: var(--app-space-6) var(--app-space-4);
+  box-sizing: border-box;
+  background: var(--paper-deep);
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 22rem;
+  padding: var(--app-space-6);
+  border: var(--app-border-width) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--app-shadow-card);
+}
+
+.login-card__brand {
   display: flex;
   flex-direction: column;
   gap: var(--app-space-2);
 }
 
-.app-login input,
-.app-page button {
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  font-size: var(--app-font-caption);
+  font-weight: 500;
+  color: var(--ink-mid);
+}
+
+.field input {
   min-height: var(--control-height);
+  padding: 0 var(--app-space-3);
   border: var(--app-border-width) solid var(--line);
   border-radius: var(--radius-input);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
+  font-size: var(--app-font-ui);
+  font-weight: 400;
 }
 
-.app-login input {
-  padding: 0 var(--app-space-3);
-}
-
-.app-login input[aria-invalid="true"] {
+.field input[aria-invalid="true"] {
   border-color: var(--danger-ink);
 }
 
-.app-page button {
+.field__error {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--danger-ink);
+  font-weight: 400;
+}
+
+/* 앱 틀 — 왼쪽 메뉴 + 본문(Figma 66:2) */
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-6);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: var(--nav-width);
+  padding: var(--app-space-6) var(--app-space-4);
+  border-right: var(--app-border-width) solid var(--line);
+}
+
+.app-nav__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  padding: 0 var(--app-space-3);
+}
+
+.app-nav__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  flex-grow: 1;
+}
+
+.app-nav__item {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--app-space-3);
+  border: var(--app-border-width) solid transparent;
   border-radius: var(--radius-button);
-  padding: 0 var(--app-button-padding-x);
+  color: var(--ink-soft);
+}
+
+.app-nav__item:hover {
+  color: var(--brand-ink);
+}
+
+.app-nav__item[aria-current="page"] {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.app-nav__logout {
+  align-self: flex-start;
+  min-height: var(--control-height);
+  padding: 0 var(--app-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
   cursor: pointer;
 }
 
-.app-error {
-  margin: 0;
-  color: var(--danger-ink);
+.app-nav__logout:hover {
+  color: var(--brand-ink);
 }
 
-.app-status {
-  padding: var(--app-space-10) var(--app-space-6);
+.app-main {
+  flex-grow: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--app-space-10);
+}
+
+/* 글 목록(Figma 66:2) */
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-6);
+}
+
+.post-list__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-3);
+}
+
+.post-list__header .page-title {
+  flex-grow: 1;
+}
+
+.post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+}
+
+.post-tabs {
+  display: flex;
+  gap: var(--app-space-6);
+  border-bottom: var(--app-border-width) solid var(--line);
+}
+
+.post-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--app-space-2);
   color: var(--ink-soft);
+}
+
+.post-tab[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: inset 0 calc(-1 * var(--app-focus-ring-width)) 0 var(--brand-ink);
+}
+
+.post-tab__count {
+  font-size: var(--app-font-caption);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.post-table {
+  width: 100%;
+  border: var(--app-border-width) solid var(--line);
+  border-radius: var(--radius-card);
+  border-spacing: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.post-table th {
+  height: var(--control-height);
+  padding: 0 var(--app-space-6);
+  border-bottom: var(--app-border-width) solid var(--line-soft);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: var(--app-font-caption);
+  font-weight: 400;
+  text-align: left;
+}
+
+.post-table td {
+  padding: var(--app-space-4) var(--app-space-6);
+  border-top: var(--app-border-width) solid var(--line-soft);
+  vertical-align: middle;
+}
+
+.post-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.post-table__title {
+  font-size: var(--app-font-row-title);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.post-table__title:hover {
+  color: var(--brand-ink);
+}
+
+.post-table__muted {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.post-table__date {
+  text-align: right;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: var(--app-space-2) var(--app-space-3);
+  border-radius: var(--radius-pill);
+  background: var(--paper-deep);
+  color: var(--ink-mid);
+  font-size: var(--app-font-caption);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-pill--published {
+  background: var(--accent-soft);
+  color: var(--accent-ink-badge);
+}
+
+.post-list__empty-tab,
+.post-list__footer {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.post-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--app-space-4);
+  padding: var(--app-space-10) var(--app-space-4);
+  text-align: center;
+}
+
+.post-empty__body {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--ink-mid);
+}
+
+.post-empty .post-actions {
+  justify-content: center;
+}
+
+/* 좁은 화면 — 편집은 데스크톱 전제, 목록은 깨지지만 않게(결정 아티팩트 "폰 화면") */
+@media (width <= 48rem) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: auto;
+    padding: var(--app-space-3) var(--app-space-4);
+    border-right: 0;
+    border-bottom: var(--app-border-width) solid var(--line);
+  }
+
+  .app-nav__items {
+    flex-direction: row;
+    flex-grow: 1;
+  }
+
+  .app-main {
+    padding: var(--app-space-6) var(--app-space-4);
+  }
+
+  .post-table__optional {
+    display: none;
+  }
+
+  .post-table th,
+  .post-table td {
+    padding-inline: var(--app-space-3);
+  }
+}
+
+@media (width <= 30rem) {
+  .app-nav__brand {
+    display: none;
+  }
 }

@@ -16,8 +16,8 @@ function loginErrorMessage(error: Error | null): string | null {
 }
 
 /**
- * 최소 로그인 폼 — 가드의 흐름(로그인 → next로 복귀)을 세우기 위한 것이다. 화면 디자인은 로그인 화면 이슈가 채운다.
- * API 거절 문장(잠금 · 틀린 비밀번호)은 그대로 보여 주고, 실패하면 첫 입력칸으로 포커스를 옮긴다.
+ * 로그인(결정 아티팩트 1 · A안 종이 위 카드). 실패하면 API 문장 + 잠금 고정 안내를 보이고 첫 입력칸으로 포커스를
+ * 옮긴다. 디자인의 "남은 횟수 · 잠금 시간"은 보이지 않는다 — 서버가 잠김 여부를 응답으로 드러내지 않는다(api-session).
  */
 export function LoginPage() {
   const [searchParams] = useSearchParams();
@@ -26,6 +26,7 @@ export function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const usernameRef = useRef<HTMLInputElement>(null);
+  const titleId = useId();
   const usernameId = useId();
   const passwordId = useId();
   const errorId = useId();
@@ -49,39 +50,53 @@ export function LoginPage() {
   const describedBy = hasError ? errorId : undefined;
 
   return (
-    <main className="app-page app-login">
-      <h1>{MESSAGES.login.title}</h1>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor={usernameId}>{MESSAGES.login.username}</label>
-        <input
-          ref={usernameRef}
-          id={usernameId}
-          name="username"
-          autoComplete="username"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          aria-invalid={hasError}
-          aria-describedby={describedBy}
-          required
-        />
-        <label htmlFor={passwordId}>{MESSAGES.login.password}</label>
-        <input
-          id={passwordId}
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          aria-invalid={hasError}
-          aria-describedby={describedBy}
-          required
-        />
-        {hasError ? (
-          <p id={errorId} className="app-error" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
-        <button type="submit" disabled={submit.isPending}>
+    <main className="login">
+      <form className="login-card" aria-labelledby={titleId} onSubmit={handleSubmit}>
+        <div className="login-card__brand">
+          <span className="brand-logo">{MESSAGES.brand}</span>
+          <span className="brand-sub">{MESSAGES.appTitle}</span>
+        </div>
+        <h1 id={titleId} className="visually-hidden">
+          {MESSAGES.login.title}
+        </h1>
+        <div className="field">
+          <label htmlFor={usernameId}>{MESSAGES.login.username}</label>
+          <input
+            ref={usernameRef}
+            id={usernameId}
+            name="username"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            aria-invalid={hasError}
+            aria-describedby={describedBy}
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={passwordId}>{MESSAGES.login.password}</label>
+          <input
+            id={passwordId}
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            aria-invalid={hasError}
+            aria-describedby={describedBy}
+            required
+          />
+          {hasError ? (
+            <p id={errorId} className="field__error" role="alert">
+              <span>{errorMessage}</span> <span>{MESSAGES.login.lockNotice}</span>
+            </p>
+          ) : null}
+        </div>
+        <button
+          type="submit"
+          className="app-button app-button--primary app-button--full"
+          disabled={submit.isPending}
+        >
           {submit.isPending ? MESSAGES.login.submitting : MESSAGES.login.submit}
         </button>
       </form>
