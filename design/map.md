@@ -27,3 +27,29 @@
 ## 디자인이 이미 정한 접근성 (구현이 깎지 않는다)
 
 실제 `button`/`a`/`label`, 아이콘 버튼 `aria-label`, nav/aside `aria-label`, 44px 컨트롤, `:focus-visible` 2px 윤곽, 움직임은 reduced-motion 존중.
+
+## 간격 토큰 출처 (#101, 2026-09-24)
+
+Figma Variables는 0개다. 아트보드 여섯 장(`66:2` `67:2` `68:2` `69:2` `70:2` `71:2`)의 auto-layout 276개에서 gap(`itemSpacing`, SPACE_BETWEEN 제외)과 padding 네 방향을 읽기 전용으로 모았다. **두 아트보드 이상**에 나오는 값만 `space`로 두었다.
+
+| 토큰(px) | 아트보드 수 | 쓰인 곳(예)                                                        |
+| -------- | ----------- | ------------------------------------------------------------------ |
+| 2        | 4           | 목록 Container gap `66:6` · 편집 Container padding `68:66`         |
+| 4        | 4           | 목록 Container gap `66:13` · 버튼 padding `66:45`                  |
+| 6        | 6           | 링크 gap `68:6` · 충돌 버튼 padding `67:18`                        |
+| 8        | 4           | 버튼 아이콘 gap `66:45` · 편집 Container padding `68:11`           |
+| 10       | 4           | 충돌 Container gap `67:11` · Text Area padding `68:128`            |
+| 12       | 5           | 편집 머리줄 gap `68:5` · 목록 Container gap `66:31`                |
+| 14       | 5           | nav 링크 padding `66:14`                                           |
+| 16       | 3           | 편집 Container padding `68:63` · AI 연결 목록 gap `70:41`          |
+| 18       | 6           | 버튼 좌우 padding `66:38` · 링크 padding `66:35`                   |
+| 20       | 4           | nav padding `66:5` · 본문 gap `66:30` · 꾸미기 패널 gap `69:82`    |
+| 22       | 6           | 링크 · 버튼 padding `66:41` `67:12`                                |
+| 24       | 4           | nav padding `66:5` · 탭 gap `66:44` · 글 정보 패널 padding `68:96` |
+| 28       | 4           | Container padding `66:64` `66:77`                                  |
+| 32       | 2           | nav gap · padding `66:5` `70:5`                                    |
+| 36       | 3           | 대화상자 Container padding `67:4` `71:4` · `68:24`                 |
+| 40       | 5           | 본문 padding `66:30` · 대화상자 padding `67:4`                     |
+| 56       | 2           | 본문 padding `66:30` `70:30`                                       |
+
+뺀 값: 1px(버튼 padding 34곳 — 테두리 보정), 64px(`68:2` 종이 위 한 곳), 80px(이미 `size.article-padding-x`). 선 두께는 stroke 72곳 중 55곳이 1px이라 `size.border-width`. 포커스 고리는 캡처에 초점 상태가 없어 원래 설명(2px solid brand-ink, offset 2px)을 `focus-ring-width` · `focus-ring-offset`으로 옮겼다.

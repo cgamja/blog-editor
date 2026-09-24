@@ -468,7 +468,7 @@
 /*
  * 스티커 오버레이(sticker-drag design.md 1) — ProseMirror DOM 밖 형제라 에디터 위에 겹쳐 둔다(.blog-editor-frame 기준).
  * 레이어 자체는 포인터를 통과시키고, 버튼 · 조절점만 받는다. 크기 · 색은 design/tokens.json
- * (control-height 44px = 2.75rem, focus-ring 2px brand-ink, toolbar · danger-ink)을 따른다.
+ * (control-height 44px = 2.75rem, focus-ring-width · focus-ring-offset 2px + brand-ink, toolbar · danger-ink)을 따른다.
  */
 .sticker-layer {
   position: absolute;
