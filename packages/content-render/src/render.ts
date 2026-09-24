@@ -264,7 +264,7 @@ function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderConte
   const motionAttr = attrs.motion !== undefined ? ` data-motion="${escapeHtml(attrs.motion)}"` : "";
   const alignAttr = attrs.align !== undefined ? ` data-align="${escapeHtml(attrs.align)}"` : "";
   const styleAttr =
-    attrs.width !== undefined ? ` style="--w:${escapeHtml(String(attrs.width))}"` : "";
+    attrs.width !== undefined ? ` style="--w:${cssInteger(attrs.width, "폭")}"` : "";
   const stickersHtml = (attrs.stickers ?? [])
     .map((sticker) => renderSticker(sticker, ctx))
     .join("");
@@ -280,8 +280,8 @@ function renderSticker(sticker: Sticker, ctx: RenderContext): string {
   if (size === undefined)
     throw new RangeError(`renderHtml: 알 수 없는 스티커 id — ${String(sticker.id)}`);
   const { width, height } = size;
-  const e = (value: number) => escapeHtml(String(value));
-  const style = `--x:${e(sticker.x)};--y:${e(sticker.y)};--s:${e(sticker.size)};--r:${e(sticker.rotate)}`;
+  const n = (value: unknown) => cssInteger(value, "스티커 좌표");
+  const style = `--x:${n(sticker.x)};--y:${n(sticker.y)};--s:${n(sticker.size)};--r:${n(sticker.rotate)}`;
   const id = escapeHtml(sticker.id);
   return (
     `<img class="post-sticker" src="${ctx.imageBaseUrl}/stickers/${id}.png" alt="" ` +
@@ -290,6 +290,17 @@ function renderSticker(sticker: Sticker, ctx: RenderContext): string {
 }
 
 // ── 작은 조립 헬퍼 ────────────────────────────────────────────────────────
+
+/**
+ * style 안 CSS 변수에 싣는 정수. 이스케이프는 `;`로 다른 선언을 잇는 것을 막지 못해, 정수가 아니면
+ * 렌더하지 않고 오류를 던진다(heading level · 스티커 id와 같은 관례, spec: render-safety).
+ */
+function cssInteger(value: unknown, what: string): string {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    throw new RangeError(`renderHtml: ${what}는 정수여야 한다 — ${typeof value}`);
+  }
+  return String(value);
+}
 
 function headingTag(level: (typeof HEADING_LEVELS)[number]): string {
   // 일반 객체는 "toString" 같은 프로토타입 키도 값을 돌려준다 — 자기 키만 표로 본다
