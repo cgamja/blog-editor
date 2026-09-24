@@ -26,7 +26,8 @@ async function readPasswordHash(env: Record<string, string | undefined>): Promis
   if (hasPlain === hasHash) {
     throw new Error(
       "비밀번호는 ADMIN_PASSWORD(평문) 또는 ADMIN_PASSWORD_HASH 중 정확히 하나로 준다 — " +
-        "레포 루트 .env에 ADMIN_PASSWORD=… 한 줄을 넣는다",
+        "레포 루트 .env에 ADMIN_PASSWORD=… 한 줄을 넣는다(# · 공백이 든 값은 큰따옴표로). " +
+        "셸 환경 변수가 .env보다 우선한다 — 셸에 같은 이름(빈 값 포함)이 있는지 확인",
     );
   }
   if (hasPlain) return hashPassword(plain);

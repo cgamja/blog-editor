@@ -10,6 +10,8 @@
  *   ADMIN_USERNAME       시드 계정 아이디, 없으면 admin
  *   SESSION_SECRET       세션 쿠키 HMAC 키(32바이트 이상), 없으면 시작할 때 만든다(재시작하면 세션이 끊긴다)
  *   PORT · POST_STORE_ROOT · IMAGE_BASE_URL
+ * `.env`에서 `#` · 공백이 든 값은 큰따옴표로 감싼다 — 따옴표 없으면 `#` 뒤가 주석으로 잘린다
+ * (Node 26 실측: `ADMIN_PASSWORD=12#34` → "12").
  * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
  */
 import { fileURLToPath } from "node:url";
