@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ChangeEvent, RefObject } from "react";
 import type { Editor } from "@tiptap/react";
+import type { Transaction } from "@tiptap/pm/state";
 import {
   imageFileInput,
   imageFileInputKey,
   imageFilesOf,
   imageUpload,
   imageUploadKey,
+  nearestTopGap,
   topGapAfterSelection,
 } from "@blog-editor/editor-core";
 import { placeholderRenderer } from "./image-placeholder";
@@ -34,17 +36,29 @@ export function useImageUpload(
   const { enqueue, actions } = useUploadQueue(editor, upload);
   const pickerRef = useRef<HTMLInputElement>(null);
   const pickerGap = useRef<number | null>(null);
-  const enabled = upload !== undefined;
+  const canUpload = upload !== undefined;
 
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!canUpload) return undefined;
     editor.registerPlugin(imageUpload(placeholderRenderer(actions)));
     editor.registerPlugin(imageFileInput<File>({ onFiles: enqueue }));
     return () => {
       editor.unregisterPlugin(imageFileInputKey);
       editor.unregisterPlugin(imageUploadKey);
     };
-  }, [editor, actions, enqueue, enabled]);
+  }, [editor, actions, enqueue, canUpload]);
+
+  // 파일 창이 열려 있는 동안 앞 업로드가 끝나거나 글이 바뀌면 고른 자리가 블록 안으로 밀린다 — 트랜잭션마다
+  // 매핑해 둔다(뒤 블록 쪽에 붙는다, 자리 장식과 같은 방향)
+  useEffect(() => {
+    const follow = ({ transaction }: { transaction: Transaction }) => {
+      if (pickerGap.current !== null && transaction.docChanged) {
+        pickerGap.current = transaction.mapping.map(pickerGap.current, 1);
+      }
+    };
+    editor.on("transaction", follow);
+    return () => void editor.off("transaction", follow);
+  }, [editor]);
 
   const openPicker = useCallback(
     (gap?: number) => {
@@ -59,11 +73,13 @@ export function useImageUpload(
       const picked = imageFilesOf(Array.from(event.target.files ?? []));
       // 같은 파일을 다시 고를 수 있게 비운다
       event.target.value = "";
-      if (pickerGap.current !== null) enqueue(picked, pickerGap.current);
+      const gap = pickerGap.current;
       pickerGap.current = null;
+      // 고른 파일은 조용히 버리지 않는다 — 매핑된 자리가 블록 안이면 가장 가까운 블록 사이 자리로 옮긴다
+      if (gap !== null) enqueue(picked, nearestTopGap(editor.state.doc, gap, false));
     },
-    [enqueue],
+    [editor, enqueue],
   );
 
-  return enabled ? { pickerRef, onPickerChange, openPicker } : null;
+  return canUpload ? { pickerRef, onPickerChange, openPicker } : null;
 }

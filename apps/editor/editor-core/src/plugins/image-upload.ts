@@ -15,17 +15,18 @@ import { imagePathOrNull, naturalSizeFrom } from "../closed-values";
 import type { ImageUploadEntry, ImageUploadRender, UploadedImageAttrs } from "./image-upload.types";
 
 /**
- * 플러그인 상태의 자리 — 밖에 보이는 ImageUploadEntry에 더해, 자리를 둘 때의 선택을 매핑하며 들고 있다.
- * 끝났을 때 선택이 그대로면(사용자가 다른 데서 쓰지 않았다면) 넣은 그림을 고르고, 아니면 커서를 뺏지 않는다.
+ * 플러그인 상태의 자리 — 밖에 보이는 ImageUploadEntry에 더해, 자리를 둔 뒤 사용자가 손을 댔는지(글 · 선택이
+ * 바뀌었는지)를 들고 있다. 좌표 비교는 같은 자리에서 이어 쓰면 매핑된 선택과 지금 선택이 같아져 틀린다.
+ * 손대지 않았으면 끝날 때 넣은 그림을 고르고, 손댔으면 커서를 뺏지 않는다.
  */
 interface TrackedUpload extends ImageUploadEntry {
-  selection: { anchor: number; head: number };
+  isTouched: boolean;
 }
 
 export const imageUploadKey = new PluginKey<readonly TrackedUpload[]>("imageUpload");
 
 type UploadMeta =
-  | { type: "start"; id: string; pos: number; selection: TrackedUpload["selection"] }
+  | { type: "start"; id: string; pos: number }
   | { type: "fail"; id: string; message: string }
   | { type: "remove"; id: string };
 
@@ -39,27 +40,24 @@ const STICK_TO_NEXT = 1;
  */
 function survives(entry: TrackedUpload, tr: Transaction): { pos: number } | null {
   const result = tr.mapping.mapResult(entry.pos, STICK_TO_NEXT);
-  const atStart = entry.pos === 0;
-  const atEnd = entry.pos === tr.before.content.size;
-  const lost =
-    result.deletedAcross || (atStart && result.deletedAfter) || (atEnd && result.deletedBefore);
-  return lost ? null : { pos: result.pos };
+  const isAtStart = entry.pos === 0;
+  const isAtEnd = entry.pos === tr.before.content.size;
+  const isLost =
+    result.deletedAcross || (isAtStart && result.deletedAfter) || (isAtEnd && result.deletedBefore);
+  return isLost ? null : { pos: result.pos };
 }
 
 function mapEntries(entries: readonly TrackedUpload[], tr: Transaction): TrackedUpload[] {
   return entries.flatMap((entry) => {
     const mapped = survives(entry, tr);
-    if (mapped === null) return [];
-    const { anchor, head } = entry.selection;
-    const selection = { anchor: tr.mapping.map(anchor), head: tr.mapping.map(head) };
-    return [{ ...entry, pos: mapped.pos, selection }];
+    return mapped === null ? [] : [{ ...entry, pos: mapped.pos }];
   });
 }
 
 function applyMeta(entries: TrackedUpload[], meta: UploadMeta): TrackedUpload[] {
   if (meta.type === "start") {
-    const { id, pos, selection } = meta;
-    return [...entries, { id, pos, status: "uploading", selection }];
+    const { id, pos } = meta;
+    return [...entries, { id, pos, status: "uploading", isTouched: false }];
   }
   if (meta.type === "fail") {
     return entries.map((entry) =>
@@ -78,7 +76,10 @@ export function imageUpload(render?: ImageUploadRender): Plugin<readonly Tracked
       apply(tr, previous) {
         const mapped = tr.docChanged ? mapEntries(previous, tr) : [...previous];
         const meta = tr.getMeta(imageUploadKey) as UploadMeta | undefined;
-        return meta === undefined ? mapped : applyMeta(mapped, meta);
+        // 자리를 두는 트랜잭션 말고 글이나 선택이 바뀌면 그 전부터 있던 자리는 모두 "손댔다"
+        const isEdited = meta?.type !== "start" && (tr.docChanged || tr.selectionSet);
+        const marked = isEdited ? mapped.map((entry) => ({ ...entry, isTouched: true })) : mapped;
+        return meta === undefined ? marked : applyMeta(marked, meta);
       },
     },
     props: {
@@ -139,15 +140,7 @@ export function startImageUpload(id: string, pos: number): Command {
     if (!hasPlugin(state) || !isTopGap(state.doc, pos) || findEntry(state, id) !== undefined) {
       return false;
     }
-    const { anchor, head } = state.selection;
-    dispatch?.(
-      state.tr.setMeta(imageUploadKey, {
-        type: "start",
-        id,
-        pos,
-        selection: { anchor, head },
-      } satisfies UploadMeta),
-    );
+    dispatch?.(state.tr.setMeta(imageUploadKey, { type: "start", id, pos } satisfies UploadMeta));
     return true;
   };
 }
@@ -173,8 +166,8 @@ export function cancelImageUpload(id: string): Command {
 
 /**
  * 올리기가 끝나면 자리에 image 노드를 넣고 자리를 지운다 — 한 트랜잭션이라 undo 한 번에 돌아간다.
- * 자리가 없으면(지워졌거나 취소) false — 끝난 결과는 버린다. 자리를 둔 뒤 선택이 그대로면 넣은 그림을 노드로 골라
- * 대체 텍스트 입력이 바로 뜨게 하고 그림으로 스크롤한다. 그사이 다른 데서 쓰고 있었다면 커서를 뺏지 않는다
+ * 자리가 없으면(지워졌거나 취소) false — 끝난 결과는 버린다. 자리를 둔 뒤 손대지 않았으면 넣은 그림을 노드로 골라
+ * 대체 텍스트 입력이 바로 뜨게 하고 그림으로 스크롤한다. 그사이 쓰거나 커서를 옮겼다면 커서를 뺏지 않는다
  * (선택은 삽입에 맞춰 매핑될 뿐이고 스크롤도 하지 않는다).
  */
 export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Command {
@@ -196,9 +189,7 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
     const tr = state.tr
       .insert(gap, image)
       .setMeta(imageUploadKey, { type: "remove", id } satisfies UploadMeta);
-    const { anchor, head } = state.selection;
-    const untouched = anchor === entry.selection.anchor && head === entry.selection.head;
-    if (untouched) {
+    if (!entry.isTouched) {
       tr.setSelection(NodeSelection.create(tr.doc, gap)).scrollIntoView();
     }
     dispatch(tr);
