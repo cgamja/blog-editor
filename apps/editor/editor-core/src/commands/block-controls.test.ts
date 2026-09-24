@@ -153,6 +153,16 @@ describe("editor-block-resize: 가운데 기준으로 폭을 대칭 조절한다
     ).toBe(60);
   });
 
+  it('WHEN 폭 600px 본문, 시작 50%, align: "left"에서 오른쪽 손잡이를 30px 오른쪽으로, align: "right"에서 왼쪽 손잡이를 30px 왼쪽으로 끈다 THEN 둘 다 55다', () => {
+    const base = { startPercent: 50, containerWidth: 600 };
+    expect(
+      resizedWidthPercent({ ...base, startX: 400, x: 430, side: "right", align: "left" }),
+    ).toBe(55);
+    expect(
+      resizedWidthPercent({ ...base, startX: 200, x: 170, side: "left", align: "right" }),
+    ).toBe(55);
+  });
+
   it("WHEN 시작 50%에서 오른쪽 손잡이를 1000px 오른쪽으로, 또는 왼쪽 손잡이를 1000px 오른쪽으로 끈다 THEN 100, 25다", () => {
     const base = { startPercent: 50, startX: 300, x: 1300, containerWidth: 600 };
     expect(resizedWidthPercent({ ...base, side: "right" })).toBe(100);

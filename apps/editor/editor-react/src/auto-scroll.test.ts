@@ -1,4 +1,4 @@
-import { autoScrollStep } from "./block-geometry";
+import { autoScrollStep } from "./auto-scroll";
 
 const box = { top: 100, bottom: 700 };
 
