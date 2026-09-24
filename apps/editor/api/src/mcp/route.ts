@@ -7,13 +7,10 @@ import type { PostStore } from "../store";
 import { hashConnectionToken } from "./connection-tokens";
 import type { ConnectionTokenStore } from "./connection-tokens";
 import { MCP_UNAUTHORIZED_MESSAGE, bodyTooLargeMessage } from "./messages";
-import {
-  DRAFTS_SCOPE,
-  protectedResourceMetadataUrl,
-  registerOAuthRoutes,
-  verifyAccessToken,
-} from "./oauth/routes";
-import type { OAuthOptions } from "./oauth/routes";
+import { DRAFTS_SCOPE } from "./constants";
+import { registerOAuthRoutes } from "./oauth/routes";
+import { findAccessTokenSourceName, protectedResourceMetadataUrl } from "./oauth/tokens";
+import type { OAuthOptions } from "./oauth/types";
 import { createDraftsServer } from "./tools";
 
 export interface McpOptions {
@@ -77,17 +74,19 @@ export function registerMcpRoute(
       ? 'Bearer realm="mcp"'
       : `Bearer resource_metadata="${protectedResourceMetadataUrl(oauth.issuer)}", scope="${DRAFTS_SCOPE}"`;
   /** 연결용 토큰이면 그 이름, OAuth 액세스 토큰이면 redirect 종류 이름 — 초안 출처 `token:<이름>`이 된다 */
-  const sourceNameOf = async (token: string): Promise<string | null> => {
+  const resolveTokenSourceName = async (token: string): Promise<string | null> => {
     const connection = await connectionTokens.findByHash(hashConnectionToken(token));
     if (connection !== null) return connection.name;
-    return oauth === undefined ? null : verifyAccessToken(oauth, token, session.nowSeconds());
+    return oauth === undefined
+      ? null
+      : findAccessTokenSourceName(oauth, token, session.nowSeconds());
   };
 
   // 순서가 계약이다: 인증 → 크기 → 핸들러. 토큰 없는 요청은 본문을 읽기 전에 401로 끝난다
   const mcp = new Hono<{ Variables: { mcpAuth: AuthInfo } }>();
   mcp.use(async (c, next) => {
     const token = bearerTokenOf(c.req.header("Authorization"));
-    const name = token === null ? null : await sourceNameOf(token);
+    const name = token === null ? null : await resolveTokenSourceName(token);
     if (token === null || name === null) {
       c.header("WWW-Authenticate", challenge);
       return c.json({ message: MCP_UNAUTHORIZED_MESSAGE }, 401);

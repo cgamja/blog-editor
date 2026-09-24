@@ -12,6 +12,6 @@ export type { McpOptions } from "./mcp/route";
 export type { ConnectionToken, ConnectionTokenStore } from "./mcp/connection-tokens";
 export { hashConnectionToken } from "./mcp/connection-tokens";
 export { createMemoryConnectionTokenStore } from "./mcp/memory-connection-token-store";
-export type { OAuthOptions } from "./mcp/oauth/routes";
+export type { OAuthOptions } from "./mcp/oauth/types";
 export type { OAuthStore } from "./mcp/oauth/store";
 export { createMemoryOAuthStore } from "./mcp/oauth/memory-oauth-store";

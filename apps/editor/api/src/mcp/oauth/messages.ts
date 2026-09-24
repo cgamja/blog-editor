@@ -2,6 +2,8 @@
 export const PAGE_TITLE = "AI 연결 허용";
 export const CONSENT_LEAD = "이 앱이 블로그에 초안을 쓰도록 허용할까요? 발행은 할 수 없습니다.";
 export const REDIRECT_LABEL = "허용하면 돌아갈 곳";
+/** client_name이 없을 때 */
+export const DEFAULT_CLIENT_NAME = "AI 앱";
 export const LOOPBACK_WARNING =
   "이 컴퓨터 안의 프로그램(예: Claude Code)으로 돌아갑니다. 직접 시작한 연결이 아니면 거부하세요.";
 export const USERNAME_LABEL = "아이디";
