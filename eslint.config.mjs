@@ -118,16 +118,24 @@ const WEB_FEATURE_INTERNALS = {
  * 깊이 d의 파일에서 `../`를 d+1번 올라가면 features 폴더다 — 그다음이 `..`가 아니면 옆 기능, 한 번 더 올라가 app이면 위다.
  */
 export const WEB_FEATURE_MAX_DEPTH = 3;
+const WEB_FEATURE_OUTWARD_MESSAGE =
+  "web 기능은 app과 다른 기능을 import하지 않는다 — 조합은 app, 공유는 shared.";
 const webFeatureOutward = (depth) => {
-  const toFeatures = "\\.\\./".repeat(depth + 1);
+  // 앞에 붙은 `./`는 뜻이 없다(`./../auth` = `../auth`)
+  const lead = "^(?:\\./)?";
+  const up = (times) => `(?:\\.\\./){${times}}`;
   return [
+    // features 폴더까지 올라가 옆 기능으로
+    { regex: `${lead}${up(depth + 1)}(?!\\.\\.)`, message: WEB_FEATURE_OUTWARD_MESSAGE },
+    // src나 그 위까지 올라갔다가 features · app으로 다시 내려오기(`../../features/auth` · `../../../src/app`)
     {
-      regex: `^${toFeatures}(?!\\.\\.)`,
-      message: "web 기능은 다른 기능을 import하지 않는다 — 조합은 app, 공유는 shared.",
+      regex: `${lead}(?:\\.\\./){${depth + 2},}(?:[^/]+/)*(?:features|app)(?:/|$)`,
+      message: WEB_FEATURE_OUTWARD_MESSAGE,
     },
+    // 내려갔다가 다시 올라오기(`../components/../../auth`) — 기능 안 import에는 필요 없는 모양이다
     {
-      regex: `^${toFeatures}\\.\\./app(/|$)`,
-      message: "web 기능은 app을 import하지 않는다 — 아래 층이 위 층을 모른다.",
+      regex: `${lead}(?:\\.\\./)*[^./][^/]*/(?:[^/]+/)*\\.\\.(?:/|$)`,
+      message: "상대경로 중간에 ..를 쓰지 않는다 — 층 규칙을 우회하는 모양이다.",
     },
   ];
 };
@@ -193,7 +201,10 @@ export default defineConfig([
   boundary([`${WEB_SRC}/app/**`], [...WEB_PACKAGE, WEB_FEATURE_INTERNALS]),
   boundary([`${WEB_SRC}/shared/**`], [...WEB_PACKAGE, WEB_SHARED_UPWARD, WEB_FEATURE_INTERNALS]),
   ...Array.from({ length: WEB_FEATURE_MAX_DEPTH + 1 }, (_, depth) =>
-    boundary([webFeatureFilesAt(depth)], [...WEB_PACKAGE, ...webFeatureOutward(depth)]),
+    boundary(
+      [webFeatureFilesAt(depth)],
+      [...WEB_PACKAGE, WEB_FEATURE_INTERNALS, ...webFeatureOutward(depth)],
+    ),
   ),
   globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
 ]);

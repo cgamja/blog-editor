@@ -1,5 +1,8 @@
 /** 로그인 · 로그아웃 화면의 문장 */
 export const AUTH_MESSAGES = {
+  session: {
+    checking: "로그인 상태를 확인하는 중이에요.",
+  },
   login: {
     title: "로그인",
     username: "아이디",

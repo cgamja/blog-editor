@@ -25,8 +25,9 @@ const SPACE_PREFIX = "space-";
 const FONT_SIZE_PREFIX = "font-size-";
 const SHADOW_PREFIX = "shadow-";
 
-// 그림자 한 겹: `<x> <y> <blur> [<spread>] <색 토큰 이름> <불투명도>%` — 색은 색 토큰을 섞어 쓴다
-const SHADOW_LAYER = /^((?:-?\d+(?:\.\d+)?(?:px)?\s+){3,4})([a-z0-9-]+)\s+(\d{1,3})%$/;
+// 그림자 한 겹: `<x> <y> <blur> [<spread>] <색 토큰 이름> <불투명도>%` — 색은 색 토큰을 섞어 쓴다.
+// 길이는 `0`이나 px만 — CSS는 0이 아닌 단위 없는 길이를 무효로 버린다(그림자가 조용히 사라진다)
+const SHADOW_LAYER = /^((?:(?:0|-?\d+(?:\.\d+)?px)\s+){3,4})([a-z0-9-]+)\s+(\d{1,3})%$/;
 const MAX_PERCENT = 100;
 
 const TOKEN_NAME = /^[a-z0-9-]+$/;

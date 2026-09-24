@@ -13,6 +13,16 @@ export const POST_SUMMARY_OPTIONAL_KEYS = [
   "updated",
 ] as const satisfies readonly (keyof PostSummary)[];
 
+type ListedKey = (typeof POST_SUMMARY_KEYS)[number] | (typeof POST_SUMMARY_OPTIONAL_KEYS)[number];
+// 두 목록이 PostSummary의 키를 빠짐없이 덮는다 — 타입에 필드를 더하고 목록을 잊으면 typecheck가 멈춘다
+const COVERS_EVERY_KEY: Exclude<keyof PostSummary, ListedKey> extends never ? true : never = true;
+void COVERS_EVERY_KEY;
+
+/** 불리언 필드 — 나머지 필수 키는 문자열이다(parsePostList) */
+export const BOOLEAN_POST_SUMMARY_KEYS: ReadonlySet<string> = new Set<
+  (typeof POST_SUMMARY_KEYS)[number]
+>(["draft"]);
+
 export const POSTS_QUERY_KEY = ["posts"] as const;
 export const POSTS_PATH = "/api/posts";
 

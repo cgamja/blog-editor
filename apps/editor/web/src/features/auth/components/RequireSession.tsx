@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router";
 import { MESSAGES } from "../../../shared/messages";
 import { loginPathFor } from "../../../shared/routes/next-path";
 import { useSession } from "../hooks/use-session";
+import { AUTH_MESSAGES } from "../messages";
 
 /**
  * 로그인이 필요한 화면을 감싸는 레이아웃(design.md 3). 인증을 loader에 섞지 않아 화면 이슈들이 loader를 자유롭게 쓴다.
@@ -14,7 +15,7 @@ export function RequireSession() {
   if (session.isPending) {
     return (
       <p className="app-status" role="status">
-        {MESSAGES.checkingSession}
+        {AUTH_MESSAGES.session.checking}
       </p>
     );
   }

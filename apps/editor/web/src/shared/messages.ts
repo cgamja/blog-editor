@@ -2,7 +2,6 @@
 export const MESSAGES = {
   appTitle: "블로그 에디터",
   brand: "육아비서",
-  checkingSession: "로그인 상태를 확인하는 중이에요.",
   nav: {
     label: "주 메뉴",
     posts: "글",
