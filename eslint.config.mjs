@@ -111,6 +111,35 @@ const WEB_FEATURE_INTERNALS = {
   message:
     "기능 밖에서는 features/<이름>(index.ts)만 import한다 — 기능 안쪽 경로는 그 기능의 것이다.",
 };
+/**
+ * 기능 안에서 위(app)나 옆(다른 기능)으로 가는 import — index도 막는다(ARCHITECTURE: feature 간 직접 import 금지).
+ * 기능끼리 필요한 것은 app이 조합하거나 shared로 내린다. 상대경로는 파일 깊이에 따라 모양이 달라
+ * (`features/posts/api.ts`의 `../auth` · `features/posts/pages/X.tsx`의 `../../auth`) 깊이마다 블록을 둔다.
+ * 깊이 d의 파일에서 `../`를 d+1번 올라가면 features 폴더다 — 그다음이 `..`가 아니면 옆 기능, 한 번 더 올라가 app이면 위다.
+ */
+export const WEB_FEATURE_MAX_DEPTH = 3;
+const WEB_FEATURE_OUTWARD_MESSAGE =
+  "web 기능은 app과 다른 기능을 import하지 않는다 — 조합은 app, 공유는 shared.";
+const webFeatureOutward = (depth) => {
+  // 앞에 붙은 `./`는 뜻이 없다(`./../auth` = `../auth`)
+  const lead = "^(?:\\./)?";
+  const up = (times) => `(?:\\.\\./){${times}}`;
+  return [
+    // features 폴더까지 올라가 옆 기능으로
+    { regex: `${lead}${up(depth + 1)}(?!\\.\\.)`, message: WEB_FEATURE_OUTWARD_MESSAGE },
+    // src나 그 위까지 올라갔다가 features · app으로 다시 내려오기(`../../features/auth` · `../../../src/app`)
+    {
+      regex: `${lead}(?:\\.\\./){${depth + 2},}(?:[^/]+/)*(?:features|app)(?:/|$)`,
+      message: WEB_FEATURE_OUTWARD_MESSAGE,
+    },
+    // 내려갔다가 다시 올라오기(`../components/../../auth`) — 기능 안 import에는 필요 없는 모양이다
+    {
+      regex: `${lead}(?:\\.\\./)*[^./][^/]*/(?:[^/]+/)*\\.\\.(?:/|$)`,
+      message: "상대경로 중간에 ..를 쓰지 않는다 — 층 규칙을 우회하는 모양이다.",
+    },
+  ];
+};
+const webFeatureFilesAt = (depth) => `${WEB_SRC}/features/*/${"*/".repeat(depth)}*`;
 
 const restrictedImports = (patterns) => ({
   "no-restricted-imports": ["error", { patterns: [RELATIVE_CROSS_PACKAGE, ...patterns] }],
@@ -168,7 +197,14 @@ export default defineConfig([
   ),
   boundary(["apps/editor/web/**"], WEB_PACKAGE),
   // 뒤 블록이 규칙을 통째로 덮어쓰므로 패키지 경계(WEB_PACKAGE)를 층마다 다시 넣는다
-  boundary([`${WEB_SRC}/app/**`, `${WEB_SRC}/pages/**`], [...WEB_PACKAGE, WEB_FEATURE_INTERNALS]),
+  // 기능에 속하지 않는 화면(앱 틀 · 404 · 오류)은 app 아래라 따로 층을 두지 않는다 — 최상위 폴더는 테스트가 고정한다
+  boundary([`${WEB_SRC}/app/**`], [...WEB_PACKAGE, WEB_FEATURE_INTERNALS]),
   boundary([`${WEB_SRC}/shared/**`], [...WEB_PACKAGE, WEB_SHARED_UPWARD, WEB_FEATURE_INTERNALS]),
+  ...Array.from({ length: WEB_FEATURE_MAX_DEPTH + 1 }, (_, depth) =>
+    boundary(
+      [webFeatureFilesAt(depth)],
+      [...WEB_PACKAGE, WEB_FEATURE_INTERNALS, ...webFeatureOutward(depth)],
+    ),
+  ),
   globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
 ]);

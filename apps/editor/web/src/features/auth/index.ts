@@ -1,3 +1,4 @@
+export { LogoutButton } from "./components/LogoutButton";
 export { RequireSession } from "./components/RequireSession";
 export { SESSION_QUERY_KEY } from "./constants";
 export { LoginPage } from "./pages/LoginPage";
