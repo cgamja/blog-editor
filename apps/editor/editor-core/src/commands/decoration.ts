@@ -10,6 +10,8 @@ import {
   stickerIdOrNull,
   widthOrNull,
 } from "../closed-values";
+import { DEFAULT_COORDINATES } from "./decoration.constants";
+import type { BlockRect, StickerPatch, StickerPlacement, StickerTarget } from "./decoration.types";
 
 /**
  * 꾸미기 커맨드 — spec: editor-decoration, design.md.
@@ -19,30 +21,7 @@ import {
  * (https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute).
  */
 
-export interface StickerPlacement {
-  /** 스티커가 붙을 최상위 블록의 시작 위치 */
-  blockPos: number;
-  x: number;
-  y: number;
-  size: number;
-  rotate: number;
-}
-/** 옮길 자리 — 회전은 원래 스티커의 것을 쓴다 */
-export type StickerTarget = Omit<StickerPlacement, "rotate">;
-export type StickerPatch = Partial<Omit<StickerPlacement, "blockPos">>;
-/** 블록 사각형(px) — 측정은 UI가 하고 이 모듈은 숫자만 본다 */
-export interface BlockRect {
-  pos: number;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
-
 type Coordinates = Omit<StickerPlacement, "blockPos">;
-
-/** 디자인 69:2의 코랄 별 자리 — 블록 오른쪽 위 모서리, 약 88px / 600px(design.md 2) */
-const DEFAULT_COORDINATES: Coordinates = { x: 95, y: 5, size: 15, rotate: 0 };
 
 const PERCENT = 100;
 
@@ -86,9 +65,11 @@ function setOnSelectedBlocks(key: string, value: unknown): Command {
   return (state, dispatch) => {
     const blocks = selectedTopBlocks(state);
     if (blocks.length === 0 || !blocks.every(({ node }) => canHold(node, key))) return false;
-    if (dispatch) {
+    // 이미 같은 값이면 true(가질 수 있다)이되 dispatch하지 않는다 — 빈 undo 단계를 쌓지 않는다(design.md 1)
+    const changed = blocks.filter(({ node }) => node.attrs[key] !== value);
+    if (dispatch && changed.length > 0) {
       const tr = state.tr;
-      for (const { pos } of blocks) tr.setNodeAttribute(pos, key, value);
+      for (const { pos } of changed) tr.setNodeAttribute(pos, key, value);
       dispatch(tr);
     }
     return true;
@@ -143,7 +124,6 @@ function stickerCount(doc: Node): number {
   return count;
 }
 
-/** 커서가 있는 최상위 블록의 시작 위치. 대상이 없으면 null */
 function cursorBlockPos(state: EditorState): number | null {
   const [first] = selectedTopBlocks(state);
   return first === undefined ? null : first.pos;
@@ -183,7 +163,8 @@ export const updateSticker = (blockPos: number, index: number, patch: StickerPat
 
 export const removeSticker = (blockPos: number, index: number): Command =>
   changeStickers(blockPos, (stickers) =>
-    index >= 0 && index < stickers.length ? stickers.filter((_, i) => i !== index) : null,
+    // 비정수 · 범위 밖 순번은 undefined — true + 빈 dispatch가 되지 않게 updateSticker와 같이 거른다
+    stickers[index] === undefined ? null : stickers.filter((_, i) => i !== index),
   );
 
 /**

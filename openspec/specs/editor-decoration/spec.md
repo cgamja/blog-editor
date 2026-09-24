@@ -8,7 +8,7 @@
 
 ### Requirement: 블록의 글꼴 · 움직임을 바꾼다
 
-editor-core는 SHALL `setBlockFont(font | null)` · `setBlockMotion(motion | null)` 커맨드를 export한다. 선택이 걸친 최상위 블록 모두에 값을 넣고, `null`이면 지운다. 대상 중 하나라도 그 속성을 가질 수 없거나 값이 닫힌 집합 밖이면 dispatch 없이 `false`다. GapCursor · AllSelection에서도 `false`다.
+editor-core는 SHALL `setBlockFont(font | null)` · `setBlockMotion(motion | null)` 커맨드를 export한다. 선택이 걸친 최상위 블록 모두에 값을 넣고, `null`이면 지운다. 대상 중 하나라도 그 속성을 가질 수 없거나 값이 닫힌 집합 밖이면 dispatch 없이 `false`다. GapCursor · AllSelection에서도 `false`다. 모든 대상이 이미 같은 값이면 `true`를 돌려주되 dispatch하지 않는다(빈 undo 단계를 쌓지 않는다. `can`은 "이 속성을 가질 수 있나"로 남는다).
 
 #### Scenario: 커서가 있는 최상위 문단의 글꼴이 바뀐다
 
@@ -24,6 +24,11 @@ editor-core는 SHALL `setBlockFont(font | null)` · `setBlockMotion(motion | nul
 
 - **WHEN** 글머리 목록 항목 안에 커서를 두고 `setBlockFont("gaegu")`를 실행한다
 - **THEN** 최상위 목록의 `font`가 `gaegu`이고 안쪽 노드에는 꾸미기가 없다
+
+#### Scenario: 이미 같은 값이면 true이지만 dispatch하지 않는다
+
+- **WHEN** `font: "jua"` 문단에서 `setBlockFont("jua")`를, `font`가 없는 문단에서 `setBlockFont(null)`을 실행한다
+- **THEN** 둘 다 `true`이고 dispatch가 한 번도 불리지 않는다
 
 #### Scenario: null이면 꾸미기가 지워진다
 

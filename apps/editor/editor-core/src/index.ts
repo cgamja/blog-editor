@@ -22,7 +22,7 @@ export type {
   StickerPatch,
   StickerPlacement,
   StickerTarget,
-} from "./commands/decoration";
+} from "./commands/decoration.types";
 export { MoveBlock, moveBlockDown, moveBlockKeymap, moveBlockUp } from "./commands/move-block";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export {
