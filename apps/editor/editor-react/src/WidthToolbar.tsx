@@ -26,14 +26,16 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
 
-  // 폭이 바뀌면 블록 크기도 바뀐다 — 그릴 때마다가 아니라 대상 · 값이 바뀔 때만 다시 잰다
+  // 대상 · 폭이 바뀔 때 붙인다(속성이 바뀌면 ProseMirror가 블록 DOM을 새로 그린다). 그 뒤로는
+  // 블록 · 기준 상자의 크기 변화(이미지 로드 · 창 크기)와 안쪽 스크롤 상자의 스크롤(capture —
+  // scroll은 버블링하지 않는다)마다 다시 잰다
   useLayoutEffect(() => {
     if (target === null) return undefined;
+    // https://prosemirror.net/docs/ref/#view.EditorView.nodeDOM
+    const block = editor.view.nodeDOM(target.pos);
+    const frame = toolbarRef.current?.offsetParent;
+    if (!(block instanceof HTMLElement) || !(frame instanceof HTMLElement)) return undefined;
     const measure = () => {
-      // https://prosemirror.net/docs/ref/#view.EditorView.nodeDOM
-      const block = editor.view.nodeDOM(target.pos);
-      const frame = toolbarRef.current?.offsetParent;
-      if (!(block instanceof HTMLElement) || !(frame instanceof HTMLElement)) return;
       const blockRect = block.getBoundingClientRect();
       const frameRect = frame.getBoundingClientRect();
       setAnchor({
@@ -42,8 +44,15 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
       });
     };
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    // https://developer.mozilla.org/docs/Web/API/ResizeObserver
+    const observer = new ResizeObserver(measure);
+    observer.observe(block);
+    observer.observe(frame);
+    window.addEventListener("scroll", measure, { capture: true, passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", measure, { capture: true });
+    };
   }, [editor, target?.pos, target?.value]);
 
   if (target === null) return null;
