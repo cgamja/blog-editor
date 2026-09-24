@@ -1,7 +1,13 @@
 import { useCallback, useId, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { Editor } from "@tiptap/react";
-import { isStickerRemoveKey, removeSticker, stickerKeyCommand } from "@blog-editor/editor-core";
+import { keydownHandler } from "@tiptap/pm/keymap";
+import {
+  historyKeymap,
+  isStickerRemoveKey,
+  removeSticker,
+  stickerKeyCommand,
+} from "@blog-editor/editor-core";
 import type { StickerRef } from "@blog-editor/editor-core";
 import { StickerFrame } from "./StickerFrame";
 import { STICKER_MESSAGES, stickerAriaLabel } from "./sticker-messages";
@@ -17,6 +23,13 @@ import { useStickerSelection } from "./use-sticker-selection";
  * ProseMirror DOM 밖 형제 요소라 포인터 · 키가 에디터에 닿지 않는다(design.md 1).
  * 끄는 동안은 유령만 그리고, 놓을 때 커맨드 1번 = 트랜잭션 1번 = undo 1번이다.
  */
+
+/**
+ * 스티커 버튼에 포커스가 있어도 되돌리기 · 다시 하기(⌘Z 등)는 에디터 것을 쓴다 — 버튼은 ProseMirror 밖이라
+ * 에디터 키맵이 받지 못한다. Mod를 플랫폼대로 푸는 keydownHandler를 그대로 쓴다.
+ * https://prosemirror.net/docs/ref/#keymap.keydownHandler
+ */
+const handleHistoryKeys = keydownHandler(historyKeymap);
 
 export interface StickerLayerProps {
   editor: Editor;
@@ -52,7 +65,10 @@ export function StickerLayer({ editor }: StickerLayerProps) {
       return;
     }
     const command = stickerKeyCommand(refOf(box), key, { metaKey, ctrlKey, altKey });
-    if (command === null) return;
+    if (command === null) {
+      if (handleHistoryKeys(editor.view, event.nativeEvent)) event.preventDefault();
+      return;
+    }
     event.preventDefault();
     command(editor.state, (tr) => editor.view.dispatch(tr));
     // 지운 스티커의 버튼은 사라진다 — 포커스를 글쓰기로 돌린다
