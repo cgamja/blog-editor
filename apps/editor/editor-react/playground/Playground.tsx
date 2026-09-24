@@ -25,7 +25,10 @@ interface EditorPaneProps {
 }
 
 function EditorPane({ fixture, onFixtureChange }: EditorPaneProps) {
-  const { editor } = useBlogEditor({ doc: fixtures[fixture].doc, key: fixture, label: "본문" });
+  const handle = useBlogEditor({ doc: fixtures[fixture].doc, key: fixture, label: "본문" });
+  // 에디터는 마운트 effect에서 생긴다 — 그 전 한 번은 그리지 않는다
+  if (handle === null) return null;
+  const { editor } = handle;
   return (
     <>
       <EditorScreen editor={editor} stickerSrc={stickerSrc} uploadImage={uploadImage} />
