@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent } from "react";
 import type { RefObject } from "react";
-import { autoScrollStep, scrollContainerOf, visibleBoxOf } from "./block-geometry";
+import { autoScrollStep } from "./auto-scroll";
+import { scrollContainerOf, visibleBoxOf } from "./block-geometry";
 
 /**
  * 켜져 있는 동안 포인터가 스크롤 상자 가장자리에 있으면 매 프레임 스크롤한다(block-controls design.md 4).
