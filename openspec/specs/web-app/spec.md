@@ -121,6 +121,11 @@ web은 SHALL 화면의 API 요청을 `apiRequest(path, init)`로 보낸다. 401�
 - **WHEN** `message`가 든 JSON 409를 받는다
 - **THEN** 상태 409와 그 문장을 가진 `ApiError`다
 
+#### Scenario: 이유 코드가 든 409는 그 본문을 가진 ConflictError
+
+- **WHEN** `reason: "published"`가 든 409를 받는다
+- **THEN** `ConflictError`이고 `body.reason`이 `published`다
+
 #### Scenario: JSON이 아닌 실패는 문장 없는 ApiError
 
 - **WHEN** 본문이 JSON이 아닌 502를 받는다
@@ -170,6 +175,15 @@ web은 SHALL `src/styles/tokens.css`를 `design/tokens.json`에서 `tokensToCss`
 - **WHEN** 지금 `design/tokens.json`으로 CSS를 만든다
 - **THEN** 저장된 `src/styles/tokens.css`와 글자 하나 다르지 않다
 
+### Requirement: 세션 만료를 스스로 알리는 mutation의 401은 세션을 바꾸지 않는다
+
+web의 QueryClient는 SHALL `meta.expiresSessionOnUnauthorized`가 `false`인 mutation이 `UnauthorizedError`로 실패하면 세션 캐시를 바꾸지 않는다 — 그 화면(편집 화면 저장)이 띠로 알리고 쓰던 글을 두고 떠나지 않는다. 그 밖의 401은 지금처럼 로그인 필요로 바꾼다.
+
+#### Scenario: 편집 화면 저장의 401
+
+- **WHEN** `meta.expiresSessionOnUnauthorized: false`인 mutation이 `UnauthorizedError`로 실패한다
+- **THEN** 세션은 로그인됨 그대로다
+
 ### Requirement: 글자 크기 · 그림자도 디자인 토큰에서 만든다
 
 web의 토큰 생성기는 SHALL `font` 그룹의 px 값을 `--font-size-<이름>`(rem)으로, `shadow` 그룹을 `--shadow-<이름>`으로 만든다. 그림자 색은 색 토큰 이름과 불투명도로 적고 `color-mix`로 그 색 토큰을 쓴다. 모양이 다르거나 없는 색 이름이면 생성이 멈춘다.
@@ -188,3 +202,12 @@ web의 토큰 생성기는 SHALL `font` 그룹의 px 값을 `--font-size-<이름
 
 - **WHEN** 없는 색 이름이나 불투명도가 빠진 그림자를 준다
 - **THEN** 생성이 멈춘다
+
+### Requirement: 기능끼리 쿼리 키가 겹치지 않는다
+
+web은 SHALL 모양이 다른 서버 상태를 같은 쿼리 키에 두지 않는다. 편집 화면의 카테고리 제안은 `["posts", "categories"]`로, 글 목록 `["posts"]` 아래에 둔다 — 목록을 무효화하면 함께 무효화된다.
+
+#### Scenario: 글 목록 무효화
+
+- **WHEN** 글 목록과 편집 화면 카테고리를 캐시하고 `["posts"]`를 무효화한다
+- **THEN** 두 캐시는 따로 남고 둘 다 무효화된다

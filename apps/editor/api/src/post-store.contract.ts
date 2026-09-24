@@ -76,5 +76,26 @@ export function describePostStoreContract(name: string, createStore: () => Promi
       const winner = results[0]?.status === "fulfilled" ? first : second;
       expect((await store.get("beta-open"))?.file).toEqual(winner);
     });
+
+    it("WHEN 맞는 revision으로 지우면 THEN 조회하면 null이고 목록에 없다", async () => {
+      const store = await createStore();
+      const { revision } = await store.put("beta-open", fixtures.minimal, null);
+
+      await store.delete("beta-open", revision);
+
+      expect(await store.get("beta-open")).toBeNull();
+      expect(await store.list()).toEqual([]);
+    });
+
+    it("WHEN 한 번 고친 뒤 옛 revision으로 지우면 THEN ConflictError이고 고친 글이 그대로다", async () => {
+      const store = await createStore();
+      const { revision: stale } = await store.put("beta-open", fixtures.minimal, null);
+      const updated = withTitle(fixtures.minimal, "고친 제목");
+      const { revision } = await store.put("beta-open", updated, stale);
+
+      await expect(store.delete("beta-open", stale)).rejects.toBeInstanceOf(ConflictError);
+
+      expect(await store.get("beta-open")).toEqual({ file: updated, revision });
+    });
   });
 }

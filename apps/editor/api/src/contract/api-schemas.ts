@@ -6,6 +6,7 @@ import {
   imagePathSchema,
   slugSchema,
 } from "@blog-editor/content-schema";
+import { RENAME_CONFLICT_REASONS } from "../rename-reasons";
 import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 
 /** 오류 응답 대부분 — 화면이 `message`를 그대로 보여 준다(messages.ts) */
@@ -25,6 +26,17 @@ export const schemaErrorBodySchema = z.strictObject({
 export const loginBodySchema = z.object({ username: z.string(), password: z.string() });
 
 export const saveResultSchema = z.strictObject({ revision: z.string() });
+
+/** 주소 바꾸기 409 — `reason`으로 화면이 충돌(stale)과 주소 칸 문장(published · taken)을 나눈다 */
+export const renameConflictBodySchema = z.strictObject({
+  message: z.string(),
+  reason: z.enum(RENAME_CONFLICT_REASONS),
+});
+
+export const renameResultSchema = z.strictObject({ slug: slugSchema, revision: z.string() });
+
+/** 공개 렌더러가 그린 본문 HTML(`<div class="post-body">…</div>`) */
+export const previewResultSchema = z.strictObject({ html: z.string() });
 
 const naturalSide = z.int().min(NATURAL_SIZE_RANGE.min).max(NATURAL_SIZE_RANGE.max);
 

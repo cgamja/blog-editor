@@ -338,6 +338,188 @@
         }
       }
     },
+    "/api/posts/{slug}/rename": {
+      "post": {
+        "operationId": "renamePost",
+        "tags": ["posts"],
+        "summary": "초안 주소 바꾸기",
+        "description": "새 주소에 쓰고 옛 주소를 지운다. 발행한 글은 주소가 URL이라 잠겨 있다. 옛 주소의 글은 없어진다.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "글 주소 — 소문자 · 숫자 · 하이픈",
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤으면 409",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "새 주소",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "옮겼다",
+            "headers": {
+              "ETag": {
+                "description": "새 주소의 revision",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "주소 모양이 틀렸거나 본문이 JSON이 아니다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "글이 없다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "reason — published: 발행한 글이다(주소 잠금) · stale: revision이 맞지 않는다 · taken: 새 주소에 글이 이미 있다. 어느 쪽도 바뀌지 않는다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RenameConflictBody"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "If-Match가 없다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preview": {
+      "post": {
+        "operationId": "previewPost",
+        "tags": ["posts"],
+        "summary": "미리보기",
+        "description": "공개 API와 같은 렌더러 · imageBaseUrl로 본문을 그린다. 저장하지 않는다. 스타일은 /public/post.css.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "그릴 문서",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "그린 본문",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "본문이 JSON이 아니거나 문서가 스키마에 맞지 않는다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "미리보기로 보내기엔 글이 너무 크다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/images": {
       "post": {
         "operationId": "uploadImage",
@@ -1984,6 +2166,67 @@
           }
         },
         "required": ["revision"],
+        "additionalProperties": false
+      },
+      "RenameBody": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "required": ["to"],
+        "additionalProperties": false
+      },
+      "RenameResult": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "revision": {
+            "type": "string"
+          }
+        },
+        "required": ["slug", "revision"],
+        "additionalProperties": false
+      },
+      "RenameConflictBody": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["published", "stale", "taken"]
+          }
+        },
+        "required": ["message", "reason"],
+        "additionalProperties": false
+      },
+      "PreviewBody": {
+        "type": "object",
+        "properties": {
+          "doc": {
+            "$ref": "#/components/schemas/Doc"
+          }
+        },
+        "required": ["doc"],
+        "additionalProperties": false
+      },
+      "PreviewResult": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string"
+          }
+        },
+        "required": ["html"],
         "additionalProperties": false
       },
       "ImageUploadResult": {

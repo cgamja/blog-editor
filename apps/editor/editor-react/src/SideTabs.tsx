@@ -7,6 +7,9 @@ export interface SideTabsProps {
   postInfo: ReactNode;
   decorate: ReactNode;
   initialTab: SideTab;
+  /** 바깥에서 고르는 탭 — 없으면 스스로 고른다(React 제어 · 비제어 컴포넌트) */
+  tab?: SideTab | undefined;
+  onTabChange?: ((tab: SideTab) => void) | undefined;
 }
 
 const TABS: readonly SideTab[] = ["postInfo", "decorate"];
@@ -20,8 +23,13 @@ const TAB_LABELS: Record<SideTab, string> = {
  * https://www.w3.org/WAI/ARIA/apg/patterns/tabs/). 두 패널 모두 마운트해 두고 hidden으로 가린다 —
  * 탭을 바꿔도 꾸미기 패널의 미리 보기 상태가 끊기지 않는다.
  */
-export function SideTabs({ postInfo, decorate, initialTab }: SideTabsProps) {
-  const [active, setActive] = useState<SideTab>(initialTab);
+export function SideTabs({ postInfo, decorate, initialTab, tab, onTabChange }: SideTabsProps) {
+  const [ownTab, setOwnTab] = useState<SideTab>(initialTab);
+  const active = tab ?? ownTab;
+  const setActive = (next: SideTab) => {
+    setOwnTab(next);
+    onTabChange?.(next);
+  };
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const baseId = useId();
   const tabId = (tab: SideTab) => `${baseId}-tab-${tab}`;

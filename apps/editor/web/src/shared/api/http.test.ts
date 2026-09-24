@@ -29,6 +29,22 @@ describe("apiRequest — API 요청 도우미는 401과 그 밖의 실패를 오
     expect(error).toMatchObject({ status: 409, userMessage: "다른 곳에서 먼저 저장했다" });
   });
 
+  it("WHEN 이유 코드가 든 409를 받는다 THEN ConflictError가 그 본문을 가진다", async () => {
+    respond(
+      new Response(
+        JSON.stringify({ message: "발행한 글은 주소를 바꿀 수 없다", reason: "published" }),
+        {
+          status: 409,
+        },
+      ),
+    );
+
+    const error = await apiRequest("/api/posts/a/rename").catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error).toMatchObject({ status: 409, body: { reason: "published" } });
+  });
+
   it("WHEN JSON이 아닌 실패 응답을 받는다 THEN 문장 없는 ApiError다", async () => {
     respond(new Response("Bad Gateway", { status: 502 }));
 
