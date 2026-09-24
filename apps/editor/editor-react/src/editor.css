@@ -1,0 +1,18 @@
+/*
+ * 에디터 안에서만 필요한 모양. 본문 모양은 content-render post.css가 맡는다(미리보기와 공개 HTML이 같다).
+ * 색은 사이트 토큰 이름을 참조만 한다 — 정의하지 않는다.
+ */
+
+.blog-editor .ProseMirror {
+  outline: none;
+  min-height: 12rem;
+}
+
+/*
+ * 노드 선택 표시. 커스텀 블록 뒤 Backspace는 첫 번에 블록을 선택만 하고 두 번째에 지운다 —
+ * 선택이 눈에 보여야 두 번째 Backspace가 무엇을 지우는지 안다(editor-custom-blocks design).
+ */
+.blog-editor .ProseMirror-selectednode {
+  outline: 0.125rem solid var(--brand-ink);
+  outline-offset: 0.125rem;
+}
