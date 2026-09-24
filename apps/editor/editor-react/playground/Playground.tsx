@@ -17,18 +17,21 @@ const FIXTURE_NAMES = Object.keys(fixtures) as FixtureName[];
 // 스크린샷 넣기 버튼이 쓰는 저장 경로 모양의 예시 — 실제 파일은 없다(이미지 업로드는 M5)
 const SAMPLE_SCREENSHOT = { src: "/images/playground-sample.webp", caption: "플레이그라운드 예시" };
 
+type DocView = { ok: true; text: string } | { ok: false; text: string };
+
 /** 저장 가능한 문서면 JSON, 아니면 zod 오류 문장 */
-function describeDoc(read: () => unknown): string {
+function describeDoc(read: () => unknown): DocView {
   try {
-    return JSON.stringify(read(), null, 2);
+    return { ok: true, text: JSON.stringify(read(), null, 2) };
   } catch (error) {
-    return `저장할 수 없는 문서: ${error instanceof Error ? error.message : String(error)}`;
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, text: `저장할 수 없는 문서: ${reason}` };
   }
 }
 
 function EditorPane({ fixture }: { fixture: FixtureName }) {
-  const { editor } = useBlogEditor(fixtures[fixture].doc);
-  const json = useEditorState({
+  const { editor } = useBlogEditor({ doc: fixtures[fixture].doc, key: fixture, label: "본문" });
+  const view = useEditorState({
     editor,
     selector: ({ editor: current }) => describeDoc(() => readDoc(current.state.doc)),
   });
@@ -66,11 +69,13 @@ function EditorPane({ fixture }: { fixture: FixtureName }) {
           {/* TODO(#45): 인용으로 감싸기 — 감싸기 커맨드가 editor-core에 생기면 버튼을 단다 */}
         </div>
         <div className="playground-page">
-          <BlogEditor editor={editor} label="본문" />
+          <BlogEditor editor={editor} />
         </div>
       </section>
       <section aria-label="현재 문서">
-        <pre className="playground-json">{json}</pre>
+        <pre className={view.ok ? "playground-json" : "playground-json playground-error"}>
+          {view.text}
+        </pre>
       </section>
     </div>
   );
@@ -91,7 +96,7 @@ export function Playground() {
           ))}
         </select>
       </label>
-      {/* 픽스처가 바뀌면 에디터를 새로 만든다 */}
+      {/* 픽스처가 바뀌면 에디터를 새로 만든다 — useBlogEditor의 key와 같은 값 */}
       <EditorPane key={fixture} fixture={fixture} />
     </main>
   );
