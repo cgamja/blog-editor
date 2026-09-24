@@ -21,6 +21,19 @@ function comparable(attrs: object): Record<string, unknown> {
 
 const sticker = { id: "heart", x: 50, y: 30, size: 20, rotate: 0 };
 
+/** 스펙 안 `img.post-sticker`의 src만 바꾼 사본. */
+function withStickerSrc(spec: DOMOutputSpec, src: string): DOMOutputSpec {
+  if (!Array.isArray(spec)) return spec;
+  return (spec as unknown[]).map((part) => {
+    if (Array.isArray(part)) return withStickerSrc(part as DOMOutputSpec, src);
+    const isStickerAttrs =
+      part !== null &&
+      typeof part === "object" &&
+      (part as { class?: string }).class === "post-sticker";
+    return isStickerAttrs ? { ...(part as object), src } : part;
+  }) as DOMOutputSpec;
+}
+
 describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고 다시 읽힌다", () => {
   it("WHEN 꾸밈 · 스티커 문단, 폭 60 이미지, 꾸밈 없는 문단을 DOM 스펙으로 낸다 THEN 공개 HTML과 같은 래퍼로 나가고 스티커는 래퍼 안 img다", () => {
     const decorated = schema.nodes.paragraph!.create(
@@ -91,29 +104,37 @@ describe("editor-dom: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고
     },
   );
 
-  it("WHEN 스티커가 있는 문단 · 구분선의 DOM 스펙을 DOMParser.parseSlice로 읽는다 THEN 블록은 둘뿐이고 스티커 img가 이미지 블록이 되지 않는다", () => {
+  it("WHEN 스티커 img의 src를 경로 규칙을 통과하는 값으로 바꾼 문단 · 구분선과 래퍼 밖 같은 img를 DOMParser.parseSlice로 읽는다 THEN 래퍼 안 img는 블록이 되지 않고 래퍼 밖 img만 이미지가 된다", () => {
     const paragraph = schema.nodes.paragraph!.create(
       { font: "jua", stickers: [sticker] },
       schema.text("가"),
     );
     const rule = schema.nodes.horizontalRule!.create({ stickers: [sticker, sticker] });
 
+    // 대조군: `/stickers/` 경로는 imagePathSchema가 먼저 거부하므로, 스티커 자리 img의 src를 경로 규칙을
+    // 통과하는 값으로 바꾼다. 그래도 이미지가 안 생기면 막는 것은 래퍼 구조(contentElement · atom)다.
+    // 같은 img를 래퍼 밖에 두면 이미지 블록이 되는 것으로 대조군이 유효함을 보인다.
+    const passingSrc = "/images/sticker-stand-in.png";
+    const specs = [
+      withStickerSrc(toDom(paragraph), passingSrc),
+      withStickerSrc(toDom(rule), passingSrc),
+      ["img", { src: passingSrc, alt: "" }] as DOMOutputSpec,
+    ];
+
     const slice = DOMParser.fromSchema(schema).parseSlice(
       // 가짜 DOM은 파서가 읽는 표면만 가졌다(dom.test.helpers MiniNode) — 파서의 DOM 타입으로 단언한다
-      miniDomFromSpecs([toDom(paragraph), toDom(rule)]) as unknown as Parameters<
-        DOMParser["parseSlice"]
-      >[0],
+      miniDomFromSpecs(specs) as unknown as Parameters<DOMParser["parseSlice"]>[0],
     );
 
     const types: string[] = [];
     slice.content.descendants((node) => {
       types.push(node.type.name);
     });
-    expect(slice.content.childCount).toBe(2);
-    expect(types).not.toContain("image");
-    expect([slice.content.child(0).type.name, slice.content.child(1).type.name]).toEqual([
+    expect(types.filter((type) => type === "image")).toHaveLength(1);
+    expect(slice.content.content.map((node) => node.type.name)).toEqual([
       "paragraph",
       "horizontalRule",
+      "image",
     ]);
   });
 });

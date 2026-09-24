@@ -12,7 +12,8 @@ const CHUNK_LENGTH_SIZE = 4;
 const CHUNK_TYPE_OFFSET = PNG_SIGNATURE_LENGTH + CHUNK_LENGTH_SIZE;
 const CHUNK_TYPE_SIZE = 4;
 const IHDR_WIDTH_OFFSET = CHUNK_TYPE_OFFSET + CHUNK_TYPE_SIZE;
-const IHDR_HEIGHT_OFFSET = IHDR_WIDTH_OFFSET + 4;
+const IHDR_WIDTH_SIZE = 4;
+const IHDR_HEIGHT_OFFSET = IHDR_WIDTH_OFFSET + IHDR_WIDTH_SIZE;
 
 function pngSize(bytes: Buffer): { width: number; height: number } {
   if (bytes.subarray(0, PNG_SIGNATURE_LENGTH).toString("hex") !== PNG_SIGNATURE)

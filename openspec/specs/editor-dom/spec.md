@@ -27,8 +27,8 @@
 
 #### Scenario: 스티커 img는 파싱에서 블록이 되지 않는다
 
-- **WHEN** 스티커가 있는 문단과 스티커 두 개가 있는 구분선의 DOM 스펙을 `DOMParser.fromSchema(schema).parseSlice`로 읽는다
-- **THEN** 최상위 블록은 문단 · 구분선 둘뿐이고 `image` 노드가 없다
+- **WHEN** 스티커가 있는 문단 · 구분선의 DOM 스펙에서 스티커 `img`의 `src`를 이미지 경로 규칙을 통과하는 값(`/images/…`)으로 바꾸고, 같은 `img` 하나를 래퍼 밖에 더해 `DOMParser.fromSchema(schema).parseSlice`로 읽는다
+- **THEN** 최상위 블록은 문단 · 구분선 · 이미지 셋이고 `image` 노드는 래퍼 밖 것 하나뿐이다 — 래퍼 구조(`contentElement` · atom)가 스티커를 막는다
 
 ### Requirement: HTML 속성을 검증 없이 attrs로 읽지 않는다
 

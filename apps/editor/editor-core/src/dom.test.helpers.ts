@@ -151,11 +151,14 @@ function miniElement(tag: string, attrs: Record<string, string>, children: MiniN
     get firstElementChild() {
       return elements()[0] ?? null;
     },
-    get textContent() {
-      return "";
+    // 흉내 내지 않은 표면 — 조용히 빈 값을 주면 허위 통과가 된다. 필요해지면 실제로 구현한다
+    get textContent(): string {
+      throw new Error("dom.test.helpers: MiniNode는 textContent를 흉내 내지 않는다");
+    },
+    querySelector(): never {
+      throw new Error("dom.test.helpers: MiniNode는 querySelector를 흉내 내지 않는다");
     },
     getAttribute: (name: string) => (Object.hasOwn(attrs, name) ? attrs[name]! : null),
-    querySelector: () => null,
     matches(selector: string) {
       return matchesSelector(self as unknown as FakeElement, selector);
     },
@@ -173,22 +176,22 @@ function miniElement(tag: string, attrs: Record<string, string>, children: MiniN
  * 구멍(0)은 글자 "글"로 채운다. https://prosemirror.net/docs/ref/#model.DOMParser.parseSlice
  */
 export function miniDomFromSpecs(specs: readonly DOMOutputSpec[]): MiniNode {
-  const build = (spec: DOMOutputSpec): MiniNode => {
-    if (!Array.isArray(spec)) throw new Error("dom.test.helpers: 배열 스펙만 다룬다");
-    const [tag, ...rest] = spec as [string, ...unknown[]];
-    const first = rest[0];
-    const hasAttrs = first !== null && typeof first === "object" && !Array.isArray(first);
-    const attrs = hasAttrs ? (first as Record<string, string>) : {};
-    const children = (hasAttrs ? rest.slice(1) : rest).map((child) =>
-      child === 0
-        ? miniText("글")
-        : typeof child === "string"
-          ? miniText(child)
-          : build(child as DOMOutputSpec),
-    );
-    return miniElement(tag, attrs, children);
-  };
-  return miniElement("div", {}, specs.map(build));
+  return miniElement("div", {}, specs.map(miniFromSpec));
+}
+
+function miniFromSpec(spec: DOMOutputSpec): MiniNode {
+  if (!Array.isArray(spec)) throw new Error("dom.test.helpers: 배열 스펙만 다룬다");
+  const [tag, ...rest] = spec as [string, ...unknown[]];
+  const first = rest[0];
+  const hasAttrs = first !== null && typeof first === "object" && !Array.isArray(first);
+  const attrs = hasAttrs ? (first as Record<string, string>) : {};
+  return miniElement(tag, attrs, (hasAttrs ? rest.slice(1) : rest).map(toMiniChild));
+}
+
+function toMiniChild(child: unknown): MiniNode {
+  if (child === 0) return miniText("글");
+  if (typeof child === "string") return miniText(child);
+  return miniFromSpec(child as DOMOutputSpec);
 }
 
 /** 스키마 전체에서 이 태그 이름을 받는 규칙이 있는가. */
