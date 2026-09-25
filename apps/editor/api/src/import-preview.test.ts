@@ -43,9 +43,10 @@ describe("import-preview-api — 변환 결과만 돌려주고 저장하지 않�
     expect(await store.list()).toEqual([]);
   });
 
-  it("WHEN 표가 든 markdown이면 THEN ok가 false이고 메시지에 그 줄 번호가 있으며 저장소는 비어 있다", async () => {
+  it("WHEN HTML 블록이 든 markdown이면 THEN ok가 false이고 메시지에 그 줄 번호가 있으며 저장소는 비어 있다", async () => {
     const { store, client } = setup();
-    const markdown = "첫 문단\n\n| 표 | 빠짐 |\n| --- | --- |\n| a | b |";
+    // 표는 이제 받는다(adr-028) — 여전히 정의 밖인 HTML 블록으로 실패 경로를 본다
+    const markdown = "첫 문단\n\n<div>빠짐</div>";
 
     const res = await client.request(PATH, postJson({ markdown }));
     const body = (await res.json()) as { ok: boolean; messages: string[] };

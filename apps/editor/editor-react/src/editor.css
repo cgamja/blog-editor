@@ -31,6 +31,22 @@
 }
 
 /*
+ * 표(spec: editor-table, adr-028). 에디터 DOM은 머리 행도 `td`다(머리 행은 노드 종류가 아니라 첫 행이라는 자리) —
+ * 공개 HTML의 `th` 모양(post.css)을 첫 행에 입힌다. 칸 안 문단은 공개 HTML에 없는 틀이라 여백을 없앤다.
+ */
+.blog-editor .ProseMirror .post-table-scroll tr:first-child > td {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.blog-editor .ProseMirror .post-table-scroll td > p {
+  margin: 0;
+}
+/* 여러 칸을 고른 칸 선택 — prosemirror-tables가 `selectedCell` 클래스를 단다(첫 행 모양보다 뒤에 둬 이긴다) */
+.blog-editor .ProseMirror .post-table-scroll tr > td.selectedCell {
+  background: var(--brand-soft);
+}
+
+/*
  * 편집 중에는 움직임(post.css의 스크롤 진입 애니메이션)을 재생하지 않는다 — 쓰는 동안 블록이 스크롤마다
  * 사라졌다 나타나면 안 된다. 미리보기 · 공개 HTML에서는 그대로다. 명시도 0,3,0이 post.css의
  * `.post-body [data-motion="…"]`(0,2,0)를 불러오는 순서와 무관하게 이긴다(decoration-visible design.md 5).

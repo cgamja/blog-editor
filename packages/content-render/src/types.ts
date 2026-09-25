@@ -18,6 +18,8 @@ export type InnerParagraph = Extract<Block, { type: "blockquote" }>["content"][n
 export type InnerListItem = Extract<Block, { type: "bulletList" }>["content"][number];
 export type CalloutChild = Extract<Block, { type: "callout" }>["content"][number];
 export type InnerList = Exclude<CalloutChild, InnerParagraph>;
+export type TableRow = Extract<Block, { type: "table" }>["content"][number];
+export type TableCell = TableRow["content"][number];
 
 /**
  * 최상위 블록 attrs 중 꾸미기 필드만 뽑은 모양 — DecorationAttrs(Partial)를 그대로 쓰지 않는다.

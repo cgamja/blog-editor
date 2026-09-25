@@ -1,5 +1,5 @@
 import { Fragment, Slice } from "@tiptap/pm/model";
-import type { Node } from "@tiptap/pm/model";
+import type { Node, NodeType } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
@@ -142,5 +142,26 @@ describe("editor-paste: 붙여넣기로 문단이 나뉘어도 스티커는 한 
       ["둘", 0],
       ["다라", 0],
     ]);
+  });
+});
+
+describe("editor-paste: 표 칸 자리의 붙여넣기는 표 칸 편집에 맡긴다", () => {
+  it("WHEN 스티커 있는 표의 본문 칸 글자 가운데에 닫힌 표 조각을 붙인다 THEN stickerSafePaste는 받지 않는다", () => {
+    const { table, tableRow, tableCell } = schema.nodes as Record<string, NodeType>;
+    const cell = (text: string) =>
+      tableCell!.create(null, paragraph.create(null, schema.text(text)));
+    const stickered = table!.create({ stickers: stickers(1) }, [
+      tableRow!.create(null, [cell("머리")]),
+      tableRow!.create(null, [cell("가나")]),
+    ]);
+    let middle = 0;
+    stickered.descendants((node, pos) => {
+      if (node.isText && node.text === "가나") middle = pos + 1 + 1;
+    });
+    const pasted = table!.create(null, [tableRow!.create(null, [cell("붙인 칸")])]);
+
+    const { handled } = paste(stateAt([stickered], middle), closedSlice(pasted));
+
+    expect(handled).toBe(false);
   });
 });

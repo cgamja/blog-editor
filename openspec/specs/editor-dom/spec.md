@@ -8,7 +8,7 @@
 
 ### Requirement: 에디터 DOM은 공개 HTML과 같은 어휘로 나가고 다시 읽힌다
 
-에디터 스키마의 노드 · 마크는 SHALL content-render 출력과 같은 태그 · 클래스 · data 속성으로 DOM을 만들고, 같은 모양의 HTML을 다시 읽어 같은 attrs를 만든다. 꾸밈(`font` · `motion` · `width`)이나 스티커가 있는 최상위 블록은 `div.post-block`으로 감싸고(`data-font` · `data-motion` · `style="--w:N"`), 없으면 요소만 낸다. 스티커는 블록 요소 뒤(같은 래퍼 안)에 순서대로 `img.post-sticker[src="/stickers/{id}.png"][alt=""][contenteditable=false][draggable=false][style="--x:{x};--y:{y};--s:{size};--r:{rotate}"]`로 낸다. 콜아웃은 `aside.post-callout[data-tone]`, 이미지는 `figure.post-image > img`(원본 크기는 `width` · `height`), 앱 스크린샷은 `figure.post-screenshot > img + figcaption`, 코드 블록은 `pre > code[data-language]`다. HTML에서 스티커를 읽는 규칙은 없다.
+에디터 스키마의 노드 · 마크는 SHALL content-render 출력과 같은 태그 · 클래스 · data 속성으로 DOM을 만들고, 같은 모양의 HTML을 다시 읽어 같은 attrs를 만든다. 꾸밈(`font` · `motion` · `width`)이나 스티커가 있는 최상위 블록은 `div.post-block`으로 감싸고(`data-font` · `data-motion` · `style="--w:N"`), 없으면 요소만 낸다. 스티커는 블록 요소 뒤(같은 래퍼 안)에 순서대로 `img.post-sticker[src="/stickers/{id}.png"][alt=""][contenteditable=false][draggable=false][style="--x:{x};--y:{y};--s:{size};--r:{rotate}"]`로 낸다. 콜아웃은 `aside.post-callout[data-tone]`, 이미지는 `figure.post-image > img`(원본 크기는 `width` · `height`), 앱 스크린샷은 `figure.post-screenshot > img + figcaption`, 코드 블록은 `pre > code[data-language]`, 표는 `div.post-table-scroll > table > tbody > tr > td`(머리 행도 `td` — 머리 행은 자리다, 칸 안은 `p`, 머리 행 칸의 열 정렬은 `td[data-align]`)다(adr-028). HTML에서 스티커를 읽는 규칙은 없다.
 
 #### Scenario: 꾸밈이 있는 블록은 공개 HTML과 같은 래퍼로 나간다
 

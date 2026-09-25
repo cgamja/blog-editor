@@ -13,8 +13,20 @@ export const MARKDOWN_SHORTCUTS_PRIORITY = 1100;
 /** 목록 항목의 Enter · Tab · Backspace — 스티커 분할 · 커스텀 블록 Backspace보다 앞 */
 export const LIST_KEYS_PRIORITY = 1050;
 
+/**
+ * 표 칸의 Tab · Shift+Tab · Enter — 칸 안에는 목록이 없어 목록 키와 겹치지 않는다.
+ * 스티커 분할보다 앞이어야 칸 안 Enter가 칸을 나누지 않는다. prosemirror-tables 편집은 TABLE_EDITING_PRIORITY
+ */
+export const TABLE_KEYS_PRIORITY = 1050;
+
 /** 스티커가 있는 블록의 Enter — 스티커 없는 블록이면 넘긴다 */
 export const STICKER_SPLIT_PRIORITY = 1000;
 
 /** 커스텀 블록 바로 뒤 Backspace(editor-react가 등록) — 스티커 분할과 서로 다른 키라 같은 층이다 */
 export const CUSTOM_BLOCK_KEYS_PRIORITY = 1000;
+
+/**
+ * prosemirror-tables `tableEditing()` — 방향키 · 마우스 · 붙여넣기를 넓게 받아 README가 "near the end"에 두라고 한다.
+ * 코어 Keymap(100) · 같은 탭 스티커 복사(90)보다 뒤라 그쪽이 먼저 보고 넘긴 것만 받는다
+ */
+export const TABLE_EDITING_PRIORITY = 10;

@@ -5,13 +5,24 @@ import type { Doc } from "@blog-editor/content-schema";
 
 type JsonNode = Record<string, unknown>;
 
+/**
+ * 에디터 스키마에만 있는 attrs의 기본값 — prosemirror-tables가 칸 크기를 읽는 자리(extensions.ts TableCell).
+ * 기본값이면 저장 형식에 자리가 없고, 기본값이 아니면(병합) 남겨 zod가 거부한다(adr-028).
+ */
+const EDITOR_ONLY_DEFAULTS: Readonly<Record<string, unknown>> = { colspan: 1, rowspan: 1 };
+
+const isEditorOnlyDefault = (key: string, value: unknown) =>
+  Object.hasOwn(EDITOR_ONLY_DEFAULTS, key) && EDITOR_ONLY_DEFAULTS[key] === value;
+
 /** ProseMirror는 값 없는 attrs를 null로 채워 내보낸다 — 저장 형식에는 그 자리가 없다. */
 function withoutNullAttrs(json: JsonNode): JsonNode {
   const { attrs, content, marks, ...rest } = json;
   const out: JsonNode = { ...rest };
   if (attrs !== undefined) {
     out.attrs = Object.fromEntries(
-      Object.entries(attrs as JsonNode).filter(([, value]) => value !== null),
+      Object.entries(attrs as JsonNode).filter(
+        ([key, value]) => value !== null && !isEditorOnlyDefault(key, value),
+      ),
     );
   }
   if (Array.isArray(content))

@@ -1,7 +1,7 @@
 /*
  * 본문용 CSS — 렌더된 HTML의 닫힌 어휘(클래스 · data-* · CSS 변수)에 모양을 입힌다(adr-008).
  * 색 · 글꼴 토큰은 사이트 globals.css의 이름을 그대로 참조만 한다(수동 복사, plan 09) — 여기서 정의하지 않는다.
- * 기본 본문 값(제목 · 링크 · 목록 · 인용 · 코드 · 이미지 · 구분선)은 사이트 .prose와 같다.
+ * 기본 본문 값(제목 · 링크 · 목록 · 인용 · 코드 · 이미지 · 구분선)은 사이트 .prose와 같다. 표는 사이트에 없던 모양이다(adr-028).
  */
 
 .post-body {
@@ -99,6 +99,36 @@
   text-align: center;
   font-size: 0.9em;
   color: var(--ink-soft);
+}
+
+/* ---------- 표 (adr-028) ---------- */
+
+/* 본문보다 넓은 표는 페이지를 넓히지 않고 틀 안에서 가로로 스크롤한다 */
+.post-body .post-table-scroll {
+  overflow-x: auto;
+}
+.post-body .post-table-scroll table {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 0.95em;
+}
+/* 칸이 한 글자 폭까지 좁아지지 않게 — 좁은 화면에서는 틀이 스크롤한다 */
+.post-body .post-table-scroll :is(th, td) {
+  min-width: 5em;
+  padding: 0.5em 0.8em;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.post-body .post-table-scroll th {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.post-body .post-table-scroll [data-align="center"] {
+  text-align: center;
+}
+.post-body .post-table-scroll [data-align="right"] {
+  text-align: right;
 }
 
 /* ---------- 콜아웃 ---------- */
