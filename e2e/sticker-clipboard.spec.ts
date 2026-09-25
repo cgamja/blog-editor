@@ -111,3 +111,22 @@ test("WHEN 문단을 세 번 클릭해 복사하고 뒤에 문단이 있는 새 
   await expect(body.getByText(`${BODY_TEXT}끝`, { exact: true })).toHaveCount(1);
   await expect(stickers).toHaveCount(STICKERS.length * 2);
 });
+
+test("WHEN 스티커 둘인 문단의 하트 스티커를 고르고 ⌘C · ⌘V를 누르면 THEN 문단 스티커가 셋이 되고 새 하트 스티커가 눌림 상태로 포커스를 가진다", async ({
+  page,
+}, testInfo) => {
+  const { stickers } = await openStickerDraft(page, testInfo, "sticker-copy-single");
+
+  // 스티커 조작 버튼은 에디터 밖 층에 있다 — 포커스하면 그 스티커가 골라진다
+  const hearts = page.getByRole("button", { name: "하트 스티커", exact: true });
+  await hearts.first().focus();
+  await page.keyboard.press("ControlOrMeta+C");
+  await page.keyboard.press("ControlOrMeta+V");
+
+  await expect(stickers).toHaveCount(STICKERS.length + 1);
+  await expect(hearts).toHaveCount(2);
+  const pressed = page.getByRole("button", { name: "하트 스티커", exact: true, pressed: true });
+  await expect(pressed).toHaveCount(1);
+  await expect(pressed).toBeFocused();
+  await expect(hearts.last()).toBeFocused();
+});
