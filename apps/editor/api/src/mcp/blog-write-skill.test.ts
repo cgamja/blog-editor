@@ -1,5 +1,4 @@
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { lstatSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { convertMarkdown } from "@blog-editor/content-convert";
 
 /**
@@ -51,6 +50,7 @@ describe("blog-write-skill", () => {
     expect(lstatSync(CODEX_SKILL_DIR).isSymbolicLink()).toBe(true);
     expect(realpathSync(CODEX_SKILL_URL)).toBe(realpathSync(SKILL_URL));
     expect(readFileSync(CODEX_SKILL_URL, "utf8")).toBe(readFileSync(SKILL_URL, "utf8"));
-    expect(fileURLToPath(CODEX_SKILL_URL)).toContain("/.agents/skills/");
+    // 상대 링크여야 레포를 어디에 받아도 풀린다
+    expect(readlinkSync(CODEX_SKILL_DIR)).toBe("../../.claude/skills/blog-write");
   });
 });
