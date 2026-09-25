@@ -36,15 +36,27 @@ const MAX_PLACES = 3;
 const INLINE_TEXT_BLOCKS = new Set(["paragraph", "heading"]);
 /** 코드 펜스로 시작하는 새 글은 코드 블록 글자가 아니라 블록 바꾸기다 */
 const CODE_FENCE = /^\s*(```|~~~)/;
+/**
+ * 강제 줄바꿈(adr-028)은 찾는 글에서 줄바꿈 한 글자다 — get_post markdown에서 줄 끝 `\` + 줄바꿈으로 보이는 자리라,
+ * AI가 본 두 줄을 그대로 범위로 옮겨도 찾는다. 공백으로 두면 `첫 줄 둘째 줄`이 원래 공백과 구별되지 않고, 없는 글자로
+ * 두면 두 줄이 붙어(`첫 줄둘째 줄`) 본 글과 달라진다.
+ */
+const HARD_BREAK_TEXT = "\n";
+/** 범위에 get_post 모양 그대로 쓴 강제 줄바꿈(줄 끝 `\` + 줄바꿈) */
+const MARKDOWN_HARD_BREAK = /\\\r?\n/g;
 
 function fail(message: string): { ok: false; messages: [string] } {
   return { ok: false, messages: [message] };
 }
 
+/** 인라인 하나가 찾는 글에서 차지하는 글자 */
+function inlineTextOf(node: JsonNode): string {
+  if (node.type === "hardBreak") return HARD_BREAK_TEXT;
+  return typeof node.text === "string" ? node.text : "";
+}
+
 function textOf(node: JsonNode): string {
-  return (node.content ?? [])
-    .map((child) => (typeof child.text === "string" ? child.text : ""))
-    .join("");
+  return (node.content ?? []).map(inlineTextOf).join("");
 }
 
 /** 글자 블록을 문서 순서대로 모은다 — 인용 · 목록 · 콜아웃 안 문단도 모양을 몰라도 content를 따라 내려간다 */
@@ -170,11 +182,12 @@ function spliceInline(
   let position = 0;
   for (const node of nodes) {
     const start = position;
-    const end = position + node.text.length;
+    const end = position + inlineTextOf(node).length;
     position = end;
     if (end <= from) before.push(node);
     else if (start >= to) after.push(node);
-    else {
+    // 강제 줄바꿈은 한 글자라 범위에 걸치면 통째로 범위 안이다 — 잘라 남길 글자가 없다
+    else if (node.type === "text") {
       if (start < from) before.push({ ...node, text: node.text.slice(0, from - start) });
       if (end > to) after.push({ ...node, text: node.text.slice(to - start) });
     }
@@ -324,7 +337,7 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
 export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   const root = doc as unknown as JsonNode;
   const blocks = collectTextBlocks(root);
-  const located = locate(blocks, edit.selection);
+  const located = locate(blocks, edit.selection.replace(MARKDOWN_HARD_BREAK, HARD_BREAK_TEXT));
   if (!located.ok) return located;
   const { start, end } = located.found;
   const range: EditRange = {

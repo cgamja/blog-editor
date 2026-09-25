@@ -49,6 +49,8 @@ export const pmSchema = new Schema({
       inline: true,
       attrs: { src: { default: "" }, alt: { default: "" } },
     },
+    // 강제 줄바꿈(adr-028) — 문단 안에만. 제목 · 표 칸 자리는 check.ts가 막는다
+    hardBreak: { group: "inline", inline: true },
     text: { group: "inline" },
   },
   marks: {

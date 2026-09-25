@@ -58,7 +58,8 @@ export const allBlocks = {
         content: [
           { type: "text", text: "육아비서는 " },
           { type: "text", text: "보호자", marks: [{ type: "bold" }] },
-          { type: "text", text: "와 아이를 함께 챙기는 AI 육아 도우미입니다. " },
+          { type: "text", text: "와 아이를 함께 챙기는 AI 육아 도우미입니다." },
+          { type: "hardBreak" },
           { type: "text", text: "지금 바로 무료로 체험해보세요.", marks: [{ type: "italic" }] },
           { type: "text", text: " 설정은 " },
           { type: "text", text: "config.json", marks: [{ type: "code" }] },

@@ -104,10 +104,24 @@ function mergeAdjacentText(nodes: Node[]): Node[] {
   return merged;
 }
 
+/**
+ * 문단 끝에 이어진 강제 줄바꿈을 지운다(adr-028) — 줄 끝 `\`는 뒤에 줄이 있어야 줄바꿈으로 읽히므로 markdown으로
+ * 나를 수 없고, 공개 HTML에서도 끝의 `<br>`은 보이는 줄을 만들지 않는다.
+ */
+function withoutTrailingHardBreaks(nodes: Node[]): Node[] {
+  let end = nodes.length;
+  while (end > 0 && nodes[end - 1]?.type === "hardBreak") end -= 1;
+  return end === nodes.length ? nodes : nodes.slice(0, end);
+}
+
 function normalizeNode(node: Node): Node {
-  const mergedContent = Array.isArray(node.content)
+  const children = Array.isArray(node.content)
     ? mergeAdjacentText((node.content as Node[]).map((child) => normalizeNode(child)))
     : undefined;
+  const mergedContent =
+    children !== undefined && node.type === "paragraph"
+      ? withoutTrailingHardBreaks(children)
+      : children;
   // content: []는 키 자체를 지운다(spec ④) — ProseMirror toJSON과 같은 모양이 정규형이다.
   const content =
     mergedContent !== undefined && mergedContent.length > 0 ? mergedContent : undefined;

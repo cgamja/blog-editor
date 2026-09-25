@@ -2,6 +2,7 @@ import { Extension, Mark, Node, getSchema } from "@tiptap/core";
 import type { Attribute } from "@tiptap/core";
 import type { Schema, TagParseRule } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
+import { hardBreakOrEnter } from "./commands/hard-break";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
 import { stickerClipboard } from "./plugins/sticker-clipboard";
@@ -74,13 +75,37 @@ const Text = Node.create({ name: "text", group: "inline" });
 const Paragraph = Node.create({
   name: "paragraph",
   group: "block",
-  content: "text*",
+  // 강제 줄바꿈은 문단에만(adr-028) — 표 칸 문단도 같은 노드라 스키마로는 못 막고 커맨드 · 붙여넣기 정규화가 막는다
+  content: "(text | hardBreak)*",
   addAttributes: () => alignedText,
   parseHTML: () => [
     wrapperRule({ matches: isTag("P"), keys: ["font", "motion", "align"] }),
     { tag: "p" },
   ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["p", 0]),
+});
+
+/**
+ * 강제 줄바꿈(adr-028). `linebreakReplacement`라 문단 → 코드 블록 바꾸기(setBlockType)에서 줄바꿈 글자가 된다
+ * (prosemirror-transform 1.12.1 structure.ts setBlockType · replaceLinebreaks). 코드 블록 → 문단은 turnIntoTextblock이
+ * 줄마다 문단으로 나눈다. 제목으로 바꾸면 turnIntoTextblock이 공백 하나로 먼저 바꾼다(setBlockType은 지워 글자가 붙는다).
+ * 붙여넣기: 조각 안 제목의 `<br>`은 DOMParser가 공백으로 읽고(prosemirror-model 1.25.12 from_dom.ts leafFallback),
+ * 제목 · 표 칸 자리로 들어가는 글자의 강제 줄바꿈은 paste-normalizer가 공백으로 바꾼다.
+ * https://prosemirror.net/docs/ref/#model.NodeSpec.linebreakReplacement
+ */
+const HardBreak = Node.create({
+  name: "hardBreak",
+  group: "inline",
+  inline: true,
+  selectable: false,
+  linebreakReplacement: true,
+  parseHTML: () => [{ tag: "br" }],
+  renderHTML: () => ["br"],
+  renderText: () => "\n",
+  addKeyboardShortcuts: () => ({
+    "Shift-Enter": ({ editor }) =>
+      editor.commands.command(({ state, dispatch }) => hardBreakOrEnter(state, dispatch)),
+  }),
 });
 
 const HEADING_TAG = /^H([1-6])$/;
@@ -322,8 +347,8 @@ const cellAttrs = (element: ElementLike) => ({
 
 /**
  * 칸 — 안은 문단 하나(GFM 칸은 한 줄 인라인). 칸에 여러 블록을 붙이면 Fitter가 표를 쪼개므로 붙여넣기 정규화가
- * 한 줄로 합친다(paste-normalizer — 강제 줄바꿈 #131이 생기면 블록 사이를 공백 대신 줄바꿈으로). `colspan` · `rowspan`은 prosemirror-tables가 칸 크기를 읽는
- * 자리라 에디터 스키마에만 두고 늘 1이다 — 저장 경계(docFromNode)가 지운다. 병합 커맨드는 두지 않는다.
+ * 한 줄로 합친다(paste-normalizer, 블록 사이는 공백 하나 — 표 칸에는 강제 줄바꿈이 없다(adr-028)).
+ * `colspan` · `rowspan`은 prosemirror-tables가 칸 크기를 읽는 자리라 에디터 스키마에만 두고 늘 1이다 — 저장 경계(docFromNode)가 지운다. 병합 커맨드는 두지 않는다.
  * prosemirror-tables 1.8.5 `computeMap` · `findWidth`가 `attrs.colspan` · `attrs.rowspan`을 읽는다(dist/index.js).
  */
 const spanAttr: Attribute = { default: 1, rendered: false, parseHTML: ignoreHtml };
@@ -498,6 +523,7 @@ export const editorExtensions = [
   Doc,
   Text,
   Paragraph,
+  HardBreak,
   Heading,
   BulletList,
   OrderedList,

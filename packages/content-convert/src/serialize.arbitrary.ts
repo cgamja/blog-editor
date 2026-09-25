@@ -97,8 +97,24 @@ const inlineArb = fc
     }),
   );
 
-/** 빈 문단이 없게 — 인라인은 최소 하나. */
-const inlinesArb = fc.array(inlineArb, { minLength: 1, maxLength: 4 });
+const HARD_BREAK_NODE = { type: "hardBreak" } as const;
+/** 문단 인라인에서 글자 : 강제 줄바꿈 비율 */
+const TEXT_INLINE_WEIGHT = 3;
+const HARD_BREAK_WEIGHT = 1;
+
+/**
+ * 빈 문단이 없게 — 글자가 최소 하나. 문단에는 강제 줄바꿈(adr-028)을 섞는다(앞 · 가운데 · 끝 · 이어짐 모두 —
+ * 끝의 것은 정규형이 지운다). 제목 · 표 칸은 글자만(inlineArb).
+ */
+const inlinesArb = fc
+  .array(
+    fc.oneof(
+      { arbitrary: inlineArb, weight: TEXT_INLINE_WEIGHT },
+      { arbitrary: fc.constant(HARD_BREAK_NODE), weight: HARD_BREAK_WEIGHT },
+    ),
+    { minLength: 1, maxLength: 5 },
+  )
+  .filter((content) => content.some((node) => node.type === "text"));
 
 const paragraphInner = inlinesArb.map((content) => ({ type: "paragraph", content }));
 

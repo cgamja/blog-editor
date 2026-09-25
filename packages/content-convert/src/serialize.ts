@@ -1,7 +1,7 @@
 import { naturalSizeOf, normalize, orderedListNumberAt } from "@blog-editor/content-schema";
-import type { Block, Doc, TextNode } from "@blog-editor/content-schema";
+import type { Block, Doc, InlineNode } from "@blog-editor/content-schema";
 import { APP_FRAME, CALLOUT_CONTAINER_NAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
-import { serializeInline, serializePlainLabel } from "./serialize-inline";
+import { serializeInline, serializeParagraph, serializePlainLabel } from "./serialize-inline";
 
 /**
  * doc → markdown(spec: markdown-serialize) — `get_post`가 AI에게 주는 글. 정답은 "다시 변환하면 같은
@@ -30,10 +30,11 @@ const BLOCK_SEPARATOR = "\n\n";
  */
 const PARAGRAPH_INTERRUPTING_LIST_START = 1;
 const MIN_FENCE_LENGTH = 3;
+const BLOCKQUOTE_PREFIX = "> ";
 
 interface ParagraphLike {
   type: "paragraph";
-  content?: TextNode[] | undefined;
+  content?: InlineNode[] | undefined;
 }
 interface ListItemLike {
   type: "listItem";
@@ -54,14 +55,25 @@ interface BlockLosses {
 /** 같은 블록 안 losses 순서(spec: stickers가 먼저). */
 const DROPPED_KINDS = ["emptyParagraph", "codeMark"] as const;
 
-function inlineOf(paragraph: ParagraphLike, dropped: BlockLosses): string | undefined {
+/** 강제 줄바꿈 — 줄 끝 `\`(adr-028). 줄 끝 공백 둘은 보이지 않고 편집기가 지우기 쉬워 쓰지 않는다 */
+const HARD_BREAK = "\\\n";
+
+/**
+ * 문단 → 줄들을 강제 줄바꿈으로 이은 글. 이어진 줄 앞에는 `continuation`(인용 `> ` · 목록 항목 들여쓰기)을 붙인다 —
+ * 첫 줄 앞 표지는 부르는 쪽이 붙인다. 빈 문단은 undefined(losses의 emptyParagraph).
+ */
+function inlineOf(
+  paragraph: ParagraphLike,
+  dropped: BlockLosses,
+  continuation = "",
+): string | undefined {
   if (paragraph.content === undefined || paragraph.content.length === 0) {
     dropped.emptyParagraph += 1;
     return undefined;
   }
-  const { text, droppedCodeMarks } = serializeInline(paragraph.content, "paragraph");
+  const { lines, droppedCodeMarks } = serializeParagraph(paragraph.content);
   dropped.codeMark += droppedCodeMarks;
-  return text;
+  return lines.join(`${HARD_BREAK}${continuation}`);
 }
 
 /**
@@ -165,7 +177,7 @@ function renderList(list: ListLike, dropped: BlockLosses, alternate: boolean): s
       const marker = listMarker(list, index, alternate);
       const indent = " ".repeat(marker.length + 1);
       // liftEmptyItems가 첫 문단이 빈 항목을 이미 뺐으므로 inlineOf는 늘 글자를 돌려준다.
-      const lines = [`${marker} ${inlineOf(paragraph, dropped) ?? ""}`];
+      const lines = [`${marker} ${inlineOf(paragraph, dropped, indent) ?? ""}`];
       const nestedText = renderLists(nested, dropped, new ListMarkers(), "\n");
       if (nestedText !== undefined) {
         if (nested[0] !== undefined && cannotInterruptParagraph(nested[0])) lines.push("");
@@ -281,9 +293,9 @@ function serializeBlockBody(
     }
     case "blockquote": {
       const lines = block.content
-        .map((paragraph) => inlineOf(paragraph, dropped))
+        .map((paragraph) => inlineOf(paragraph, dropped, BLOCKQUOTE_PREFIX))
         .filter((line): line is string => line !== undefined)
-        .map((line) => `> ${line}`);
+        .map((line) => `${BLOCKQUOTE_PREFIX}${line}`);
       return lines.length > 0 ? lines.join("\n>\n") : undefined;
     }
     case "codeBlock": {

@@ -18,7 +18,7 @@ import {
   containerNotAllowedMessage,
   emptyLinkTextMessage,
   footnoteInlineMessage,
-  hardBreakMessage,
+  hardBreakPlaceMessage,
   headingLevelMessage,
   htmlNotAllowedMessage,
   imageAltLengthMessage,
@@ -480,7 +480,9 @@ function checkInline(
         currentLine += 1;
         return;
       case "hardbreak":
-        messages.push(hardBreakMessage(block.topLevel, currentLine, lineText));
+        if (block.semantic !== "paragraph") {
+          messages.push(hardBreakPlaceMessage(block.topLevel, currentLine, lineText));
+        }
         currentLine += 1;
         return;
       case "span_open":

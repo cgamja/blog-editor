@@ -38,6 +38,10 @@ const LINK_HREFS = [
 const MAX_BLOCKS_PER_DOC = 4;
 const STICKER_CAP_PER_BLOCK = Math.floor(MAX_STICKERS_PER_DOC / MAX_BLOCKS_PER_DOC);
 
+/** 문단 인라인에서 글자 : 강제 줄바꿈 비율 — 줄바꿈이 이어지는 모양도 나올 만큼, 글자가 대부분이게 */
+const TEXT_INLINE_WEIGHT = 4;
+const HARD_BREAK_WEIGHT = 1;
+
 const HEX_MAX = 0xffffff;
 const HEX_DIGITS = 6;
 const hexColorArb = fc
@@ -97,6 +101,12 @@ const inlineArb = fc
       : { type: "text" as const, text };
   });
 
+/** 문단 인라인 — 글자에 강제 줄바꿈(adr-028)을 섞는다. 제목 · 표 칸은 글자만(inlineArb) */
+const paragraphInlineArb = fc.oneof(
+  { arbitrary: inlineArb, weight: TEXT_INLINE_WEIGHT },
+  { arbitrary: fc.constant({ type: "hardBreak" as const }), weight: HARD_BREAK_WEIGHT },
+);
+
 const stickerArb = fc.record({
   id: fc.constantFrom(...STICKER_IDS),
   x: fc.integer({ min: STICKER_RANGES.x.min, max: STICKER_RANGES.x.max }),
@@ -142,6 +152,12 @@ export function decorationArbitrary(opts: {
 /** 인용 · 콜아웃 · listItem 안쪽 문단 — 꾸미기 자리가 없다(decoration-schema: 안쪽 노드에는 attrs 없음) */
 const innerParagraphArb = fc.record({
   type: fc.constant("paragraph" as const),
+  content: fc.array(paragraphInlineArb, { maxLength: 2 }),
+});
+
+/** 표 칸 안 문단 — 한 줄 문법이라 글자만(adr-028) */
+const cellParagraphArb = fc.record({
+  type: fc.constant("paragraph" as const),
   content: fc.array(inlineArb, { maxLength: 2 }),
 });
 
@@ -153,7 +169,7 @@ const paragraphArb = fc.record({
     align: true,
     maxStickers: STICKER_CAP_PER_BLOCK,
   }),
-  content: fc.array(inlineArb, { maxLength: 3 }),
+  content: fc.array(paragraphInlineArb, { maxLength: 3 }),
 });
 
 const headingArb = fc
@@ -356,7 +372,7 @@ const tableArb = fc
             minLength: columns,
             maxLength: columns,
           }),
-          fc.array(fc.array(innerParagraphArb, { minLength: columns, maxLength: columns }), {
+          fc.array(fc.array(cellParagraphArb, { minLength: columns, maxLength: columns }), {
             minLength: rows,
             maxLength: rows,
           }),

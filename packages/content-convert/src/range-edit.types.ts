@@ -19,7 +19,8 @@ export type JsonNode = {
   content?: JsonNode[];
 } & Record<string, unknown>;
 
-export type InlineText = { type: "text"; text: string; marks?: unknown[] };
+/** 문단 인라인 — 글자와 강제 줄바꿈(adr-028) */
+export type InlineText = { type: "text"; text: string; marks?: unknown[] } | { type: "hardBreak" };
 
 export interface TextBlockRef {
   /** 이 글자 블록이 든 최상위 블록 순번 */

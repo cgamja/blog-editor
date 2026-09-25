@@ -75,6 +75,7 @@ export type {
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
+export { hardBreakOrEnter, insertHardBreak } from "./commands/hard-break";
 export {
   addTableColumnAfter,
   addTableRowAfter,
@@ -113,6 +114,7 @@ export {
   previewMotion,
 } from "./plugins/motion-preview";
 export {
+  normalizeDroppedSlice,
   normalizePastedSlice,
   pasteNormalizer,
   pasteNormalizerKey,
