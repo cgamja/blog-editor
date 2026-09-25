@@ -19,6 +19,7 @@ export async function submitLogin(page: Page): Promise<void> {
 /**
  * 초안 한 편을 저장소에 바로 만든다. 실브라우저 층의 저장 형식 픽스처는 여기 하나다 — 서버가 받는 형식 그대로라
  * 스키마 버전이 오르면 이것을 같이 올리는 계약이다. 본문을 주지 않으면 제목을 본문으로 쓴다.
+ * `blockAttrs`는 본문 문단의 꾸밈 속성(스티커 등) — 저장 형식 그대로라 서버의 zod가 한 번 더 거른다.
  * 페이지의 fetch로 보낸다 — 화면과 같은 출처 · 세션 쿠키로 만든다.
  */
 export async function createDraft(
@@ -26,6 +27,7 @@ export async function createDraft(
   slug: string,
   title: string,
   body: string = title,
+  blockAttrs?: Record<string, unknown>,
 ): Promise<void> {
   const file = {
     schemaVersion: 1,
@@ -39,7 +41,13 @@ export async function createDraft(
     },
     doc: {
       type: "doc",
-      content: [{ type: "paragraph", content: [{ type: "text", text: body }] }],
+      content: [
+        {
+          type: "paragraph",
+          ...(blockAttrs === undefined ? {} : { attrs: blockAttrs }),
+          content: [{ type: "text", text: body }],
+        },
+      ],
     },
   };
   const status = await page.evaluate(
