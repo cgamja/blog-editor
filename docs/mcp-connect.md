@@ -1,4 +1,4 @@
-# AI 연결 — `/mcp`에 Claude 붙이기
+# AI 연결 — `/mcp`에 Claude · Codex 붙이기
 
 AI(채팅 앱)가 블로그 초안을 쓰게 하는 MCP 커넥터(adr-007 · adr-016). 도구는 6개이고 **초안만** 쓴다 — 발행은 사람이 에디터에서 한다.
 
@@ -24,7 +24,33 @@ claude mcp add --transport http blog-editor http://127.0.0.1:8787/mcp \
   --header "Authorization: Bearer <위에서 만든 토큰>"
 ```
 
-Claude Code에서 `/mcp`로 `connected`를 확인하고 "블로그 초안 하나 써 줘"라고 하면 된다. Claude는 `get_writing_guide`를 먼저 읽고 `create_draft`를 부르며, 응답의 에디터 링크를 알려 준다.
+Claude Code에서 `/mcp`로 `connected`를 확인하고 "블로그 초안 하나 써 줘"라고 하면 된다. Claude는 `get_writing_guide`를 먼저 읽고 `create_draft`를 부르며, 응답의 에디터 링크를 알려 준다. 레포 스킬로 한 번에 쓰려면 `/blog-write <주제>`.
+
+## 2-c. Codex CLI (로컬 그대로)
+
+Codex도 같은 `/mcp`에 붙는다 — 도구 6개와 "초안만" 규칙은 같다. 토큰은 설정 파일에 적지 않고 환경 변수 이름만 적는다(`bearer_token_env_var`, https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+```bash
+# 토큰은 셸 환경에 둔다(예: ~/.zshrc). 값은 1절의 MCP_CONNECTION_TOKEN과 같다
+export BLOG_EDITOR_MCP_TOKEN=<위에서 만든 토큰>
+
+codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN
+codex mcp list   # blog-editor가 보이면 된다
+```
+
+`~/.codex/config.toml`에 직접 적어도 같다:
+
+```toml
+[mcp_servers.blog-editor]
+url = "http://127.0.0.1:8787/mcp"
+bearer_token_env_var = "BLOG_EDITOR_MCP_TOKEN"
+# 선택: 도구 호출마다 묻지 않게. 이 서버 도구는 초안만 쓰고 발행 도구가 없다
+default_tools_approval_mode = "approve"
+```
+
+대화형 Codex는 도구를 처음 부를 때 허락을 묻는다. **비대화형 `codex exec`는 물을 수 없어서** 허락 설정이 없으면 도구 호출이 `MCP tool call requires approval, but approval policy is never`로 실패한다. 그래서 위 `default_tools_approval_mode = "approve"`를 넣거나, 그 실행에만 `-c 'mcp_servers.blog-editor.default_tools_approval_mode="approve"'`를 준다. 값은 `auto` · `prompt` · `writes` · `approve` 중 하나다(같은 공식 문서).
+
+레포 스킬은 Codex에서 `$blog-write <주제>`로 부른다(또는 "블로그 초안 써 줘"처럼 말하면 설명을 보고 고른다). Codex는 레포의 `.agents/skills/`를 읽고, 그 안의 `blog-write`는 `.claude/skills/blog-write`를 가리키는 링크다 — 원본은 하나다(adr-035, https://learn.chatgpt.com/docs/build-skills). 저장 직후 SEO 훅(#149) 같은 Claude Code 전용 장치는 Codex에 없다. 대신 저장 응답의 seo 결과를 스킬 규칙이 확인한다.
 
 ## 2-b. claude.ai 커스텀 커넥터
 
