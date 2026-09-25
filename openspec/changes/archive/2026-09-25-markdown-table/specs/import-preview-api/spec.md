@@ -1,10 +1,4 @@
-# import-preview-api Specification
-
-## Purpose
-
-마크다운 가져오기의 변환을 서버가 맡는다. web은 변환 코어(content-convert)에 닿지 못해(adr-009) 미리보기 API로 변환 결과 · 공개 렌더러 HTML · 제목/설명 제안 또는 줄 번호 메시지를 받고, 초안 저장은 기존 글 저장 API로 한다(이슈 #98).
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: 가져오기 미리보기는 변환 결과만 돌려주고 저장하지 않는다
 
@@ -34,21 +28,3 @@
 
 - **WHEN** 세션 쿠키 없이 맞는 markdown으로 미리보기를 부른다
 - **THEN** 401이다
-
-### Requirement: 미리보기 요청 본문은 크기 상한이 있다
-
-`POST /api/import/preview`는 SHALL 요청 본문이 markdown 상한의 4배 바이트를 넘으면 읽기 전에 413과 크기 문장을 돌려준다.
-
-#### Scenario: 본문 상한을 넘긴 미리보기는 413이다
-
-- **WHEN** 세션을 가진 채 본문 상한을 넘긴 본문으로 부른다
-- **THEN** 413 · 크기 문장이고 계약의 413 스키마를 따른다
-
-### Requirement: 미리보기 요청 본문은 markdown 하나뿐이다
-
-`POST /api/import/preview`는 SHALL 본문에 `markdown` 밖의 키가 있으면 400을 돌려준다(계약 `additionalProperties: false`).
-
-#### Scenario: 모르는 키가 든 본문은 400이다
-
-- **WHEN** markdown 밖의 키가 든 본문으로 부른다
-- **THEN** 400이다

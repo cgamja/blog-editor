@@ -19,7 +19,7 @@ MCP 입력(`check_draft` · `create_draft` · `update_draft`)이 쓰는 markdown
 
 변환은 SHALL 다음을 변환하지 않고 거부한다.
 
-- `#` h1 · h4 이하 · 표 · 각주 · 할 일 목록
+- `#` h1 · h4 이하 · 각주 · 할 일 목록
 - 쓰이지 않는 링크 참조 정의(`[r]: url`)
 - 인라인/블록 HTML(`<div>` · `<br>` · `<u>` 포함)
 - 절대 URL 이미지
@@ -30,14 +30,14 @@ MCP 입력(`check_draft` · `create_draft` · `update_draft`)이 쓰는 markdown
 
 #### Scenario: 정의 밖 markdown은 거부한다
 
-- **WHEN** 다음 열세 가지를 각각 넣는다
-  - `# 제목` · 표(`| a | b |` 다음 줄 `|---|---|`) · `<u>밑줄</u>` · `<div>` · `<br>`
+- **WHEN** 다음 열두 가지를 각각 넣는다
+  - `# 제목` · `<u>밑줄</u>` · `<div>` · `<br>`
   - `![x](https://a.com/x.png)` · `[x](javascript:alert(1))`
   - 인용 안의 `## 제목` · 목록 항목 안의 ``` 펜스
   - 각주(`글[^1]` · 빈 줄 · `[^1]: 설명`) · 할 일 목록(`- [ ] 할 일`)
   - 쓰이지 않는 링크 참조 정의(`글` · 빈 줄 · `[r]: https://a.com`)
   - 목록 항목 안 두 번째 문단(`- a` · 빈 줄 · `  b`)
-- **THEN** 열세 경우 모두 변환이 실패하고 markdown-validation-message 형식의 메시지가 나온다
+- **THEN** 열두 경우 모두 변환이 실패하고 markdown-validation-message 형식의 메시지가 나온다
 
 ### Requirement: 형식 가이드는 문법마다 예시 하나를 싣고 그 예시는 전부 유효하다
 
@@ -101,3 +101,17 @@ MCP 입력(`check_draft` · `create_draft` · `update_draft`)이 쓰는 markdown
 
 - **WHEN** `1. 가` · `2. 나`와 `3. 가` · `4. 나`를 각각 변환한다
 - **THEN** 앞은 start 없는 `orderedList`, 뒤는 start 3 `orderedList`가 된다
+
+### Requirement: GFM 표는 표 블록이 된다
+
+변환은 SHALL GFM 표(머리 줄 · `|---|` 구분 줄 · 본문 줄)를 최상위 `table`로 바꾼다(adr-028). 머리 줄이 첫 행이고, 칸 글자는 마크를 가진 인라인이다. 구분 줄의 `:-:`는 `center`, `--:`는 `right`, `:--` · `---`는 정렬 없음이다. 본문 줄의 모자란 칸은 빈 칸으로 채운다(GFM). 머리 줄보다 칸이 많은 본문 줄은 넘치는 칸의 글자가 사라지므로 버리지 않고 거부한다. 표 안의 메시지는 그 행의 줄 번호를 가리킨다. 표 바로 위 `{font= motion=}` 지시어는 표의 꾸미기가 된다. 표 칸 안 그림, 인용 · 목록 · 콜아웃 안 표는 거부한다.
+
+#### Scenario: 정렬과 마크가 있는 표가 table이 된다
+
+- **WHEN** `| 이름 | 값 |` · `| --- | :-: |` · `| **가** | 1 |`을 변환한다
+- **THEN** 첫 행 칸 `이름` · `값`(`align: "center"`), 둘째 행 칸 `가`(bold) · `1`인 `table` 하나가 나온다
+
+#### Scenario: 자리 밖 표 · 칸 안 그림 · 넘치는 칸은 거부한다
+
+- **WHEN** 인용 안의 표, 넷째 줄 칸 안에 `![x](/images/a.webp)`가 있는 표, 넷째 줄이 머리 줄(1칸)보다 칸이 많은 표를 각각 변환한다
+- **THEN** 셋 다 실패하고 markdown-validation-message 형식의 메시지가 나오며, 메시지 줄 번호가 차례로 1 · 4 · 4다
