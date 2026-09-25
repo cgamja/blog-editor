@@ -22,6 +22,9 @@ export const CONTAINER_LABEL: Record<ContainerKind, string> = {
 /** 콜아웃 컨테이너 이름(`:::callout`) — tokens.ts(파서 설정) · check.ts · message.ts · serialize.ts가 같이 쓴다. */
 export const CALLOUT_CONTAINER_NAME = "callout";
 
+/** 범위 고치기 동작(adr-031) — range-edit.ts와 MCP update_draft 입력 스키마가 같은 값을 본다. */
+export const RANGE_EDIT_COMMANDS = ["replace", "insert_after"] as const;
+
 /** 지시어 키 — 이 순서가 직렬화(serialize.ts)가 지시어 줄에 쓰는 순서다. */
 export const DIRECTIVE_KEYS = ["frame", "font", "motion", "align", "width", "size"] as const;
 
