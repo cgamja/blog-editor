@@ -13,6 +13,8 @@
  * `.env`에서 `#` · 공백이 든 값은 큰따옴표로 감싼다 — 따옴표 없으면 `#` 뒤가 주석으로 잘린다
  * (Node 26 실측: `ADMIN_PASSWORD=12#34` → "12").
  * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
+ * 세션 쿠키도 `__Host-` · Secure 없는 `session`이다(Safari가 http 루프백에서 Secure 쿠키를 버림 — adr-026).
+ * PUBLIC_BASE_URL을 주면 공개 터널 뒤에 서므로 배포와 같은 `__Host-session`(Secure)으로 돌아간다.
  *
  * 선택 — 있으면 `/mcp`를 연다(adr-016, `.env`에 넣어도 된다):
  *   MCP_CONNECTION_TOKEN       연결용 토큰, 32자 이상 — `openssl rand -hex 32`
@@ -104,6 +106,7 @@ const app = createApp({
     },
   ]),
   sessionSecret: config.sessionSecret,
+  sessionCookie: config.sessionCookie,
   ...(mcp === null ? {} : { mcp }),
 });
 
@@ -114,6 +117,11 @@ serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
   if (config.generatedSecret) {
     console.log("SESSION_SECRET이 없어 새로 만들었다 — 재시작하면 로그인이 끊긴다");
   }
+  console.log(
+    config.sessionCookie === "loopback-http"
+      ? "세션 쿠키: session(루프백 http — Safari 로그인 가능)"
+      : "세션 쿠키: __Host-session(Secure — PUBLIC_BASE_URL 있음, 로컬 Safari 로그인 불가)",
+  );
   console.log(
     mcp === null
       ? "mcp: 꺼짐 (MCP_CONNECTION_TOKEN 없음)"

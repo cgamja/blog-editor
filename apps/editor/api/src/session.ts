@@ -16,6 +16,8 @@ import {
   UNAUTHORIZED_MESSAGE,
 } from "./messages";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
+import { COOKIE_NAME_PREFIX_OF, COOKIE_PREFIX, SESSION_COOKIE_OF } from "./session-constants";
+import type { CookieOptions, SessionCookieMode } from "./session-types";
 
 export interface SessionOptions {
   accounts: AccountStore;
@@ -27,6 +29,8 @@ export interface SessionOptions {
   loginFailureDelayMs?: number;
   /** 현재 시각(epoch ms) — 만료 판정용, 테스트가 주입한다 */
   now?: () => number;
+  /** 기본 `secure`. `loopback-http`는 로컬 진입점만 넘긴다(SessionCookieMode) */
+  sessionCookie?: SessionCookieMode;
 }
 
 export interface SessionConfig {
@@ -35,6 +39,8 @@ export interface SessionConfig {
   sessionTtlSeconds: number;
   loginFailureDelayMs: number;
   nowSeconds: () => number;
+  /** 쓰기 · 읽기 · 지우기가 같은 이름 · 속성을 쓰도록 모드에서 한 번 정한다 */
+  cookie: CookieOptions;
   /** 앱 하나에 하나 — 재시작하면 초기화된다 */
   lockout: LoginLockout;
 }
@@ -48,26 +54,8 @@ const MS_PER_SECOND = 1000;
 /** 계정 id와 겹치지 않는 값 — 계정 id는 시드 · 저장소가 정하고 공백을 쓰지 않는다 */
 const UNKNOWN_ACCOUNT_KEY = " unknown-account";
 
-/** `hono/cookie`는 옵션 타입을 따로 내보내지 않는다(패키지 exports에 utils 경로 없음) */
-type CookieOptions = NonNullable<Parameters<typeof setSignedCookie>[4]>;
-
-/**
- * `__Host-` 접두사 — 브라우저는 Secure · Path=/ · Domain 없음일 때만 이 쿠키를 받는다. 상위 도메인
- * (simsimeestudio.com)이 심은 같은 이름 쿠키가 세션 쿠키를 가리지 못한다.
- */
-const COOKIE_PREFIX = "host";
-/** Hono `prefix` 옵션이 쿠키 이름 앞에 붙이는 문자열 */
-const COOKIE_NAME_PREFIX_OF = { host: "__Host-" } as const;
-/** 브라우저에 실제로 적히는 쿠키 이름(계약 문서가 쓴다) */
+/** 배포(`secure` 모드)에서 브라우저에 적히는 쿠키 이름(계약 문서가 쓴다) */
 export const SESSION_COOKIE_NAME = `${COOKIE_NAME_PREFIX_OF[COOKIE_PREFIX]}${SESSION_COOKIE}`;
-
-const COOKIE_ATTRIBUTES: CookieOptions = {
-  prefix: COOKIE_PREFIX,
-  httpOnly: true,
-  secure: true,
-  sameSite: "Strict",
-  path: "/",
-};
 
 function readCredentials(body: unknown): { username: string; password: string } | null {
   if (typeof body !== "object" || body === null) return null;
@@ -90,6 +78,7 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
     sessionTtlSeconds = DEFAULT_TTL_SECONDS,
     loginFailureDelayMs = DEFAULT_FAILURE_DELAY_MS,
     now = Date.now,
+    sessionCookie = "secure",
   } = options;
   if (Buffer.byteLength(sessionSecret, "utf8") < MIN_SECRET_BYTES) {
     throw new Error(`sessionSecret은 ${MIN_SECRET_BYTES}바이트 이상이어야 한다`);
@@ -101,6 +90,7 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
     sessionTtlSeconds,
     loginFailureDelayMs,
     nowSeconds,
+    cookie: SESSION_COOKIE_OF[sessionCookie],
     lockout: createLoginLockout(),
   };
 }
@@ -114,9 +104,9 @@ const SESSION_FREE_METHODS: ReadonlySet<string> = new Set(["POST", "DELETE"]);
 /** 서명 · 만료가 맞는 세션 쿠키의 계정 id. 없거나 위조 · 만료면 null */
 export async function sessionAccountId(
   c: Context,
-  { sessionSecret, nowSeconds }: SessionConfig,
+  { sessionSecret, nowSeconds, cookie }: SessionConfig,
 ): Promise<string | null> {
-  const value = await getSignedCookie(c, sessionSecret, SESSION_COOKIE, COOKIE_PREFIX);
+  const value = await getSignedCookie(c, sessionSecret, SESSION_COOKIE, cookie.prefix);
   if (typeof value !== "string") return null;
   const expiresAt = expiresAtOf(value);
   if (expiresAt === null || expiresAt <= nowSeconds()) return null;
@@ -160,7 +150,7 @@ export function requireSession(config: SessionConfig): MiddlewareHandler {
 }
 
 export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
-  const { sessionSecret, sessionTtlSeconds, nowSeconds } = config;
+  const { sessionSecret, sessionTtlSeconds, nowSeconds, cookie } = config;
 
   app.post(SESSION_PATH, async (c) => {
     let body: unknown;
@@ -177,7 +167,7 @@ export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
 
     const expiresAt = nowSeconds() + sessionTtlSeconds;
     await setSignedCookie(c, SESSION_COOKIE, `${account.id}.${expiresAt}`, sessionSecret, {
-      ...COOKIE_ATTRIBUTES,
+      ...cookie,
       maxAge: sessionTtlSeconds,
     });
     return c.body(null, 204);
@@ -188,7 +178,7 @@ export function registerSessionRoutes(app: Hono, config: SessionConfig): void {
 
   // 멱등 — 세션이 없거나 만료돼도 204다(화면이 만료된 세션에서 로그아웃을 눌러도 오류가 아니다)
   app.delete(SESSION_PATH, (c) => {
-    deleteCookie(c, SESSION_COOKIE, COOKIE_ATTRIBUTES);
+    deleteCookie(c, SESSION_COOKIE, cookie);
     return c.body(null, 204);
   });
 }

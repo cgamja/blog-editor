@@ -46,7 +46,7 @@ test("WHEN 저장된 글의 편집 주소를 열면 THEN 제목과 본문이 채
       content: [{ type: "paragraph", content: [{ type: "text", text: EXISTING_POST.body }] }],
     },
   };
-  // 세션 쿠키가 Secure(__Host-)라 http 루프백에서 page.request는 싣지 않는다(401 실측) — 페이지의 fetch로 만든다
+  // 화면과 같은 출처 · 세션 쿠키로 만든다
   const status = await page.evaluate(
     async ({ slug, file }) => {
       const response = await fetch(`/api/posts/${slug}`, {

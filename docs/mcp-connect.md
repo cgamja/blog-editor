@@ -42,6 +42,7 @@ claude.ai는 Anthropic 클라우드에서 서버로 접속한다 — **서버가
    echo "PUBLIC_BASE_URL=https://xxx.trycloudflare.com" >> .env
    pnpm --filter @blog-editor/api dev                 # 로그에 oauth: https://xxx… 가 찍힌다
    ```
+   이 값이 `.env`에 있는 동안은 세션 쿠키가 배포와 같은 Secure라 로컬 에디터에 Safari로 로그인할 수 없다(Chrome은 된다, adr-026). 값을 빼고 다시 켜면 돌아온다.
 2. **Customize › Connectors › Add custom connector** → URL `https://xxx.trycloudflare.com/mcp`, 인증 칸(OAuth Client ID/Secret)은 **비운다** — claude.ai가 스스로 등록한다(DCR)
 3. 연결하면 로그인 · 동의 화면이 뜬다 → 에디터 아이디 · 비밀번호(`.env`의 `ADMIN_USERNAME` · `ADMIN_PASSWORD`) → **허용**
 4. 채팅의 **+ › Connectors**에서 켠다. 초안 출처는 `token:oauth-claude-ai`로 적힌다
