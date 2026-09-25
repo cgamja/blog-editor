@@ -168,3 +168,24 @@ describe("ordered-list-start — 시작 번호 1은 정규형에서 지운다", 
     expect(result.content[0]).not.toHaveProperty("attrs");
   });
 });
+
+describe("normalize — 문단 끝의 강제 줄바꿈은 지운다", () => {
+  const br = { type: "hardBreak" } as const;
+  const t = (text: string) => ({ type: "text", text }) as const;
+
+  it("WHEN 앞 · 가운데 · 끝에 hardBreak가 있으면 THEN 끝의 것만 지운다", () => {
+    const doc = docSchema.parse({
+      type: "doc",
+      content: [{ type: "paragraph", content: [br, t("가"), br, br, t("나"), br, br] }],
+    });
+    expect(normalize(doc).content[0]).toEqual({
+      type: "paragraph",
+      content: [br, t("가"), br, br, t("나")],
+    });
+  });
+
+  it("WHEN hardBreak뿐인 문단이면 THEN content 없는 빈 문단이 된다", () => {
+    const doc = docSchema.parse({ type: "doc", content: [{ type: "paragraph", content: [br] }] });
+    expect(normalize(doc).content[0]).toEqual({ type: "paragraph" });
+  });
+});

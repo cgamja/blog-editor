@@ -1,8 +1,15 @@
 import { DOMParser, Fragment, Slice } from "@tiptap/pm/model";
 import type { Node } from "@tiptap/pm/model";
 import { EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { dropPoint } from "@tiptap/pm/transform";
 import type { EditorView } from "@tiptap/pm/view";
-import { createEditorSchema, docFromNode, normalizePastedSlice, pasteNormalizer } from "../index";
+import {
+  createEditorSchema,
+  docFromNode,
+  normalizeDroppedSlice,
+  normalizePastedSlice,
+  pasteNormalizer,
+} from "../index";
 import { el, markFromStyle, miniDomFromSpecs, readWith } from "../dom.test.helpers";
 
 const schema = createEditorSchema();
@@ -242,6 +249,217 @@ describe("editor-paste: 표 조각은 붙일 자리에 맞게 정규화된다", 
     const table = saved.content[0];
     expect(table?.type === "table" && table.content[1]?.content[0]?.content[0].content).toEqual([
       { type: "text", text: "본문가 나" },
+    ]);
+  });
+
+  it("WHEN <p>가<br>나</p>를 최상위 빈 문단과 칸 자리에 각각 붙인다 THEN 문단은 hardBreak로 나뉘고 칸은 공백 하나로 이어진다", () => {
+    const html = miniDomFromSpecs([["p", "가", ["br"], "나"]]);
+    const slice = DOMParser.fromSchema(schema).parseSlice(
+      html as unknown as Parameters<DOMParser["parseSlice"]>[0],
+    );
+
+    const top = stateWith([paragraph.create()], 1);
+    const topSaved = docFromNode(
+      top.apply(top.tr.replaceSelection(normalizePastedSlice(slice, { intoTopLevel: true }))).doc,
+    );
+    expect(topSaved.content).toEqual([
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "가" },
+          { type: "hardBreak" },
+          { type: "text", text: "나" },
+        ],
+      },
+    ]);
+
+    const cell = stateInCell();
+    const intoCell = normalizePastedSlice(slice, { intoTopLevel: false, intoTableCell: true });
+    const cellSaved = docFromNode(cell.apply(cell.tr.replaceSelection(intoCell)).doc);
+    const table = cellSaved.content[0];
+    expect(table?.type === "table" && table.content[1]?.content[0]?.content[0].content).toEqual([
+      { type: "text", text: "본문가 나" },
+    ]);
+  });
+});
+
+describe("editor-paste: 붙여넣은 br은 자리에 맞게 읽힌다", () => {
+  const parse = (specs: Parameters<typeof miniDomFromSpecs>[0]) =>
+    DOMParser.fromSchema(schema).parseSlice(
+      miniDomFromSpecs(specs) as unknown as Parameters<DOMParser["parseSlice"]>[0],
+    );
+
+  it("WHEN <p>가<br>나</p>를 제목 글자 끝에 붙인다 THEN 제목 하나에 공백 하나로 이어지고 docFromNode를 통과한다", () => {
+    const heading = schema.nodes.heading!.create({ level: 2 }, schema.text("제목"));
+    const state = stateWith([heading], 3);
+    const plugin = pasteNormalizer();
+    const slice = plugin.props.transformPasted!.call(
+      plugin,
+      parse([["p", "가", ["br"], "나"]]),
+      { state } as EditorView,
+      false,
+    );
+
+    const saved = docFromNode(state.apply(state.tr.replaceSelection(slice)).doc);
+
+    expect(saved.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "제목가 나" }] },
+    ]);
+  });
+
+  it("WHEN <b>가<br>나</b>를 빈 문단에 붙인다 THEN 글자만 굵고 hardBreak에는 마크가 없다", () => {
+    const normalized = normalizePastedSlice(parse([["p", ["b", "가", ["br"], "나"]]]), {
+      intoTopLevel: true,
+    });
+    const breaks: Node[] = [];
+    normalized.content.descendants((node) => {
+      if (node.type.name === "hardBreak") breaks.push(node);
+    });
+    const state = stateWith([paragraph.create()], 1);
+    const saved = docFromNode(state.apply(state.tr.replaceSelection(normalized)).doc);
+
+    expect(breaks.map((node) => node.marks.length)).toEqual([0]);
+    expect(saved.content).toEqual([
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", text: "가", marks: [{ type: "bold" }] },
+          { type: "hardBreak" },
+          { type: "text", text: "나", marks: [{ type: "bold" }] },
+        ],
+      },
+    ]);
+  });
+});
+
+describe("editor-paste: 끌어 놓기는 놓는 자리로 한 줄 여부를 정한다", () => {
+  const hardBreak = () => schema.nodes.hardBreak!.create();
+  const heading = () => schema.nodes.heading!.create({ level: 2 }, schema.text("제목"));
+  /** 문단 가 · hardBreak · 나를 글자만 고른 조각(열린 문단) — 에디터 안 끌기가 만드는 모양 */
+  const draggedLine = () => {
+    const doc = schema.nodes.doc!.create(null, [
+      paragraph.create(null, [schema.text("가"), hardBreak(), schema.text("나")]),
+    ]);
+    return doc.slice(1, 4);
+  };
+  /** prosemirror-view 1.42.5 handleDrop처럼 dropPoint 자리에 replaceRange로 넣는다 */
+  function dropInto(state: EditorState, at: number, slice: Slice): EditorState {
+    const pos = dropPoint(state.doc, at, slice) ?? at;
+    return state.apply(state.tr.replaceRange(pos, pos, slice));
+  }
+  const headingText = (state: EditorState) => docFromNode(state.doc).content[0];
+
+  it("WHEN 에디터 안에서 가 · hardBreak · 나를 끌어 제목 가운데에 놓는다 THEN 제목이 나뉘지 않고 제가 나목이 된다", () => {
+    const state = stateWith([heading(), paragraph.create(null, schema.text("본문"))], 7);
+    const slice = normalizeDroppedSlice(draggedLine(), state.doc.resolve(2), { moving: true });
+
+    expect(headingText(dropInto(state, 2, slice))).toEqual({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: "제가 나목" }],
+    });
+  });
+
+  it("WHEN 밖에서 끌어 온 가 · hardBreak · 나를 표 칸 글자 끝에 놓는다 THEN 칸 글자가 공백 하나로 이어진다", () => {
+    const cellNode = schema.nodes.tableCell!.create(
+      null,
+      paragraph.create(null, schema.text("칸")),
+    );
+    const table = schema.nodes.table!.create(null, schema.nodes.tableRow!.create(null, cellNode));
+    const state = stateWith([table, paragraph.create(null, schema.text("본문"))], 11);
+    const slice = normalizeDroppedSlice(draggedLine(), state.doc.resolve(5), { moving: false });
+
+    const saved = docFromNode(dropInto(state, 5, slice).doc);
+
+    const first = saved.content[0];
+    expect(first?.type === "table" && first.content[0]?.content[0]?.content[0].content).toEqual([
+      { type: "text", text: "칸가 나" },
+    ]);
+  });
+
+  it("WHEN 커서는 문단에 둔 채 가 · hardBreak · 나를 제목 가운데에 끌어 놓는다(플러그인) THEN 선택이 아니라 놓는 자리로 공백이 되고, 다음 붙여넣기는 다시 선택을 따른다", () => {
+    const state = stateWith([heading(), paragraph.create(null, schema.text("본문"))], 7);
+    const plugin = pasteNormalizer();
+    const view = {
+      state,
+      dragging: { slice: draggedLine(), move: true },
+      posAtCoords: () => ({ pos: 2, inside: 1 }),
+    } as unknown as EditorView;
+
+    // node 테스트 환경에는 DOM lib(DragEvent)이 없다 — 핸들러가 읽는 좌표만 싣는다
+    const dropEvent = { clientX: 1, clientY: 1 } as Parameters<
+      NonNullable<NonNullable<typeof plugin.props.handleDOMEvents>["drop"]>
+    >[1];
+    plugin.props.handleDOMEvents!.drop!.call(plugin, view, dropEvent);
+    const dropped = plugin.props.transformPasted!.call(plugin, draggedLine(), view, false);
+    const pasted = plugin.props.transformPasted!.call(
+      plugin,
+      draggedLine(),
+      { state } as EditorView,
+      false,
+    );
+
+    expect(headingText(dropInto(state, 2, dropped))).toEqual({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: "제가 나목" }],
+    });
+    const pastedTypes: string[] = [];
+    pasted.content.descendants((node) => {
+      pastedTypes.push(node.type.name);
+    });
+    expect(pastedTypes).toContain("hardBreak");
+  });
+
+  it("WHEN 제목 위에 파일을 놓아 다른 플러그인이 놓기를 받고(transformPasted 없음) 이어서 문단에 붙여넣는다 THEN 붙여넣기는 선택을 따라 hardBreak를 지킨다", async () => {
+    const state = stateWith([heading(), paragraph.create(null, schema.text("본문"))], 7);
+    const plugin = pasteNormalizer();
+    const view = {
+      state,
+      dragging: null,
+      posAtCoords: () => ({ pos: 2, inside: 1 }),
+    } as unknown as EditorView;
+    const dropEvent = { clientX: 1, clientY: 1 } as Parameters<
+      NonNullable<NonNullable<typeof plugin.props.handleDOMEvents>["drop"]>
+    >[1];
+
+    // 파일 놓기 — image-file-input의 handleDrop이 true를 돌려 붙여넣기 정규화의 transformPasted · handleDrop은 오지 않는다
+    plugin.props.handleDOMEvents!.drop!.call(plugin, view, dropEvent);
+    // 놓기 이벤트가 끝나고(마이크로태스크까지) 한참 뒤의 붙여넣기
+    await Promise.resolve();
+    const pasted = plugin.props.transformPasted!.call(
+      plugin,
+      draggedLine(),
+      { state } as EditorView,
+      false,
+    );
+
+    const pastedTypes: string[] = [];
+    pasted.content.descendants((node) => {
+      pastedTypes.push(node.type.name);
+    });
+    expect(pastedTypes).toContain("hardBreak");
+  });
+
+  it("WHEN 인라인 조각 가 · hardBreak · 나를 제목 글자 끝에 붙인다 THEN 제목 하나에 공백 하나로 이어진다", () => {
+    const state = stateWith([heading()], 3);
+    const plugin = pasteNormalizer();
+    const inline = new Slice(
+      Fragment.fromArray([schema.text("가"), hardBreak(), schema.text("나")]),
+      0,
+      0,
+    );
+
+    const slice = plugin.props.transformPasted!.call(
+      plugin,
+      inline,
+      { state } as EditorView,
+      false,
+    );
+    const saved = docFromNode(state.apply(state.tr.replaceSelection(slice)).doc);
+
+    expect(saved.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "제목가 나" }] },
     ]);
   });
 });
