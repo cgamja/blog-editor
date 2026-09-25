@@ -337,7 +337,11 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
 export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   const root = doc as unknown as JsonNode;
   const blocks = collectTextBlocks(root);
-  const located = locate(blocks, edit.selection.replace(MARKDOWN_HARD_BREAK, HARD_BREAK_TEXT));
+  // 글자 그대로 먼저 — 코드 블록에는 `\` + 줄바꿈이 글자로 있다. 못 찾으면 get_post의 강제 줄바꿈 표기로 읽는다
+  const asHardBreaks = edit.selection.replace(MARKDOWN_HARD_BREAK, HARD_BREAK_TEXT);
+  const literal = locate(blocks, edit.selection);
+  const located =
+    literal.ok || asHardBreaks === edit.selection ? literal : locate(blocks, asHardBreaks);
   if (!located.ok) return located;
   const { start, end } = located.found;
   const range: EditRange = {
