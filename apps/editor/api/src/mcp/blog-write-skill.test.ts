@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { convertMarkdown } from "@blog-editor/content-convert";
 
 /**
@@ -7,6 +8,12 @@ import { convertMarkdown } from "@blog-editor/content-convert";
  * 예시는 형식 가이드와 같은 `example` 펜스로 표시하고, 뽑는 규칙도 형식 가이드 추출기(content-convert convert.test.ts)와 같다.
  */
 const SKILL_URL = new URL("../../../../../.claude/skills/blog-write/SKILL.md", import.meta.url);
+// Codex는 `.agents/skills`를 읽는다 — 원본을 가리키는 심볼릭 링크 폴더(adr-035)
+const CODEX_SKILL_DIR = new URL("../../../../../.agents/skills/blog-write", import.meta.url);
+const CODEX_SKILL_URL = new URL(
+  "../../../../../.agents/skills/blog-write/SKILL.md",
+  import.meta.url,
+);
 
 function extractExampleBlocks(markdown: string): string[] {
   const lines = markdown.split("\n");
@@ -38,5 +45,12 @@ describe("blog-write-skill", () => {
       const result = convertMarkdown(block);
       expect(result.ok ? [] : result.messages, block).toEqual([]);
     }
+  });
+
+  it("WHEN Codex 경로(.agents/skills)의 SKILL.md를 읽으면 THEN 원본을 가리키는 링크이고 내용이 같다", () => {
+    expect(lstatSync(CODEX_SKILL_DIR).isSymbolicLink()).toBe(true);
+    expect(realpathSync(CODEX_SKILL_URL)).toBe(realpathSync(SKILL_URL));
+    expect(readFileSync(CODEX_SKILL_URL, "utf8")).toBe(readFileSync(SKILL_URL, "utf8"));
+    expect(fileURLToPath(CODEX_SKILL_URL)).toContain("/.agents/skills/");
   });
 });
