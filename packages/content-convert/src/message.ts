@@ -234,13 +234,18 @@ export function calloutToneMessage(topLevel: number, line: number, received: str
   );
 }
 
-export function hardBreakMessage(topLevel: number, line: number, received: string): FoundMessage {
+/** 강제 줄바꿈은 문단 안에만(adr-028) — 제목 · 표 칸은 한 줄 문법이다 */
+export function hardBreakPlaceMessage(
+  topLevel: number,
+  line: number,
+  received: string,
+): FoundMessage {
   return blockMessage(
     topLevel,
     line,
-    "줄 끝 공백 둘이나 \\로 강제 줄바꿈은 쓸 수 없다",
+    "강제 줄바꿈(줄 끝 \\ · 공백 둘)은 문단 안에만 쓴다",
     received,
-    "문단을 그대로 잇거나(공백 하나) 새 문단으로 나눈다",
+    "제목 · 표 칸은 한 줄로 쓰거나 새 문단으로 나눈다",
   );
 }
 

@@ -173,6 +173,15 @@ const textSchema = z.strictObject({
   marks: marksArraySchema.optional(),
 });
 
+/**
+ * 강제 줄바꿈(adr-028) — 문단(최상위 · 안쪽) 안에만 온다. 제목 · 표 칸은 markdown에서 한 줄 문법이라 자리가 없다.
+ * 마크 · attrs가 없다 — 줄바꿈은 글자가 아니라 꾸밀 것이 없다.
+ */
+const hardBreakSchema = z.strictObject({ type: z.literal("hardBreak") });
+
+/** 문단 인라인 — 글자와 강제 줄바꿈 */
+const paragraphInlineSchema = z.discriminatedUnion("type", [textSchema, hardBreakSchema]);
+
 /** codeBlock 안 텍스트 — "마크 없는 text"라 marks 자리 자체가 없다. */
 const codeBlockTextSchema = z.strictObject({
   type: z.literal("text"),
@@ -294,6 +303,12 @@ const appScreenshotAttrsSchema = z
 
 const innerParagraphSchema = z.strictObject({
   type: z.literal("paragraph"),
+  content: z.array(paragraphInlineSchema).optional(),
+});
+
+/** 표 칸 안 문단 — GFM 칸은 한 줄 인라인이라 강제 줄바꿈 자리가 없다(adr-028) */
+const cellParagraphSchema = z.strictObject({
+  type: z.literal("paragraph"),
   content: z.array(textSchema).optional(),
 });
 
@@ -352,7 +367,7 @@ const innerListSchema: z.ZodType<InnerListNode> = z.lazy(() =>
 const tableCellSchema = z.strictObject({
   type: z.literal("tableCell"),
   attrs: z.strictObject({ align: alignSchema.optional() }).optional(),
-  content: z.tuple([innerParagraphSchema]),
+  content: z.tuple([cellParagraphSchema]),
 });
 
 const tableRowSchema = z.strictObject({
@@ -365,7 +380,7 @@ const tableRowSchema = z.strictObject({
 const paragraphSchema = z.strictObject({
   type: z.literal("paragraph"),
   attrs: paragraphAttrsSchema.optional(),
-  content: z.array(textSchema).optional(),
+  content: z.array(paragraphInlineSchema).optional(),
 });
 
 const headingSchema = z.strictObject({
@@ -504,6 +519,9 @@ export const docSchema = z
 
 export type Mark = z.infer<typeof markSchema>;
 export type TextNode = z.infer<typeof textSchema>;
+export type HardBreakNode = z.infer<typeof hardBreakSchema>;
+/** 문단 안 인라인 — 제목 · 표 칸은 TextNode만 */
+export type InlineNode = z.infer<typeof paragraphInlineSchema>;
 export type Sticker = z.infer<typeof stickerSchema>;
 /**
  * 꾸미기 속성의 합집합 타입 — 실제 노드는 각자의 좁은 attrs 스키마를 쓴다(font는 글자 블록만,

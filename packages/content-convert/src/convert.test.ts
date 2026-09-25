@@ -116,17 +116,77 @@ describe("markdown-format", () => {
     }
   });
 
-  it("WHEN soft break과 hard break을 각각 변환하면 THEN soft break만 받는다", () => {
+  it("WHEN soft break · 줄 끝 공백 둘 · 줄 끝 백슬래시를 각각 변환하면 THEN soft는 공백, 뒤의 둘은 hardBreak다", () => {
     const soft = convertMarkdown(["첫 줄", "둘째 줄"].join("\n"));
     expectOk(soft);
     expect(soft.doc.content).toEqual([
       { type: "paragraph", content: [{ type: "text", text: "첫 줄 둘째 줄" }] },
     ]);
 
-    // 줄 끝 공백 둘(hard break) — 스키마에 자리가 없어 거부된다
-    const hard = convertMarkdown(["첫 줄  ", "둘째 줄"].join("\n"));
-    expectFail(hard);
-    expect(hard.messages.length).toBeGreaterThan(0);
+    const broken = {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "첫 줄" },
+        { type: "hardBreak" },
+        { type: "text", text: "둘째 줄" },
+      ],
+    };
+    for (const markdown of [
+      ["첫 줄  ", "둘째 줄"],
+      ["첫 줄\\", "둘째 줄"],
+    ]) {
+      const hard = convertMarkdown(markdown.join("\n"));
+      expectOk(hard);
+      expect(hard.doc.content).toEqual([broken]);
+    }
+  });
+
+  it("WHEN 목록 항목 안 줄 끝 백슬래시를 변환하면 THEN 항목 문단이 hardBreak로 나뉜다", () => {
+    const result = convertMarkdown(["- 첫 줄\\", "  둘째 줄"].join("\n"));
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "bulletList",
+      content: [
+        {
+          type: "listItem",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                { type: "text", text: "첫 줄" },
+                { type: "hardBreak" },
+                { type: "text", text: "둘째 줄" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("WHEN 굵은 글자 사이 줄 끝 백슬래시를 변환하면 THEN hardBreak에는 마크가 없다", () => {
+    const result = convertMarkdown(["**가\\", "나**"].join("\n"));
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "가", marks: [{ type: "bold" }] },
+        { type: "hardBreak" },
+        { type: "text", text: "나", marks: [{ type: "bold" }] },
+      ],
+    });
+  });
+
+  it("WHEN setext 제목 안에 줄 끝 백슬래시를 쓰면 THEN 강제 줄바꿈은 문단 안에만 쓴다는 메시지로 거부한다", () => {
+    const result = convertMarkdown(["가\\", "나", "---"].join("\n"));
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/강제 줄바꿈/);
+  });
+
+  it("WHEN 그림 뒤에 줄 끝 백슬래시로 글자를 이으면 THEN 글자와 섞인 인라인 이미지로 거부한다", () => {
+    const result = convertMarkdown(["![a](/images/a.webp)\\", "설명"].join("\n"));
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/이미지/);
   });
 
   it("WHEN 순서 목록이 1부터 · 3부터 시작하면 THEN 앞은 start 없이, 뒤는 start 3으로 받는다", () => {
@@ -390,7 +450,8 @@ describe("markdown-directive", () => {
     expect(heading.attrs).toEqual({ level: 2, font: "jua", motion: "fade-up" });
     expect(paragraph.attrs).toBeUndefined();
     expect(heading.content?.[0]?.text ?? "").not.toContain("{");
-    expect(paragraph.content?.[0]?.text ?? "").not.toContain("{");
+    const firstInline = paragraph.content?.[0];
+    expect(firstInline?.type === "text" ? firstInline.text : "").not.toContain("{");
   });
 
   it("WHEN 문단 앞 {align=center} · 이미지 앞 {frame=app align=right}를 쓰면 THEN 정렬이 attrs가 된다", () => {

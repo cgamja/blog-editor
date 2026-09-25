@@ -48,6 +48,8 @@ export type {
   Block,
   Mark,
   TextNode,
+  HardBreakNode,
+  InlineNode,
   DecorationAttrs,
   TextStyleAttrs,
   Sticker,

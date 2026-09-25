@@ -61,3 +61,12 @@
 
 - **WHEN** 머리 행 `이름` · `값`(`align: "right"`), 본문 행 `가` · `1`인 표를 렌더한다
 - **THEN** 출력이 `<div class="post-table-scroll"><table><thead><tr><th scope="col">이름</th><th scope="col" data-align="right">값</th></tr></thead><tbody><tr><td>가</td><td data-align="right">1</td></tr></tbody></table></div>`다
+
+### Requirement: 강제 줄바꿈은 br로 낸다
+
+렌더러는 SHALL `hardBreak`를 속성 없는 `<br>`로 낸다. 문단 안 다른 인라인과 같은 자리에 둔다.
+
+#### Scenario: 문단 안 br
+
+- **WHEN** 문단 `가` · `hardBreak` · `나`(bold)를 렌더한다
+- **THEN** `<p>가<br><strong>나</strong></p>`가 나온다

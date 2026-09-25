@@ -72,6 +72,8 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   textstyle: { mark: "textStyle", getAttrs: (tok) => (tok.meta as { attrs: object }).attrs },
   // span_open/close는 검사용 틀이라 마크를 만들지 않는다
   span: { ignore: true },
+  // 줄 끝 `\` · 공백 둘(adr-028). 둘러싼 마크가 함께 실리지만 문서의 hardBreak에는 마크 자리가 없다 — buildDoc이 지운다
+  hardbreak: { node: "hardBreak" },
 });
 
 interface RawNode {
@@ -149,6 +151,16 @@ function toTableBlock(table: RawNode): RawNode {
   return { type: "table", content: rows };
 }
 
+/**
+ * MarkdownParser는 인라인 노드를 만들 때 그 자리의 마크를 붙인다(prosemirror-markdown 1.13.8 `MarkdownParseState.addNode`
+ * — `type.createAndFill(attrs, content, top ? top.marks : [])`). 강제 줄바꿈은 마크가 없는 노드라 지운다.
+ */
+function withoutHardBreakMarks(node: RawNode): RawNode {
+  if (node.type === "hardBreak") return { type: "hardBreak" };
+  if (node.content === undefined) return node;
+  return { ...node, content: node.content.map(withoutHardBreakMarks) };
+}
+
 function applyTopLevelBlock(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
   if (block.type === "table") return withDecoration(toTableBlock(block), directive);
   const solelyImage =
@@ -172,7 +184,7 @@ export function buildDoc(
   const content = (raw.content ?? []).map((block, i) => {
     const record = topLevelRecords[i];
     const directive = record ? resolvedByMapStart.get(record.mapStart0) : undefined;
-    return applyTopLevelBlock(block, directive);
+    return applyTopLevelBlock(withoutHardBreakMarks(block), directive);
   });
   return { type: "doc", content };
 }

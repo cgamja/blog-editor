@@ -132,6 +132,20 @@ describe("html-render", () => {
   });
 });
 
+describe("html-render — 강제 줄바꿈은 br로 낸다", () => {
+  it("WHEN 문단 가 · hardBreak · 굵은 나를 렌더하면 THEN p 안에 br이 들어간다", () => {
+    const file = docOf({
+      type: "paragraph",
+      content: [
+        { type: "text", text: "가" },
+        { type: "hardBreak" },
+        { type: "text", text: "나", marks: [{ type: "bold" }] },
+      ],
+    });
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toContain("<p>가<br><strong>나</strong></p>");
+  });
+});
+
 // ── render-safety (보호 대상 — 고쳐서 통과시키지 않는다) ─────────────────────
 
 describe("render-safety", () => {

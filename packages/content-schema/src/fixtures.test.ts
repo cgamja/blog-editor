@@ -7,9 +7,9 @@ import { BLOG_CATEGORIES } from "./categories.test.helpers";
 /**
  * document-fixtures spec은 #### Scenario 3개 — 1:1로 옮긴다.
  *
- * document-schema Requirement 1이 나열하는 노드는 doc을 뺀 15종(paragraph·heading·bulletList·
+ * document-schema Requirement 1이 나열하는 노드는 doc을 뺀 16종(paragraph·heading·bulletList·
  * orderedList·blockquote·codeBlock·horizontalRule·image·callout·appScreenshot·table·listItem·
- * tableRow·tableCell·text)이다. fixtures spec 제목의 "11종"은 이 나열과 어긋난다 — spec.md를
+ * tableRow·tableCell·text·hardBreak)이다. fixtures spec 제목의 "11종"은 이 나열과 어긋난다 — spec.md를
  * 고치지 않고, 스키마 Requirement가 실제로 정의한 전체 집합을 기준으로 커버리지를 검사한다(notes에 기록).
  */
 
@@ -34,6 +34,7 @@ const ALL_NODE_TYPES = [
   "listItem",
   "tableRow",
   "tableCell",
+  "hardBreak",
   "text",
 ];
 const ALL_MARK_TYPES = ["bold", "italic", "code", "link", "strike", "underline", "textStyle"];

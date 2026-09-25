@@ -169,7 +169,7 @@ const liftItemFixingSplit: Command = (state, dispatch) => {
 };
 
 /** 빈 항목은 위치와 상관없이 내어쓴다 — 라이브러리 splitListItem은 가운데 빈 항목이면 빈 항목을 하나 더 만든다(design.md 2) */
-const enterInList: Command = (state, dispatch) => {
+export const enterInList: Command = (state, dispatch) => {
   const listItem = listItemOf(state);
   if (listItem === undefined || !isInListItem(state)) return false;
   const { $from, empty } = state.selection;

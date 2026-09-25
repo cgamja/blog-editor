@@ -8,6 +8,7 @@ import {
 import type {
   Block,
   HEADING_LEVELS,
+  InlineNode,
   Mark,
   NaturalSizeAttrs,
   PostFile,
@@ -184,8 +185,13 @@ function renderImg(src: string, alt: string, attrs: NaturalSizeAttrs, ctx: Rende
 
 // ── 인라인(텍스트 + 마크) ────────────────────────────────────────────────
 
-function renderInline(content: readonly TextNode[] | undefined): string {
-  return (content ?? []).map(renderText).join("");
+function renderInline(content: readonly InlineNode[] | undefined): string {
+  return (content ?? []).map(renderInlineNode).join("");
+}
+
+/** 강제 줄바꿈은 속성 없는 br(adr-028) — 제목 · 표 칸 인라인은 TextNode만 오므로 같은 함수로 충분하다 */
+function renderInlineNode(node: InlineNode): string {
+  return node.type === "hardBreak" ? "<br>" : renderText(node);
 }
 
 function renderText(node: TextNode): string {

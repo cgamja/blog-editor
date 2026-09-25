@@ -75,6 +75,8 @@ const allBlocksDoc = {
               text: "인용 링크",
               marks: [{ type: "link", attrs: { href: "/blog/first-post" } }],
             },
+            { type: "hardBreak" },
+            { type: "text", text: "둘째 줄" },
           ],
         },
       ],
@@ -627,6 +629,49 @@ describe("document-schema — 표는 직사각형이고 첫 행이 머리 행이
     ["둘째 행 칸에 align이 있는 표", tableDoc([[{ text: "a" }], [{ text: "b", align: "right" }]])],
     ["칸에 문단이 둘인 표", twoParagraphCell],
     ["인용 안의 표", { type: "blockquote", content: [tableDoc([[{ text: "a" }]])] }],
+  ])("WHEN %s를 파싱하면 THEN success는 false다", (_label, block) => {
+    expect(docSchema.safeParse({ type: "doc", content: [block] }).success).toBe(false);
+  });
+});
+
+describe("document-schema — 강제 줄바꿈은 문단 안에만 온다", () => {
+  const broken = [
+    { type: "text", text: "첫 줄" },
+    { type: "hardBreak" },
+    { type: "text", text: "둘째 줄" },
+  ];
+
+  it("WHEN 최상위 문단과 목록 항목 문단에 hardBreak를 두면 THEN success는 true다", () => {
+    const topLevel = { type: "doc", content: [{ type: "paragraph", content: broken }] };
+    const inList = {
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [{ type: "listItem", content: [{ type: "paragraph", content: broken }] }],
+        },
+      ],
+    };
+    expect(docSchema.safeParse(topLevel).success).toBe(true);
+    expect(docSchema.safeParse(inList).success).toBe(true);
+  });
+
+  const inCell = {
+    type: "table",
+    content: [
+      {
+        type: "tableRow",
+        content: [{ type: "tableCell", content: [{ type: "paragraph", content: broken }] }],
+      },
+    ],
+  };
+  it.each([
+    ["제목 안 hardBreak", { type: "heading", attrs: { level: 2 }, content: broken }],
+    ["표 칸 문단 안 hardBreak", inCell],
+    [
+      "마크 붙은 hardBreak",
+      { type: "paragraph", content: [{ type: "hardBreak", marks: [{ type: "bold" }] }] },
+    ],
   ])("WHEN %s를 파싱하면 THEN success는 false다", (_label, block) => {
     expect(docSchema.safeParse({ type: "doc", content: [block] }).success).toBe(false);
   });

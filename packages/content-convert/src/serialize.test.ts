@@ -350,4 +350,40 @@ describe("serializeMarkdown", () => {
       messages: [],
     });
   });
+
+  it("WHEN 최상위 · 인용 · 목록 항목 문단에 hardBreak가 있으면 THEN 줄 끝 백슬래시로 쓰고 이어진 줄은 자리에 맞춰 쓴다", () => {
+    const hardBreak = { type: "hardBreak" };
+    const input = doc(
+      paragraph(text("- 가"), hardBreak, text("# 나")),
+      { type: "blockquote", content: [paragraph(text("다"), hardBreak, text("라"))] },
+      {
+        type: "bulletList",
+        content: [{ type: "listItem", content: [paragraph(text("마"), hardBreak, text("바"))] }],
+      },
+    );
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe(
+      ["\\- 가\\", "\\# 나", "", "> 다\\", "> 라", "", "- 마\\", "  바", ""].join("\n"),
+    );
+    expect(result.losses).toEqual([]);
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: normalize(input),
+      messages: [],
+    });
+  });
+
+  it("WHEN 여러 줄 문단의 줄이 표 머리 줄 · 구분 줄처럼 생겼으면 THEN 다시 읽어도 표가 아니다", () => {
+    const input = doc(paragraph(text("a | b"), { type: "hardBreak" }, text("| --- |")));
+
+    const result = serializeMarkdown(input);
+
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: normalize(input),
+      messages: [],
+    });
+  });
 });

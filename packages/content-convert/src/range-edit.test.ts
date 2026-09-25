@@ -458,3 +458,74 @@ describe("markdown-range-edit — 표", () => {
     expect(message).toContain("표");
   });
 });
+
+describe("markdown-range-edit — 강제 줄바꿈이 든 문단도 범위로 고친다", () => {
+  it("WHEN 첫 줄 · hardBreak · 둘째 줄 문단에서 뒤 줄만 · 줄바꿈에 걸쳐 · 줄바꿈이 든 새 글로 바꾼다 THEN 자리가 어긋나지 않고 범위 밖 줄바꿈은 남는다", () => {
+    const broken = doc({
+      type: "paragraph",
+      content: [text("첫 줄"), { type: "hardBreak" }, text("둘째 줄")],
+    });
+    const paragraphOf = (result: RangeEditResult) => {
+      expectOk(result);
+      return result.doc.content[0];
+    };
+
+    // 뒤 줄 글자만 — 줄바꿈 뒤 자리가 한 글자 밀리지 않는다
+    expect(
+      paragraphOf(
+        editDocRange(broken, { command: "replace", selection: "둘째", markdown: "셋째" }),
+      ),
+    ).toEqual({
+      type: "paragraph",
+      content: [text("첫 줄"), { type: "hardBreak" }, text("셋째 줄")],
+    });
+    // get_post 모양 그대로(`\` + 줄바꿈) 줄바꿈에 걸친 범위 — 줄바꿈도 함께 바뀐다
+    expect(
+      paragraphOf(
+        editDocRange(broken, {
+          command: "replace",
+          selection: "첫 줄\\\n둘째",
+          markdown: "하나",
+        }),
+      ),
+    ).toEqual({ type: "paragraph", content: [text("하나 줄")] });
+    // 새 글의 줄바꿈도 들어가고 범위 밖 줄바꿈은 남는다
+    expect(
+      paragraphOf(
+        editDocRange(broken, { command: "replace", selection: "첫 줄", markdown: "가\\\n나" }),
+      ),
+    ).toEqual({
+      type: "paragraph",
+      content: [
+        text("가"),
+        { type: "hardBreak" },
+        text("나"),
+        { type: "hardBreak" },
+        text("둘째 줄"),
+      ],
+    });
+  });
+});
+
+describe("markdown-range-edit — 코드 블록의 백슬래시 줄 끝은 글자 그대로 찾는다", () => {
+  it("WHEN 코드 블록 글자 `a \\` + 줄바꿈 + `b`를 그대로 집어 바꾼다 THEN 강제 줄바꿈 표기로 읽지 않고 찾는다", () => {
+    const input = doc({
+      type: "codeBlock",
+      attrs: { language: "sh" },
+      content: [text("echo a \\\n  b")],
+    });
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "a \\\n  b",
+      markdown: "c",
+    });
+
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "codeBlock",
+      attrs: { language: "sh" },
+      content: [text("echo c")],
+    });
+  });
+});
