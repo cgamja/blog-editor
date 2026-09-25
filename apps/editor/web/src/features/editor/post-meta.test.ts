@@ -1,4 +1,5 @@
-import { missingForSave } from "./post-meta";
+import { fixtures } from "@blog-editor/content-schema";
+import { missingForSave, withMetaPatch } from "./post-meta";
 
 describe("web-post-meta — 저장을 막는 빈칸", () => {
   it("WHEN 제목 · 설명 · 카테고리가 비고 주소가 빈 글을 보면 THEN 제목 · 설명 · 카테고리 · 주소 순서다", () => {
@@ -17,5 +18,17 @@ describe("web-post-meta — 저장을 막는 빈칸", () => {
         "sleep-log",
       ),
     ).toEqual([]);
+  });
+});
+
+describe("web-post-meta — 핵심 검색어 칸", () => {
+  it("WHEN 핵심 검색어를 적었다가 공백으로 비우면 THEN 적으면 들어가고 비우면 키가 빠진다", () => {
+    const meta = fixtures.minimal.meta;
+
+    const filled = withMetaPatch(meta, { keyword: "봄 산책" });
+    const cleared = withMetaPatch(filled, { keyword: "  " });
+
+    expect(filled.keyword).toBe("봄 산책");
+    expect(cleared).not.toHaveProperty("keyword");
   });
 });

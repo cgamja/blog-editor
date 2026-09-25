@@ -100,3 +100,21 @@ describe("public-posts-api — 본문용 CSS", () => {
     expect(await res.text()).toBe(readFileSync(cssPath, "utf8"));
   });
 });
+
+describe("public-posts-api — 핵심 검색어는 나가지 않는다", () => {
+  it("WHEN keyword가 있는 발행 글을 공개 조회하면 THEN 그 글 항목에 keyword 키가 없다", async () => {
+    const { store, app } = setup();
+    const withKeyword = published(fixtures.allBlocks);
+    await store.put(
+      "feature-tour",
+      { ...withKeyword, meta: { ...withKeyword.meta, keyword: "봄 산책" } },
+      null,
+    );
+
+    const body = (await (await app.request("/public/posts")).json()) as {
+      posts: Array<Record<string, unknown>>;
+    };
+
+    expect(body.posts[0]).not.toHaveProperty("keyword");
+  });
+});
