@@ -72,7 +72,12 @@ codex mcp list   # blog-editor가 보이면 된다
   security add-generic-password -a "$USER" -s blog-editor-mcp -w   # 토큰을 묻는다(한 번)
   BLOG_EDITOR_MCP_TOKEN="$(security find-generic-password -a "$USER" -s blog-editor-mcp -w)" codex
   ```
-- 그 셸에서만 `export`한다. 창을 닫으면 사라지므로 매번 넣어야 한다.
+- 그 셸에서만 쓴다. 값을 입력 프롬프트로 받아 셸 기록(`~/.zsh_history`)에 남지 않게 한다. 창을 닫으면 사라지므로 매번 넣어야 한다:
+  ```bash
+  read -rs BLOG_EDITOR_MCP_TOKEN && export BLOG_EDITOR_MCP_TOKEN   # 토큰을 붙여 넣고 Enter(화면에 안 보인다)
+  ```
+
+어느 쪽이든 명령줄에 토큰 값을 직접 쓰지 않는다.
 
 로컬 루프백 서버라 `~/.zshrc`에 두는 편리함을 고를 수도 있다. 그 경우에는 그 파일이 어디로 복사 · 동기화되는지 알고 고른다.
 
@@ -105,7 +110,7 @@ approval_mode = "prompt"
 **비대화형 `codex exec`.** 이 모드는 허락을 물을 수 없다. 그래서 `prompt`로 둔 도구는 `MCP tool call requires approval, but approval policy is never`로 실패한다. 위 설정이면 읽기와 `create_draft`는 되고 `update_draft`만 실패한다(2026-09-25 실제로 확인). 그 한 번의 실행에서 고치기까지 맡길 때만 그 실행에 `-c`로 허락을 준다:
 
 ```bash
-codex exec -c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"' '$blog-seo <주소>'
+codex exec -c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"' '$blog-write <주제>'
 ```
 
 **웹 검색.** Codex 기본 웹 검색(`web_search = "cached"`)은 OpenAI가 관리하는 색인만 보고 원문 페이지에 가지 않는다(같은 config-reference). `/blog-write`는 숫자 · 사실을 원문에서 확인하므로 실시간 검색을 켠다: 대화형은 `codex --search`, `codex exec`는 `-c 'web_search="live"'`, 늘 쓰려면 `web_search = "live"`. 켜지 않으면 스킬은 원문을 확인하지 못한 사실을 쓰지 않고 그렇다고 알린다.
