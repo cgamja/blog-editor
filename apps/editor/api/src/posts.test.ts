@@ -62,6 +62,17 @@ describe("posts-api — 목록 · 조회", () => {
     expect(body.posts[2]).not.toHaveProperty("doc");
   });
 
+  it("WHEN 목록을 부르면 THEN 요약에 설명이 있어 발행 확인이 설명 중복도 점검한다", async () => {
+    const { store, app } = setup();
+    await store.put("beta-open", fixtures.minimal, null);
+
+    const body = (await (await app.request("/api/posts")).json()) as {
+      posts: Array<Record<string, unknown>>;
+    };
+
+    expect(body.posts[0]).toMatchObject({ description: fixtures.minimal.meta.description });
+  });
+
   it("WHEN 저장된 글 · 없는 slug · 잘못된 slug를 조회하면 THEN 200+ETag · 404 · 400이다", async () => {
     const { store, app } = setup();
     const { revision } = await store.put("beta-open", fixtures.minimal, null);
