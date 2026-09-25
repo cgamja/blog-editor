@@ -22,8 +22,12 @@ import type {
   TextPoint,
 } from "./range-edit.types";
 
-/** 시작 · 끝 글을 나누는 표시 — AI가 말줄임표 한 글자로 써도 받는다 */
-const ELLIPSIS = /\.\.\.|…/;
+/**
+ * 시작 · 끝 글을 나누는 표시 — AI가 말줄임표 한 글자로 써도 받는다. 점은 넷 이상 이어질 수 있다
+ * (마침표로 끝나는 시작 글 바로 뒤에 `...`를 붙인 경우).
+ */
+const ELLIPSIS = /\.{3,}|…/;
+const ELLIPSIS_DOTS = 3;
 /** 여러 곳을 알릴 때 범위 앞뒤로 보여 줄 글자 수 */
 const AROUND_CHARS = 12;
 /** 여러 곳을 알릴 때 늘어놓을 최대 개수 — 그 이상은 어차피 더 긴 글이 필요하다 */
@@ -57,13 +61,20 @@ function collectTextBlocks(doc: JsonNode): TextBlockRef[] {
   return found;
 }
 
-function splitSelection(selection: string): { start: string; end: string } | null {
+/**
+ * 첫 말줄임표에서 나누는 자리들을 앞에서부터 준다. 점이 넷 이상 이어지면 그 줄의 첫 `...`와 마지막
+ * `...` 두 자리다 — 마지막 자리는 앞의 점을 시작 글의 마침표로 본다.
+ */
+function splitSelection(selection: string): { start: string; end: string }[] {
   const match = ELLIPSIS.exec(selection);
-  if (match === null) return null;
-  return {
-    start: selection.slice(0, match.index).trim(),
-    end: selection.slice(match.index + match[0].length).trim(),
-  };
+  if (match === null) return [];
+  const cut = (at: number, length: number) => ({
+    start: selection.slice(0, at).trim(),
+    end: selection.slice(at + length).trim(),
+  });
+  const run = match[0].length;
+  if (run <= ELLIPSIS_DOTS) return [cut(match.index, run)];
+  return [cut(match.index, ELLIPSIS_DOTS), cut(match.index + run - ELLIPSIS_DOTS, ELLIPSIS_DOTS)];
 }
 
 function indexesOf(text: string, needle: string): number[] {
@@ -119,20 +130,25 @@ function pick(
 }
 
 /**
- * "시작...끝"으로 먼저 찾고, 한쪽이 비었거나 찾지 못하면 `...`까지 글자 그대로 다시 찾는다
- * (글에 말줄임표가 들어 있는 경우).
+ * 시도 순서는 첫 `...`에서 나누기 → (점이 넷 이상이면) 마지막 `...`에서 나누기 → 글자 그대로다.
+ * 한 곳으로 정해지는 첫 시도를 쓰고, 없으면 여러 곳인 첫 시도로 알리고, 그것도 없으면 못 찾았다고 알린다.
  */
 function locate(blocks: readonly TextBlockRef[], selection: string): Located {
   if (selection === "") return fail(selectionEmptyMessage());
-  const split = splitSelection(selection);
-  if (split === null) return pick(blocks, selection, candidatesOf(blocks, selection, null), false);
-  const ranged =
-    split.start === "" || split.end === "" ? [] : candidatesOf(blocks, split.start, split.end);
-  if (ranged.length === 1) return pick(blocks, selection, ranged, true);
-  // 나눠서 없거나 여러 곳이면, 글자 그대로 한 곳이 더 정확한 뜻이다
-  const literal = candidatesOf(blocks, selection, null);
-  const candidates = ranged.length === 0 || literal.length === 1 ? literal : ranged;
-  return pick(blocks, selection, candidates, true);
+  const literal = () => candidatesOf(blocks, selection, null);
+  const splits = splitSelection(selection);
+  if (splits.length === 0) return pick(blocks, selection, literal(), false);
+  const attempts = [
+    ...splits.map(({ start, end }) =>
+      start === "" || end === "" ? [] : candidatesOf(blocks, start, end),
+    ),
+    literal(),
+  ];
+  const chosen =
+    attempts.find((found) => found.length === 1) ??
+    attempts.find((found) => found.length > 1) ??
+    [];
+  return pick(blocks, selection, chosen, true);
 }
 
 /** 꾸밈 없는 문단 하나면 그 인라인 글 — 한 블록 안 글자 바꾸기로 쓸 수 있다 */

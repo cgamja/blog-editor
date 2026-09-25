@@ -34,7 +34,7 @@ export function selectionPartialBlockMessage(isInOneCodeBlock: boolean): string 
   const textOnly = isInOneCodeBlock
     ? "글자만 바꾸려면 펜스 없이 새 글만 보낸다"
     : "글자만 바꾸려면 꾸밈 줄 없이 문단 하나로 보낸다";
-  return `선택이 블록 일부만 덮는다 — 블록을 바꾸려면 블록(목록 · 인용 · 콜아웃 · 코드 블록이면 그 전체)의 처음부터 끝까지 고르고, ${textOnly}`;
+  return `선택이 블록 일부만 덮는다 — 블록을 바꾸려면 블록(목록 · 인용 · 콜아웃 · 표 · 코드 블록이면 그 전체)의 처음부터 끝까지 고르고, ${textOnly}`;
 }
 
 export function insertEmptyMessage(): string {
