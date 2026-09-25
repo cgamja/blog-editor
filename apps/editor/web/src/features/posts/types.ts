@@ -7,6 +7,8 @@ import type { ComponentType } from "react";
 export interface PostSummary {
   slug: string;
   title: string;
+  /** 발행 확인의 설명 중복 점검에 쓴다(adr-034) */
+  description: string;
   date: string;
   updated?: string;
   category: string;

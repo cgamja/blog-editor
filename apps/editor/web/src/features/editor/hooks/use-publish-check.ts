@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Doc } from "@blog-editor/content-schema";
 import { readDocOrNull } from "../read-doc";
-import { useOtherPostTitles } from "./use-other-post-titles";
+import { useSeoOtherPosts } from "./use-seo-other-posts";
 
 /**
  * 발행 확인의 검색 노출 점검 재료(adr-030) — 확인을 연 순간의 문서와 제목 중복을 볼 다른 글.
@@ -9,7 +9,7 @@ import { useOtherPostTitles } from "./use-other-post-titles";
  */
 export function usePublishCheck(getDoc: () => Doc, ownSlugs: readonly (string | null)[]) {
   const [publishDoc, setPublishDoc] = useState<Doc | null>(null);
-  const otherPosts = useOtherPostTitles(ownSlugs);
+  const otherPosts = useSeoOtherPosts(ownSlugs);
   return {
     publishDoc,
     otherPosts,

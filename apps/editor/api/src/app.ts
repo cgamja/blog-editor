@@ -68,10 +68,12 @@ function byDate(a: { date: string; slug: string }, b: { date: string; slug: stri
 }
 
 function summaryOf(slug: string, meta: PostFile["meta"]) {
-  const { title, date, updated, category, draft, source } = meta;
+  const { title, description, date, updated, category, draft, source } = meta;
   return {
     slug,
     title,
+    // 발행 확인의 설명 중복 점검(adr-034) — MCP 점검과 같은 비교 대상이 되게 한다
+    description,
     date,
     ...(updated === undefined ? {} : { updated }),
     category,

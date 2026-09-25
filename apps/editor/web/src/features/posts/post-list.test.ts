@@ -12,6 +12,7 @@ import type { PostSummary } from "./types";
 const post = (slug: string, overrides: Partial<PostSummary> = {}): PostSummary => ({
   slug,
   title: slug,
+  description: `${slug} 설명`,
   date: "2026-09-01",
   category: "parenting",
   draft: true,

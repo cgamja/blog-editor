@@ -4,6 +4,7 @@ import type { ListDialog, PostSummary, PostTab } from "./types";
 export const POST_SUMMARY_KEYS = [
   "slug",
   "title",
+  "description",
   "date",
   "category",
   "draft",

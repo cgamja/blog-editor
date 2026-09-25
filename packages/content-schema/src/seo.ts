@@ -1,16 +1,20 @@
 import type { Doc } from "./doc";
 import {
+  HARD_BREAK_TEXT,
   INTERNAL_HREF_PREFIX,
   QUESTION_MARK,
   SEO_BODY_MIN_CHARS,
   SEO_DESCRIPTION_LENGTH,
   SEO_FIRST_PARAGRAPH_MAX,
+  SEO_LEVEL_PENALTY,
   SEO_LEVELS,
   SEO_META_FIELDS,
+  SEO_SCORE_MAX,
+  SEO_SCORE_MIN,
   SEO_TITLE_LENGTH,
 } from "./seo.constants";
 import { SEO_MESSAGES } from "./seo.messages";
-import type { SeoFinding, SeoInput, SeoLevel, SeoRule, SeoTarget } from "./seo.types";
+import type { SeoFinding, SeoInput, SeoLevel, SeoOtherPost, SeoRule, SeoTarget } from "./seo.types";
 
 type Block = Doc["content"][number];
 
@@ -40,6 +44,7 @@ const compact = (text: string) => text.normalize("NFC").replace(/\s+/g, "").toLo
 
 function textOf(node: AnyNode): string {
   if (node.text !== undefined) return node.text;
+  if (node.type === "hardBreak") return HARD_BREAK_TEXT;
   return (node.content ?? []).map(textOf).join("");
 }
 
@@ -118,7 +123,7 @@ function firstParagraphOf(blocks: readonly Block[]): FirstParagraph | null {
   return { block: index + 1, text: textOf(blocks[index] as AnyNode) };
 }
 
-function bodyFindings({ doc, others }: SeoInput, first: FirstParagraph | null): SeoFinding[] {
+function bodyFindings({ slug, doc, others }: SeoInput, first: FirstParagraph | null): SeoFinding[] {
   const blocks = doc.content;
   const found: SeoFinding[] = [];
   blocks.forEach((block, index) => {
@@ -138,7 +143,9 @@ function bodyFindings({ doc, others }: SeoInput, first: FirstParagraph | null): 
   if (first !== null && charCount(first.text) > SEO_FIRST_PARAGRAPH_MAX) {
     found.push(finding("should", "first-paragraph-length", { kind: "block", block: first.block }));
   }
-  if (others.length > 0 && !blocks.some((block) => hasInternalLink(block as AnyNode))) {
+  // 이을 글이 있을 때만 — 자기 글은 이을 대상이 아니다(중복 비교와 같은 규칙)
+  const hasOtherPosts = others.some((other) => other.slug !== slug);
+  if (hasOtherPosts && !blocks.some((block) => hasInternalLink(block as AnyNode))) {
     found.push(finding("info", "internal-link-missing", { kind: "body" }));
   }
   const bodyText = blocks
@@ -162,4 +169,31 @@ export function checkSeo(input: SeoInput): SeoFinding[] {
     ...keywordFindings(input, first),
     ...bodyFindings(input, first),
   ].sort(byLevelThenPosition);
+}
+
+/**
+ * 목록 요약을 비교 대상으로 — web(GET /api/posts)과 MCP(저장소 목록)가 같은 함수로 만들어 같은 점수를 얻는다
+ * (adr-034). 목록은 저장소가 검증 없이 준 값이라 제목이 문자열인 항목만, 설명은 문자열일 때만 쓴다.
+ */
+export function seoOthersOf(
+  summaries: readonly { slug: string; title?: unknown; description?: unknown }[],
+): SeoOtherPost[] {
+  return summaries.flatMap(({ slug, title, description }) =>
+    typeof title === "string"
+      ? [{ slug, title, description: typeof description === "string" ? description : undefined }]
+      : [],
+  );
+}
+
+/**
+ * 검색 노출 점수 0~100(adr-034) — 만점에서 규칙 하나당 한 번 그 등급의 감점을 뺀다. 같은 규칙이 여러 블록에서
+ * 걸려도(alt 없는 이미지 여럿) 고칠 일은 한 종류라 한 번만 뺀다. 저장 · 발행을 막지 않는다(adr-030).
+ */
+export function scoreSeo(findings: readonly SeoFinding[]): number {
+  const levelByRule = new Map(findings.map(({ rule, level }) => [rule, level]));
+  const penalty = [...levelByRule.values()].reduce(
+    (sum, level) => sum + SEO_LEVEL_PENALTY[level],
+    0,
+  );
+  return Math.max(SEO_SCORE_MIN, SEO_SCORE_MAX - penalty);
 }

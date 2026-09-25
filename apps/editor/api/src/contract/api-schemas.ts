@@ -46,12 +46,13 @@ export const imageUploadResultSchema = z.strictObject({
   naturalHeight: naturalSide,
 });
 
-/** 목록의 한 줄 — 저장 형식 메타에서 설명 · 대표 이미지를 뺀 것 */
+/** 목록의 한 줄 — 저장 형식 메타에서 대표 이미지 · 핵심 검색어를 뺀 것. 설명은 발행 확인의 중복 점검에 쓴다 */
 export function createPostListSchema(options: { categories: readonly [string, ...string[]] }) {
   const meta = createPostMetaSchema(options).shape;
   const summary = z.strictObject({
     slug: slugSchema,
     title: meta.title,
+    description: meta.description,
     date: meta.date,
     updated: meta.updated,
     category: meta.category,

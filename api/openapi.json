@@ -2262,6 +2262,11 @@
                   "minLength": 1,
                   "maxLength": 80
                 },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                },
                 "date": {
                   "type": "string",
                   "format": "date",
@@ -2292,7 +2297,7 @@
                   ]
                 }
               },
-              "required": ["slug", "title", "date", "category", "draft", "source"],
+              "required": ["slug", "title", "description", "date", "category", "draft", "source"],
               "additionalProperties": false
             }
           }
