@@ -3,13 +3,7 @@ import { AllSelection } from "@tiptap/pm/state";
 import type { Command, EditorState } from "@tiptap/pm/state";
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
 import type { Sticker } from "@blog-editor/content-schema";
-import {
-  fontOrNull,
-  motionOrNull,
-  stickerFieldOrNull,
-  stickerIdOrNull,
-  widthOrNull,
-} from "../closed-values";
+import { fontOrNull, motionOrNull, stickerOrNull, widthOrNull } from "../closed-values";
 import { DEFAULT_COORDINATES } from "./decoration.constants";
 import { sameStickers, stickerCount, stickersOf } from "./sticker-query";
 import type { StickerPatch, StickerPlacement, StickerTarget, TopBlock } from "./decoration.types";
@@ -96,16 +90,8 @@ export function setBlockWidth(percent: number): Command {
 // ── 스티커 ──
 
 /** 닫힌 집합 안이면 스티커, 아니면 null — 자르지 않는다(design.md 2) */
-function stickerOf(id: unknown, { x, y, size, rotate }: Coordinates): Sticker | null {
-  const sticker = {
-    id: stickerIdOrNull(id),
-    x: stickerFieldOrNull("x", x),
-    y: stickerFieldOrNull("y", y),
-    size: stickerFieldOrNull("size", size),
-    rotate: stickerFieldOrNull("rotate", rotate),
-  };
-  return Object.values(sticker).every((value) => value !== null) ? (sticker as Sticker) : null;
-}
+const stickerOf = (id: unknown, coordinates: Coordinates): Sticker | null =>
+  stickerOrNull({ id, ...coordinates });
 
 /** 빈 배열은 정규형에서 지워지는 값이라 null로 둔다 */
 const stickersAttr = (stickers: Sticker[]) => (stickers.length > 0 ? stickers : null);

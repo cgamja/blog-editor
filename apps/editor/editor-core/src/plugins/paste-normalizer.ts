@@ -26,7 +26,7 @@ const MEDIA_NODES = new Set(["image", "appScreenshot"]);
 const TOP_LEVEL_DEPTH = 1;
 
 /** 노드 선택이면 $from이 선택된 노드의 부모 안이다 — 그 노드가 최상위일 때(깊이 0)만 최상위 자리다. */
-function isTopLevelTarget(selection: Selection): boolean {
+export function isTopLevelTarget(selection: Selection): boolean {
   return selection instanceof NodeSelection
     ? selection.$from.depth === 0
     : selection.$from.depth <= TOP_LEVEL_DEPTH;

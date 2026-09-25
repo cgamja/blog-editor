@@ -20,6 +20,7 @@ import {
   imagePathSchema,
   naturalSizeOf,
 } from "@blog-editor/content-schema";
+import type { Sticker } from "@blog-editor/content-schema";
 
 /**
  * 밖에서 들어온 값(붙여넣은 HTML 속성 · 붙여넣은 조각의 attrs)을 content-schema의 닫힌 집합으로 거른다.
@@ -78,6 +79,20 @@ export const stickerFieldOrNull = (
   key: keyof typeof STICKER_RANGES,
   value: unknown,
 ): number | null => intInRange(value, STICKER_RANGES[key]);
+
+/** 스티커 하나 — 닫힌 id와 좌표 범위 안이면 그 값, 한 칸이라도 밖이면 null(자르지 않는다) */
+export function stickerOrNull(value: unknown): Sticker | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { id, x, y, size, rotate } = value as Record<string, unknown>;
+  const sticker = {
+    id: stickerIdOrNull(id),
+    x: stickerFieldOrNull("x", x),
+    y: stickerFieldOrNull("y", y),
+    size: stickerFieldOrNull("size", size),
+    rotate: stickerFieldOrNull("rotate", rotate),
+  };
+  return Object.values(sticker).every((field) => field !== null) ? (sticker as Sticker) : null;
+}
 
 /** 원본 크기 한 변 — 범위 밖 · 숫자 아님은 없는 것. ProseMirror의 null도 여기서 한 번만 undefined로 바꾼다. */
 const naturalSide = (value: unknown): number | undefined =>

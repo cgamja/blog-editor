@@ -101,6 +101,9 @@ export {
   pasteNormalizer,
   pasteNormalizerKey,
 } from "./plugins/paste-normalizer";
+export { stickerClipboard, stickerClipboardKey } from "./plugins/sticker-clipboard";
+export { STICKER_CLIP_ATTR } from "./plugins/sticker-clipboard.constants";
+export type { StickerClipboardOptions } from "./plugins/sticker-clipboard.types";
 export { hideSticker, stickerHiding, stickerHidingKey } from "./plugins/sticker-hiding";
 export { STICKER_HIDDEN_ATTR } from "./plugins/sticker-hiding.constants";
 export { previewBlockWidth, widthPreview, widthPreviewKey } from "./plugins/width-preview";

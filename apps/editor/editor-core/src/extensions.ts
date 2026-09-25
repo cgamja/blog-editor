@@ -4,6 +4,8 @@ import type { Schema } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
+import { stickerClipboard } from "./plugins/sticker-clipboard";
+import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
 import {
   headingLevelOf,
   hrefOrNull,
@@ -388,6 +390,15 @@ const PasteNormalizer = Extension.create({
   addProseMirrorPlugins: () => [pasteNormalizer()],
 });
 
+/** 같은 탭 복사 · 붙여넣기에서 스티커를 되살린다(spec: editor-paste, adr-027) — 정규화 뒤에 돌도록 우선순위가 낮다 */
+const StickerClipboard = Extension.create({
+  name: "stickerClipboard",
+  priority: STICKER_CLIPBOARD_PRIORITY,
+  addProseMirrorPlugins() {
+    return [stickerClipboard(this.editor.schema)];
+  },
+});
+
 export const editorExtensions = [
   Doc,
   Text,
@@ -414,6 +425,7 @@ export const editorExtensions = [
   Code,
   StickerSafeSplit,
   PasteNormalizer,
+  StickerClipboard,
 ];
 
 export function createEditorSchema(): Schema {
