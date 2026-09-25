@@ -9,6 +9,7 @@ import { stickerOrNull } from "../closed-values";
 import { canHoldDecoration } from "../commands/decoration";
 import { stickerCount, stickersOf } from "../commands/sticker-query";
 import { isTopLevelTarget } from "./paste-normalizer";
+import { pasteTransaction } from "./sticker-safe-paste";
 import {
   CLIP_MEMORY_LIMIT,
   CLIP_NONCE_BYTES,
@@ -223,7 +224,9 @@ function restoreCopiedStickers(
   const { base, lists } = planOpenEnds(slice, valid, state);
   for (let keep = lists.flat().length; keep > 0; keep -= 1) {
     const candidate = withStickers(base, keepFirst(lists, keep));
-    if (stickerCount(state.tr.replaceSelection(candidate).doc) <= MAX_STICKERS_PER_DOC) {
+    // 붙인 결과로 센다 — 나뉜 자리 문단의 복제분은 stickerSafePaste가 지우므로 세지 않는다(#126). 닫아 붙이는
+    // 경우(pasteClosed)는 replaceSelection으로 붙여 교체 함수가 다를 수 있지만, 자리가 스티커 없는 빈 블록이라 스티커 수는 같다
+    if (stickerCount(pasteTransaction(state, candidate).doc) <= MAX_STICKERS_PER_DOC) {
       return candidate;
     }
   }
