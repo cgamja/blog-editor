@@ -1,5 +1,30 @@
 import { docSchema, naturalSizeOf } from "./doc";
 
+interface CellSpec {
+  text?: string;
+  align?: string;
+}
+
+/** 행마다 칸 목록으로 표 블록을 만든다 — 칸 안은 문단 하나 */
+function tableDoc(rows: CellSpec[][], attrs?: Record<string, unknown>) {
+  return {
+    type: "table",
+    ...(attrs === undefined ? {} : { attrs }),
+    content: rows.map((cells) => ({
+      type: "tableRow",
+      content: cells.map(({ text, align }) => ({
+        type: "tableCell",
+        ...(align === undefined ? {} : { attrs: { align } }),
+        content: [
+          text === undefined
+            ? { type: "paragraph" }
+            : { type: "paragraph", content: [{ type: "text", text }] },
+        ],
+      })),
+    })),
+  };
+}
+
 const allBlocksDoc = {
   type: "doc",
   content: [
@@ -68,6 +93,10 @@ const allBlocksDoc = {
       ],
     },
     { type: "appScreenshot", attrs: { src: "/images/shot1.webp", caption: "캡션" } },
+    tableDoc([
+      [{ text: "이름" }, { text: "값", align: "center" }],
+      [{ text: "가" }, { text: "1" }],
+    ]),
   ],
 };
 
@@ -139,7 +168,7 @@ describe("document-schema — 1차 블록과 마크만 통과한다", () => {
   });
 
   it.each([
-    ["정의 밖 노드 table", { type: "doc", content: [{ type: "table", content: [] }] }],
+    ["정의 밖 노드 footnote", { type: "doc", content: [{ type: "footnote", content: [] }] }],
     [
       "paragraph에 attrs.style",
       { type: "doc", content: [{ type: "paragraph", attrs: { style: "color:red" }, content: [] }] },
@@ -559,5 +588,46 @@ describe("ordered-list-start — 번호 목록은 시작 번호를 선택으로 
 
   it.each([0, -1, 1.5, "3", 1_000_000_000])("WHEN start %s를 검증하면 THEN 거부된다", (start) => {
     expect(docSchema.safeParse(orderedListWith(start)).success).toBe(false);
+  });
+});
+
+describe("document-schema — 표는 직사각형이고 첫 행이 머리 행이다", () => {
+  it("WHEN 머리 행에 정렬이 있는 2×2 표를 파싱하면 THEN success는 true다", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        tableDoc([
+          [{ text: "이름" }, { text: "값", align: "center" }],
+          [{ text: "가" }, {}],
+        ]),
+      ],
+    };
+    expect(docSchema.safeParse(doc).success).toBe(true);
+  });
+
+  const twoParagraphCell = {
+    type: "table",
+    content: [
+      {
+        type: "tableRow",
+        content: [
+          {
+            type: "tableCell",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "가" }] },
+              { type: "paragraph", content: [{ type: "text", text: "나" }] },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  it.each([
+    ["행마다 칸 수가 다른 표", tableDoc([[{ text: "a" }, { text: "b" }], [{ text: "c" }]])],
+    ["둘째 행 칸에 align이 있는 표", tableDoc([[{ text: "a" }], [{ text: "b", align: "right" }]])],
+    ["칸에 문단이 둘인 표", twoParagraphCell],
+    ["인용 안의 표", { type: "blockquote", content: [tableDoc([[{ text: "a" }]])] }],
+  ])("WHEN %s를 파싱하면 THEN success는 false다", (_label, block) => {
+    expect(docSchema.safeParse({ type: "doc", content: [block] }).success).toBe(false);
   });
 });

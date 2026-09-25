@@ -194,17 +194,6 @@ function toMiniChild(child: unknown): MiniNode {
   return miniFromSpec(child as DOMOutputSpec);
 }
 
-/** 스키마 전체에서 이 태그 이름을 받는 규칙이 있는가. */
-export function hasRuleForTag(schema: Schema, tag: string): boolean {
-  const specs = [
-    ...Object.values(schema.nodes).map((type) => type.spec.parseDOM ?? []),
-    ...Object.values(schema.marks).map((type) => type.spec.parseDOM ?? []),
-  ];
-  return specs
-    .flat()
-    .some((rule) => "tag" in rule && rule.tag !== undefined && rule.tag.split(/[.[]/)[0] === tag);
-}
-
 /** 스타일 규칙(`style: "font-weight"` 등)으로 이 값을 읽으면 그 마크가 되는가. */
 export function markFromStyle(
   schema: Schema,
