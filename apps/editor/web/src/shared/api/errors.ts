@@ -15,6 +15,7 @@ export class ApiError extends Error {
 
 /**
  * 세션이 없거나 만료됐다(401) — QueryClient가 세션을 로그인 필요로 바꿔 가드가 로그인 화면으로 보낸다.
+ * 화면이 렌더 중 던진 401은 가드 자리 경계(`SessionErrorBoundary`)가 로그인 화면으로 보낸다.
  * 재시도해도 결과가 같아서 다시 묻지 않는다. 로그인 실패 문장을 보이려고 API 문장은 그대로 싣는다.
  */
 export class UnauthorizedError extends ApiError {

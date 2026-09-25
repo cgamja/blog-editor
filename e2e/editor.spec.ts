@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { collectErrors, logIn } from "./app.test.helpers";
+import { collectErrors, createDraft, logIn } from "./app.test.helpers";
 
 const EXISTING_POST = {
   title: "편집 화면 확인용 글",
@@ -29,36 +29,8 @@ test("WHEN 저장된 글의 편집 주소를 열면 THEN 제목과 본문이 채
 }, testInfo) => {
   await logIn(page);
   // 실행 한 번의 저장소를 모든 프로젝트 · 재시도가 같이 쓰므로 주소를 따로 둔다
-  const slug = `e2e-existing-${testInfo.project.name}-${testInfo.retry}`;
-  const file = {
-    // 서버가 받는 저장 형식 그대로 쓴다 — 스키마 버전이 오르면 이 픽스처도 같이 올려야 하는 계약이다
-    schemaVersion: 1,
-    meta: {
-      title: EXISTING_POST.title,
-      description: "실브라우저 층이 기존 글 편집 화면을 여는지 확인하는 글이다.",
-      date: "2026-09-25",
-      category: "studio",
-      draft: true,
-      source: "editor",
-    },
-    doc: {
-      type: "doc",
-      content: [{ type: "paragraph", content: [{ type: "text", text: EXISTING_POST.body }] }],
-    },
-  };
-  // 화면과 같은 출처 · 세션 쿠키로 만든다
-  const status = await page.evaluate(
-    async ({ slug, file }) => {
-      const response = await fetch(`/api/posts/${slug}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "If-None-Match": "*" },
-        body: JSON.stringify(file),
-      });
-      return response.status;
-    },
-    { slug, file },
-  );
-  expect(status).toBe(201);
+  const slug = `e2e-existing-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
+  await createDraft(page, slug, EXISTING_POST.title, EXISTING_POST.body);
 
   await page.goto(`/posts/${slug}/edit`);
 
