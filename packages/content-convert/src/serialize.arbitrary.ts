@@ -17,6 +17,15 @@ import {
 /** 흔한 시작 번호(2 ~ 12) — 전체 범위만 뽑으면 거의 9자리 수라 작은 번호의 표지 · 들여쓰기를 못 본다 */
 const SMALL_START_RANGE = { min: 2, max: 12 };
 
+/** 목록 안 목록은 두 겹까지(최상위 목록이 깊이 0) */
+const MAX_LIST_DEPTH = 2;
+/** 넓은 목록 — 항목 10개 이상이어야 번호 표지가 두 자리(`10.`)가 되어 들여쓰기 폭이 바뀐다 */
+const WIDE_LIST_ITEMS = 11;
+const WIDE_LIST_NESTED = 1;
+/** 좁은 목록 — 한 항목에 안쪽 목록 둘(글머리 · 번호 섞임)을 보는 자리 */
+const NARROW_LIST_ITEMS = 3;
+const NARROW_LIST_NESTED = 2;
+
 /** markdown 문법 글자 · 한글 · 공백류를 섞는다 — 이스케이프와 flanking 경계를 두드리는 게 목적이다. */
 const TEXT_UNITS = [
   "가",
@@ -148,19 +157,30 @@ function withStart(
     );
 }
 
-function listArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
-  const nested = depth < 2 ? fc.array(listArb(depth + 1), { maxLength: 2 }) : fc.constant([]);
-  const item = fc
-    .tuple(paragraphInner, nested)
-    .map(([paragraph, lists]) => ({ type: "listItem", content: [paragraph, ...lists] }));
-  return withStart(
-    fc
+/**
+ * 목록 크기가 깊이마다 곱해지지 않게 한다 — 항목 11개 · 항목당 안쪽 목록 2개를 세 깊이 모두에 두면 한
+ * 표본이 항목 1000개를 넘어(최악 11×2×11×2×11) 왕복 테스트 시간의 90% 넘게를 그 표본들이 쓴다(#157).
+ * 두 자리 번호 표지(10.)를 보는 넓은 목록은 뿌리에서 잎까지 한 번만 두고, 그 항목의 안쪽 목록은 하나다.
+ */
+function listArb(depth: number, isWideAllowed = true): fc.Arbitrary<Record<string, unknown>> {
+  const listOf = (isWide: boolean) => {
+    const nested =
+      depth < MAX_LIST_DEPTH
+        ? fc.array(listArb(depth + 1, isWideAllowed && !isWide), {
+            maxLength: isWide ? WIDE_LIST_NESTED : NARROW_LIST_NESTED,
+          })
+        : fc.constant([]);
+    const item = fc
+      .tuple(paragraphInner, nested)
+      .map(([paragraph, lists]) => ({ type: "listItem", content: [paragraph, ...lists] }));
+    return fc
       .tuple(
         fc.constantFrom("bulletList", "orderedList"),
-        fc.array(item, { minLength: 1, maxLength: 11 }),
+        fc.array(item, { minLength: 1, maxLength: isWide ? WIDE_LIST_ITEMS : NARROW_LIST_ITEMS }),
       )
-      .map(([type, content]) => ({ type, content })),
-  );
+      .map(([type, content]) => ({ type, content }));
+  };
+  return withStart(isWideAllowed ? fc.oneof(listOf(false), listOf(true)) : listOf(false));
 }
 
 const topParagraph = fc

@@ -22,6 +22,9 @@ describe("editor-schema: 저장 문서는 에디터 스키마를 오가도 바�
     },
   );
 
+  // 기본 5초는 부하에서 모자란다(#157) — 표본은 작고(평균 최상위 블록 2.4개, 표본 하나 최대 10ms) 느린 경로가
+  // 없는데, 병렬 worktree verify로 load average 20~50일 때 1.9~5초가 걸려 한 번 넘었다(단독 0.4~1.6초).
+  // 노드 종류가 늘어도 버티게 이웃 속성 테스트(convert-roundtrip · serialize)와 같은 30초를 둔다
   it("WHEN docArbitrary 표본을 docToNode → docFromNode로 돌린다 THEN 모두 normalize 결과와 같다", () => {
     fc.assert(
       fc.property(docArbitrary, (doc) => {
@@ -29,7 +32,7 @@ describe("editor-schema: 저장 문서는 에디터 스키마를 오가도 바�
       }),
       { numRuns: 1000 },
     );
-  });
+  }, 30_000);
 });
 
 describe("editor-schema: 층마다 막는 것이 정해져 있다", () => {
