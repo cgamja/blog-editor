@@ -6,30 +6,6 @@
 
 ## Requirements
 
-### Requirement: 붙여넣은 HTML은 닫힌 집합으로만 읽힌다
-
-붙여넣기 파싱 규칙은 SHALL 문서에 자리가 없는 모양을 받지 않는다. 구글 독스가 전체를 감싸는 `<b style="font-weight:normal">`는 굵게가 아니고, `font-weight`가 700 이상이거나 `bold`인 `span`은 굵게다. 허용 목록(`hrefSchema`) 밖 링크(`javascript:` 등)는 마크가 되지 않는다(글자는 남는다). 경로 규칙(`imagePathSchema`) 밖 이미지(절대 URL · `data:`)는 노드가 되지 않는다. 표(`table` · `tr` · `td` · `th`)를 받는 규칙은 없다(칸의 글자는 문단으로 읽힌다). `h1`은 가장 높은 제목(2), `h4`~`h6`은 가장 낮은 제목(3)이 된다.
-
-#### Scenario: 구글 독스의 감싸는 b 태그는 굵게가 아니다
-
-- **WHEN** `<b style="font-weight:normal;" id="docs-internal-guid-1">`와 `<span style="font-weight:700">`을 굵게 규칙으로 읽는다
-- **THEN** 앞의 것은 굵게가 아니고 뒤의 것은 굵게다
-
-#### Scenario: 허용 목록 밖 링크와 외부 이미지는 받지 않는다
-
-- **WHEN** `<a href="javascript:alert(1)">` · `<img src="https://example.com/a.png">` · `<img src="data:image/png;base64,AA">`를 읽는다
-- **THEN** 링크 규칙과 이미지 규칙이 모두 거부한다
-
-#### Scenario: 표는 표로 들어오지 않는다
-
-- **WHEN** 스키마의 파싱 규칙에서 `table` · `tr` · `td` · `th`를 받는 규칙을 찾는다
-- **THEN** 없다
-
-#### Scenario: 허용되지 않는 제목 수준은 가까운 수준으로 읽힌다
-
-- **WHEN** `h1` · `h2` · `h3` · `h4` · `h6`을 읽는다
-- **THEN** 수준이 차례로 2 · 2 · 3 · 3 · 3이다
-
 ### Requirement: 붙여넣은 조각은 넣을 자리에 맞게 정규화된다
 
 `normalizePastedSlice(slice, { intoTopLevel })`와 이것을 `transformPasted`로 거는 `pasteNormalizer()` 플러그인은 SHALL 조각을 저장 가능한 모양으로 만든다. 스티커는 늘 지운다. 인용 · 목록 · 콜아웃 안에 붙이면(`intoTopLevel: false`) 꾸밈을 모두 지우고, 최상위에 붙이면 안쪽 노드의 꾸밈만 지운다. 허용 목록 밖 링크 마크는 지우고 글자는 남긴다. 경로 규칙 밖 이미지 · 앱 스크린샷 노드는 지운다. 짝이 깨진 원본 크기는 둘 다 지운다. 플러그인은 붙일 자리를 선택으로 판단한다. 노드 선택이면 그 노드가 최상위일 때(`$from.depth === 0`), 그 밖에는 깊이 1 이하일 때 최상위다. 에디터 안에서 끌어 옮기는 경우(`view.dragging.move`)는 정규화하지 않는다. 내부 조각이라 이미 저장 가능한 모양이고, 스티커를 지우면 옮기다가 데이터를 잃는다. 안쪽 자리에 떨어뜨려 무효가 되면 blockGuard가 거부한다. 플러그인은 `PasteNormalizer` 확장으로 `editorExtensions`에 들어 있어 에디터를 마운트하면 켜진다.
@@ -130,7 +106,7 @@
 
 ### Requirement: 붙여넣기로 나뉜 블록의 스티커는 한 조각에만 남는다
 
-`stickerSafePaste()` 플러그인은 SHALL 붙여넣기가 스티커 있는 최상위 블록을 나누면 그 블록의 스티커를 글이 있는 첫 조각에만 남긴다 — Enter로 나눌 때(`splitBlockKeepingStickers`)와 같은 규칙이다(가운데 · 끝이면 앞 조각, 맨 앞이면 글이 남은 뒤 조각). 조각은 교체 범위의 최상위 노드 중 원래 블록과 같은 스티커 배열(같은 참조 — 앞 조각은 prosemirror-model `Node.copy`, 뒤 조각은 prosemirror-transform `Fitter.close` → `openFrontierNode`가 값을 참조로 옮긴다)을 가진 것이고, 붙인 블록(같은 탭 복사로 되살린 스티커 포함)의 스티커는 건드리지 않는다. 조각을 고치는 것은 붙여넣기와 같은 트랜잭션이라, 복제되었다면 글 하나 스티커 상한을 넘었을 붙여넣기도 blockGuard가 거부하지 않는다. 같은 탭 복사(`stickerClipboard`)의 상한 계산도 이렇게 고친 결과로 센다. 나누지 않는 붙여넣기 · 한글 조합 중 · 글자 노드 하나짜리 조각 · 이미지 올리기가 파일로 받는 붙여넣기(이미지 파일만 오고 글이 함께 오지 않은 것 — 글과 함께 온 미리보기 이미지는 글 붙여넣기로 다룬다)는 기본 붙여넣기 그대로다. 플러그인은 `StickerSafeSplit` 확장이 `editorExtensions`에 등록한다.
+`stickerSafePaste()` 플러그인은 SHALL 붙여넣기가 스티커 있는 최상위 블록을 나누면 그 블록의 스티커를 글이 있는 첫 조각에만 남긴다 — Enter로 나눌 때(`splitBlockKeepingStickers`)와 같은 규칙이다(가운데 · 끝이면 앞 조각, 맨 앞이면 글이 남은 뒤 조각). 조각은 교체 범위의 최상위 노드 중 원래 블록과 같은 스티커 배열(같은 참조 — 앞 조각은 prosemirror-model `Node.copy`, 뒤 조각은 prosemirror-transform `Fitter.close` → `openFrontierNode`가 값을 참조로 옮긴다)을 가진 것이고, 붙인 블록(같은 탭 복사로 되살린 스티커 포함)의 스티커는 건드리지 않는다. 조각을 고치는 것은 붙여넣기와 같은 트랜잭션이라, 복제되었다면 글 하나 스티커 상한을 넘었을 붙여넣기도 blockGuard가 거부하지 않는다. 같은 탭 복사(`stickerClipboard`)의 상한 계산도 이렇게 고친 결과로 센다. 나누지 않는 붙여넣기 · 표 칸 자리(칸 편집 · 붙여넣기 정규화가 맡는다, adr-028) · 한글 조합 중 · 글자 노드 하나짜리 조각 · 이미지 올리기가 파일로 받는 붙여넣기(이미지 파일만 오고 글이 함께 오지 않은 것 — 글과 함께 온 미리보기 이미지는 글 붙여넣기로 다룬다)는 기본 붙여넣기 그대로다. 플러그인은 `StickerSafeSplit` 확장이 `editorExtensions`에 등록한다.
 
 #### Scenario: 스티커 있는 문단 가운데에 붙이면 스티커는 앞 조각에만 남는다
 
@@ -166,3 +142,47 @@
 
 - **WHEN** 미리보기 이미지 파일과 글(문단 둘)이 함께 온 붙여넣기(Word · Excel 복사)를 스티커 셋인 문단 "가나다라"의 "가나" 뒤에 붙인다
 - **THEN** "가나"에 스티커 셋이 있고 붙인 문단 둘과 뒤 조각 "다라"에는 스티커가 없다
+
+#### Scenario: 표 칸 자리의 붙여넣기는 받지 않는다
+
+- **WHEN** 스티커가 있는 표의 본문 칸 글자 가운데에 닫힌 표 조각을 붙인다
+- **THEN** 이 플러그인은 받지 않는다(false) — 칸 편집이 칸으로 넣는다
+
+### Requirement: 붙여넣은 HTML은 닫힌 집합으로만 읽히고 표는 표가 된다
+
+붙여넣기 파싱 규칙은 SHALL 문서에 자리가 없는 모양을 받지 않는다. 구글 독스가 전체를 감싸는 `<b style="font-weight:normal">`는 굵게가 아니고, `font-weight`가 700 이상이거나 `bold`인 `span`은 굵게다. 허용 목록(`hrefSchema`) 밖 링크(`javascript:` 등)는 마크가 되지 않는다(글자는 남는다). 경로 규칙(`imagePathSchema`) 밖 이미지(절대 URL · `data:`)는 노드가 되지 않는다. 표(`table` · `tr` · `td` · `th`)는 표가 된다(adr-028) — 첫 행이 머리 행이고, 열 정렬은 우리 어휘(`data-align`)만 읽으며, 붙여넣기 정규화가 본문 칸의 정렬을 지운다(열 정렬은 머리 행 칸에만). 칸 병합(`colspan` · `rowspan`)은 읽지 않고, 병합을 버려 행 길이가 달라진 표는 짧은 행 끝에 빈 칸을 채워 직사각형으로 만든다(blockGuard가 prosemirror-tables fixTables보다 먼저 거부하므로). 표 칸이 붙일 자리이거나 조각 맨 위가 행 · 칸이면 모든 칸의 정렬을 지운다 — 칸 조각이 어느 행에 들어갈지 모른다. 칸 안에 표가 아닌 블록 여러 개를 붙이면 글자를 한 줄로 합친다(블록 사이는 공백 하나, 강제 줄바꿈 #131이 생기면 줄바꿈) — 칸 안은 문단 하나라 그대로 두면 표가 쪼개진다. `h1`은 가장 높은 제목(2), `h4`~`h6`은 가장 낮은 제목(3)이 된다.
+
+#### Scenario: 구글 독스의 감싸는 b 태그는 굵게가 아니다
+
+- **WHEN** `<b style="font-weight:normal;" id="docs-internal-guid-1">`와 `<span style="font-weight:700">`을 굵게 규칙으로 읽는다
+- **THEN** 앞의 것은 굵게가 아니고 뒤의 것은 굵게다
+
+#### Scenario: 허용 목록 밖 링크와 외부 이미지는 받지 않는다
+
+- **WHEN** `<a href="javascript:alert(1)">` · `<img src="https://example.com/a.png">` · `<img src="data:image/png;base64,AA">`를 읽는다
+- **THEN** 링크 규칙과 이미지 규칙이 모두 거부한다
+
+#### Scenario: 표는 표로 들어오고 정렬은 머리 칸에만 남는다
+
+- **WHEN** 머리 칸 · 본문 칸 모두 `data-align="center"`인 `<table><thead><tr><th>가</th></tr></thead><tbody><tr><td>나</td></tr></tbody></table>`을 읽고 최상위 자리로 정규화해 빈 문단에 붙인다
+- **THEN** 문서에 2행 1열 표가 생기고 첫 행 칸만 `align: "center"`이며 결과가 `docFromNode`를 통과한다
+
+#### Scenario: 허용되지 않는 제목 수준은 가까운 수준으로 읽힌다
+
+- **WHEN** `h1` · `h2` · `h3` · `h4` · `h6`을 읽는다
+- **THEN** 수준이 차례로 2 · 2 · 3 · 3 · 3이다
+
+#### Scenario: 칸 자리에 붙이는 행 조각은 정렬이 없다
+
+- **WHEN** 머리 칸에 `align: "right"`가 있는 행 둘 조각을 칸 자리로(`intoTableCell: true`) 정규화한다
+- **THEN** 모든 칸의 정렬이 없다
+
+#### Scenario: 병합 칸이 있는 표는 직사각형으로 들어온다
+
+- **WHEN** 첫 행이 `colspan="2"` 칸 하나, 둘째 행이 칸 둘인 표 HTML을 읽어 최상위로 정규화해 빈 문단에 붙인다
+- **THEN** 두 행 모두 칸이 둘이고 결과가 `docFromNode`를 통과한다
+
+#### Scenario: 칸에 문단 여럿을 붙이면 한 줄이 된다
+
+- **WHEN** 문단 `가` · `나` 조각을 칸 자리로 정규화해 `본문` 칸 글자 끝에 붙인다
+- **THEN** 칸 글자가 `본문가 나`이고 결과가 `docFromNode`를 통과한다

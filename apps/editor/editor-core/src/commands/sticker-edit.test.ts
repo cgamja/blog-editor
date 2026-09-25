@@ -1,6 +1,7 @@
 import type { Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
+import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import {
   blockGuard,
@@ -9,6 +10,7 @@ import {
   docToNode,
   isStickerRemoveKey,
   mapStickerRef,
+  pasteStickerBeside,
   placeStickerNear,
   removeSticker,
   stickerCount,
@@ -31,7 +33,7 @@ const paragraph = (value: string, attrs?: Json): Json => ({
 const doc = (...blocks: Json[]): Json => ({ type: "doc", content: blocks });
 
 const sticker = (fields: Partial<Record<"x" | "y" | "size" | "rotate", number>> = {}) => ({
-  id: "heart",
+  id: "heart" as const,
   x: 10,
   y: 20,
   size: 30,
@@ -255,5 +257,37 @@ describe("editor-sticker-edit: 스티커 개수를 문서에서 센다", () => {
       stickersIn(state.doc, blockStart(state.doc, 1)).length,
       stickersIn(state.doc, 1),
     ]).toEqual([3, 1, []]);
+  });
+});
+
+describe("editor-sticker-copy: 복사해 둔 스티커를 고른 스티커 옆에 하나 더 붙인다", () => {
+  const target = { blockPos: 0, index: 0 };
+
+  it("WHEN heart x 10 · y 20 · size 12 · rotate 30을 복사해 그 스티커 옆에 붙인다 THEN 둘째가 x 15 · y 25인 같은 스티커다", () => {
+    const copied = sticker({ size: 12, rotate: 30 });
+    const result = run(stateOf(doc(withStickers(copied))), pasteStickerBeside(copied, target));
+
+    expect(result.ok).toBe(true);
+    expect(stickersOf(result.saved, 0)).toEqual([
+      copied,
+      { id: "heart", x: 15, y: 25, size: 12, rotate: 30 },
+    ]);
+  });
+
+  it("WHEN x 125 · y 10 스티커 옆에 붙인다 THEN 새 스티커는 x 120 · y 15다", () => {
+    const edge = sticker({ x: 125, y: 10 });
+    const result = run(stateOf(doc(withStickers(edge))), pasteStickerBeside(edge, target));
+
+    expect(stickersOf(result.saved, 0)[1]).toMatchObject({ x: 120, y: 15 });
+  });
+
+  it("WHEN 스티커가 12개인 글에서 붙인다 THEN false이고 문서가 그대로다", () => {
+    const full = stateOf(
+      doc(withStickers(...Array.from({ length: MAX_STICKERS_PER_DOC }, () => sticker()))),
+    );
+    const result = run(full, pasteStickerBeside(sticker(), target));
+
+    expect(result.ok).toBe(false);
+    expect(result.state.doc.eq(full.doc)).toBe(true);
   });
 });

@@ -105,8 +105,10 @@ export function wrapperRule(options: {
   attrs?: (inner: ElementLike) => Attrs | false;
   hasContent?: boolean;
   preserveWhitespace?: TagParseRule["preserveWhitespace"];
+  /** 내용을 읽을 요소 — 없으면 래퍼의 첫 자식(블록 요소). 표처럼 블록 요소가 한 겹 더 감싸일 때 준다 */
+  contentOf?: (wrapper: ElementLike) => ElementLike | null;
 }): TagParseRule {
-  const { matches, keys, attrs, hasContent = true, preserveWhitespace } = options;
+  const { matches, keys, attrs, hasContent = true, preserveWhitespace, contentOf } = options;
   const getAttrs = (element: ElementLike): Attrs | false => {
     const inner = element.firstElementChild;
     if (inner === null || !matches(inner)) return false;
@@ -115,7 +117,7 @@ export function wrapperRule(options: {
   };
   // ElementLike는 HTMLElement의 부분 모양이라 두 콜백만 단언한다 — DOM lib이 있는 소비자(editor-react)에서는
   // ElementLike 매개변수를 HTMLElement 자리에 그대로 둘 수 없다(TS2352). 나머지 키는 satisfies로 검사한다
-  const contentElement = (element: ElementLike) => element.firstElementChild;
+  const contentElement = contentOf ?? ((element: ElementLike) => element.firstElementChild);
   return {
     tag: WRAPPER_TAG,
     ...(preserveWhitespace === undefined ? {} : { preserveWhitespace }),

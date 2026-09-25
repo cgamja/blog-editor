@@ -235,6 +235,34 @@ function serializeCallout(
   ].join("\n");
 }
 
+/** GFM 구분 줄의 열 표지 — 정렬 없음(정규형이 left를 지운다)은 `---` */
+const COLUMN_DELIMITER: Record<string, string> = { center: ":-:", right: "--:" };
+const PLAIN_COLUMN_DELIMITER = "---";
+
+function tableLine(cells: readonly string[]): string {
+  return `| ${cells.join(" | ")} |`;
+}
+
+type TableCell = Extract<Block, { type: "table" }>["content"][number]["content"][number];
+
+function cellText(cell: TableCell, dropped: BlockLosses): string {
+  const { text, droppedCodeMarks } = serializeInline(cell.content[0].content ?? [], "cell");
+  dropped.codeMark += droppedCodeMarks;
+  return text;
+}
+
+/** 첫 행이 머리 줄, 열 정렬은 머리 행 칸에 있다(adr-028). 빈 칸은 GFM에서도 빈 칸이라 빠진 것이 아니다 */
+function serializeTable(block: Extract<Block, { type: "table" }>, dropped: BlockLosses): string {
+  const lines = block.content.map((row) =>
+    tableLine(row.content.map((cell) => cellText(cell, dropped))),
+  );
+  const head = block.content[0]?.content ?? [];
+  const delimiters = head.map(
+    (cell) => COLUMN_DELIMITER[cell.attrs?.align ?? ""] ?? PLAIN_COLUMN_DELIMITER,
+  );
+  return [lines[0], tableLine(delimiters), ...lines.slice(1)].join("\n");
+}
+
 function serializeBlockBody(
   block: Block,
   dropped: BlockLosses,
@@ -246,7 +274,10 @@ function serializeBlockBody(
     case "heading": {
       const hashes = "#".repeat(block.attrs.level);
       const content = block.content ?? [];
-      return content.length > 0 ? `${hashes} ${serializeInline(content, "heading").text}` : hashes;
+      if (content.length === 0) return hashes;
+      const { text, droppedCodeMarks } = serializeInline(content, "heading");
+      dropped.codeMark += droppedCodeMarks;
+      return `${hashes} ${text}`;
     }
     case "blockquote": {
       const lines = block.content
@@ -272,6 +303,8 @@ function serializeBlockBody(
     case "bulletList":
     case "orderedList":
       return serializeListAmong(block as ListLike, dropped, markers);
+    case "table":
+      return serializeTable(block, dropped);
   }
 }
 

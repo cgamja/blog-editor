@@ -151,7 +151,6 @@ describe("markdown-format", () => {
 
   const outOfDefinitionCases: Array<[string, string]> = [
     ["h1", "# 제목"],
-    ["표", ["| a | b |", "|---|---|"].join("\n")],
     ["밑줄 HTML", "<u>밑줄</u>"],
     ["div", "<div>글자</div>"],
     ["br", "글자<br>"],
@@ -259,6 +258,52 @@ describe("markdown-format", () => {
     const result = convertMarkdown(readGuideExamples());
     expectOk(result);
     expect(docSchema.safeParse(result.doc).success).toBe(true);
+  });
+});
+
+describe("markdown-format — GFM 표는 표 블록이 된다", () => {
+  it("WHEN 정렬과 마크가 있는 GFM 표를 변환하면 THEN 머리 행 정렬이 든 table 하나가 나온다", () => {
+    const result = convertMarkdown(["| 이름 | 값 |", "| --- | :-: |", "| **가** | 1 |"].join("\n"));
+    expectOk(result);
+    const cell = (content: Record<string, unknown>[], align?: string) => ({
+      type: "tableCell",
+      ...(align === undefined ? {} : { attrs: { align } }),
+      content: [{ type: "paragraph", content }],
+    });
+    expect(result.doc.content).toEqual([
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              cell([{ type: "text", text: "이름" }]),
+              cell([{ type: "text", text: "값" }], "center"),
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              cell([{ type: "text", text: "가", marks: [{ type: "bold" }] }]),
+              cell([{ type: "text", text: "1" }]),
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it.each([
+    ["인용 안의 표", ["> | a | b |", "> | --- | --- |", "> | 1 | 2 |"].join("\n"), 1],
+    ["표 칸 안 그림", ["| a |", "| --- |", "| b |", "| ![x](/images/a.webp) |"].join("\n"), 4],
+    ["머리 행보다 칸이 많은 본문 줄", ["| a |", "| --- |", "| b |", "| c | d |"].join("\n"), 4],
+  ])("WHEN %s를 변환하면 THEN 실패하고 메시지가 그 줄 번호를 가리킨다", (_name, markdown, line) => {
+    const result = convertMarkdown(markdown);
+    expectFail(result);
+    for (const message of result.messages) {
+      expect(message).toMatch(/^블록 \d+ \(\d+줄\): .+\(받음: ".*"\) → .+$/);
+    }
+    expect(result.messages[0]).toContain(`(${line}줄)`);
   });
 });
 

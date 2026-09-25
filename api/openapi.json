@@ -1906,6 +1906,158 @@
                   },
                   "required": ["type", "attrs"],
                   "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "table"
+                    },
+                    "attrs": {
+                      "type": "object",
+                      "properties": {
+                        "font": {
+                          "type": "string",
+                          "enum": ["pretendard", "jua", "gaegu"]
+                        },
+                        "motion": {
+                          "type": "string",
+                          "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "stickers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "enum": [
+                                  "star-coral",
+                                  "star-mint",
+                                  "heart",
+                                  "cloud",
+                                  "bottle",
+                                  "rattle",
+                                  "pacifier",
+                                  "foot-coral",
+                                  "foot-mint"
+                                ]
+                              },
+                              "x": {
+                                "type": "integer",
+                                "minimum": -25,
+                                "maximum": 125
+                              },
+                              "y": {
+                                "type": "integer",
+                                "minimum": -25,
+                                "maximum": 125
+                              },
+                              "size": {
+                                "type": "integer",
+                                "minimum": 2,
+                                "maximum": 50
+                              },
+                              "rotate": {
+                                "type": "integer",
+                                "minimum": -180,
+                                "maximum": 180
+                              }
+                            },
+                            "required": ["id", "x", "y", "size", "rotate"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "content": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "tableRow"
+                          },
+                          "content": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "tableCell"
+                                },
+                                "attrs": {
+                                  "type": "object",
+                                  "properties": {
+                                    "align": {
+                                      "type": "string",
+                                      "enum": ["left", "center", "right"]
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                "content": {
+                                  "type": "array",
+                                  "prefixItems": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "paragraph"
+                                        },
+                                        "content": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "const": "text"
+                                              },
+                                              "text": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              "marks": {
+                                                "type": "array",
+                                                "items": {
+                                                  "$ref": "#/components/schemas/Mark"
+                                                }
+                                              }
+                                            },
+                                            "required": ["type", "text"],
+                                            "additionalProperties": false
+                                          }
+                                        }
+                                      },
+                                      "required": ["type"],
+                                      "additionalProperties": false
+                                    }
+                                  ],
+                                  "items": false,
+                                  "minItems": 1,
+                                  "maxItems": 1
+                                }
+                              },
+                              "required": ["type", "content"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": ["type", "content"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["type", "content"],
+                  "additionalProperties": false
                 }
               ]
             }

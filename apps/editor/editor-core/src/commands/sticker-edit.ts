@@ -3,7 +3,7 @@ import type { Command } from "@tiptap/pm/state";
 import type { Mappable } from "@tiptap/pm/transform";
 import { STICKER_RANGES } from "@blog-editor/content-schema";
 import type { Sticker } from "@blog-editor/content-schema";
-import { removeSticker, updateSticker } from "./decoration";
+import { addSticker, removeSticker, updateSticker } from "./decoration";
 import type { BlockRect, StickerPatch, StickerTarget } from "./decoration.types";
 import { stickersIn } from "./sticker-query";
 
@@ -24,6 +24,8 @@ const RESIZE_STEP_PERCENT = 1;
 const ROTATE_STEP_DEGREES = 15;
 const FULL_TURN_DEGREES = 360;
 const PERCENT = 100;
+/** 붙여 넣은 스티커를 고른 스티커에서 비키는 거리 — 블록 폭 · 높이의 %. 겹쳐 놓이면 복제된 줄 모른다 */
+const PASTE_OFFSET_PERCENT = 5;
 
 /** ±180 밖이면 반대쪽으로 감는다 — 회전은 원이라 범위 끝에서 멈출 이유가 없다(design.md 4) */
 export function wrapRotation(degrees: number): number {
@@ -74,6 +76,30 @@ export function stickerKeyCommand(
     const current = stickersIn(state.doc, blockPos)[index];
     if (current === undefined) return false;
     return updateSticker(blockPos, index, patchOf(current))(state, dispatch);
+  };
+}
+
+function besideOnAxis(value: number, { max }: { max: number }): number {
+  const forward = value + PASTE_OFFSET_PERCENT;
+  const fitsForward = forward <= max;
+  return fitsForward ? forward : value - PASTE_OFFSET_PERCENT;
+}
+
+/**
+ * 복사해 둔 스티커(종류 · 크기 · 회전)를 고른 스티커 옆에 그 블록 끝으로 하나 더 붙인다(spec: editor-sticker-copy).
+ * 상한 · 닫힌 집합 검사는 addSticker 한 곳을 지난다. 새 스티커는 블록 스티커의 마지막 순번이다.
+ */
+export function pasteStickerBeside(copied: Sticker, target: StickerRef): Command {
+  return (state, dispatch) => {
+    const anchor = stickersIn(state.doc, target.blockPos)[target.index];
+    if (anchor === undefined) return false;
+    return addSticker(copied.id, {
+      blockPos: target.blockPos,
+      x: besideOnAxis(anchor.x, STICKER_RANGES.x),
+      y: besideOnAxis(anchor.y, STICKER_RANGES.y),
+      size: copied.size,
+      rotate: copied.rotate,
+    })(state, dispatch);
   };
 }
 
