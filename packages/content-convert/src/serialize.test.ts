@@ -284,4 +284,70 @@ describe("serializeMarkdown", () => {
       { block: 3, kind: "emptyParagraph", count: 1 },
     ]);
   });
+
+  it("WHEN 정렬 · 파이프 · 빈 칸이 있는 표를 직렬화하면 THEN GFM 표 세 줄이고 다시 변환하면 같다", () => {
+    const cell = (content: Record<string, unknown>[], align?: string) => ({
+      type: "tableCell",
+      ...(align === undefined ? {} : { attrs: { align } }),
+      content: [content.length > 0 ? paragraph(...content) : { type: "paragraph" }],
+    });
+    const input = doc({
+      type: "table",
+      content: [
+        { type: "tableRow", content: [cell([text("a")]), cell([text("b")], "right")] },
+        { type: "tableRow", content: [cell([text("x|y", { type: "code" })]), cell([])] },
+      ],
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("| a | b |\n| --- | --: |\n| `x\\|y` |  |\n");
+    expect(result.losses).toEqual([]);
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: normalize(input),
+      messages: [],
+    });
+  });
+
+  it("WHEN 줄바꿈이 든 코드 마크 글자가 표 칸 · 제목에 있으면 THEN 코드 마크를 빼고 글자로 써 줄이 끊기지 않고 losses에 센다", () => {
+    const code = { type: "code" };
+    const input = doc(
+      { type: "heading", attrs: { level: 2 }, content: [text("a\nb", code)] },
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [{ type: "tableCell", content: [paragraph(text("c\nd", code))] }],
+          },
+        ],
+      },
+    );
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe("## a&#10;b\n\n| c&#10;d |\n| --- |\n");
+    expect(result.losses).toEqual([
+      { block: 1, kind: "codeMark", count: 1 },
+      { block: 2, kind: "codeMark", count: 1 },
+    ]);
+    const withoutCode = doc(
+      { type: "heading", attrs: { level: 2 }, content: [text("a\nb")] },
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [{ type: "tableCell", content: [paragraph(text("c\nd"))] }],
+          },
+        ],
+      },
+    );
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: normalize(withoutCode),
+      messages: [],
+    });
+  });
 });

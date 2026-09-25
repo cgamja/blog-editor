@@ -17,7 +17,7 @@
 
 #### Scenario: 틀린 markdown이면 줄 번호 메시지가 온다
 
-- **WHEN** 지원하지 않는 블록(표)이 든 markdown으로 미리보기를 부른다
+- **WHEN** 지원하지 않는 블록(HTML 블록 `<div>`)이 든 markdown으로 미리보기를 부른다
 - **THEN** `ok: false`이고 메시지에 그 줄 번호가 있으며, 글 목록은 비어 있다
 
 #### Scenario: 틀린 요청은 400이다

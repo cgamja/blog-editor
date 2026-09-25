@@ -110,6 +110,26 @@ describe("html-render", () => {
       `<div class="post-body"><ol start="3"><li><p>가</p></li></ol></div>`,
     );
   });
+
+  it("WHEN 정렬 열이 있는 표를 렌더하면 THEN 머리 행은 thead th, 나머지는 tbody td이고 정렬이 열 전체에 붙는다", () => {
+    const cell = (text: string, align?: "right") => ({
+      type: "tableCell" as const,
+      ...(align === undefined ? {} : { attrs: { align } }),
+      content: [{ type: "paragraph" as const, content: [{ type: "text" as const, text }] }] as [
+        { type: "paragraph"; content: { type: "text"; text: string }[] },
+      ],
+    });
+    const file = docOf({
+      type: "table",
+      content: [
+        { type: "tableRow", content: [cell("이름"), cell("값", "right")] },
+        { type: "tableRow", content: [cell("가"), cell("1")] },
+      ],
+    } as Block);
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toBe(
+      `<div class="post-body"><div class="post-table-scroll"><table><thead><tr><th scope="col">이름</th><th scope="col" data-align="right">값</th></tr></thead><tbody><tr><td>가</td><td data-align="right">1</td></tr></tbody></table></div></div>`,
+    );
+  });
 });
 
 // ── render-safety (보호 대상 — 고쳐서 통과시키지 않는다) ─────────────────────

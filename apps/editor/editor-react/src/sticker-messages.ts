@@ -28,7 +28,7 @@ export const removeStickerLabel = (id: string): string => `${stickerName(id)} �
 
 export const STICKER_MESSAGES = {
   keyboardHint:
-    "방향키로 옮기고, 더하기 · 빼기로 크기를, 대괄호로 회전을 바꿔요. Delete로 지우고 Esc로 나가요.",
+    "방향키로 옮기고, 더하기 · 빼기로 크기를, 대괄호로 회전을 바꿔요. 복사 · 붙여넣기로 하나 더 만들고, Delete로 지우고 Esc로 나가요.",
   cannotPlace: "여기에는 놓을 수 없어요. 문단이나 사진 가까이에 놓아 주세요.",
   limit: `스티커는 글 하나에 ${MAX_STICKERS_PER_DOC}개까지예요.`,
 } as const;

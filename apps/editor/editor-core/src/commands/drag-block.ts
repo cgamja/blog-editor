@@ -15,6 +15,8 @@ import { INSERTABLE_BLOCKS } from "./drag-block.constants";
 import type { InsertableBlockKind } from "./drag-block.constants";
 import type { BlockBand, InsertableBlock } from "./drag-block.types";
 import { blockStart } from "./move-block";
+import { createTable } from "./table";
+import { NEW_TABLE_SIZE } from "./table.constants";
 import { carriedAttrs } from "./turn-into";
 
 const isIndex = (value: number, size: number) =>
@@ -97,6 +99,10 @@ function insertableBlock(state: EditorState, kind: InsertableBlockKind, from: No
   const type = state.schema.nodes[spec.type];
   if (type === undefined) return null;
   const attrs = from === null ? (spec.attrs ?? null) : carriedAttrs(from, type, spec.attrs ?? null);
+  // createAndFill은 표를 1×1로 채운다 — 머리 행 + 본문 행이 있는 크기로 만든다(spec: editor-table)
+  if (type.spec.tableRole === "table") {
+    return createTable(state.schema, NEW_TABLE_SIZE.rows, NEW_TABLE_SIZE.columns, attrs);
+  }
   return type.createAndFill(attrs);
 }
 

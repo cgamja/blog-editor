@@ -189,7 +189,7 @@ const stickerSchema = z.strictObject({
   rotate: intInRange(STICKER_RANGES.rotate.min, STICKER_RANGES.rotate.max),
 });
 
-/** 글자가 있는 블록(paragraph · blockquote · bulletList · orderedList)의 attrs. */
+/** 글자가 있는 블록(paragraph · blockquote · bulletList · orderedList · table)의 attrs. */
 const textDecorationAttrsSchema = z.strictObject({
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
@@ -345,6 +345,21 @@ const innerListSchema: z.ZodType<InnerListNode> = z.lazy(() =>
   z.union([innerBulletListSchema, innerOrderedListSchema]),
 );
 
+/**
+ * 표 칸 — 열 정렬만 attrs로 가진다(adr-028). 정렬은 머리 행(첫 행) 칸에만 올 수 있고, 그 규칙은 표 refine이
+ * 본다. 칸 안은 attrs 없는 문단 정확히 하나(GFM 칸은 한 줄 인라인).
+ */
+const tableCellSchema = z.strictObject({
+  type: z.literal("tableCell"),
+  attrs: z.strictObject({ align: alignSchema.optional() }).optional(),
+  content: z.tuple([innerParagraphSchema]),
+});
+
+const tableRowSchema = z.strictObject({
+  type: z.literal("tableRow"),
+  content: z.array(tableCellSchema).min(1),
+});
+
 // ── 5. 최상위 블록 ─────────────────────────────────────────────────────
 
 const paragraphSchema = z.strictObject({
@@ -407,6 +422,44 @@ const calloutSchema = z.strictObject({
     .min(1),
 });
 
+type TableRowNode = z.infer<typeof tableRowSchema>;
+
+/**
+ * 표는 직사각형이고(모든 행의 칸 수가 같다) 열 정렬은 머리 행 칸에만 있다(adr-028) — 칸 병합 · 본문 칸 정렬은
+ * 자리가 없다. 머리 행은 노드 종류가 아니라 첫 행이라는 자리다.
+ */
+function checkTableShape(rows: readonly TableRowNode[], ctx: z.RefinementCtx): void {
+  const columns = rows[0]?.content.length ?? 0;
+  rows.forEach((row, rowIndex) => {
+    if (row.content.length !== columns) {
+      ctx.addIssue({
+        code: "custom",
+        message: `표의 모든 행은 칸 수가 같아야 한다(첫 행 ${columns}칸)`,
+        path: ["content", rowIndex, "content"],
+      });
+    }
+    if (rowIndex === 0) return;
+    row.content.forEach((cell, cellIndex) => {
+      if (cell.attrs?.align !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "열 정렬은 머리 행(첫 행) 칸에만 둔다",
+          path: ["content", rowIndex, "content", cellIndex, "attrs", "align"],
+        });
+      }
+    });
+  });
+}
+
+/** 꾸미기는 목록 · 인용과 같은 font · motion · stickers — 정렬 · 폭은 없다(adr-028) */
+const tableSchema = z
+  .strictObject({
+    type: z.literal("table"),
+    attrs: textDecorationAttrsSchema.optional(),
+    content: z.array(tableRowSchema).min(1),
+  })
+  .superRefine((table, ctx) => checkTableShape(table.content, ctx));
+
 const topLevelBlockSchema = z.union([
   paragraphSchema,
   headingSchema,
@@ -418,6 +471,7 @@ const topLevelBlockSchema = z.union([
   imageSchema,
   calloutSchema,
   appScreenshotSchema,
+  tableSchema,
 ]);
 
 // ── 6. doc 루트 + 스티커 합계 12개 refine(보호 대상) ───────────────────────
