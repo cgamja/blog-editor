@@ -48,3 +48,18 @@ export const QUESTION_MARK = "?";
 
 /** 강제 줄바꿈은 줄바꿈 한 글자다 — 빈 글자로 읽으면 줄 앞뒤 글자가 한 낱말로 붙는다 */
 export const HARD_BREAK_TEXT = "\n";
+
+/** 검색 노출 점수의 범위 — 점수는 저장하지 않고 발견 목록에서 매번 계산한다(adr-034) */
+export const SEO_SCORE_MAX = 100;
+export const SEO_SCORE_MIN = 0;
+
+/**
+ * 규칙 하나당 등급별 감점(adr-034). must 넷이면 0점이 되게 must를 크게 잡았다 — 중복 제목 · 소제목 없음 ·
+ * alt 없음은 검색 노출을 직접 해친다. should는 고치면 좋아지는 길이 · 검색어 자리라 must의 절반 아래,
+ * info는 글에 따라 안 맞을 수 있는 권고라 몇 개가 남아도 90점대가 되게 작게 둔다.
+ */
+export const SEO_LEVEL_PENALTY = {
+  must: 25,
+  should: 10,
+  info: 3,
+} as const satisfies Record<(typeof SEO_LEVELS)[number], number>;

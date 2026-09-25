@@ -61,7 +61,7 @@ export type { PostFile } from "./post-file";
 
 export { defaultAlignOf, normalize } from "./normalize";
 
-export { checkSeo } from "./seo";
+export { checkSeo, scoreSeo, seoOthersOf } from "./seo";
 export {
   SEO_BODY_MIN_CHARS,
   SEO_DESCRIPTION_LENGTH,

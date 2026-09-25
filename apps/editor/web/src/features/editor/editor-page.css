@@ -288,6 +288,13 @@
   color: var(--ink);
 }
 
+.seo-checklist-score {
+  margin: 0;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--ink-mid);
+}
+
 .seo-checklist-notice,
 .seo-checklist-empty {
   margin: 0;
