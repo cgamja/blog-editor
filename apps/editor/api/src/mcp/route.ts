@@ -2,6 +2,7 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
+import { blogToday } from "../blog-date";
 import type { SessionConfig } from "../session";
 import type { SettingsStore } from "../settings-store";
 import type { PostStore } from "../store";
@@ -30,10 +31,6 @@ const MCP_PATH = "/mcp";
 /** 초안 한 편(markdown 20만 자, tools.ts)에 JSON-RPC 봉투를 얹어도 남는 크기 — 개수 · 횟수 제한은 M4 */
 const MAX_BODY_BYTES = 1024 * 1024;
 const BEARER = /^Bearer\s+(\S+)$/i;
-/** 글 날짜는 블로그 독자 기준 — 한국 아침에 쓴 초안이 UTC 어제로 찍히지 않게 */
-const BLOG_TIME_ZONE = "Asia/Seoul";
-// en-CA 로캘은 날짜를 YYYY-MM-DD로 쓴다
-const ISO_DATE_FORMAT = new Intl.DateTimeFormat("en-CA", { timeZone: BLOG_TIME_ZONE });
 
 function bearerTokenOf(header: string | undefined): string | null {
   return BEARER.exec(header ?? "")?.[1] ?? null;
@@ -64,7 +61,7 @@ export function registerMcpRoute(
     settings,
   } = options;
   if (oauth !== undefined) registerOAuthRoutes(app, { ...oauth, session });
-  const today = options.today ?? (() => ISO_DATE_FORMAT.format(new Date()));
+  const today = options.today ?? blogToday;
   const handler = createMcpHandler(({ authInfo }) => {
     // 아래 라우트가 토큰을 확인한 요청만 넘기므로 authInfo가 없으면 배선이 잘못된 것이다
     if (authInfo === undefined) throw new Error("MCP 요청에 authInfo가 없다");

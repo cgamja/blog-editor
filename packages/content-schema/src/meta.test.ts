@@ -29,6 +29,13 @@ describe("postMeta", () => {
     expect(schema.safeParse({ ...valid, date: "2026-09-22T10:00:00Z" }).success).toBe(false);
   });
 
+  it("WHEN keyword가 없거나 1~상한 글자면 통과하고 빈 문자열 · 상한 초과는 거부한다(post-file 핵심 검색어)", () => {
+    expect(schema.safeParse(valid).success).toBe(true);
+    expect(schema.safeParse({ ...valid, keyword: "봄 산책" }).success).toBe(true);
+    expect(schema.safeParse({ ...valid, keyword: "  " }).success).toBe(false);
+    expect(schema.safeParse({ ...valid, keyword: "가".repeat(41) }).success).toBe(false);
+  });
+
   it("빈 제목·긴 설명은 거부한다", () => {
     expect(schema.safeParse({ ...valid, title: "   " }).success).toBe(false);
     expect(schema.safeParse({ ...valid, description: "가".repeat(161) }).success).toBe(false);

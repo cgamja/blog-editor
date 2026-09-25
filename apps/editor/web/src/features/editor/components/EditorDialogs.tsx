@@ -1,4 +1,5 @@
-import type { Doc, PostMeta } from "@blog-editor/content-schema";
+import { checkSeo } from "@blog-editor/content-schema";
+import type { Doc, PostMeta, SeoOtherPost } from "@blog-editor/content-schema";
 import { useWarmDisplayFont } from "../../../shared/ui/use-warm-display-font";
 import { EDITOR_MESSAGES } from "../messages";
 import { missingForSave } from "../post-meta";
@@ -29,6 +30,10 @@ export interface EditorDialogsProps {
   isPublished: boolean;
   /** 미리보기를 연 순간의 문서 */
   previewDoc: Doc | null;
+  /** 발행 확인을 연 순간의 문서 — 검색 노출 점검이 읽는다(닫힌 집합을 어기면 null) */
+  publishDoc: Doc | null;
+  /** 제목 중복 점검에 쓰는 다른 글 */
+  otherPosts: readonly SeoOtherPost[];
   actions: EditorDialogActions;
 }
 
@@ -38,6 +43,8 @@ export function EditorDialogs({
   form,
   isPublished,
   previewDoc,
+  publishDoc,
+  otherPosts,
   actions,
 }: EditorDialogsProps) {
   useWarmDisplayFont(DIALOG_TITLES);
@@ -55,6 +62,11 @@ export function EditorDialogs({
       <PublishDialog
         isUpdate={isPublished}
         missing={missingForSave(form.meta, form.slug)}
+        seo={
+          publishDoc === null
+            ? null
+            : checkSeo({ slug: form.slug, meta: form.meta, doc: publishDoc, others: otherPosts })
+        }
         onConfirm={actions.onConfirmPublish}
         onCancel={actions.onClose}
       />

@@ -3,6 +3,7 @@ export {
   POST_SOURCES,
   TITLE_MAX_LENGTH,
   DESCRIPTION_MAX_LENGTH,
+  KEYWORD_MAX_LENGTH,
   createPostMetaSchema,
   imagePathSchema,
   postSourceSchema,
@@ -57,6 +58,25 @@ export { createPostFileSchema, migrations, migrate, MigrationError } from "./pos
 export type { PostFile } from "./post-file";
 
 export { defaultAlignOf, normalize } from "./normalize";
+
+export { checkSeo } from "./seo";
+export {
+  SEO_BODY_MIN_CHARS,
+  SEO_DESCRIPTION_LENGTH,
+  SEO_FIRST_PARAGRAPH_MAX,
+  SEO_LEVELS,
+  SEO_RULES,
+  SEO_TITLE_LENGTH,
+} from "./seo.constants";
+export type {
+  SeoFinding,
+  SeoInput,
+  SeoLevel,
+  SeoMetaField,
+  SeoOtherPost,
+  SeoRule,
+  SeoTarget,
+} from "./seo.types";
 
 export { createPublicPostsResponseSchema } from "./public-api";
 export type { PublicPostsResponse } from "./public-api";

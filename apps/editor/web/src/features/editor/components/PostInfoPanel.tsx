@@ -14,7 +14,7 @@ export interface PostInfoPanelProps {
   onOpenDecorate: () => void;
 }
 
-/** 「글 정보」 탭(디자인 68:2) — 주소 · 카테고리 · 설명 · 날짜 · 꾸미기 열기 · AI와 다듬기 */
+/** 「글 정보」 탭(디자인 68:2) — 주소 · 카테고리 · 설명 · 핵심 검색어 · 날짜 · 꾸미기 열기 · AI와 다듬기 */
 export function PostInfoPanel({
   meta,
   isPublished,
@@ -31,6 +31,8 @@ export function PostInfoPanel({
     categoryHint: `${id}-category-hint`,
     description: `${id}-description`,
     descriptionHint: `${id}-description-hint`,
+    keyword: `${id}-keyword`,
+    keywordHint: `${id}-keyword-hint`,
     date: `${id}-date`,
     aiHint: `${id}-ai-hint`,
   };
@@ -76,6 +78,21 @@ export function PostInfoPanel({
         />
         <p id={ids.descriptionHint} className="post-info-hint">
           {info.descriptionHint}
+        </p>
+      </div>
+
+      <div className="post-info-field">
+        <label htmlFor={ids.keyword}>{info.keyword}</label>
+        <input
+          id={ids.keyword}
+          type="text"
+          value={meta.keyword ?? ""}
+          autoComplete="off"
+          aria-describedby={ids.keywordHint}
+          onChange={(event) => onMetaChange({ keyword: event.target.value })}
+        />
+        <p id={ids.keywordHint} className="post-info-hint">
+          {info.keywordHint}
         </p>
       </div>
 
