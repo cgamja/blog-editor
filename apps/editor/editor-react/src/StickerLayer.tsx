@@ -14,6 +14,7 @@ import { STICKER_MESSAGES, stickerAriaLabel } from "./sticker-messages";
 import { refOf, sameRef } from "./sticker-ref";
 import type { StickerBox } from "./sticker-types";
 import { hiddenStickerRule } from "./sticker-ui";
+import { useStickerClipboard } from "./use-sticker-clipboard";
 import { useStickerDrop } from "./use-sticker-drop";
 import { useStickerGesture } from "./use-sticker-gesture";
 import { useStickerLayout } from "./use-sticker-layout";
@@ -58,12 +59,18 @@ export function StickerLayer({ editor }: StickerLayerProps) {
     selection.leave();
   };
 
+  const handleClipboardKey = useStickerClipboard(editor, selection, setStatus);
+
   const handleKeyDown = (box: StickerBox) => (event: KeyboardEvent<HTMLButtonElement>) => {
     if (gesture !== null || editor.view.composing) return;
     const { key, metaKey, ctrlKey, altKey } = event;
     if (key === "Escape" && !metaKey && !ctrlKey && !altKey) {
       event.preventDefault();
       selection.leave();
+      return;
+    }
+    if (handleClipboardKey(refOf(box), event.nativeEvent)) {
+      event.preventDefault();
       return;
     }
     const command = stickerKeyCommand(refOf(box), key, { metaKey, ctrlKey, altKey });

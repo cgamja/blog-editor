@@ -30,6 +30,7 @@ export type {
 export {
   isStickerRemoveKey,
   mapStickerRef,
+  pasteStickerBeside,
   placeStickerNear,
   stickerKeyCommand,
   wrapRotation,
