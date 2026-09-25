@@ -117,8 +117,8 @@ editor-react는 SHALL 순수 함수 `filterSlashItems(query)`로 「+」 메뉴�
 
 #### Scenario: 한글 이름과 영문 별칭으로 거른다
 
-- **WHEN** `filterSlashItems("제목")`, `filterSlashItems("h2")`, `filterSlashItems("HR")`, `filterSlashItems("")`, `filterSlashItems("없는말")`
-- **THEN** 큰 제목 · 작은 제목, 큰 제목, 구분선, 전체 10개, 빈 목록이다
+- **WHEN** `filterSlashItems("제목")`, `filterSlashItems("h2")`, `filterSlashItems("HR")`, `filterSlashItems("")`, `filterSlashItems("없는말")`, `filterSlashItems("table")`
+- **THEN** 큰 제목 · 작은 제목, 큰 제목, 구분선, 전체 11개(마지막은 「표」), 빈 목록, 표다
 
 #### Scenario: 조합 중인 한글로도 거른다
 

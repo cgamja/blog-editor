@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PostMeta } from "@blog-editor/content-schema";
+import { withMetaPatch } from "../post-meta";
 import { suggestSlug } from "../slug";
 import type { EditableMeta, EditingStart } from "../types";
 
@@ -14,7 +15,7 @@ export function usePostForm(start: EditingStart) {
   return {
     meta,
     slug,
-    changeMeta: (patch: EditableMeta) => setMeta((previous) => ({ ...previous, ...patch })),
+    changeMeta: (patch: EditableMeta) => setMeta((previous) => withMetaPatch(previous, patch)),
     /**
      * 제목을 바꾼다. 아직 서버에 없는 새 글이고 사람이 주소를 고친 적이 없으면 주소도 제목에서 제안한다
      * (디자인 결정 "새 글").

@@ -50,6 +50,72 @@ function cleanAttrs(node: Node, keepDecoration: boolean): Attrs {
 const allowedMarks = (marks: readonly Mark[]) =>
   marks.filter((mark) => mark.type.name !== "link" || hrefOrNull(mark.attrs.href) !== null);
 
+/** 선택이 표 칸 안인가 — 붙인 칸은 본문 칸이 될 수 있고, 칸 안은 문단 하나라 여러 블록이 들어갈 자리가 없다 */
+export function isTableCellTarget(selection: Selection): boolean {
+  const { $from } = selection;
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    if ($from.node(depth).type.spec.tableRole === "cell") return true;
+  }
+  return false;
+}
+
+const isTablePart = (node: Node) => node.type.spec.tableRole !== undefined;
+
+function withoutAlign(cell: Node): Node {
+  return cell.attrs.align == null
+    ? cell
+    : cell.type.create({ ...cell.attrs, align: null }, cell.content, cell.marks);
+}
+
+/**
+ * 표를 저장 가능한 모양으로 — 열 정렬은 머리 행(첫 행) 칸에만(adr-028, 공개 HTML은 열의 모든 칸에 data-align을
+ * 싣는다), 그리고 직사각형. 병합을 버린 표 · 행 길이가 다른 외부 표는 짧은 행 끝에 빈 칸을 채운다 — blockGuard
+ * (filterTransaction)가 prosemirror-tables fixTables(appendTransaction)보다 먼저 거부해 붙여넣기가 통째로 사라진다.
+ */
+function rectangularTable(table: Node): Node {
+  let width = 0;
+  table.forEach((row) => (width = Math.max(width, row.childCount)));
+  const rows: Node[] = [];
+  table.forEach((row, _offset, rowIndex) => {
+    const cells: Node[] = [];
+    row.forEach((cell) => cells.push(rowIndex === 0 ? cell : withoutAlign(cell)));
+    const filler = cells[0]?.type;
+    while (filler !== undefined && cells.length < width) {
+      const empty = filler.createAndFill();
+      if (empty === null) break;
+      cells.push(empty);
+    }
+    rows.push(row.type.create(row.attrs, Fragment.fromArray(cells)));
+  });
+  return table.type.create(table.attrs, Fragment.fromArray(rows), table.marks);
+}
+
+/** 칸 조각(맨 위가 행 · 칸)이나 칸 자리에 붙이는 표의 칸은 어느 행에 들어갈지 몰라 정렬을 모두 지운다 */
+function withoutCellAligns(node: Node): Node {
+  if (node.type.spec.tableRole === "cell") return withoutAlign(node);
+  if (!isTablePart(node)) return node;
+  const children: Node[] = [];
+  node.forEach((child) => children.push(withoutCellAligns(child)));
+  return node.type.create(node.attrs, Fragment.fromArray(children), node.marks);
+}
+
+/**
+ * 칸 안에 여러 블록을 붙이면 한 줄로 합친다(블록 사이는 공백 하나 — 강제 줄바꿈 #131이 생기면 줄바꿈으로).
+ * 칸 안은 문단 하나라 그대로 두면 Fitter가 표를 쪼개고 blockGuard가 거부한다. 그림 같은 글자 없는 블록은 빠진다.
+ */
+function inlineForCell(slice: Slice): Slice {
+  const pieces: Node[] = [];
+  slice.content.descendants((node) => {
+    if (!node.isTextblock) return true;
+    if (node.content.size > 0) {
+      if (pieces.length > 0) pieces.push(node.type.schema.text(" "));
+      node.content.forEach((inline) => pieces.push(inline));
+    }
+    return false;
+  });
+  return pieces.length === 0 ? Slice.empty : new Slice(Fragment.fromArray(pieces), 0, 0);
+}
+
 function cleanNode(node: Node, isSliceTop: boolean, intoTopLevel: boolean): Node | null {
   if (node.isText) return node.mark(allowedMarks(node.marks));
   if (MEDIA_NODES.has(node.type.name) && imagePathOrNull(node.attrs.src) === null) return null;
@@ -58,23 +124,34 @@ function cleanNode(node: Node, isSliceTop: boolean, intoTopLevel: boolean): Node
     const cleaned = cleanNode(child, false, intoTopLevel);
     if (cleaned !== null) children.push(cleaned);
   });
-  return node.type.create(
+  const cleaned = node.type.create(
     cleanAttrs(node, intoTopLevel && isSliceTop),
     Fragment.fromArray(children),
     allowedMarks(node.marks),
   );
+  return node.type.spec.tableRole === "table" ? rectangularTable(cleaned) : cleaned;
 }
 
-export function normalizePastedSlice(slice: Slice, options: { intoTopLevel: boolean }): Slice {
+export function normalizePastedSlice(
+  slice: Slice,
+  options: { intoTopLevel: boolean; intoTableCell?: boolean },
+): Slice {
+  const intoTableCell = options.intoTableCell ?? false;
   const nodes: Node[] = [];
   slice.content.forEach((node) => {
     const cleaned = cleanNode(node, true, options.intoTopLevel);
     if (cleaned !== null) nodes.push(cleaned);
   });
+  if (nodes.length === 0) return Slice.empty;
+  const cellPieces = nodes.some((node) => ["row", "cell"].includes(node.type.spec.tableRole));
+  // 표 조각은 prosemirror-tables handlePaste가 칸으로 넣는다 — 칸 자리이거나 칸 조각이면 정렬만 지운다
+  const fixed = intoTableCell || cellPieces ? nodes.map(withoutCellAligns) : nodes;
   // 지우는 것은 원자 노드뿐이라 열린 끝(openStart · openEnd)은 그대로 둔다(design.md 4)
-  return nodes.length === 0
-    ? Slice.empty
-    : new Slice(Fragment.fromArray(nodes), slice.openStart, slice.openEnd);
+  const result = new Slice(Fragment.fromArray(fixed), slice.openStart, slice.openEnd);
+  // 표 조각만이면 prosemirror-tables가 칸으로 넣는다. 문단과 섞인 표는 칸으로 넣을 수 없어 글자만 한 줄로 합친다
+  const mustFlatten =
+    intoTableCell && !fixed.every(isTablePart) && !fixed.every((node) => node.isInline);
+  return mustFlatten ? inlineForCell(result) : result;
 }
 
 export const pasteNormalizerKey = new PluginKey("pasteNormalizer");
@@ -88,7 +165,10 @@ export function pasteNormalizer(): Plugin {
         // 이미 저장 가능한 모양이고 스티커를 지우면 옮기다 잃는다 — 안쪽에 떨어져 무효가 되면 blockGuard가 막는다
         view.dragging?.move
           ? slice
-          : normalizePastedSlice(slice, { intoTopLevel: isTopLevelTarget(view.state.selection) }),
+          : normalizePastedSlice(slice, {
+              intoTopLevel: isTopLevelTarget(view.state.selection),
+              intoTableCell: isTableCellTarget(view.state.selection),
+            }),
     },
   });
 }

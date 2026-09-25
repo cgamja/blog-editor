@@ -22,6 +22,15 @@ export const BLOCK_MENU_MESSAGES = {
   remove: "지우기",
 } as const;
 
+/** 손잡이 블록이 표일 때 블록 메뉴의 표 항목(spec: editor-table) — 커서 칸, 커서가 표 밖이면 마지막 칸 기준 */
+export const TABLE_MENU_MESSAGES = {
+  group: "표",
+  addRowAfter: "아래에 행 추가",
+  addColumnAfter: "오른쪽에 열 추가",
+  deleteRow: "행 지우기",
+  deleteColumn: "열 지우기",
+} as const;
+
 /** 「바꾸기」 항목 이름. 키 타입이 TURN_INTO_TARGETS와 같아서 종류가 늘면 typecheck가 빠진 이름을 잡는다. */
 export const TURN_INTO_LABELS: Record<TurnIntoKind, string> = {
   paragraph: "문단",
@@ -54,6 +63,7 @@ export const INSERTABLE_BLOCK_LABELS: Record<InsertableBlockKind, string> = {
   calloutTip: "콜아웃 · 팁",
   calloutWarning: "콜아웃 · 주의",
   horizontalRule: "구분선",
+  table: "표",
 };
 
 /** 「+」 · `/` 메뉴의 동작 항목 이름(block-menu-actions.ts). 키 타입이 동작 목록과 같아 빠지면 typecheck가 잡는다 */

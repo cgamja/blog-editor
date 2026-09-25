@@ -347,3 +347,68 @@ describe("mcp-drafts — 워크스페이스 글쓰기 가이드", () => {
     expect(result.text).toContain(guide);
   });
 });
+
+describe("mcp-drafts — SEO 검사", () => {
+  it("WHEN alt가 빈 이미지가 든 markdown으로 create_draft를 부르면 THEN 저장되고 응답 seo에 image-alt가 있다", async () => {
+    const { store, app } = setup();
+
+    const created = await callTool(app, "create_draft", {
+      ...NEW_DRAFT,
+      markdown: "첫 문단입니다.\n\n![](/images/cherry-walk.webp)",
+    });
+    const body = JSON.parse(created.text) as { seo: Array<{ rule: string; level: string }> };
+
+    expect(created.isError).toBe(false);
+    expect(await store.get(NEW_DRAFT.slug)).not.toBeNull();
+    expect(body.seo).toContainEqual(expect.objectContaining({ rule: "image-alt", level: "must" }));
+  });
+
+  it("WHEN keyword를 넣어 create_draft한 뒤 keyword 없이 update_draft하면 THEN 처음 keyword가 그대로다", async () => {
+    const { store, app } = setup();
+    const created = await callTool(app, "create_draft", { ...NEW_DRAFT, keyword: "봄 산책" });
+    const { revision } = JSON.parse(created.text) as { revision: string };
+
+    const updated = await callTool(app, "update_draft", {
+      slug: NEW_DRAFT.slug,
+      revision,
+      markdown: "고친 첫 문단입니다.",
+    });
+
+    expect(updated.isError).toBe(false);
+    expect((await store.get(NEW_DRAFT.slug))?.file.meta.keyword).toBe("봄 산책");
+  });
+
+  it("WHEN 목록에 제목이 문자열이 아닌 항목이 섞여 있어도 THEN create_draft는 저장되고 성공 응답이다", async () => {
+    const base = createMemoryPostStore();
+    const store: PostStore = {
+      ...base,
+      list: async () => [
+        ...(await base.list()),
+        { slug: "broken", meta: { title: 42 } } as unknown as Awaited<
+          ReturnType<PostStore["list"]>
+        >[number],
+      ],
+    };
+    const { app } = setup(store);
+
+    const created = await callTool(app, "create_draft", NEW_DRAFT);
+
+    expect(created.isError).toBe(false);
+    expect(await base.get(NEW_DRAFT.slug)).not.toBeNull();
+  });
+
+  it("WHEN 유효한 토큰으로 initialize를 부르면 THEN instructions에 get_writing_guide와 seo가 있다", async () => {
+    const { app } = setup();
+
+    const result = await resultOf(
+      await rpc(app, "initialize", {
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: {},
+        clientInfo: { name: "test", version: "0.0.0" },
+      }),
+    );
+
+    expect(result.instructions).toEqual(expect.stringContaining("get_writing_guide"));
+    expect(result.instructions).toEqual(expect.stringContaining("seo"));
+  });
+});

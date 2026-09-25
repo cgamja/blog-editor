@@ -245,6 +245,69 @@ export const allBlocks = {
           caption: "일정 탭에서 다가오는 예방접종을 확인하는 화면",
         },
       },
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "기능" }] }],
+              },
+              {
+                type: "tableCell",
+                attrs: { align: "center" },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "무료" }] }],
+              },
+              {
+                type: "tableCell",
+                attrs: { align: "right" },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "프리미엄" }] }],
+              },
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "성장 기록" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "있음" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "있음" }] }],
+              },
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "일정 알림" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "없음" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "있음", marks: [{ type: "bold" }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 } satisfies PostFile;

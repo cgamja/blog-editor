@@ -12,6 +12,7 @@ import {
 import type { TurnIntoKind } from "@blog-editor/editor-core";
 import { menuItemsOf, onMenuKeyDown } from "./menu-keys";
 import { BLOCK_MENU_MESSAGES, TURN_INTO_LABELS } from "./messages";
+import { TableMenuGroup } from "./TableMenuGroup";
 import { useCloseOnOutsidePointer } from "./use-dismiss";
 import { useMenuPlacement, useScrollMenuIntoView } from "./use-menu-placement";
 
@@ -28,7 +29,7 @@ export interface BlockMenuProps {
 }
 
 /**
- * 손잡이를 누르면 여는 블록 메뉴(Notion의 블록 메뉴) — 바꾸기 · 복제 · 지우기. 커맨드는 모두 손잡이 블록에
+ * 손잡이를 누르면 여는 블록 메뉴(Notion의 블록 메뉴) — 바꾸기 · (표면) 행 · 열 · 복제 · 지우기. 커맨드는 모두 손잡이 블록에
  * 작동한다(editor-core atTopBlock, block-controls design.md 5). 바꿀 수 없는 항목은 aria-disabled다 —
  * APG는 비활성 메뉴 항목도 포커스를 받게 둔다. https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/
  */
@@ -44,6 +45,7 @@ export function BlockMenu({ editor, index, onClose, buttonRef, onRun }: BlockMen
   const [enabledKinds] = useState(() =>
     KINDS.filter((kind) => turnTopBlockInto(index, kind)(editor.state)),
   );
+  const isTable = editor.state.doc.maybeChild(index)?.type.name === "table";
 
   // APG menu-button 패턴: 메뉴를 열면 포커스는 첫 항목으로 간다 — 방향키 탐색이 거기서 시작한다
   useEffect(() => {
@@ -100,6 +102,7 @@ export function BlockMenu({ editor, index, onClose, buttonRef, onRun }: BlockMen
           );
         })}
       </div>
+      {isTable && <TableMenuGroup index={index} state={editor.state} choose={choose} />}
       <div role="separator" className="block-menu-separator" />
       <button
         type="button"

@@ -85,3 +85,20 @@ describe("web-post-save — 주소를 바꾼 뒤 저장이 실패해도 쓰던 �
     expect(drafts.has("beta-open")).toBe(false);
   });
 });
+
+describe("web-post-save — 수정일은 서버가 정한다", () => {
+  it("WHEN 발행 글을 저장하면 THEN 폼의 updated를 그대로 보내고 오늘 날짜를 넣지 않는다", async () => {
+    const start = loadedStart(true);
+    const { saver, puts, finishPut } = setup({
+      ...start,
+      meta: { ...start.meta, updated: "2026-08-01" },
+    });
+
+    const saving = saver.save("publish");
+    await Promise.resolve();
+    await finishPut("r2");
+    await saving;
+
+    expect(puts[0]?.file.meta.updated).toBe("2026-08-01");
+  });
+});

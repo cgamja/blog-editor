@@ -335,6 +335,46 @@ const appScreenshotArb = fc.record({
     .map(([src, size, deco]) => ({ src, caption: "", ...size, ...deco })),
 });
 
+const MAX_TABLE_SIDE = 3;
+
+/**
+ * 표 — 직사각형, 첫 행이 머리 행이고 열 정렬은 머리 행 칸에만 있다(adr-028). 칸 안은 안쪽 문단 하나.
+ * 꾸미기는 목록 · 인용과 같은 font · motion · stickers.
+ */
+const tableArb = fc
+  .record({
+    columns: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+    rows: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+  })
+  .chain(({ columns, rows }) =>
+    fc.record({
+      type: fc.constant("table" as const),
+      attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+      content: fc
+        .tuple(
+          fc.array(fc.option(fc.constantFrom(...ALIGNS), { nil: undefined }), {
+            minLength: columns,
+            maxLength: columns,
+          }),
+          fc.array(fc.array(innerParagraphArb, { minLength: columns, maxLength: columns }), {
+            minLength: rows,
+            maxLength: rows,
+          }),
+        )
+        .map(([aligns, grid]) =>
+          grid.map((cells, row) => ({
+            type: "tableRow" as const,
+            content: cells.map((paragraph, column) => {
+              const align = row === 0 ? aligns[column] : undefined;
+              return align === undefined
+                ? { type: "tableCell" as const, content: [paragraph] }
+                : { type: "tableCell" as const, attrs: { align }, content: [paragraph] };
+            }),
+          })),
+        ),
+    }),
+  );
+
 const topLevelBlockArb = fc.oneof(
   paragraphArb,
   headingArb,
@@ -346,6 +386,7 @@ const topLevelBlockArb = fc.oneof(
   appScreenshotArb,
   listArb("bulletList", 0),
   listArb("orderedList", 0),
+  tableArb,
 );
 
 /** 블록 최대 MAX_BLOCKS_PER_DOC개 × 블록당 최대 STICKER_CAP_PER_BLOCK개 — 문서당 스티커 상한을 절대 넘지 않는다. */
