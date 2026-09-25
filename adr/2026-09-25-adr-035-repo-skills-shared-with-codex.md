@@ -21,13 +21,13 @@
 
 - **원본은 `.claude/skills/<이름>/`에 둔다.** Codex용 `.agents/skills/<이름>`은 원본을 가리키는 **상대 심볼릭 링크**다(`../../.claude/skills/<이름>`). git은 링크를 링크로 저장한다.
 - **링크하는 스킬은 블로그 글쓰기 스킬만이다**(`blog-write`, 이후 `blog-seo`).
-  - OpenSpec이 만든 `openspec-*` 스킬은 Claude Code 도구 이름을 전제로 쓰였다.
+  - OpenSpec이 만든 `openspec-*` 스킬은 프런트매터에 `allowed-tools`(Claude Code 전용 칸)를 쓴다. Codex에서 제대로 도는지도 확인하지 않았다.
   - 그래서 Codex 쪽에 링크하지 않는다.
 - **테스트가 링크를 지킨다.**
   - Codex 경로가 링크인지 본다.
   - 실제 경로가 원본과 같은지, 내용이 같은지 본다(`blog-write-skill.test.ts`).
 - **스킬 문장은 도구 중립으로 쓴다.** 갈리는 단계만 "Claude Code면 … / Codex면 …"으로 나눈다. 갈리는 단계는 다음과 같다.
-  - MCP 연결: `/mcp`와 `codex mcp add`
+  - MCP 연결: `/mcp`와 `codex mcp add`(도구별 허락 · 웹 검색 `live` 포함)
   - 스킬 부르는 법: `/blog-write`와 `$blog-write`
   - 글 품질 채점: claude-seo가 없으면 규칙 결과로 한다.
   - AI 이미지: ADR-029에 따라 Codex는 `$imagegen`, Claude Code는 `codex exec`를 쓴다.
@@ -44,8 +44,15 @@
 ## 감수한 트레이드오프
 
 - **Windows에서는 링크가 풀린다.** `core.symlinks`가 꺼져 있으면 링크가 경로 글자를 담은 파일로 풀린다. 그러면 Codex가 스킬을 못 찾고, 링크 테스트가 실패한다. 1단계는 본인용(macOS)이라 감수한다.
-- **Claude Code 전용 장치는 Codex에서 빠진다.** 저장 직후 SEO 훅(#149), claude-seo가 그렇다. 스킬 문장의 규칙이 대신하지만 강제력은 약하다. 다만 초안만 쓴다는 불변 조건은 서버가 지키므로 영향이 없다.
+- **Claude Code 전용 장치는 Codex에서 빠진다.** 저장 직후 SEO 훅(#149, 예정), claude-seo가 그렇다. 스킬 문장의 규칙이 대신하지만 강제력은 약하다. 다만 초안만 쓴다는 불변 조건은 서버가 지키므로 영향이 없다.
 - **스킬 문장이 조금 길어진다.** 도구별로 갈리는 곳이 늘 때마다 문장이 는다.
+- **도구 중립 여부를 강제하는 수단이 없다.** 스킬 문장이 한쪽 도구만 가정하는지는 리뷰만 본다.
+- **Codex 연결은 보안을 위해 편리함을 조금 버린다.**
+  - 서버 전체 자동 허락(`default_tools_approval_mode = "approve"`)은 권하지 않는다. 사용자 설정에 넣으면 모든 Codex 세션이 묻지 않고 `update_draft`로 사람이 쓰는 중인 초안을 바꿀 수 있다. 스킬은 웹 문서를 읽으므로, 그 안에 숨은 지시(프롬프트 인젝션)가 그 길을 쓸 위험도 있다.
+  - 그래서 읽기 도구 4개와 `create_draft`만 도구별로 자동 허락한다. `create_draft`는 이미 있는 주소면 거부되어 남의 글을 덮지 못한다. `update_draft`는 늘 묻는다.
+  - 비대화형 `codex exec`는 물을 수 없다. 그래서 고치기까지 맡기는 실행에만 `-c`로 그때 허락을 준다.
+  - 토큰은 평문 셸 설정(`~/.zshrc`)보다 macOS 키체인이나 그 셸에서만 쓰는 환경 변수를 권한다. 편리함을 골라 평문에 두는 것은 사용자가 알고 고른다.
+  - 도구에 `readOnlyHint` 표시를 달면 Codex의 `writes` 모드로 설정이 짧아질 수 있다. 서버 변경이라 따로 다룬다.
 
 ## 재검토 조건
 

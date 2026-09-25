@@ -1,5 +1,4 @@
-import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { lstatSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { convertMarkdown } from "@blog-editor/content-convert";
 
 /**
@@ -53,6 +52,7 @@ describe.each(REPO_SKILLS)("repo skill %s", (name) => {
     expect(lstatSync(codexSkillDir(name)).isSymbolicLink()).toBe(true);
     expect(realpathSync(codexSkillUrl(name))).toBe(realpathSync(skillUrl(name)));
     expect(readFileSync(codexSkillUrl(name), "utf8")).toBe(readFileSync(skillUrl(name), "utf8"));
-    expect(fileURLToPath(codexSkillUrl(name))).toContain("/.agents/skills/");
+    // 상대 링크여야 레포를 어디에 받아도 풀린다
+    expect(readlinkSync(codexSkillDir(name))).toBe(`../../.claude/skills/${name}`);
   });
 });
