@@ -417,4 +417,44 @@ describe("markdown-range-edit — 범위 찾기 보강", () => {
     expectOk(result);
     expect(result.doc.content).toEqual([paragraph("좋아"), input.content[1]]);
   });
+
+  it("WHEN 마침표 바로 뒤에 '...'를 붙인 '첫 문단이다....끝 문단이다.'로 replace하면 THEN 첫 문단부터 끝 문단까지를 바꾼다", () => {
+    const input = doc(
+      paragraph("첫 문단이다."),
+      paragraph("가운데 문단이다."),
+      paragraph("끝 문단이다."),
+      paragraph("남는 문단"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "첫 문단이다....끝 문단이다.",
+      markdown: "하나로 합친 문단",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([paragraph("하나로 합친 문단"), input.content[3]]);
+  });
+});
+
+describe("markdown-range-edit — 표", () => {
+  it("WHEN 표의 두 행에 걸친 일부를 골라 replace하면 THEN 실패이고 '블록 일부'와 표 전체를 고르라고 알린다", () => {
+    const cell = (value: string) => ({ type: "tableCell", content: [paragraph(value)] });
+    const row = (...values: string[]) => ({ type: "tableRow", content: values.map(cell) });
+    const input = doc({
+      type: "table",
+      content: [row("이름", "나이"), row("하나", "1"), row("둘", "2")],
+    });
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "하나...둘",
+      markdown: "새 문단",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("블록 일부");
+    expect(message).toContain("표");
+  });
 });
