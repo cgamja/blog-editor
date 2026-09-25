@@ -45,3 +45,6 @@ export const INTERNAL_HREF_PREFIX = "/";
 
 /** 질문형 소제목의 끝 */
 export const QUESTION_MARK = "?";
+
+/** 강제 줄바꿈은 줄바꿈 한 글자다 — 빈 글자로 읽으면 줄 앞뒤 글자가 한 낱말로 붙는다 */
+export const HARD_BREAK_TEXT = "\n";

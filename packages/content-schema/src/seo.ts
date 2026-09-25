@@ -1,5 +1,6 @@
 import type { Doc } from "./doc";
 import {
+  HARD_BREAK_TEXT,
   INTERNAL_HREF_PREFIX,
   QUESTION_MARK,
   SEO_BODY_MIN_CHARS,
@@ -40,6 +41,7 @@ const compact = (text: string) => text.normalize("NFC").replace(/\s+/g, "").toLo
 
 function textOf(node: AnyNode): string {
   if (node.text !== undefined) return node.text;
+  if (node.type === "hardBreak") return HARD_BREAK_TEXT;
   return (node.content ?? []).map(textOf).join("");
 }
 
