@@ -66,6 +66,32 @@ test("WHEN 스티커 있는 문단을 복사해 같은 글에 붙여넣으면 TH
   await expect(stickers).toHaveCount(STICKERS.length * 2);
 });
 
+test("WHEN 스티커 있는 문단을 복사해 그 문단 글자 가운데에 붙여넣으면 THEN 나뉜 문단의 스티커는 앞 조각에만 있고 붙인 문단의 스티커는 그대로다", async ({
+  page,
+}, testInfo) => {
+  const { body, stickers } = await openStickerDraft(page, testInfo, "sticker-paste-middle");
+
+  // ⌘A 복사는 닫힌 조각이다 — 글자 가운데에 붙이면 자리 문단이 둘로 나뉜다
+  await body.focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.press("ControlOrMeta+C");
+  await body.getByText(BODY_TEXT).click({ position: TEXT_START });
+  for (let i = 0; i < 3; i += 1) await pressMovingSelection(page, "ArrowRight");
+  await page.keyboard.press("ControlOrMeta+V");
+
+  // 앞 조각 · 붙인 문단 · 뒤 조각 — 스티커는 앞 조각(원래 것)과 붙인 문단(되살린 것)에만
+  // 스티커는 문단(p)의 형제다 — 꾸밈 래퍼 div.post-block 안에 문단과 함께 있다(editor-core dom.ts withDecoration).
+  // 그래서 최상위 블록(래퍼 또는 문단) 단위로 센다
+  const blocks = body.locator(":scope > *");
+  await expect(body.getByText(BODY_TEXT, { exact: true })).toHaveCount(1);
+  await expect(blocks).toHaveCount(3);
+  await expect(blocks.nth(0).locator("img.post-sticker")).toHaveCount(STICKERS.length);
+  await expect(blocks.nth(1)).toHaveText(BODY_TEXT);
+  await expect(blocks.nth(1).locator("img.post-sticker")).toHaveCount(STICKERS.length);
+  await expect(blocks.nth(2).locator("img.post-sticker")).toHaveCount(0);
+  await expect(stickers).toHaveCount(STICKERS.length * 2);
+});
+
 test("WHEN 문단을 세 번 클릭해 복사하고 뒤에 문단이 있는 새 빈 문단에 붙여넣은 뒤 글자를 치면 THEN 붙은 문단에 같은 수의 스티커가 있고 친 글자는 그 문단 끝에 붙는다", async ({
   page,
 }, testInfo) => {

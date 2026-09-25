@@ -131,6 +131,16 @@ describe("editor-paste: 같은 탭에서 복사한 스티커는 붙여넣어도 
     expect(stickerCountOf(doc)).toBe(12);
   });
 
+  it("WHEN 스티커 있는 문단 글자 가운데에 복사한 스티커 블록을 붙인다 THEN 나뉜 자리 문단의 복제분은 상한 계산에 들지 않아 붙인 블록의 스티커가 모두 남는다", () => {
+    // 자리 5개 + 붙일 4개 = 9. 나뉜 뒤 조각의 복제분(5)까지 세면 14라 붙인 쪽이 깎인다. 커서는 "본문|가운데"(1 + 글자 2)
+    const { slice } = copyThenPaste({
+      copied: closedSlice(block("가", 4)),
+      target: stateWith([block("본문가운데", 5)], 3),
+    });
+
+    expect(slice.content.child(0).attrs.stickers).toEqual(stickers(4));
+  });
+
   it("WHEN 상한까지 찬 글에서 스티커 블록을 잘라 내 다른 자리에 붙인다 THEN 스티커가 모두 남는다", () => {
     // 잘라내기가 원래 자리를 지운 뒤의 문서 — 남은 9개 + 옮길 3개 = 상한 12. 커서는 블록 끝(1 + 글자 5)
     const { slice, doc } = copyThenPaste({

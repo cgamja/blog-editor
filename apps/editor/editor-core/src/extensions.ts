@@ -5,6 +5,7 @@ import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
 import { stickerClipboard } from "./plugins/sticker-clipboard";
+import { stickerSafePaste } from "./plugins/sticker-safe-paste";
 import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
 import {
   headingLevelOf,
@@ -371,7 +372,8 @@ const Underline = Mark.create({
 });
 
 /**
- * 스티커가 있는 블록의 Enter를 splitBlockKeepingStickers에 넘긴다 — 등록만(design.md 6, .claude/rules/editor.md).
+ * 스티커가 있는 블록이 나뉠 때 스티커를 한 블록에만 남긴다 — Enter는 splitBlockKeepingStickers에, 붙여넣기는
+ * stickerSafePaste에 넘긴다. 등록만(design.md 6, .claude/rules/editor.md).
  * TipTap chain은 중간 커맨드가 실패해도 dispatch하므로 체인으로 잇지 않는다.
  * https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension#keyboard-shortcuts
  */
@@ -382,6 +384,7 @@ const StickerSafeSplit = Extension.create({
     Enter: ({ editor }) =>
       editor.commands.command(({ state, dispatch }) => splitBlockKeepingStickers(state, dispatch)),
   }),
+  addProseMirrorPlugins: () => [stickerSafePaste()],
 });
 
 /** 붙여넣기 정규화를 에디터 기본으로 켠다(spec: editor-paste). */
