@@ -16,6 +16,8 @@ import { POST_CATEGORIES_QUERY_KEY } from "../constants";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
+import { usePublishCheck } from "../hooks/use-publish-check";
+import { readDocOrNull } from "../read-doc";
 import { usePostForm } from "../hooks/use-post-form";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
 import { useServerSave } from "../hooks/use-server-save";
@@ -65,6 +67,8 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     onAdopt,
     onConflict: () => setOverlay("conflict"),
   });
+  // 자기 글은 제목 중복 비교에서 뺀다 — 주소를 바꾼 초안의 옛 주소도 자기 글이다
+  const publishCheck = usePublishCheck(getDoc, [form.slug, start.slug, server.savedSlug()]);
   const autosave = useAutosave({
     editor,
     save: server.save,
@@ -85,8 +89,13 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     autosave.schedule();
   };
 
+  const openPublish = () => {
+    publishCheck.captureDoc();
+    setOverlay("publish");
+  };
+
   const handleSaveDraft = () => {
-    if (server.isPublished) setOverlay("publish");
+    if (server.isPublished) openPublish();
     else void autosave.flush();
   };
   useSaveShortcut(handleSaveDraft);
@@ -103,12 +112,10 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   };
 
   const handleOpenPreview = () => {
-    try {
-      setPreviewDoc(getDoc());
-      setOverlay("preview");
-    } catch {
-      // 닫힌 집합을 어기는 문서 — 저장도 같은 이유로 실패하고 머리줄이 알린다
-    }
+    const doc = readDocOrNull(getDoc);
+    if (doc === null) return;
+    setPreviewDoc(doc);
+    setOverlay("preview");
   };
 
   const conflict = useConflictActions({
@@ -138,7 +145,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
           onBack: () => void handleBack(),
           onPreview: handleOpenPreview,
           onSaveDraft: handleSaveDraft,
-          onPublish: () => setOverlay("publish"),
+          onPublish: openPublish,
         }}
         title={
           <TitleField
@@ -171,6 +178,8 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         form={form}
         isPublished={server.isPublished}
         previewDoc={previewDoc}
+        publishDoc={publishCheck.publishDoc}
+        otherPosts={publishCheck.otherPosts}
         actions={{
           onClose: () => setOverlay(null),
           ...conflict,

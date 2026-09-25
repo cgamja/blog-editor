@@ -2,7 +2,6 @@ import { SCHEMA_VERSION } from "@blog-editor/content-schema";
 import type { Doc, PostFile, PostMeta } from "@blog-editor/content-schema";
 import { ApiError } from "../../shared/api/errors";
 import { NEW_POST_KEY } from "./constants";
-import { todayIsoDate } from "./editing-start";
 import { localDraftOf } from "./local-draft";
 import { EDITOR_MESSAGES } from "./messages";
 import { missingForSave } from "./post-meta";
@@ -103,7 +102,8 @@ export function createPostSaver(start: EditingStart, deps: PostSaverDeps): PostS
     const willPublish = mode === "publish" || wasPublished;
     const file: PostFile = {
       schemaVersion: SCHEMA_VERSION,
-      meta: { ...meta, draft: !willPublish, ...(wasPublished ? { updated: todayIsoDate() } : {}) },
+      // 수정일은 서버가 정한다(adr-030) — 발행 글 내용이 바뀌었을 때만 블로그 시간대의 오늘로 올린다
+      meta: { ...meta, draft: !willPublish },
       doc,
     };
     events.onStatus({ kind: "saving" });

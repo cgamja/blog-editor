@@ -31,6 +31,8 @@ export type PostSource = z.infer<typeof postSourceSchema>;
 /** 글 메타 길이 상한 — 가져오기 제안 · 화면의 입력 확인이 저장 규칙과 같은 값을 쓴다 */
 export const TITLE_MAX_LENGTH = 80;
 export const DESCRIPTION_MAX_LENGTH = 160;
+/** 핵심 검색어 — 검색창에 칠 말 하나라 짧다(adr-030) */
+export const KEYWORD_MAX_LENGTH = 40;
 
 /**
  * 카테고리는 URL이 되므로 닫힌 집합이다. 목록은 사이트가 아니라 워크스페이스 설정이 준다(plan 3-3)
@@ -46,6 +48,8 @@ export function createPostMetaSchema(options: { categories: readonly [string, ..
     draft: z.boolean(),
     image: imagePathSchema.optional(),
     source: postSourceSchema,
+    /** 핵심 검색어 — SEO 검사만 쓰는 저장 전용 값이라 공개 조회 · 목록 요약에 싣지 않는다(adr-030) */
+    keyword: z.string().trim().min(1).max(KEYWORD_MAX_LENGTH).optional(),
   });
 }
 

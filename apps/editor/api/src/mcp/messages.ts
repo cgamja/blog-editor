@@ -38,20 +38,31 @@ export const MCP_TOOL_TEXT = {
       "글 하나를 markdown으로 읽는다. update_draft에 넘길 revision과, markdown으로 옮기지 못한 것(losses)을 함께 준다.",
   },
   check_draft: {
-    title: "형식 검사",
-    description: "저장하지 않고 markdown 형식만 검사해 틀린 곳을 알려준다.",
+    title: "형식 · SEO 검사",
+    description:
+      "저장하지 않고 markdown 형식을 검사해 틀린 곳을 알려준다. 형식이 맞으면 seo(검색 노출 점검)도 준다 — title · description · keyword를 함께 주면 그것까지 본다. 이미 저장된 글을 검사할 때는 slug도 준다(자기 글과의 제목 중복을 빼려고).",
   },
   create_draft: {
     title: "초안 만들기",
     description:
-      "markdown과 글 정보로 새 초안을 저장한다. 항상 초안이고 발행은 사람이 에디터에서 한다. 응답의 editorUrl을 사용자에게 알려준다.",
+      "markdown과 글 정보로 새 초안을 저장한다. 항상 초안이고 발행은 사람이 에디터에서 한다. keyword는 핵심 검색어(선택). 응답의 seo를 must부터 고쳐 update_draft하고(seo가 null이면 점검하지 못한 것), editorUrl을 사용자에게 알려준다.",
   },
   update_draft: {
     title: "초안 고치기",
     description:
-      "get_post로 받은 revision으로 초안을 고쳐 쓴다. 그사이 바뀌었으면 충돌이다. 발행된 글은 고치지 못한다.",
+      "get_post로 받은 revision으로 초안을 고쳐 쓴다. 그사이 바뀌었으면 충돌이다. 발행된 글은 고치지 못한다. keyword를 주지 않으면 원래 값을 지킨다. 응답에 seo가 있다.",
   },
 } as const;
+
+/**
+ * 연결할 때 AI에게 주는 서버 안내(MCP 초기화 응답 `instructions`) — 클라이언트가 이 문장을 AI의 지시에
+ * 넣는다. 가이드를 잊어도 쓰기 응답의 `seo`가 고칠 거리를 다시 준다(adr-030).
+ */
+export const MCP_SERVER_INSTRUCTIONS = [
+  "이 서버는 블로그 초안을 쓰고 고친다. 발행은 사람이 에디터에서 한다.",
+  "글을 쓰기 전에 get_writing_guide를 먼저 읽고, 형식 · 말투 · SEO 규칙을 따른다.",
+  "check_draft · create_draft · update_draft 응답의 seo는 검색 노출 점검이다 — must부터 고쳐 update_draft하고, should · info는 글에 맞으면 반영한다.",
+].join("\n");
 
 /** get_writing_guide에서 워크스페이스 글쓰기 가이드 앞에 붙는 제목 */
 export const MCP_WORKSPACE_GUIDE_HEADING = "## 이 블로그의 글쓰기 가이드";
