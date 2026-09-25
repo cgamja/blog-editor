@@ -9,14 +9,14 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 도구 이름은 `blog-editor` MCP 서버 기준이다: `get_writing_guide` · `list_posts` · `get_post` · `check_draft` · `create_draft` · `update_draft`. 아래에서 "있으면"이라고 적은 인자 · 기능은 도구 설명(스키마)에 있을 때만 쓰고, 없으면 그 단계를 건너뛴다.
 
-이 스킬은 Claude Code와 Codex가 같은 파일을 읽는다(Codex는 `.agents/skills/blog-write` 링크로, adr-035). 대부분의 단계는 같다. 도구마다 다른 곳만 "Claude Code면 … / Codex면 …"으로 적었다. 웹 검색 · 페이지 열기는 쓰는 쪽의 웹 도구(Claude Code는 WebSearch · WebFetch, Codex는 웹 검색)를 쓴다.
+이 스킬은 Claude Code와 Codex가 같은 파일을 읽는다(Codex는 `.agents/skills/blog-write` 링크로, adr-035). 대부분의 단계는 같다. 도구마다 다른 곳만 "Claude Code면 … / Codex면 …"으로 적었다. 웹 검색 · 페이지 열기는 쓰는 쪽의 웹 도구를 쓴다(Claude Code는 WebSearch · WebFetch, Codex는 웹 검색 — Codex면 원문 확인에 `web_search = "live"`(또는 `--search`)가 필요하다).
 
 ## 0. 준비
 
 1. `blog-editor` MCP 도구가 보이는지 확인한다. 안 보이면 멈추고 이렇게 안내한다.
    - 레포 루트에서 `pnpm --filter @blog-editor/api dev`로 API를 켠다(127.0.0.1:8787).
    - Claude Code면 `/mcp`로 `blog-editor`를 다시 연결한다.
-   - Codex면 `codex mcp list`로 `blog-editor`가 있는지 본다. 없으면 `docs/mcp-connect.md`의 Codex 절(`codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN`)을 따르고 Codex를 다시 켠다. 도구 호출이 "requires approval"로 실패하면(비대화형 `codex exec`) 같은 절의 `default_tools_approval_mode` 설정을 안내한다.
+   - Codex면 `codex mcp list`로 `blog-editor`가 있는지 본다. 없으면 `docs/mcp-connect.md`의 Codex 절(`codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN`)을 따르고 Codex를 다시 켠다. 도구 호출이 "requires approval"로 실패하면(비대화형 `codex exec`) 같은 절의 **도구별** 허락 설정을 안내한다(읽기 도구 · `create_draft`만 자동, `update_draft`는 묻게).
    - 처음 등록은 `docs/mcp-connect.md`를 따른다.
 2. `get_writing_guide`를 읽는다. 형식 가이드(문법)와 이 블로그 주인의 글쓰기 가이드(말투 · 독자 · 구성)가 온다. **이후 모든 단계는 이 가이드가 이 파일보다 우선한다.**
 3. `list_posts`로 기존 글 제목 · 주소 · 카테고리를 본다. 제목 · 주소가 겹치지 않게 하고, 내부 링크 후보를 고르는 데 쓴다.
@@ -37,6 +37,7 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 ## 2. 리서치
 
 - 웹 검색으로 찾고, **숫자 · 날짜 · 사실은 원문 페이지를 열어서** 확인한다. 검색 스니펫만 보고 쓰지 않는다.
+- Codex면 원문 확인에 실시간 검색(`web_search = "live"` 또는 `--search`)이 필요하다. 기본값(`cached`)은 색인만 본다. 원문을 열 수 없으면 그 사실은 확인하지 못했다고 방향 확인에서 알리고 본문에 쓰지 않는다.
 - 사실마다 출처 URL을 기억해 두고, 글 끝 "참고한 곳"에 링크로 단다.
 - 의학 · 안전 · 법률처럼 틀리면 해가 되는 정보는 공신력 있는 출처(기관 · 공식 문서)만 쓴다. 없으면 쓰지 않고, 확인이 필요하다고 사용자에게 알린다.
 - 경험담(육아 이야기)은 지어내지 않는다. 사용자에게 받은 내용이 없으면 방향 확인에서 "넣을 경험이 있나요?"를 묻는다.
@@ -107,7 +108,7 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 1. `check_draft`로 형식을 먼저 검사한다. 실패 메시지(`블록 n (m줄): 규칙 → 고친 예`)를 보고 고친다.
 2. `create_draft`로 저장한다(slug · title · description · category · markdown, **keyword 인자가 있으면** 핵심 검색어도).
-3. 응답을 읽는다. 오류면 고쳐서 다시 한다. 검색 노출 점검(seo) 결과가 **있으면** `must`는 모두, `should`는 가능한 만큼 고친다. 저장할 때마다(`update_draft` 포함) 이 확인을 스스로 한다 — Claude Code에 저장 직후 SEO 훅(#149)이 걸려 있으면 훅이 같은 것을 알려 주지만, Codex처럼 훅이 없는 쪽은 이 규칙이 유일한 확인이다.
+3. 응답을 읽는다. 오류면 고쳐서 다시 한다. 검색 노출 점검(seo) 결과가 **있으면** `must`는 모두, `should`는 가능한 만큼 고친다. 저장할 때마다(`update_draft` 포함) 이 확인을 스스로 한다 — Claude Code에 저장 직후 SEO 훅(#149, 예정)이 생기면 훅이 같은 것을 알려 주지만, Codex처럼 훅이 없는 쪽은 이 규칙이 유일한 확인이다.
 4. 이 고치기는 **최대 3번**까지만 한다. 그래도 남으면 남은 경고를 7단계에서 알린다.
 5. 주소가 이미 있다는 오류면 주소를 바꿔 다시 만든다(`-2`를 붙이는 것보다 다른 키워드를 먼저 쓴다).
 

@@ -4,7 +4,7 @@
 
 레포 스킬 `blog-write`는 SHALL 원본 하나(`.claude/skills/blog-write/`)만 둔다. Codex가 읽는 `.agents/skills/blog-write`는 그 원본을 가리키는 심볼릭 링크다(adr-035). 그래서 두 경로의 SKILL.md는 늘 같은 내용이다.
 
-스킬 문장은 도구 중립이다. 갈리는 단계만 "Claude Code면 … / Codex면 …"으로 나눈다: MCP 연결 · 스킬 부르는 법 · 글 품질 채점 · AI 이미지.
+스킬 문장은 도구 중립이다. 갈리는 단계만 "Claude Code면 … / Codex면 …"으로 나눈다: MCP 연결 · 스킬 부르는 법 · 글 품질 채점 · AI 이미지 · 훅이 없는 쪽의 seo 확인.
 
 발행 금지 같은 불변 조건은 어느 쪽에서든 서버가 지킨다(MCP 도구 6개, 발행 도구 없음).
 
