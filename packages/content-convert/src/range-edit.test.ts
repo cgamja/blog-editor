@@ -506,3 +506,26 @@ describe("markdown-range-edit — 강제 줄바꿈이 든 문단도 범위로 �
     });
   });
 });
+
+describe("markdown-range-edit — 코드 블록의 백슬래시 줄 끝은 글자 그대로 찾는다", () => {
+  it("WHEN 코드 블록 글자 `a \\` + 줄바꿈 + `b`를 그대로 집어 바꾼다 THEN 강제 줄바꿈 표기로 읽지 않고 찾는다", () => {
+    const input = doc({
+      type: "codeBlock",
+      attrs: { language: "sh" },
+      content: [text("echo a \\\n  b")],
+    });
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "a \\\n  b",
+      markdown: "c",
+    });
+
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "codeBlock",
+      attrs: { language: "sh" },
+      content: [text("echo c")],
+    });
+  });
+});
