@@ -64,6 +64,7 @@ const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
   codeBlock: new Set(["motion"]),
   horizontalRule: new Set(["motion"]),
   image: new Set(["motion", "width", "size", "frame", "align"]),
+  table: new Set(["font", "motion"]),
 };
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;

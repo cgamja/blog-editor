@@ -110,6 +110,8 @@ function spanBodyOf(node: TextNode): string {
   return parts.join(" ");
 }
 
+const hasLineBreak = (text: string) => [...LINE_BREAKS].some((ch) => text.includes(ch));
+
 function hasCode(node: TextNode): boolean {
   return (node.marks ?? []).some((mark) => mark.type === "code");
 }
@@ -380,7 +382,8 @@ function referenceHazard(pieces: readonly Piece[]): TextNode | undefined {
   return undefined;
 }
 
-export type InlinePlace = "paragraph" | "heading";
+/** 표 칸 — 줄 첫 글자 규칙이 없고(칸 글자는 인라인으로만 읽힌다) 모든 `|`를 `\|`로 쓴다 */
+export type InlinePlace = "paragraph" | "heading" | "cell";
 
 export interface SerializedInline {
   text: string;
@@ -403,11 +406,22 @@ function buildPieces(
 }
 
 /**
- * 문단 · 제목 한 줄의 인라인. 문단은 줄 첫 글자 규칙(목록 · 인용 · 지시어 …)과 참조 정의 모양을,
- * 제목은 끝의 `#`(닫는 표지로 읽힌다)을 피한다.
+ * GFM 표는 인라인을 읽기 전에 줄을 `|`로 칸으로 나누고, `\|`만 글자 `|`로 남긴다(markdown-it
+ * rules_block/table.mjs `escapedSplit` — 코드 스팬 · 링크 주소 안도 같다). 그래서 칸의 `|`는 어디서나 `\|`다.
+ * 나눌 때 `|` 바로 앞 백슬래시 하나만 지우므로 글자 `\`(`\\`) 뒤의 `|`도 그대로 돌아온다.
+ */
+const CELL_PIPE = /\|/g;
+
+/**
+ * 문단 · 제목 · 표 칸 한 줄의 인라인. 문단은 줄 첫 글자 규칙(목록 · 인용 · 지시어 …)과 참조 정의 모양을,
+ * 제목은 끝의 `#`(닫는 표지로 읽힌다)을, 표 칸은 칸을 가르는 `|`를 피한다.
  */
 export function serializeInline(nodes: readonly TextNode[], place: InlinePlace): SerializedInline {
-  const plainCode = new Set<TextNode>();
+  // 제목 · 표 칸은 한 줄 문법이다 — 줄바꿈이 든 코드 마크 글자는 코드 스팬으로 두면 줄이 끊긴다. 코드 마크를
+  // 빼고 글자로 쓴다(줄바꿈은 &#10;) — 빠진 코드 마크 수로 센다(markdown-serialize)
+  const plainCode = new Set<TextNode>(
+    place === "paragraph" ? [] : nodes.filter((node) => hasCode(node) && hasLineBreak(node.text)),
+  );
   let pieces = buildPieces(nodes, place, plainCode);
   let hazard = place === "paragraph" ? referenceHazard(pieces) : undefined;
   while (hazard !== undefined) {
@@ -415,7 +429,11 @@ export function serializeInline(nodes: readonly TextNode[], place: InlinePlace):
     pieces = buildPieces(nodes, place, plainCode);
     hazard = referenceHazard(pieces);
   }
-  return { text: render(pieces), droppedCodeMarks: plainCode.size };
+  const text = render(pieces);
+  return {
+    text: place === "cell" ? text.replace(CELL_PIPE, "\\|") : text,
+    droppedCodeMarks: plainCode.size,
+  };
 }
 
 /** 이미지 alt · 앱 스크린샷 caption — 마크 없는 글자. 줄바꿈만 문자 참조로. */

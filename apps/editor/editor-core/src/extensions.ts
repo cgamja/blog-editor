@@ -1,6 +1,6 @@
 import { Extension, Mark, Node, getSchema } from "@tiptap/core";
 import type { Attribute } from "@tiptap/core";
-import type { Schema } from "@tiptap/pm/model";
+import type { Schema, TagParseRule } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
@@ -8,6 +8,7 @@ import { stickerClipboard } from "./plugins/sticker-clipboard";
 import { stickerSafePaste } from "./plugins/sticker-safe-paste";
 import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
 import {
+  alignOrNull,
   headingLevelOf,
   hrefOrNull,
   languageOrNull,
@@ -269,6 +270,97 @@ const AppScreenshot = Node.create({
     ]),
 });
 
+// 표(adr-028) — 공개 HTML과 같은 `div.post-table-scroll > table` 틀. 좁은 화면에서 틀이 가로로 스크롤한다(post.css)
+const TABLE_FRAME_CLASS = "post-table-scroll";
+const isTableFrame = (element: ElementLike) =>
+  element.tagName === "DIV" &&
+  hasClass(element, TABLE_FRAME_CLASS) &&
+  element.querySelector("table") !== null;
+
+const Table = Node.create({
+  name: "table",
+  group: "block",
+  content: "tableRow+",
+  isolating: true,
+  addAttributes: () => decoration,
+  parseHTML: () => [
+    wrapperRule({
+      matches: isTableFrame,
+      keys: ["font", "motion"],
+      contentOf: (wrapper) => wrapper.querySelector("table"),
+    }),
+    // 공개 HTML 틀은 모르는 div라 그대로 두면 틀째 문단으로 읽힌다 — 틀을 건너 안의 table에서 행을 읽는다.
+    // table이 없는 같은 클래스 div는 표가 아니다(contentElement가 null이 되지 않게 거부)
+    {
+      tag: `div.${TABLE_FRAME_CLASS}`,
+      getAttrs: ((frame: ElementLike) =>
+        frame.querySelector("table") === null ? false : null) as unknown as NonNullable<
+        TagParseRule["getAttrs"]
+      >,
+      contentElement: ((frame: ElementLike) =>
+        frame.querySelector("table")) as unknown as NonNullable<TagParseRule["contentElement"]>,
+    },
+    // 다른 앱에서 붙인 표는 틀이 없다 — 칸 병합 · 행 길이는 붙여넣기 정규화가 직사각형으로 맞춘다
+    { tag: "table" },
+  ],
+  renderHTML: ({ node }) =>
+    withDecoration(node.attrs, ["div", { class: TABLE_FRAME_CLASS }, ["table", ["tbody", 0]]]),
+});
+
+// 머리 행은 노드 종류가 아니라 첫 행이다 — thead · tbody는 틀일 뿐이라 안의 tr로 내려간다
+const TableRow = Node.create({
+  name: "tableRow",
+  content: "tableCell+",
+  parseHTML: () => [{ tag: "tr" }],
+  renderHTML: () => ["tr", 0],
+});
+
+// 우리 어휘(data-align)만 읽는다. 본문 칸에 온 정렬은 붙여넣기 정규화가 지운다 — 열 정렬은 머리 행 칸에만(adr-028)
+const cellAttrs = (element: ElementLike) => ({
+  align: alignOrNull(element.getAttribute("data-align")),
+});
+
+/**
+ * 칸 — 안은 문단 하나(GFM 칸은 한 줄 인라인). 칸에 여러 블록을 붙이면 Fitter가 표를 쪼개므로 붙여넣기 정규화가
+ * 한 줄로 합친다(paste-normalizer — 강제 줄바꿈 #131이 생기면 블록 사이를 공백 대신 줄바꿈으로). `colspan` · `rowspan`은 prosemirror-tables가 칸 크기를 읽는
+ * 자리라 에디터 스키마에만 두고 늘 1이다 — 저장 경계(docFromNode)가 지운다. 병합 커맨드는 두지 않는다.
+ * prosemirror-tables 1.8.5 `computeMap` · `findWidth`가 `attrs.colspan` · `attrs.rowspan`을 읽는다(dist/index.js).
+ */
+const spanAttr: Attribute = { default: 1, rendered: false, parseHTML: ignoreHtml };
+
+const TableCell = Node.create({
+  name: "tableCell",
+  content: "paragraph",
+  isolating: true,
+  addAttributes: () => ({ colspan: spanAttr, rowspan: spanAttr, align: optional }),
+  parseHTML: () => [
+    { tag: "td", getAttrs: cellAttrs },
+    { tag: "th", getAttrs: cellAttrs },
+  ],
+  renderHTML: ({ node }) => [
+    "td",
+    node.attrs.align == null ? {} : { "data-align": String(node.attrs.align) },
+    0,
+  ],
+});
+
+/** prosemirror-tables는 노드 스펙의 `tableRole`로 표 노드를 찾는다(`tableNodeTypes`) — 이름은 우리 것 그대로 */
+const TABLE_ROLES: Readonly<Record<string, string>> = {
+  table: "table",
+  tableRow: "row",
+  tableCell: "cell",
+};
+
+/**
+ * 다른 노드의 스펙에 `tableRole`을 얹는다 — TipTap 공식 표 확장과 같은 길(extendNodeSchema).
+ * https://tiptap.dev/docs/editor/extensions/custom-extensions/extend-existing#extend-node-schema
+ */
+const TableRoles = Extension.create({
+  name: "tableRoles",
+  extendNodeSchema: (extension) =>
+    Object.hasOwn(TABLE_ROLES, extension.name) ? { tableRole: TABLE_ROLES[extension.name] } : {},
+});
+
 // 톤이 닫힌 집합 밖이면 콜아웃이 아니다 — 규칙이 거부하면 안의 문단은 일반 블록으로 읽힌다
 const calloutAttrs = (aside: ElementLike) => {
   const tone = toneOrNull(aside.getAttribute("data-tone"));
@@ -416,6 +508,10 @@ export const editorExtensions = [
   Image,
   Callout,
   AppScreenshot,
+  Table,
+  TableRow,
+  TableCell,
+  TableRoles,
   // 마크 등록 순서 = ProseMirror rank = DOM에서 바깥부터 감싸는 순서. 공개 HTML과 같게
   // a > span.post-ts > u > s > strong > em > code (content-render MARK_INNER_TO_OUTER의 역순).
   // 저장 형식의 마크 순서(type 사전순)는 docFromNode의 normalize가 따로 맞춘다

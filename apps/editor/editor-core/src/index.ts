@@ -74,6 +74,14 @@ export type {
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
+export {
+  addTableColumnAfter,
+  addTableRowAfter,
+  atTopTable,
+  deleteTableColumn,
+  deleteTableRow,
+  setTableColumnAlign,
+} from "./commands/table";
 export { applySlashItem, clearSlashQuery, slashActionGap } from "./commands/slash";
 export {
   wrapInBlockquote,
@@ -85,6 +93,13 @@ export { AlignKeys, alignKeymap } from "./plugins/align-keymap";
 export { blockGuard } from "./plugins/block-guard";
 export { History, historyKeymap, historyPlugins } from "./plugins/history";
 export { ListKeys, listKeymap } from "./plugins/list-keymap";
+export {
+  TableEditing,
+  TableKeys,
+  tableColumnAlignKey,
+  tableKeymap,
+  tablePlugins,
+} from "./plugins/table-keys";
 export { markdownInputRules } from "./plugins/markdown-input-rules";
 export { markdownShortcutKeymap } from "./plugins/markdown-shortcut-keymap";
 export { TextStyleKeys, textStyleKeymap, textStyleMemory } from "./plugins/text-style-keymap";
@@ -119,6 +134,8 @@ export {
   MARKDOWN_SHORTCUTS_PRIORITY,
   SLASH_MENU_PRIORITY,
   STICKER_SPLIT_PRIORITY,
+  TABLE_EDITING_PRIORITY,
+  TABLE_KEYS_PRIORITY,
 } from "./keymap-priority.constants";
 export {
   cancelImageUpload,

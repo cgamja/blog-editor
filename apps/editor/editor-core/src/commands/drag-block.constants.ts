@@ -15,6 +15,7 @@ export const INSERTABLE_BLOCKS = {
   calloutTip: { type: "callout", attrs: { tone: "tip" } },
   calloutWarning: { type: "callout", attrs: { tone: "warning" } },
   horizontalRule: { type: "horizontalRule" },
+  table: { type: "table" },
 } as const satisfies Readonly<Record<string, InsertableBlock>>;
 
 export type InsertableBlockKind = keyof typeof INSERTABLE_BLOCKS;
