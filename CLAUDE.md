@@ -45,7 +45,7 @@ apps/editor/infra         IaC
 ```bash
 pnpm install   # prepare가 lefthook 훅(commit-msg · pre-commit · pre-push)을 건다
 pnpm verify    # typecheck · lint · lint:css(토큰 밖 CSS 값) · format:check · test · test:e2e · docs:check — 완료의 정의는 이 한 줄. 끝났다고 말하기 전에 이 출력을 보여라
-pnpm exec playwright install chromium   # 실브라우저 층(test:e2e)이 쓰는 브라우저 — 처음 한 번
+pnpm exec playwright install chromium webkit   # 실브라우저 층(test:e2e)이 쓰는 브라우저 — 처음 한 번
 ```
 
 ## 협업 규약

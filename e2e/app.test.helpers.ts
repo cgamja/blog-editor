@@ -19,7 +19,7 @@ export async function submitLogin(page: Page): Promise<void> {
 /**
  * 초안 한 편을 저장소에 바로 만든다. 실브라우저 층의 저장 형식 픽스처는 여기 하나다 — 서버가 받는 형식 그대로라
  * 스키마 버전이 오르면 이것을 같이 올리는 계약이다. 본문을 주지 않으면 제목을 본문으로 쓴다.
- * 페이지의 fetch로 보낸다: 세션 쿠키가 Secure(__Host-)라 http 루프백에서 page.request는 싣지 않는다(401 실측).
+ * 페이지의 fetch로 보낸다 — 화면과 같은 출처 · 세션 쿠키로 만든다.
  */
 export async function createDraft(
   page: Page,

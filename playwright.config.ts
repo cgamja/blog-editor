@@ -70,8 +70,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     actionTimeout: ACTION_TIMEOUT_MS,
   },
-  // WebKit은 뺐다(adr-024 · #118) — http 루프백에서 Secure 세션 쿠키(__Host-)를 저장하지 않아 로그인이 안 된다
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // WebKit(Safari 엔진)은 로컬 진입점이 루프백 http용 쿠키를 쓰게 되어 다시 켰다(adr-026 · #118)
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+  ],
   // webServer.env는 process.env 위에 얹힌다(Playwright 1.63 runner) — 덮어쓸 키만 적는다
   webServer: [
     {
@@ -85,6 +88,8 @@ export default defineConfig({
         ADMIN_PASSWORD: E2E_ACCOUNT.password,
         // 레포 루트 .env에 해시가 있어도 셸 값이 이기므로 빈 값으로 끈다(serve.ts — 둘 중 하나만 받는다)
         ADMIN_PASSWORD_HASH: "",
+        // .env에 터널 주소가 있으면 세션 쿠키가 Secure로 돌아가 WebKit이 로그인하지 못한다(adr-026) — 여기선 끈다
+        PUBLIC_BASE_URL: "",
       },
       reuseExistingServer: false,
       timeout: SERVER_START_TIMEOUT_MS,

@@ -62,8 +62,9 @@ export function readMcpOptionsFromEnv(env: NodeJS.ProcessEnv): McpOptions | null
 /**
  * `PUBLIC_BASE_URL` — claude.ai가 이 서버에 닿는 주소(터널 · 배포 도메인). 있으면 OAuth를 연다(mcp-oauth).
  * well-known 문서가 origin 바로 아래에 있어야 하므로 경로 없는 origin만 받는다.
+ * 로컬 진입점의 세션 쿠키 모드도 이 해석으로 정한다 — 값이 있으면 Secure 쿠키라 로컬 Safari 로그인이 안 된다(adr-026).
  */
-function readIssuer(raw: string | undefined): string | null {
+export function readIssuer(raw: string | undefined): string | null {
   if (raw === undefined || raw === "") return null;
   let url: URL;
   try {

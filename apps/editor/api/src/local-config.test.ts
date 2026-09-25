@@ -51,4 +51,19 @@ describe("api-session — 로컬 진입점 env", () => {
 
     expect(config.username).toBe("admin");
   });
+
+  it("WHEN PUBLIC_BASE_URL 없이 뜨면 THEN 세션 쿠키는 루프백 http 모드다", async () => {
+    const config = await readLocalConfig({ ADMIN_PASSWORD: "1234" });
+
+    expect(config.sessionCookie).toBe("loopback-http");
+  });
+
+  it("WHEN PUBLIC_BASE_URL(OAuth 공개 주소)을 주면 THEN 세션 쿠키는 배포와 같은 secure 모드다", async () => {
+    const config = await readLocalConfig({
+      ADMIN_PASSWORD: "1234",
+      PUBLIC_BASE_URL: "https://example.trycloudflare.com",
+    });
+
+    expect(config.sessionCookie).toBe("secure");
+  });
 });

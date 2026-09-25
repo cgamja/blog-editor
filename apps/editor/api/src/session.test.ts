@@ -199,3 +199,61 @@ describe("api-session — 세션 확인", () => {
     expect(await res.json()).toEqual({ message: expect.any(String) });
   });
 });
+
+describe("api-session — 루프백 http 쿠키(로컬 진입점)", () => {
+  function setupLoopback() {
+    return createApp({
+      store: createMemoryPostStore(),
+      categories: CATEGORIES,
+      imageBaseUrl: "https://simsimeestudio.com",
+      ...testAuthOptions,
+      sessionTtlSeconds: SESSION_TTL_SECONDS,
+      now: () => T0,
+      sessionCookie: "loopback-http",
+    });
+  }
+
+  it("WHEN 루프백 http 모드로 로그인하면 THEN 쿠키 이름은 session이고 Secure 없이 HttpOnly · SameSite=Strict · Path=/를 갖는다", async () => {
+    const app = setupLoopback();
+
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(204);
+    const setCookie = res.headers.get("Set-Cookie") ?? "";
+    expect(setCookie).toMatch(/^session=/);
+    expect(setCookie).not.toMatch(/Secure/);
+    expect(setCookie).toMatch(/HttpOnly/);
+    expect(setCookie).toMatch(/SameSite=Strict/);
+    expect(setCookie).toMatch(/Path=\//);
+  });
+
+  it("WHEN 루프백 http 모드 쿠키로 목록을 부르면 THEN 200이다", async () => {
+    const app = setupLoopback();
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
+
+    expect((await listPosts(app, cookie)).status).toBe(200);
+  });
+
+  it("WHEN 한 모드에서 받은 세션 쿠키를 같은 비밀의 다른 모드 앱에 보내면 THEN 양쪽 다 401이다", async () => {
+    const loopback = setupLoopback();
+    const secure = setup().app;
+    const loopbackCookie = cookieOf(
+      await loginRequest(loopback, TEST_ACCOUNT.username, TEST_ACCOUNT.password),
+    );
+    const secureCookie = cookieOf(
+      await loginRequest(secure, TEST_ACCOUNT.username, TEST_ACCOUNT.password),
+    );
+
+    expect((await listPosts(secure, loopbackCookie)).status).toBe(401);
+    expect((await listPosts(loopback, secureCookie)).status).toBe(401);
+  });
+
+  it("WHEN 루프백 http 모드에서 로그아웃하면 THEN session 쿠키를 Max-Age=0으로 지운다", async () => {
+    const app = setupLoopback();
+
+    const logout = await app.request("/api/session", { method: "DELETE" });
+
+    expect(logout.status).toBe(204);
+    expect(logout.headers.get("Set-Cookie")).toMatch(/^session=.*Max-Age=0/);
+  });
+});
