@@ -38,6 +38,10 @@ const LINK_HREFS = [
 const MAX_BLOCKS_PER_DOC = 4;
 const STICKER_CAP_PER_BLOCK = Math.floor(MAX_STICKERS_PER_DOC / MAX_BLOCKS_PER_DOC);
 
+/** 문단 인라인에서 글자 : 강제 줄바꿈 비율 — 줄바꿈이 이어지는 모양도 나올 만큼, 글자가 대부분이게 */
+const TEXT_INLINE_WEIGHT = 4;
+const HARD_BREAK_WEIGHT = 1;
+
 const HEX_MAX = 0xffffff;
 const HEX_DIGITS = 6;
 const hexColorArb = fc
@@ -97,6 +101,12 @@ const inlineArb = fc
       : { type: "text" as const, text };
   });
 
+/** 문단 인라인 — 글자에 강제 줄바꿈(adr-028)을 섞는다. 제목 · 표 칸은 글자만(inlineArb) */
+const paragraphInlineArb = fc.oneof(
+  { arbitrary: inlineArb, weight: TEXT_INLINE_WEIGHT },
+  { arbitrary: fc.constant({ type: "hardBreak" as const }), weight: HARD_BREAK_WEIGHT },
+);
+
 const stickerArb = fc.record({
   id: fc.constantFrom(...STICKER_IDS),
   x: fc.integer({ min: STICKER_RANGES.x.min, max: STICKER_RANGES.x.max }),
@@ -142,6 +152,12 @@ export function decorationArbitrary(opts: {
 /** 인용 · 콜아웃 · listItem 안쪽 문단 — 꾸미기 자리가 없다(decoration-schema: 안쪽 노드에는 attrs 없음) */
 const innerParagraphArb = fc.record({
   type: fc.constant("paragraph" as const),
+  content: fc.array(paragraphInlineArb, { maxLength: 2 }),
+});
+
+/** 표 칸 안 문단 — 한 줄 문법이라 글자만(adr-028) */
+const cellParagraphArb = fc.record({
+  type: fc.constant("paragraph" as const),
   content: fc.array(inlineArb, { maxLength: 2 }),
 });
 
@@ -153,7 +169,7 @@ const paragraphArb = fc.record({
     align: true,
     maxStickers: STICKER_CAP_PER_BLOCK,
   }),
-  content: fc.array(inlineArb, { maxLength: 3 }),
+  content: fc.array(paragraphInlineArb, { maxLength: 3 }),
 });
 
 const headingArb = fc
@@ -335,6 +351,46 @@ const appScreenshotArb = fc.record({
     .map(([src, size, deco]) => ({ src, caption: "", ...size, ...deco })),
 });
 
+const MAX_TABLE_SIDE = 3;
+
+/**
+ * 표 — 직사각형, 첫 행이 머리 행이고 열 정렬은 머리 행 칸에만 있다(adr-028). 칸 안은 안쪽 문단 하나.
+ * 꾸미기는 목록 · 인용과 같은 font · motion · stickers.
+ */
+const tableArb = fc
+  .record({
+    columns: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+    rows: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+  })
+  .chain(({ columns, rows }) =>
+    fc.record({
+      type: fc.constant("table" as const),
+      attrs: decorationArbitrary({ font: true, width: false, maxStickers: STICKER_CAP_PER_BLOCK }),
+      content: fc
+        .tuple(
+          fc.array(fc.option(fc.constantFrom(...ALIGNS), { nil: undefined }), {
+            minLength: columns,
+            maxLength: columns,
+          }),
+          fc.array(fc.array(cellParagraphArb, { minLength: columns, maxLength: columns }), {
+            minLength: rows,
+            maxLength: rows,
+          }),
+        )
+        .map(([aligns, grid]) =>
+          grid.map((cells, row) => ({
+            type: "tableRow" as const,
+            content: cells.map((paragraph, column) => {
+              const align = row === 0 ? aligns[column] : undefined;
+              return align === undefined
+                ? { type: "tableCell" as const, content: [paragraph] }
+                : { type: "tableCell" as const, attrs: { align }, content: [paragraph] };
+            }),
+          })),
+        ),
+    }),
+  );
+
 const topLevelBlockArb = fc.oneof(
   paragraphArb,
   headingArb,
@@ -346,6 +402,7 @@ const topLevelBlockArb = fc.oneof(
   appScreenshotArb,
   listArb("bulletList", 0),
   listArb("orderedList", 0),
+  tableArb,
 );
 
 /** 블록 최대 MAX_BLOCKS_PER_DOC개 × 블록당 최대 STICKER_CAP_PER_BLOCK개 — 문서당 스티커 상한을 절대 넘지 않는다. */

@@ -8,6 +8,7 @@ import {
 import type {
   Block,
   HEADING_LEVELS,
+  InlineNode,
   Mark,
   NaturalSizeAttrs,
   PostFile,
@@ -31,6 +32,8 @@ import type {
   InnerParagraph,
   RenderContext,
   RenderOptions,
+  TableCell,
+  TableRow,
 } from "./types";
 
 // ── 진입점 ────────────────────────────────────────────────────────────
@@ -90,6 +93,8 @@ function renderTopLevelBlock(block: Block, ctx: RenderContext): string {
       return finishBlock(renderImageFigure(block.attrs, ctx), block.attrs, ctx);
     case "appScreenshot":
       return finishBlock(renderScreenshotFigure(block.attrs, ctx), block.attrs, ctx);
+    case "table":
+      return finishBlock(renderTable(block.content), block.attrs ?? {}, ctx);
     case "callout":
       return finishBlock(
         tag(
@@ -115,6 +120,41 @@ function renderCodeBlock(
     attrs?.language !== undefined ? ` data-language="${escapeHtml(attrs.language)}"` : "";
   const text = (content ?? []).map((node) => escapeHtml(node.text)).join("");
   return `<pre>${tag("code", languageAttr, text)}</pre>`;
+}
+
+/**
+ * 첫 행이 머리 행이다(adr-028) — `<thead>`의 `<th scope="col">`, 나머지는 `<tbody>`의 `<td>`. 열 정렬은 머리 행 칸에만
+ * 저장되어 있어 그 열의 모든 칸에 `data-align`으로 싣는다. 좁은 화면에서 가로로 스크롤하도록 `div.post-table-scroll`로 감싼다.
+ */
+function renderTable(rows: readonly TableRow[]): string {
+  const [head, ...body] = rows;
+  const aligns = (head?.content ?? []).map((cell) => cellAlignAttr(cell.attrs?.align));
+  const row = (cells: readonly TableCell[], cellTag: "th" | "td") =>
+    tag(
+      "tr",
+      "",
+      cells
+        .map((cell, column) => {
+          const scope = cellTag === "th" ? ' scope="col"' : "";
+          return tag(
+            cellTag,
+            `${scope}${aligns[column] ?? ""}`,
+            renderInline(cell.content[0].content),
+          );
+        })
+        .join(""),
+    );
+  const thead = head === undefined ? "" : tag("thead", "", row(head.content, "th"));
+  const tbody =
+    body.length === 0
+      ? ""
+      : tag("tbody", "", body.map((bodyRow) => row(bodyRow.content, "td")).join(""));
+  return tag("div", ' class="post-table-scroll"', tag("table", "", thead + tbody));
+}
+
+/** 표에 있는 정렬만 싣는다 — 검증을 건너뛴 값은 이스케이프로 속성 경계만 지킨다(spec: render-safety) */
+function cellAlignAttr(align: string | undefined): string {
+  return align === undefined ? "" : ` data-align="${escapeHtml(align)}"`;
 }
 
 function renderImageFigure(
@@ -145,8 +185,13 @@ function renderImg(src: string, alt: string, attrs: NaturalSizeAttrs, ctx: Rende
 
 // ── 인라인(텍스트 + 마크) ────────────────────────────────────────────────
 
-function renderInline(content: readonly TextNode[] | undefined): string {
-  return (content ?? []).map(renderText).join("");
+function renderInline(content: readonly InlineNode[] | undefined): string {
+  return (content ?? []).map(renderInlineNode).join("");
+}
+
+/** 강제 줄바꿈은 속성 없는 br(adr-028) — 제목 · 표 칸 인라인은 TextNode만 오므로 같은 함수로 충분하다 */
+function renderInlineNode(node: InlineNode): string {
+  return node.type === "hardBreak" ? "<br>" : renderText(node);
 }
 
 function renderText(node: TextNode): string {

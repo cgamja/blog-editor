@@ -58,7 +58,8 @@ export const allBlocks = {
         content: [
           { type: "text", text: "육아비서는 " },
           { type: "text", text: "보호자", marks: [{ type: "bold" }] },
-          { type: "text", text: "와 아이를 함께 챙기는 AI 육아 도우미입니다. " },
+          { type: "text", text: "와 아이를 함께 챙기는 AI 육아 도우미입니다." },
+          { type: "hardBreak" },
           { type: "text", text: "지금 바로 무료로 체험해보세요.", marks: [{ type: "italic" }] },
           { type: "text", text: " 설정은 " },
           { type: "text", text: "config.json", marks: [{ type: "code" }] },
@@ -244,6 +245,69 @@ export const allBlocks = {
           naturalHeight: 1600,
           caption: "일정 탭에서 다가오는 예방접종을 확인하는 화면",
         },
+      },
+      {
+        type: "table",
+        content: [
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "기능" }] }],
+              },
+              {
+                type: "tableCell",
+                attrs: { align: "center" },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "무료" }] }],
+              },
+              {
+                type: "tableCell",
+                attrs: { align: "right" },
+                content: [{ type: "paragraph", content: [{ type: "text", text: "프리미엄" }] }],
+              },
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "성장 기록" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "있음" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "있음" }] }],
+              },
+            ],
+          },
+          {
+            type: "tableRow",
+            content: [
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "일정 알림" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "없음" }] }],
+              },
+              {
+                type: "tableCell",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "있음", marks: [{ type: "bold" }] }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       },
     ],
   },

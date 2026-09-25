@@ -18,12 +18,14 @@ import {
   containerNotAllowedMessage,
   emptyLinkTextMessage,
   footnoteInlineMessage,
-  hardBreakMessage,
+  hardBreakPlaceMessage,
   headingLevelMessage,
   htmlNotAllowedMessage,
   imageAltLengthMessage,
   imageInContainerMessage,
   imageInHeadingMessage,
+  imageInTableMessage,
+  tableRowTooWideMessage,
   imageMixedWithTextMessage,
   imagePathMessage,
   imageTitleMessage,
@@ -34,7 +36,6 @@ import {
   orderedListStartMessage,
   blockMessage,
   nestedSpanMessage,
-  tableNotAllowedMessage,
   taskListMessage,
   type FoundMessage,
 } from "./message";
@@ -110,6 +111,8 @@ export function analyzeTokens(
   const listItemStates: ListItemState[] = [];
   let topLevel = 0;
   let currentBlock: BlockRecord | undefined;
+  /** 표 안이면 지금 행의 원문 줄(0-based)과 머리 행 칸 수 — markdown-it은 칸 inline이 아니라 tr에만 map을 단다 */
+  let tableRow: { line0: number; headerColumns: number | undefined } | undefined;
 
   const container = (): "top" | ContainerKind =>
     stack.length === 0 ? "top" : stack[stack.length - 1]!;
@@ -208,8 +211,32 @@ export function analyzeTokens(
         checkPlacement(record);
         break;
       }
-      case "table_open":
-        checkTableOpen(tok, openBlockRecord, checkPlacement, sourceLines, messages);
+      case "table_open": {
+        // 칸 글자(inline)는 표 블록 하나에 딸린다 — 표 안의 그림 · 메시지 블록 번호가 표를 가리키게
+        currentBlock = openBlockRecord("table", ...mapOf(tok));
+        checkPlacement(currentBlock);
+        tableRow = { line0: mapOf(tok)[0], headerColumns: undefined };
+        break;
+      }
+      case "tr_open":
+        if (tableRow !== undefined && currentBlock !== undefined) {
+          tableRow.line0 = mapOf(tok)[0];
+          // 첫 tr은 머리 행이다 — 칸 수를 적어 두고, 본문 행은 그 수와 견준다
+          if (tableRow.headerColumns === undefined) {
+            tableRow.headerColumns = tableCellCount(sourceLines[tableRow.line0] ?? "");
+          } else {
+            checkTableRowWidth(
+              tableRow.line0,
+              tableRow.headerColumns,
+              currentBlock,
+              sourceLines,
+              messages,
+            );
+          }
+        }
+        break;
+      case "table_close":
+        tableRow = undefined;
         break;
       case "html_block":
         checkHtmlBlock(tok, openBlockRecord, checkPlacement, sourceLines, messages);
@@ -224,7 +251,14 @@ export function analyzeTokens(
         stack.pop();
         break;
       case "inline":
-        checkInline(tok, currentBlock, sourceLines, messages, titledReferenceHrefs);
+        checkInline(
+          tok,
+          currentBlock,
+          sourceLines,
+          messages,
+          titledReferenceHrefs,
+          tableRow?.line0,
+        );
         break;
       default:
         break;
@@ -232,6 +266,34 @@ export function analyzeTokens(
   }
 
   return { registry, messages };
+}
+
+/**
+ * GFM 행의 칸 수 — markdown-it 14.3.2 rules_block/table.mjs와 같은 방식(줄을 trim하고 `\|`가 아닌 `|`로 나눈 뒤
+ * 앞뒤 빈 칸을 뺀다). 코드 스팬 안의 `|`도 칸을 나눈다(markdown-it escapedSplit은 백틱을 모른다).
+ */
+function tableCellCount(line: string): number {
+  const cells = line.trim().split(/(?<!\\)\|/);
+  if (cells[0]?.trim() === "") cells.shift();
+  if (cells.length > 0 && cells[cells.length - 1]?.trim() === "") cells.pop();
+  return cells.length;
+}
+
+/**
+ * 본문 행이 머리 행보다 칸이 많으면 거부한다 — markdown-it은 넘치는 칸을 조용히 버려 받은 글자가 사라진다.
+ * 모자란 칸은 GFM대로 빈 칸이 된다(잃는 것이 없다).
+ */
+function checkTableRowWidth(
+  line0: number,
+  headerColumns: number,
+  block: BlockRecord,
+  sourceLines: readonly string[],
+  messages: FoundMessage[],
+): void {
+  const raw = sourceLines[line0] ?? "";
+  if (tableCellCount(raw) > headerColumns) {
+    messages.push(tableRowTooWideMessage(block.topLevel, line0 + 1, raw, headerColumns));
+  }
 }
 
 type OpenBlockRecord = (semantic: SemanticType, mapStart0: number, mapEnd0: number) => BlockRecord;
@@ -341,20 +403,6 @@ function checkFenceOrCodeBlock(
   return record;
 }
 
-function checkTableOpen(
-  tok: Token,
-  openBlockRecord: OpenBlockRecord,
-  checkPlacement: CheckPlacement,
-  sourceLines: readonly string[],
-  messages: FoundMessage[],
-): BlockRecord {
-  const [start, end] = mapOf(tok);
-  const record = openBlockRecord("paragraph", start, end);
-  checkPlacement(record);
-  messages.push(tableNotAllowedMessage(record.topLevel, start + 1, sourceLines[start] ?? ""));
-  return record;
-}
-
 function checkHtmlBlock(
   tok: Token,
   openBlockRecord: OpenBlockRecord,
@@ -409,10 +457,12 @@ function checkInline(
   sourceLines: readonly string[],
   messages: FoundMessage[],
   titledReferenceHrefs: ReadonlySet<string>,
+  tableRowLine0: number | undefined,
 ): void {
   if (!block) return;
   const children = tok.children ?? [];
-  let currentLine = block.mapStart0 + 1;
+  // 표 칸의 inline 토큰에는 map이 없다(markdown-it 14.3.2 — tr에만 단다) — 표 안이면 지금 행의 줄을 쓴다
+  let currentLine = (tableRowLine0 ?? block.mapStart0) + 1;
   let activeLinkTextLength: number | null = null;
   let spanDepth = 0;
 
@@ -430,7 +480,9 @@ function checkInline(
         currentLine += 1;
         return;
       case "hardbreak":
-        messages.push(hardBreakMessage(block.topLevel, currentLine, lineText));
+        if (block.semantic !== "paragraph") {
+          messages.push(hardBreakPlaceMessage(block.topLevel, currentLine, lineText));
+        }
         currentLine += 1;
         return;
       case "span_open":
@@ -548,6 +600,8 @@ function checkImage(
 
   if (block.semantic === "heading") {
     messages.push(imageInHeadingMessage(block.topLevel, line, raw));
+  } else if (block.semantic === "table") {
+    messages.push(imageInTableMessage(block.topLevel, line, raw));
   } else if (siblingCount !== 1) {
     messages.push(imageMixedWithTextMessage(block.topLevel, line, raw));
   } else if (block.container !== "top") {

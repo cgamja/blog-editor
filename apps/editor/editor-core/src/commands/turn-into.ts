@@ -1,4 +1,4 @@
-import type { Attrs, Node, NodeType } from "@tiptap/pm/model";
+import type { Attrs, Mark, Node, NodeType } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import type { Command, EditorState, Selection, Transaction } from "@tiptap/pm/state";
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
@@ -70,6 +70,44 @@ function splitIntoParagraphs(
 const codeLinesOf = (node: Node): string[] =>
   node.type.spec.code === true ? node.textContent.split("\n") : [];
 
+/**
+ * 공백이 가질 마크 — 양쪽 글자가 함께 가진 마크(굵은 두 줄이면 공백도 굵어 한 덩어리로 이어진다). 한쪽이 글자가 아니면
+ * 강제 줄바꿈 자신의 마크(에디터 안에서는 마크 붙이기가 실을 수 있다 — doc-node.ts withoutHardBreakMarks).
+ */
+function spaceMarks(before: Node | null, hardBreak: Node, after: Node | null): readonly Mark[] {
+  if (before?.isText !== true || after?.isText !== true) return hardBreak.marks;
+  return before.marks.filter((mark) => mark.isInSet(after.marks));
+}
+
+/**
+ * 강제 줄바꿈 자리가 없는 한 줄 블록(제목)으로 바꿀 때는 강제 줄바꿈을 공백 하나로 먼저 바꾼다 — setBlockType은 그
+ * 노드를 지워 두 줄 글자가 붙어 버린다(prosemirror-transform 1.12.1 structure.ts setBlockType → clearIncompatible).
+ * 코드 블록(`whitespace: "pre"`)은 setBlockType이 줄바꿈 글자로 바꾸므로(linebreakReplacement) 그대로 둔다.
+ * https://prosemirror.net/docs/ref/#model.NodeSpec.linebreakReplacement
+ */
+function hardBreaksAsSpaces(
+  tr: Transaction,
+  target: { pos: number; node: Node },
+  type: NodeType,
+): Transaction {
+  const hardBreak = type.schema.nodes.hardBreak;
+  if (hardBreak === undefined || type.whitespace === "pre") return tr;
+  if (type.contentMatch.matchType(hardBreak) !== null) return tr;
+  const spaces: { pos: number; marks: readonly Mark[] }[] = [];
+  const { node } = target;
+  node.forEach((child, offset, index) => {
+    if (child.type !== hardBreak) return;
+    const before = index > 0 ? node.child(index - 1) : null;
+    const after = index + 1 < node.childCount ? node.child(index + 1) : null;
+    spaces.push({ pos: target.pos + 1 + offset, marks: spaceMarks(before, child, after) });
+  });
+  // 노드 하나를 글자 하나로 바꾸니 크기는 같지만, 뒤에서부터 바꿔 앞 자리를 믿지 않아도 되게 한다
+  for (const { pos, marks } of spaces.reverse()) {
+    tr.replaceWith(pos, pos + 1, type.schema.text(" ", marks));
+  }
+  return tr;
+}
+
 const hasAttrs = (node: Node, attrs: Attrs | null) =>
   Object.entries(attrs ?? {}).every(([key, value]) => node.attrs[key] === value);
 
@@ -96,7 +134,8 @@ export function turnIntoTextblock(typeName: string, attrs: Attrs | null = null):
     }
     if (dispatch) {
       const from = target.pos + 1;
-      const tr = state.tr.setBlockType(from, from + target.node.content.size, type, (old) =>
+      const tr = hardBreaksAsSpaces(state.tr, target, type);
+      tr.setBlockType(from, from + tr.doc.nodeAt(target.pos)!.content.size, type, (old) =>
         carriedAttrs(old, type, attrs),
       );
       dispatch(tr.scrollIntoView());

@@ -99,4 +99,15 @@ describe("render-css", () => {
       expect(property, property).toMatch(/^(animation|opacity$|transform$)/);
     }
   });
+
+  it("WHEN 표 규칙을 찾으면 THEN 틀은 가로로 스크롤하고 칸 정렬 규칙이 center · right 둘 다 있다", () => {
+    expect(css).toMatch(/\.post-table-scroll\s*\{[^}]*overflow-x:\s*auto/);
+    for (const align of ["center", "right"]) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\.post-table-scroll[^{]*\\[data-align="${align}"\\][^{]*\\{[^}]*text-align:\\s*${align}`,
+        ),
+      );
+    }
+  });
 });

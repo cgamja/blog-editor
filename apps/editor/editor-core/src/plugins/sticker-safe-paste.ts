@@ -2,6 +2,7 @@ import type { Node, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorState, Transaction } from "@tiptap/pm/state";
 import { keepStickersOnOnePiece } from "../commands/split-block";
+import { isTableCellTarget } from "./paste-normalizer";
 import { pastedImageFiles } from "./image-file-input";
 
 /**
@@ -63,6 +64,9 @@ export function stickerSafePaste(): Plugin {
       handlePaste(view, event, slice) {
         // 조합 중에는 문서를 바꾸는 부수 효과를 얹지 않는다(CLAUDE.md) — 기본 붙여넣기에 맡긴다
         if (view.composing || isInlinePaste(slice) || isImageFilePaste(event)) return false;
+        // 표 칸 자리는 칸 편집(prosemirror-tables handlePaste)과 붙여넣기 정규화가 맡는다 — 이 플러그인이 먼저(우선순위
+        // 1000 > TableEditing 10) 받아 교체하면 표를 쪼개고 blockGuard가 거부해 붙여넣기가 사라진다(spec: editor-paste)
+        if (isTableCellTarget(view.state.selection)) return false;
         const tr = replacePasted(view.state, slice);
         const replaced = tr.steps.length;
         keepStickersOnOnePiece(tr, view.state.selection);

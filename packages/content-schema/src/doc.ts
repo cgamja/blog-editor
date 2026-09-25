@@ -173,6 +173,15 @@ const textSchema = z.strictObject({
   marks: marksArraySchema.optional(),
 });
 
+/**
+ * 강제 줄바꿈(adr-028) — 문단(최상위 · 안쪽) 안에만 온다. 제목 · 표 칸은 markdown에서 한 줄 문법이라 자리가 없다.
+ * 마크 · attrs가 없다 — 줄바꿈은 글자가 아니라 꾸밀 것이 없다.
+ */
+const hardBreakSchema = z.strictObject({ type: z.literal("hardBreak") });
+
+/** 문단 인라인 — 글자와 강제 줄바꿈 */
+const paragraphInlineSchema = z.discriminatedUnion("type", [textSchema, hardBreakSchema]);
+
 /** codeBlock 안 텍스트 — "마크 없는 text"라 marks 자리 자체가 없다. */
 const codeBlockTextSchema = z.strictObject({
   type: z.literal("text"),
@@ -189,7 +198,7 @@ const stickerSchema = z.strictObject({
   rotate: intInRange(STICKER_RANGES.rotate.min, STICKER_RANGES.rotate.max),
 });
 
-/** 글자가 있는 블록(paragraph · blockquote · bulletList · orderedList)의 attrs. */
+/** 글자가 있는 블록(paragraph · blockquote · bulletList · orderedList · table)의 attrs. */
 const textDecorationAttrsSchema = z.strictObject({
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
@@ -294,6 +303,12 @@ const appScreenshotAttrsSchema = z
 
 const innerParagraphSchema = z.strictObject({
   type: z.literal("paragraph"),
+  content: z.array(paragraphInlineSchema).optional(),
+});
+
+/** 표 칸 안 문단 — GFM 칸은 한 줄 인라인이라 강제 줄바꿈 자리가 없다(adr-028) */
+const cellParagraphSchema = z.strictObject({
+  type: z.literal("paragraph"),
   content: z.array(textSchema).optional(),
 });
 
@@ -345,12 +360,27 @@ const innerListSchema: z.ZodType<InnerListNode> = z.lazy(() =>
   z.union([innerBulletListSchema, innerOrderedListSchema]),
 );
 
+/**
+ * 표 칸 — 열 정렬만 attrs로 가진다(adr-028). 정렬은 머리 행(첫 행) 칸에만 올 수 있고, 그 규칙은 표 refine이
+ * 본다. 칸 안은 attrs 없는 문단 정확히 하나(GFM 칸은 한 줄 인라인).
+ */
+const tableCellSchema = z.strictObject({
+  type: z.literal("tableCell"),
+  attrs: z.strictObject({ align: alignSchema.optional() }).optional(),
+  content: z.tuple([cellParagraphSchema]),
+});
+
+const tableRowSchema = z.strictObject({
+  type: z.literal("tableRow"),
+  content: z.array(tableCellSchema).min(1),
+});
+
 // ── 5. 최상위 블록 ─────────────────────────────────────────────────────
 
 const paragraphSchema = z.strictObject({
   type: z.literal("paragraph"),
   attrs: paragraphAttrsSchema.optional(),
-  content: z.array(textSchema).optional(),
+  content: z.array(paragraphInlineSchema).optional(),
 });
 
 const headingSchema = z.strictObject({
@@ -407,6 +437,44 @@ const calloutSchema = z.strictObject({
     .min(1),
 });
 
+type TableRowNode = z.infer<typeof tableRowSchema>;
+
+/**
+ * 표는 직사각형이고(모든 행의 칸 수가 같다) 열 정렬은 머리 행 칸에만 있다(adr-028) — 칸 병합 · 본문 칸 정렬은
+ * 자리가 없다. 머리 행은 노드 종류가 아니라 첫 행이라는 자리다.
+ */
+function checkTableShape(rows: readonly TableRowNode[], ctx: z.RefinementCtx): void {
+  const columns = rows[0]?.content.length ?? 0;
+  rows.forEach((row, rowIndex) => {
+    if (row.content.length !== columns) {
+      ctx.addIssue({
+        code: "custom",
+        message: `표의 모든 행은 칸 수가 같아야 한다(첫 행 ${columns}칸)`,
+        path: ["content", rowIndex, "content"],
+      });
+    }
+    if (rowIndex === 0) return;
+    row.content.forEach((cell, cellIndex) => {
+      if (cell.attrs?.align !== undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: "열 정렬은 머리 행(첫 행) 칸에만 둔다",
+          path: ["content", rowIndex, "content", cellIndex, "attrs", "align"],
+        });
+      }
+    });
+  });
+}
+
+/** 꾸미기는 목록 · 인용과 같은 font · motion · stickers — 정렬 · 폭은 없다(adr-028) */
+const tableSchema = z
+  .strictObject({
+    type: z.literal("table"),
+    attrs: textDecorationAttrsSchema.optional(),
+    content: z.array(tableRowSchema).min(1),
+  })
+  .superRefine((table, ctx) => checkTableShape(table.content, ctx));
+
 const topLevelBlockSchema = z.union([
   paragraphSchema,
   headingSchema,
@@ -418,6 +486,7 @@ const topLevelBlockSchema = z.union([
   imageSchema,
   calloutSchema,
   appScreenshotSchema,
+  tableSchema,
 ]);
 
 // ── 6. doc 루트 + 스티커 합계 12개 refine(보호 대상) ───────────────────────
@@ -450,6 +519,9 @@ export const docSchema = z
 
 export type Mark = z.infer<typeof markSchema>;
 export type TextNode = z.infer<typeof textSchema>;
+export type HardBreakNode = z.infer<typeof hardBreakSchema>;
+/** 문단 안 인라인 — 제목 · 표 칸은 TextNode만 */
+export type InlineNode = z.infer<typeof paragraphInlineSchema>;
 export type Sticker = z.infer<typeof stickerSchema>;
 /**
  * 꾸미기 속성의 합집합 타입 — 실제 노드는 각자의 좁은 attrs 스키마를 쓴다(font는 글자 블록만,

@@ -39,12 +39,18 @@ export const pmSchema = new Schema({
     // start 없음은 toJSON에 undefined로 남고 normalize가 지운다
     orderedList: { group: "block", content: "listItem+", attrs: { start: { default: undefined } } },
     listItem: { content: "paragraph (bulletList | orderedList)*" },
+    // 칸은 markdown-it이 inline 토큰을 바로 넣으므로 인라인을 받는다 — parser.ts가 문서 모양(칸 안 문단 하나)으로 감싼다
+    table: { group: "block", content: "tableRow+" },
+    tableRow: { content: "tableCell+" },
+    tableCell: { content: "inline*", attrs: { align: { default: undefined } } },
 
     image: {
       group: "inline",
       inline: true,
       attrs: { src: { default: "" }, alt: { default: "" } },
     },
+    // 강제 줄바꿈(adr-028) — 문단 안에만. 제목 · 표 칸 자리는 check.ts가 막는다
+    hardBreak: { group: "inline", inline: true },
     text: { group: "inline" },
   },
   marks: {

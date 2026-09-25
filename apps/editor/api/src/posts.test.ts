@@ -177,3 +177,82 @@ describe("posts-api — 검증 · 정규화", () => {
     });
   });
 });
+
+describe("posts-api — 발행 글 수정일", () => {
+  const TODAY = "2026-09-25";
+
+  function setupWithToday() {
+    const store = createMemoryPostStore();
+    const app = createApp({
+      store,
+      categories: CATEGORIES,
+      imageBaseUrl: "https://simsimeestudio.com",
+      today: () => TODAY,
+      ...testAuthOptions,
+    });
+    return { store, app: withSession(app) };
+  }
+
+  it("WHEN 발행 글의 제목만 고쳐 맞는 If-Match로 PUT하면 THEN meta.updated가 오늘이다", async () => {
+    const { store, app } = setupWithToday();
+    const original = published(fixtures.minimal);
+    const { revision } = await store.put("beta-open", original, null);
+
+    await putPost(app, "beta-open", withTitle(original, "고친 제목"), {
+      "If-Match": `"${revision}"`,
+    });
+
+    expect((await store.get("beta-open"))?.file.meta.updated).toBe(TODAY);
+  });
+
+  it("WHEN 발행 글의 문단을 고쳐 맞는 If-Match로 PUT하면 THEN meta.updated가 오늘이다", async () => {
+    const { store, app } = setupWithToday();
+    const original = published(fixtures.minimal);
+    const { revision } = await store.put("beta-open", original, null);
+    const edited: PostFile = {
+      ...original,
+      doc: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "고친 문단" }] }],
+      },
+    };
+
+    await putPost(app, "beta-open", edited, { "If-Match": `"${revision}"` });
+
+    expect((await store.get("beta-open"))?.file.meta.updated).toBe(TODAY);
+  });
+
+  it("WHEN 수정일이 있는 발행 글을 옛 updated · 같은 내용으로 다시 저장하면 THEN 저장된 updated가 그대로다", async () => {
+    const { store, app } = setupWithToday();
+    const stored = published(fixtures.minimal);
+    const withUpdated = { ...stored, meta: { ...stored.meta, updated: "2026-09-01" } };
+    const { revision } = await store.put("beta-open", withUpdated, null);
+    const staleForm = { ...stored, meta: { ...stored.meta, updated: "2026-08-01" } };
+
+    await putPost(app, "beta-open", staleForm, { "If-Match": `"${revision}"` });
+
+    expect((await store.get("beta-open"))?.file.meta.updated).toBe("2026-09-01");
+  });
+
+  it("WHEN 초안 저장 · 처음 발행 · 내용 같은 재저장을 하면 THEN updated를 건드리지 않는다", async () => {
+    const { store, app } = setupWithToday();
+    const draft = fixtures.minimal;
+    const editing = await store.put("draft-edit", draft, null);
+    const firstPublish = await store.put("first-publish", draft, null);
+    const same = await store.put("same-content", published(draft), null);
+
+    await putPost(app, "draft-edit", withTitle(draft, "초안 고침"), {
+      "If-Match": `"${editing.revision}"`,
+    });
+    await putPost(app, "first-publish", published(draft), {
+      "If-Match": `"${firstPublish.revision}"`,
+    });
+    await putPost(app, "same-content", published(draft), { "If-Match": `"${same.revision}"` });
+
+    for (const slug of ["draft-edit", "first-publish", "same-content"]) {
+      const saved = await store.get(slug);
+      expect(saved?.file.meta.title).toBe(slug === "draft-edit" ? "초안 고침" : draft.meta.title);
+      expect(saved?.file.meta.updated).toBeUndefined();
+    }
+  });
+});

@@ -1,3 +1,4 @@
+import type { SeoLevel } from "@blog-editor/content-schema";
 import type { MetaField } from "./types";
 
 /** 편집 화면의 사용자 문장 — 디자인 68:2 · 67:2와 디자인 결정(FBoYaNUUHcxHPzpWUibKBR)의 문장을 한 곳에 둔다 */
@@ -34,6 +35,8 @@ export const EDITOR_MESSAGES = {
     categoryHint: "워크스페이스에 정해 둔 카테고리 중 하나예요.",
     description: "설명",
     descriptionHint: "검색 결과와 글 목록에 보이는 두세 줄이에요.",
+    keyword: "핵심 검색어",
+    keywordHint: "독자가 검색창에 칠 말 하나예요. 발행 전 점검에만 쓰고 사이트에는 보이지 않아요.",
     date: "날짜",
     openDecorate: "꾸미기 열기",
     refineWithAi: "이 글을 AI와 다듬기",
@@ -59,6 +62,14 @@ export const EDITOR_MESSAGES = {
     confirmUpdate: "반영",
     cancel: "취소",
     incomplete: "발행하려면 먼저 채워 주세요:",
+  },
+  /** 발행 확인의 검색 노출 점검(adr-030) — 알리기만 하고 발행은 막지 않는다 */
+  seo: {
+    heading: "검색 노출 점검",
+    mustNotice: "꼭 고칠 것이 있어요. 그래도 발행할 수는 있어요.",
+    empty: "점검할 것이 없어요.",
+    unavailable: "본문을 읽지 못해 점검할 수 없어요.",
+    levels: { must: "꼭 고치기", should: "권장", info: "참고" } satisfies Record<SeoLevel, string>,
   },
   preview: {
     title: "미리보기",

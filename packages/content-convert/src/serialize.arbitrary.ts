@@ -97,8 +97,24 @@ const inlineArb = fc
     }),
   );
 
-/** 빈 문단이 없게 — 인라인은 최소 하나. */
-const inlinesArb = fc.array(inlineArb, { minLength: 1, maxLength: 4 });
+const HARD_BREAK_NODE = { type: "hardBreak" } as const;
+/** 문단 인라인에서 글자 : 강제 줄바꿈 비율 */
+const TEXT_INLINE_WEIGHT = 3;
+const HARD_BREAK_WEIGHT = 1;
+
+/**
+ * 빈 문단이 없게 — 글자가 최소 하나. 문단에는 강제 줄바꿈(adr-028)을 섞는다(앞 · 가운데 · 끝 · 이어짐 모두 —
+ * 끝의 것은 정규형이 지운다). 제목 · 표 칸은 글자만(inlineArb).
+ */
+const inlinesArb = fc
+  .array(
+    fc.oneof(
+      { arbitrary: inlineArb, weight: TEXT_INLINE_WEIGHT },
+      { arbitrary: fc.constant(HARD_BREAK_NODE), weight: HARD_BREAK_WEIGHT },
+    ),
+    { minLength: 1, maxLength: 5 },
+  )
+  .filter((content) => content.some((node) => node.type === "text"));
 
 const paragraphInner = inlinesArb.map((content) => ({ type: "paragraph", content }));
 
@@ -234,6 +250,53 @@ const topList = fc
   .tuple(listArb(0), decoration({ font: true, width: false }))
   .map(([list, attrs]) => withAttrs(list, { ...(list.attrs as object | undefined), ...attrs }));
 
+const MAX_TABLE_SIDE = 3;
+
+/**
+ * 표 — 빈 칸은 GFM에서도 빈 칸이라 losses가 아니다(markdown-serialize). 열 정렬은 머리 행 칸에만,
+ * `left`는 정렬 없음과 같은 모양이라 뽑지 않는다(normalize가 지운다 — 왕복 비교는 normalize 결과와 한다).
+ */
+const table = fc
+  .record({
+    columns: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+    rows: fc.integer({ min: 1, max: MAX_TABLE_SIDE }),
+  })
+  .chain(({ columns, rows }) =>
+    fc.tuple(
+      fc.array(fc.constantFrom(undefined, "center", "right"), {
+        minLength: columns,
+        maxLength: columns,
+      }),
+      fc.array(
+        fc.array(fc.array(inlineArb, { maxLength: 3 }), { minLength: columns, maxLength: columns }),
+        { minLength: rows, maxLength: rows },
+      ),
+      decoration({ font: true, width: false }),
+    ),
+  )
+  .map(([aligns, grid, attrs]) =>
+    withAttrs(
+      {
+        type: "table",
+        content: grid.map((cells, row) => ({
+          type: "tableRow",
+          content: cells.map((content, column) => {
+            const cell: Record<string, unknown> = {
+              type: "tableCell",
+              content: [
+                content.length > 0 ? { type: "paragraph", content } : { type: "paragraph" },
+              ],
+            };
+            const align = row === 0 ? aligns[column] : undefined;
+            if (align !== undefined) cell.attrs = { align };
+            return cell;
+          }),
+        })),
+      },
+      attrs,
+    ),
+  );
+
 const topLevelBlock = fc.oneof(
   topParagraph,
   heading,
@@ -244,6 +307,7 @@ const topLevelBlock = fc.oneof(
   appScreenshot,
   callout,
   topList,
+  table,
 );
 
 /** 스티커 · 빈 문단 없는 유효 doc — 만든 즉시 docSchema로 거른다(생성기 자체의 실수를 가리지 않게 parse). */

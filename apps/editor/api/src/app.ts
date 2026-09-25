@@ -18,7 +18,9 @@ import {
   PRECONDITION_REQUIRED_MESSAGE,
   SCHEMA_MISMATCH_MESSAGE,
 } from "./messages";
+import { blogToday } from "./blog-date";
 import { etagOf, revisionFromEtag } from "./etag";
+import { needsSavedForUpdate, withPublishedUpdate } from "./published-update";
 import { registerPreviewRoute } from "./post-preview";
 import { registerRenameRoute } from "./post-rename";
 import { issuesOf } from "./schema-issues";
@@ -48,6 +50,8 @@ export interface AppOptions extends SessionOptions {
   images?: ImageStore;
   /** 워크스페이스 설정(글쓰기 가이드) — 없으면 메모리. 라우트는 늘 있어 계약의 라우트 집합이 옵션으로 바뀌지 않는다 */
   settings?: SettingsStore;
+  /** 발행 글 `updated`에 쓰는 오늘(`YYYY-MM-DD`). 기본은 블로그 시간대의 오늘 */
+  today?: () => string;
 }
 
 /** 사이트 빌드가 부르는 공개 조회의 짧은 캐시(plan 3-6) */
@@ -81,7 +85,7 @@ function invalidSlug(c: Context) {
 }
 
 export function createApp(options: AppOptions): Hono {
-  const { store, categories, imageBaseUrl } = options;
+  const { store, categories, imageBaseUrl, today = blogToday } = options;
   const postFileSchema = createPostFileSchema({ categories });
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
   const postCss = readPostCss();
@@ -128,7 +132,10 @@ export function createApp(options: AppOptions): Hono {
       return c.json({ message: SCHEMA_MISMATCH_MESSAGE, issues: issuesOf(parsed.error) }, 400);
     }
 
-    const file: PostFile = { ...parsed.data, doc: normalize(parsed.data.doc) };
+    const normalized: PostFile = { ...parsed.data, doc: normalize(parsed.data.doc) };
+    const current = needsSavedForUpdate(expected, normalized) ? await store.get(slug) : null;
+    const saved = current?.revision === expected ? current.file : null;
+    const file = withPublishedUpdate(saved, normalized, today());
     try {
       const { revision } = await store.put(slug, file, expected);
       c.header("ETag", etagOf(revision));

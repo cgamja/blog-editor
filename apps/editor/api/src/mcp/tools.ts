@@ -1,24 +1,34 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import type { CallToolResult } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { convertMarkdown, serializeMarkdown } from "@blog-editor/content-convert";
+import {
+  RANGE_EDIT_COMMANDS,
+  convertMarkdown,
+  editDocRange,
+  serializeMarkdown,
+} from "@blog-editor/content-convert";
+import type { RangeEdit } from "@blog-editor/content-convert";
 import {
   SCHEMA_VERSION,
+  checkSeo,
   createPostFileSchema,
   normalize,
   slugSchema,
 } from "@blog-editor/content-schema";
-import type { PostFile, PostSource } from "@blog-editor/content-schema";
+import type { Doc, PostFile, PostSource, SeoFinding, SeoInput } from "@blog-editor/content-schema";
 import { MAX_MARKDOWN_LENGTH } from "../input-limits";
 import type { SettingsStore } from "../settings-store";
 import { ConflictError } from "../store";
 import type { PostStore } from "../store";
 import {
   MCP_CONFLICT_MESSAGE,
+  MCP_EDIT_WITH_MARKDOWN_MESSAGE,
   MCP_INTERNAL_ERROR_MESSAGE,
   MCP_META_MISMATCH_MESSAGE,
+  MCP_NOTHING_TO_UPDATE_MESSAGE,
   MCP_POST_NOT_FOUND_MESSAGE,
   MCP_PUBLISHED_READ_ONLY_MESSAGE,
+  MCP_SERVER_INSTRUCTIONS,
   MCP_SLUG_TAKEN_MESSAGE,
   MCP_TOOL_TEXT,
   MCP_WORKSPACE_GUIDE_HEADING,
@@ -40,6 +50,14 @@ export interface DraftToolsOptions {
 
 const SERVER_INFO = { name: "simsimee-blog-editor", version: "0.1.0" };
 const markdownSchema = z.string().max(MAX_MARKDOWN_LENGTH);
+/** 부분 고치기(adr-031) — 범위는 "시작 글...끝 글", 새 글은 markdown */
+const rangeEditSchema = z.strictObject({
+  command: z.enum(RANGE_EDIT_COMMANDS),
+  selection: z.string().min(1).max(MAX_MARKDOWN_LENGTH),
+  markdown: markdownSchema,
+});
+
+type BuiltFile = { ok: true; file: PostFile } | { ok: false; error: CallToolResult };
 
 /** 형식 가이드(문법) 뒤에 이 블로그의 글쓰기 가이드(말투 · 독자 · 구성)를 붙인다 */
 function withWorkspaceGuide(formatGuide: string, guide: string): string {
@@ -82,28 +100,63 @@ function byDateDesc(a: { date: string; slug: string }, b: { date: string; slug: 
 }
 
 /**
- * 도구 6개(plan 3-12). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
+ * 도구 6개(plan 3-12). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
  * 입력에 `draft` 자리가 없고(strictObject라 넣으면 입력 오류) 저장하는 글을 항상 `draft: true`로 둔다.
  */
 export function createDraftsServer(options: DraftToolsOptions): McpServer {
   const { store, categories, editorBaseUrl, formatGuide, settings, today, source } = options;
   const postFileSchema = createPostFileSchema({ categories });
-  const server = new McpServer(SERVER_INFO);
+  // instructions는 초기화 응답에 실린다 — @modelcontextprotocol/server 2.0 ServerOptions.instructions
+  // (dist/createMcpHandler-*.d.mts "Optional instructions describing how to use the server")
+  const server = new McpServer(SERVER_INFO, { instructions: MCP_SERVER_INSTRUCTIONS });
 
   const editorUrlOf = (slug: string) => `${editorBaseUrl}/posts/${slug}/edit`;
 
+  /** 글 내용 SEO 점검(adr-030) — 비교 대상은 저장된 다른 글 전부(초안 포함)다 */
+  async function seoOf(
+    slug: string | undefined,
+    meta: SeoInput["meta"],
+    doc: Doc,
+  ): Promise<SeoFinding[]> {
+    // 목록은 저장소가 검증 없이 돌려준 요약이다 — 모양이 어긋난 항목은 비교에서 뺀다
+    const others = (await store.list()).flatMap(({ slug: other, meta: summary }) =>
+      typeof summary.title === "string"
+        ? [
+            {
+              slug: other,
+              title: summary.title,
+              description:
+                typeof summary.description === "string" ? summary.description : undefined,
+            },
+          ]
+        : [],
+    );
+    return checkSeo({ slug, meta, doc, others });
+  }
+
+  /**
+   * 저장한 뒤의 점검 — 이미 저장됐으므로 점검이 실패해도 성공 응답을 막지 않는다(`seo: null`은 "점검 못 함").
+   * 원문은 서버 로그에만 남긴다(guarded와 같은 이유).
+   */
+  async function seoAfterSave(slug: string, file: PostFile): Promise<SeoFinding[] | null> {
+    try {
+      return await seoOf(slug, file.meta, file.doc);
+    } catch (error) {
+      console.error("mcp: SEO 점검 실패", error);
+      return null;
+    }
+  }
+
   /** 실패하면 AI가 고칠 수 있게 변환 · 검증 메시지를 그대로 돌려준다 */
-  function buildFile(
-    markdown: string,
-    meta: PostFile["meta"],
-  ): { ok: true; file: PostFile } | { ok: false; error: CallToolResult } {
+  function buildFile(markdown: string, meta: PostFile["meta"]): BuiltFile {
     const converted = convertMarkdown(markdown);
     if (!converted.ok) return { ok: false, error: toolError(converted.messages.join("\n")) };
-    const parsed = postFileSchema.safeParse({
-      schemaVersion: SCHEMA_VERSION,
-      meta,
-      doc: converted.doc,
-    });
+    return fileOf(converted.doc, meta);
+  }
+
+  /** 문서 · 글 정보를 저장할 모양으로 검증한다 — 부분 고치기 · 글 정보만 고치기도 같은 검사를 지난다 */
+  function fileOf(doc: Doc, meta: PostFile["meta"]): BuiltFile {
+    const parsed = postFileSchema.safeParse({ schemaVersion: SCHEMA_VERSION, meta, doc });
     if (!parsed.success) {
       const issues = parsed.error.issues.map(
         ({ path, message }) => `- ${path.map(String).join(".")}: ${message}`,
@@ -111,6 +164,22 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       return { ok: false, error: toolError([MCP_META_MISMATCH_MESSAGE, ...issues].join("\n")) };
     }
     return { ok: true, file: { ...parsed.data, doc: normalize(parsed.data.doc) } };
+  }
+
+  /**
+   * update_draft의 새 문서 — 전체 markdown이면 다시 변환하고, 부분 고치기면 저장된 문서의 범위만 고친다
+   * (범위 밖 블록은 마크다운 왕복을 타지 않아 꾸밈 · 스티커가 그대로다). 둘 다 없으면 문서는 그대로다.
+   */
+  function rebuild(
+    saved: Doc,
+    meta: PostFile["meta"],
+    change: { markdown: string | undefined; edit: RangeEdit | undefined },
+  ): BuiltFile {
+    if (change.markdown !== undefined) return buildFile(change.markdown, meta);
+    if (change.edit === undefined) return fileOf(saved, meta);
+    const edited = editDocRange(saved, change.edit);
+    if (!edited.ok) return { ok: false, error: toolError(edited.messages.join("\n")) };
+    return fileOf(edited.doc, meta);
   }
 
   server.registerTool(
@@ -165,13 +234,25 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "check_draft",
     {
       ...MCP_TOOL_TEXT.check_draft,
-      // create_draft와 같은 인자를 그대로 넘겨도 되게 markdown 외의 키는 무시한다
-      inputSchema: z.object({ markdown: markdownSchema }),
+      // create_draft와 같은 인자를 그대로 넘겨도 되게 아래 밖의 키는 무시한다
+      inputSchema: z.object({
+        markdown: markdownSchema,
+        slug: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        keyword: z.string().optional(),
+      }),
     },
-    guarded(async ({ markdown }) => {
+    guarded(async ({ markdown, slug, title, description, keyword }) => {
       const converted = convertMarkdown(markdown);
       if (!converted.ok) return toolError(converted.messages.join("\n"));
-      return jsonResult({ ok: true, blocks: converted.doc.content.length });
+      const meta = { title: title ?? "", description: description ?? "", keyword };
+      const given = { title: title !== undefined, description: description !== undefined };
+      // 주지 않은 칸의 규칙은 빈 값 때문에 걸린 것이라 뺀다 — keyword-missing(info)은 주지 않은 것 자체를 알린다
+      const isAboutGivenField = ({ target }: SeoFinding) =>
+        target.kind !== "meta" || target.field === "keyword" || given[target.field];
+      const seo = (await seoOf(slug, meta, normalize(converted.doc))).filter(isAboutGivenField);
+      return jsonResult({ ok: true, blocks: converted.doc.content.length, seo });
     }),
   );
 
@@ -185,14 +266,24 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
         description: z.string(),
         category: z.enum(categories),
         markdown: markdownSchema,
+        keyword: z.string().optional(),
       }),
     },
-    guarded(async ({ slug, title, description, category, markdown }) => {
-      const meta = { title, description, date: today(), category, draft: true, source };
+    guarded(async ({ slug, title, description, category, markdown, keyword }) => {
+      const meta = {
+        title,
+        description,
+        date: today(),
+        category,
+        draft: true,
+        source,
+        ...(keyword === undefined ? {} : { keyword }),
+      };
       const built = buildFile(markdown, meta);
       if (!built.ok) return built.error;
       const { revision } = await store.put(slug, built.file, null);
-      return jsonResult({ slug, revision, editorUrl: editorUrlOf(slug) });
+      const seo = await seoAfterSave(slug, built.file);
+      return jsonResult({ slug, revision, editorUrl: editorUrlOf(slug), seo });
     }, MCP_SLUG_TAKEN_MESSAGE),
   );
 
@@ -203,13 +294,24 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       inputSchema: z.strictObject({
         slug: slugSchema,
         revision: z.string(),
-        markdown: markdownSchema,
+        markdown: markdownSchema.optional(),
+        edit: rangeEditSchema.optional(),
         title: z.string().optional(),
         description: z.string().optional(),
         category: z.enum(categories).optional(),
+        keyword: z.string().optional(),
       }),
     },
-    guarded(async ({ slug, revision, markdown, title, description, category }) => {
+    guarded(async ({ slug, revision, markdown, edit, title, description, category, keyword }) => {
+      // 전체(markdown) · 부분(edit) · 글 정보만 중 하나 — 둘을 함께 주면 어느 쪽이 이기는지 AI가 알 수 없다
+      if (markdown !== undefined && edit !== undefined)
+        return toolError(MCP_EDIT_WITH_MARKDOWN_MESSAGE);
+      const hasMetaChange = [title, description, category, keyword].some(
+        (value) => value !== undefined,
+      );
+      if (markdown === undefined && edit === undefined && !hasMetaChange) {
+        return toolError(MCP_NOTHING_TO_UPDATE_MESSAGE);
+      }
       const found = await store.get(slug);
       if (found === null) return toolError(MCP_POST_NOT_FOUND_MESSAGE);
       // 초안인지 확인한 판과 조건부로 쓰는 판을 같게 둔다 — 다르면 확인하지 않은 판(발행 글)을 덮을 수 있다
@@ -221,12 +323,14 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
         ...(title === undefined ? {} : { title }),
         ...(description === undefined ? {} : { description }),
         ...(category === undefined ? {} : { category }),
+        ...(keyword === undefined ? {} : { keyword }),
         draft: true,
       };
-      const built = buildFile(markdown, meta);
+      const built = rebuild(found.file.doc, meta, { markdown, edit });
       if (!built.ok) return built.error;
       const saved = await store.put(slug, built.file, found.revision);
-      return jsonResult({ slug, revision: saved.revision, editorUrl: editorUrlOf(slug) });
+      const seo = await seoAfterSave(slug, built.file);
+      return jsonResult({ slug, revision: saved.revision, editorUrl: editorUrlOf(slug), seo });
     }, MCP_CONFLICT_MESSAGE),
   );
 

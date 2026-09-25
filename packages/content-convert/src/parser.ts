@@ -1,10 +1,18 @@
 import { naturalSizeOf } from "@blog-editor/content-schema";
 import { MarkdownParser } from "prosemirror-markdown";
+import type Token from "markdown-it/lib/token.mjs";
 import { parseCalloutTone } from "./check";
 import { DEFAULT_CALLOUT_TONE } from "./constants";
 import { pmSchema } from "./pm-schema";
 import { createMarkdownIt, imageAltText } from "./tokens";
 import type { BlockRecord, ResolvedDirective } from "./types";
+
+/** markdown-it이 구분 줄(`:-:` · `--:` · `:--`)을 칸의 `style="text-align:…"`로 싣는다 */
+const CELL_ALIGN_STYLE = /^text-align:(left|center|right)$/;
+
+function cellAlignOf(tok: Token): string | undefined {
+  return CELL_ALIGN_STYLE.exec(tok.attrGet("style") ?? "")?.[1];
+}
 
 /**
  * markdown-it 토큰 → doc 노드 대응표(adr-013 ②). check.ts가 stage 1에서 정의 밖 토큰을 전부
@@ -36,6 +44,13 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
     getAttrs: (tok) => (tok.info.trim() !== "" ? { language: tok.info.trim() } : {}),
   },
   hr: { node: "horizontalRule" },
+  // GFM 표(adr-028) — 머리 행은 자리(첫 행)라 thead · tbody 틀은 노드가 아니다. 열 정렬은 머리 칸에만 둔다
+  table: { block: "table" },
+  thead: { ignore: true },
+  tbody: { ignore: true },
+  tr: { block: "tableRow" },
+  th: { block: "tableCell", getAttrs: (tok) => ({ align: cellAlignOf(tok) }) },
+  td: { block: "tableCell" },
   image: {
     node: "image",
     getAttrs: (tok) => ({ src: tok.attrGet("src") ?? "", alt: imageAltText(tok) }),
@@ -57,6 +72,8 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   textstyle: { mark: "textStyle", getAttrs: (tok) => (tok.meta as { attrs: object }).attrs },
   // span_open/close는 검사용 틀이라 마크를 만들지 않는다
   span: { ignore: true },
+  // 줄 끝 `\` · 공백 둘(adr-028). 둘러싼 마크가 함께 실리지만 문서의 hardBreak에는 마크 자리가 없다 — buildDoc이 지운다
+  hardbreak: { node: "hardBreak" },
 });
 
 interface RawNode {
@@ -116,7 +133,36 @@ function withDecoration(block: RawNode, directive: ResolvedDirective | undefined
   return { ...block, attrs };
 }
 
+/** 칸의 인라인을 문서 모양(칸 안 문단 하나)으로 감싼다 — 정렬 없는 칸은 attrs를 두지 않는다 */
+function toTableBlock(table: RawNode): RawNode {
+  const rows = (table.content ?? []).map((row) => ({
+    ...row,
+    content: (row.content ?? []).map((cell) => {
+      const paragraph: RawNode =
+        cell.content === undefined
+          ? { type: "paragraph" }
+          : { type: "paragraph", content: cell.content };
+      const align = cell.attrs?.align;
+      return align === undefined
+        ? { type: "tableCell", content: [paragraph] }
+        : { type: "tableCell", attrs: { align }, content: [paragraph] };
+    }),
+  }));
+  return { type: "table", content: rows };
+}
+
+/**
+ * MarkdownParser는 인라인 노드를 만들 때 그 자리의 마크를 붙인다(prosemirror-markdown 1.13.8 `MarkdownParseState.addNode`
+ * — `type.createAndFill(attrs, content, top ? top.marks : [])`). 강제 줄바꿈은 마크가 없는 노드라 지운다.
+ */
+function withoutHardBreakMarks(node: RawNode): RawNode {
+  if (node.type === "hardBreak") return { type: "hardBreak" };
+  if (node.content === undefined) return node;
+  return { ...node, content: node.content.map(withoutHardBreakMarks) };
+}
+
 function applyTopLevelBlock(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
+  if (block.type === "table") return withDecoration(toTableBlock(block), directive);
   const solelyImage =
     block.type === "paragraph" && block.content?.length === 1 && block.content[0]?.type === "image";
   if (solelyImage) return toImageBlock(block.content![0]!, directive);
@@ -138,7 +184,7 @@ export function buildDoc(
   const content = (raw.content ?? []).map((block, i) => {
     const record = topLevelRecords[i];
     const directive = record ? resolvedByMapStart.get(record.mapStart0) : undefined;
-    return applyTopLevelBlock(block, directive);
+    return applyTopLevelBlock(withoutHardBreakMarks(block), directive);
   });
   return { type: "doc", content };
 }

@@ -184,20 +184,6 @@ export function codeLanguageMessage(
   );
 }
 
-export function tableNotAllowedMessage(
-  topLevel: number,
-  line: number,
-  received: string,
-): FoundMessage {
-  return blockMessage(
-    topLevel,
-    line,
-    "표는 정의 밖이다",
-    received,
-    "표 대신 목록이나 문단으로 쓴다",
-  );
-}
-
 export function htmlNotAllowedMessage(
   topLevel: number,
   line: number,
@@ -248,13 +234,18 @@ export function calloutToneMessage(topLevel: number, line: number, received: str
   );
 }
 
-export function hardBreakMessage(topLevel: number, line: number, received: string): FoundMessage {
+/** 강제 줄바꿈은 문단 안에만(adr-028) — 제목 · 표 칸은 한 줄 문법이다 */
+export function hardBreakPlaceMessage(
+  topLevel: number,
+  line: number,
+  received: string,
+): FoundMessage {
   return blockMessage(
     topLevel,
     line,
-    "줄 끝 공백 둘이나 \\로 강제 줄바꿈은 쓸 수 없다",
+    "강제 줄바꿈(줄 끝 \\ · 공백 둘)은 문단 안에만 쓴다",
     received,
-    "문단을 그대로 잇거나(공백 하나) 새 문단으로 나눈다",
+    "제목 · 표 칸은 한 줄로 쓰거나 새 문단으로 나눈다",
   );
 }
 
@@ -359,6 +350,35 @@ export function imageInContainerMessage(
     IMAGE_TOP_LEVEL_ONLY_RULE,
     received,
     "인용 · 목록 · 콜아웃 밖으로 옮긴다",
+  );
+}
+
+export function imageInTableMessage(
+  topLevel: number,
+  line: number,
+  received: string,
+): FoundMessage {
+  return blockMessage(
+    topLevel,
+    line,
+    IMAGE_TOP_LEVEL_ONLY_RULE,
+    received,
+    "표 밖에 이미지만 있는 문단으로 따로 쓴다",
+  );
+}
+
+export function tableRowTooWideMessage(
+  topLevel: number,
+  line: number,
+  received: string,
+  headerColumns: number,
+): FoundMessage {
+  return blockMessage(
+    topLevel,
+    line,
+    `표 행의 칸이 머리 행(${headerColumns}칸)보다 많다 — 넘치는 칸의 글자가 사라진다`,
+    received,
+    `칸을 ${headerColumns}개로 줄이거나 머리 행과 구분 줄에 열을 더한다`,
   );
 }
 

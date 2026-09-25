@@ -17,6 +17,7 @@ export const SLASH_ALIASES: Record<InsertableBlockKind, readonly string[]> = {
   calloutTip: ["callout", "tip"],
   calloutWarning: ["callout", "warning"],
   horizontalRule: ["divider", "hr"],
+  table: ["table", "grid"],
 };
 
 /** 동작 항목(이미지 고르기)의 검색 키 — 「그림」 · 「사진」처럼 부르는 말도 받는다 */

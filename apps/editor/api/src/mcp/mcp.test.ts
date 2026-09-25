@@ -347,3 +347,167 @@ describe("mcp-drafts — 워크스페이스 글쓰기 가이드", () => {
     expect(result.text).toContain(guide);
   });
 });
+
+describe("mcp-drafts — SEO 검사", () => {
+  it("WHEN alt가 빈 이미지가 든 markdown으로 create_draft를 부르면 THEN 저장되고 응답 seo에 image-alt가 있다", async () => {
+    const { store, app } = setup();
+
+    const created = await callTool(app, "create_draft", {
+      ...NEW_DRAFT,
+      markdown: "첫 문단입니다.\n\n![](/images/cherry-walk.webp)",
+    });
+    const body = JSON.parse(created.text) as { seo: Array<{ rule: string; level: string }> };
+
+    expect(created.isError).toBe(false);
+    expect(await store.get(NEW_DRAFT.slug)).not.toBeNull();
+    expect(body.seo).toContainEqual(expect.objectContaining({ rule: "image-alt", level: "must" }));
+  });
+
+  it("WHEN keyword를 넣어 create_draft한 뒤 keyword 없이 update_draft하면 THEN 처음 keyword가 그대로다", async () => {
+    const { store, app } = setup();
+    const created = await callTool(app, "create_draft", { ...NEW_DRAFT, keyword: "봄 산책" });
+    const { revision } = JSON.parse(created.text) as { revision: string };
+
+    const updated = await callTool(app, "update_draft", {
+      slug: NEW_DRAFT.slug,
+      revision,
+      markdown: "고친 첫 문단입니다.",
+    });
+
+    expect(updated.isError).toBe(false);
+    expect((await store.get(NEW_DRAFT.slug))?.file.meta.keyword).toBe("봄 산책");
+  });
+
+  it("WHEN 목록에 제목이 문자열이 아닌 항목이 섞여 있어도 THEN create_draft는 저장되고 성공 응답이다", async () => {
+    const base = createMemoryPostStore();
+    const store: PostStore = {
+      ...base,
+      list: async () => [
+        ...(await base.list()),
+        { slug: "broken", meta: { title: 42 } } as unknown as Awaited<
+          ReturnType<PostStore["list"]>
+        >[number],
+      ],
+    };
+    const { app } = setup(store);
+
+    const created = await callTool(app, "create_draft", NEW_DRAFT);
+
+    expect(created.isError).toBe(false);
+    expect(await base.get(NEW_DRAFT.slug)).not.toBeNull();
+  });
+
+  it("WHEN 유효한 토큰으로 initialize를 부르면 THEN instructions에 get_writing_guide와 seo가 있다", async () => {
+    const { app } = setup();
+
+    const result = await resultOf(
+      await rpc(app, "initialize", {
+        protocolVersion: PROTOCOL_VERSION,
+        capabilities: {},
+        clientInfo: { name: "test", version: "0.0.0" },
+      }),
+    );
+
+    expect(result.instructions).toEqual(expect.stringContaining("get_writing_guide"));
+    expect(result.instructions).toEqual(expect.stringContaining("seo"));
+  });
+});
+
+describe("mcp-drafts — update_draft 부분 고치기", () => {
+  const HEART = { id: "heart", x: 90, y: 10, size: 12, rotate: 15 } as const;
+  const STICKERED: PostFile = {
+    ...fixtures.minimal,
+    doc: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          attrs: { stickers: [HEART] },
+          content: [{ type: "text", text: "벚꽃길은 주말에 붐빈다." }],
+        },
+        { type: "paragraph", content: [{ type: "text", text: "도시락은 전날 싼다." }] },
+      ],
+    },
+  };
+
+  it("WHEN 스티커가 있는 초안에 edit replace로 update_draft하면 THEN 그 글자만 바뀌고 스티커 · 다른 블록이 그대로이며 새 revision과 seo가 있다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("spring-walk", STICKERED, null);
+
+    const result = await callTool(app, "update_draft", {
+      slug: "spring-walk",
+      revision,
+      edit: { command: "replace", selection: "주말에 붐빈다", markdown: "평일 아침이 한가하다" },
+    });
+
+    expect(result.isError).toBe(false);
+    const body = JSON.parse(result.text) as { revision: string; seo: unknown };
+    expect(body.revision).not.toBe(revision);
+    expect(Array.isArray(body.seo)).toBe(true);
+    const saved = await store.get("spring-walk");
+    expect(saved?.file.doc.content).toEqual([
+      {
+        type: "paragraph",
+        attrs: { stickers: [HEART] },
+        content: [{ type: "text", text: "벚꽃길은 평일 아침이 한가하다." }],
+      },
+      STICKERED.doc.content[1],
+    ]);
+    expect(saved?.file.meta.draft).toBe(true);
+  });
+
+  it("WHEN markdown · edit 없이 title만 주어 update_draft하면 THEN 제목만 바뀌고 문서는 그대로다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("spring-walk", STICKERED, null);
+
+    const result = await callTool(app, "update_draft", {
+      slug: "spring-walk",
+      revision,
+      title: "봄날 산책",
+    });
+
+    expect(result.isError).toBe(false);
+    const saved = await store.get("spring-walk");
+    expect(saved?.file.meta.title).toBe("봄날 산책");
+    expect(saved?.file.doc).toEqual(STICKERED.doc);
+  });
+
+  it("WHEN markdown과 edit를 함께 주어 update_draft하면 THEN 도구 오류이고 글이 그대로다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("spring-walk", STICKERED, null);
+
+    const result = await callTool(app, "update_draft", {
+      slug: "spring-walk",
+      revision,
+      markdown: "통째로 바꾼 글",
+      edit: { command: "replace", selection: "도시락", markdown: "김밥" },
+    });
+
+    expect(result.isError).toBe(true);
+    expect((await store.get("spring-walk"))?.file).toEqual(STICKERED);
+  });
+
+  it("WHEN markdown · edit · 글 정보 없이 update_draft하면 THEN 도구 오류이고 글이 그대로다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("spring-walk", STICKERED, null);
+
+    const result = await callTool(app, "update_draft", { slug: "spring-walk", revision });
+
+    expect(result.isError).toBe(true);
+    expect((await store.get("spring-walk"))?.revision).toBe(revision);
+  });
+
+  it("WHEN 발행 글에 edit로 update_draft하면 THEN 도구 오류이고 발행 글이 그대로다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("spring-walk", published(STICKERED), null);
+
+    const result = await callTool(app, "update_draft", {
+      slug: "spring-walk",
+      revision,
+      edit: { command: "replace", selection: "도시락", markdown: "김밥" },
+    });
+
+    expect(result.isError).toBe(true);
+    expect((await store.get("spring-walk"))?.file).toEqual(published(STICKERED));
+  });
+});

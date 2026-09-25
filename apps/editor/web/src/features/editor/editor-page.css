@@ -272,6 +272,83 @@
   gap: var(--space-10);
 }
 
+/* 발행 확인의 검색 노출 점검(adr-030) — 알리는 목록이라 카드 · 그림자 없이 선과 칩만 쓴다 */
+.seo-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-top: var(--space-14);
+  border-top: var(--border-width) solid var(--line-soft);
+}
+
+.seo-checklist-heading {
+  margin: 0;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.seo-checklist-notice,
+.seo-checklist-empty {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-hint);
+  color: var(--ink-mid);
+}
+
+.seo-checklist-notice {
+  color: var(--danger-ink);
+}
+
+.seo-checklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seo-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+}
+
+.seo-checklist-level {
+  flex: none;
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--ink-mid);
+}
+
+.seo-checklist-level[data-level="must"] {
+  background: var(--brand-soft);
+  color: var(--danger-ink);
+}
+
+.seo-checklist-level[data-level="should"] {
+  background: var(--postit);
+  color: var(--postit-ink);
+}
+
+.seo-checklist-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-hint);
+  color: var(--ink);
+}
+
+.seo-checklist-fix {
+  font-size: var(--font-size-caption);
+  color: var(--ink-soft);
+}
+
 .editor-dialog-row {
   display: flex;
   justify-content: flex-end;

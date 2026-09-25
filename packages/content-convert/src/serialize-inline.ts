@@ -1,4 +1,4 @@
-import type { TextNode } from "@blog-editor/content-schema";
+import type { InlineNode, TextNode } from "@blog-editor/content-schema";
 import { SPAN_STYLE_KEYS, SPAN_UNDERLINE_KEY } from "./constants";
 import { createMarkdownIt } from "./tokens";
 
@@ -41,6 +41,11 @@ const SPACE_CODE_POINT = 0x20;
 const MARK_DELIM: Record<Emphasis, number> = { bold: 2, italic: 1, strike: 2 };
 /** 취소선 구분자 — `*`/`_`처럼 바꿔 쓸 글자가 없다. 한 글자에 취소선은 하나뿐이라 겹칠 일도 없다. */
 const STRIKE_CH: DelimChar = "~";
+/**
+ * GFM 표는 문단을 끊을 수 있다(markdown-it 14.3.2 rules_block/table.mjs가 paragraph의 alt에 든다). 구분 줄은
+ * `|` · `-` · `:` · 공백으로만 이뤄지고, 줄 첫 `-` · `:`는 줄 첫 글자 규칙이 이미 이스케이프한다.
+ */
+const PARAGRAPH_PIPE = "|";
 
 type CharClass = "space" | "punct" | "word";
 
@@ -109,6 +114,8 @@ function spanBodyOf(node: TextNode): string {
   if ((node.marks ?? []).some((mark) => mark.type === "underline")) parts.push(SPAN_UNDERLINE_KEY);
   return parts.join(" ");
 }
+
+const hasLineBreak = (text: string) => [...LINE_BREAKS].some((ch) => text.includes(ch));
 
 function hasCode(node: TextNode): boolean {
   return (node.marks ?? []).some((mark) => mark.type === "code");
@@ -380,7 +387,29 @@ function referenceHazard(pieces: readonly Piece[]): TextNode | undefined {
   return undefined;
 }
 
-export type InlinePlace = "paragraph" | "heading";
+/**
+ * 표 칸 — 줄 첫 글자 규칙이 없고(칸 글자는 인라인으로만 읽힌다) 모든 `|`를 `\|`로 쓴다.
+ * 이어진 줄(`paragraphLine`) — 강제 줄바꿈 뒤 문단의 다음 줄. 줄 첫 글자 규칙은 문단과 같고, 참조 정의는 문단을
+ * 끊지 못하므로 그 모양은 보지 않는다.
+ */
+export type InlinePlace = "paragraph" | "paragraphLine" | "heading" | "cell";
+
+interface InlineOptions {
+  /** 여러 줄 문단 — 글자 `|`를 모두 이스케이프한다(serializeParagraph) */
+  escapePipes?: boolean;
+}
+
+/**
+ * 여러 줄 문단은 이어진 두 줄이 GFM 표(머리 줄 + 구분 줄)로 읽히지 않게 코드 스팬 밖의 글자 `|`를 `\|`로 쓴다
+ * (PARAGRAPH_PIPE 참고).
+ */
+function escapePipes(pieces: Piece[]): void {
+  for (const piece of pieces) {
+    if (piece.kind === "char" && piece.mode === "plain" && piece.cp === PARAGRAPH_PIPE) {
+      piece.mode = "escape";
+    }
+  }
+}
 
 export interface SerializedInline {
   text: string;
@@ -392,30 +421,85 @@ function buildPieces(
   nodes: readonly TextNode[],
   place: InlinePlace,
   plainCode: ReadonlySet<TextNode>,
+  options: InlineOptions,
 ): Piece[] {
   const pieces = toPieces(nodes, plainCode);
   encodeEdgeWhitespace(pieces);
-  if (place === "paragraph") escapeLineStart(pieces);
+  if (place === "paragraph" || place === "paragraphLine") escapeLineStart(pieces);
   if (place === "heading") escapeHeadingTrailingHash(pieces);
+  if (options.escapePipes === true) escapePipes(pieces);
   escapeBangBeforeLink(pieces);
   fixFlanking(pieces);
   return pieces;
 }
 
 /**
- * 문단 · 제목 한 줄의 인라인. 문단은 줄 첫 글자 규칙(목록 · 인용 · 지시어 …)과 참조 정의 모양을,
- * 제목은 끝의 `#`(닫는 표지로 읽힌다)을 피한다.
+ * GFM 표는 인라인을 읽기 전에 줄을 `|`로 칸으로 나누고, `\|`만 글자 `|`로 남긴다(markdown-it
+ * rules_block/table.mjs `escapedSplit` — 코드 스팬 · 링크 주소 안도 같다). 그래서 칸의 `|`는 어디서나 `\|`다.
+ * 나눌 때 `|` 바로 앞 백슬래시 하나만 지우므로 글자 `\`(`\\`) 뒤의 `|`도 그대로 돌아온다.
  */
-export function serializeInline(nodes: readonly TextNode[], place: InlinePlace): SerializedInline {
-  const plainCode = new Set<TextNode>();
-  let pieces = buildPieces(nodes, place, plainCode);
+const CELL_PIPE = /\|/g;
+
+/**
+ * 문단 · 제목 · 표 칸 한 줄의 인라인. 문단은 줄 첫 글자 규칙(목록 · 인용 · 지시어 …)과 참조 정의 모양을,
+ * 제목은 끝의 `#`(닫는 표지로 읽힌다)을, 표 칸은 칸을 가르는 `|`를 피한다.
+ */
+export function serializeInline(
+  nodes: readonly TextNode[],
+  place: InlinePlace,
+  options: InlineOptions = {},
+): SerializedInline {
+  // 제목 · 표 칸은 한 줄 문법이다 — 줄바꿈이 든 코드 마크 글자는 코드 스팬으로 두면 줄이 끊긴다. 코드 마크를
+  // 빼고 글자로 쓴다(줄바꿈은 &#10;) — 빠진 코드 마크 수로 센다(markdown-serialize)
+  const oneLineSyntax = place === "heading" || place === "cell";
+  const plainCode = new Set<TextNode>(
+    oneLineSyntax ? nodes.filter((node) => hasCode(node) && hasLineBreak(node.text)) : [],
+  );
+  let pieces = buildPieces(nodes, place, plainCode, options);
   let hazard = place === "paragraph" ? referenceHazard(pieces) : undefined;
   while (hazard !== undefined) {
     plainCode.add(hazard);
-    pieces = buildPieces(nodes, place, plainCode);
+    pieces = buildPieces(nodes, place, plainCode, options);
     hazard = referenceHazard(pieces);
   }
-  return { text: render(pieces), droppedCodeMarks: plainCode.size };
+  const text = render(pieces);
+  return {
+    text: place === "cell" ? text.replace(CELL_PIPE, "\\|") : text,
+    droppedCodeMarks: plainCode.size,
+  };
+}
+
+/** 강제 줄바꿈이 나눈 문단의 줄들 — 줄마다 마크를 닫고 다시 연다(다시 읽으면 같은 마크라 doc는 같다) */
+export interface SerializedParagraph {
+  lines: string[];
+  droppedCodeMarks: number;
+}
+
+function splitAtHardBreaks(nodes: readonly InlineNode[]): TextNode[][] {
+  const lines: TextNode[][] = [[]];
+  for (const node of nodes) {
+    if (node.type === "hardBreak") lines.push([]);
+    else lines[lines.length - 1]!.push(node);
+  }
+  return lines;
+}
+
+/**
+ * 문단 인라인 → 줄들(markdown-serialize). 강제 줄바꿈은 줄 끝 `\`로 쓰므로(adr-028) 줄 사이 잇기와 이어진 줄의
+ * 들여쓰기(인용 `> ` · 목록 항목 표지 폭)는 부르는 쪽이 자리에 맞춰 한다.
+ */
+export function serializeParagraph(nodes: readonly InlineNode[]): SerializedParagraph {
+  const lineNodes = splitAtHardBreaks(nodes);
+  const escapeAllPipes = lineNodes.length > 1;
+  let droppedCodeMarks = 0;
+  const lines = lineNodes.map((line, index) => {
+    const serialized = serializeInline(line, index === 0 ? "paragraph" : "paragraphLine", {
+      escapePipes: escapeAllPipes,
+    });
+    droppedCodeMarks += serialized.droppedCodeMarks;
+    return serialized.text;
+  });
+  return { lines, droppedCodeMarks };
 }
 
 /** 이미지 alt · 앱 스크린샷 caption — 마크 없는 글자. 줄바꿈만 문자 참조로. */
