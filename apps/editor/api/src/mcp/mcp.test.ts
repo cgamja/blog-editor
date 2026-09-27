@@ -565,3 +565,25 @@ describe("mcp-drafts — update_draft 부분 고치기", () => {
     expect((await store.get("spring-walk"))?.file).toEqual(published(STICKERED));
   });
 });
+
+describe("mcp-drafts — 도구 표시(annotations)", () => {
+  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 2개는 아니다", async () => {
+    // 클라이언트(Codex writes 모드 등)는 readOnlyHint로 확인 없이 부를 도구를 고른다
+    const { app } = setup();
+
+    const result = await resultOf(await rpc(app, "tools/list", {}));
+    const tools = result.tools as Array<{ name: string; annotations?: { readOnlyHint?: boolean } }>;
+    const readOnlyOf = Object.fromEntries(
+      tools.map((tool) => [tool.name, tool.annotations?.readOnlyHint === true]),
+    );
+
+    expect(readOnlyOf).toEqual({
+      check_draft: true,
+      create_draft: false,
+      get_post: true,
+      get_writing_guide: true,
+      list_posts: true,
+      update_draft: false,
+    });
+  });
+});
