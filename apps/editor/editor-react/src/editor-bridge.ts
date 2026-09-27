@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { Editor } from "@tiptap/react";
+import { selectBlock } from "@blog-editor/editor-core";
 
 /**
  * 화면(web)이 에디터를 다루는 좁은 길 — TipTap은 editor-core · editor-react 밖으로 나가지 않는다(adr-009).
@@ -37,4 +38,15 @@ export function editorPlainText(editor: Editor): string {
 /** 본문 맨 앞에 커서 — 제목 칸에서 Enter */
 export function focusEditorStart(editor: Editor): void {
   editor.commands.focus("start");
+}
+
+/**
+ * 최상위 `index`번째(0부터) 블록으로 선택을 옮기고(editor-core `selectBlock` — 글 블록은 안쪽 커서, 그림은 노드 선택)
+ * 그 자리를 보이게 스크롤한 뒤 편집 영역에 포커스한다 — 검색 노출 점검이 가리키는 블록으로 간다. 없는 블록이면 아무것도 안 한다.
+ * 스크롤: https://prosemirror.net/docs/ref/#state.Transaction.scrollIntoView · 포커스: https://prosemirror.net/docs/ref/#view.EditorView.focus
+ */
+export function focusEditorBlock(editor: Editor, index: number): void {
+  const { view } = editor;
+  const moved = selectBlock(index)(view.state, (tr) => view.dispatch(tr.scrollIntoView()));
+  if (moved) view.focus();
 }

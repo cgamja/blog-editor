@@ -1,9 +1,9 @@
-import { checkSeo } from "@blog-editor/content-schema";
 import type { Doc, PostMeta } from "@blog-editor/content-schema";
 import { useWarmDisplayFont } from "../../../shared/ui/use-warm-display-font";
 import { EDITOR_MESSAGES } from "../messages";
 import { missingForSave } from "../post-meta";
-import type { EditorOverlay, SeoCheck, SeoOthers } from "../types";
+import { seoCheckOf } from "../seo-check";
+import type { EditorOverlay, SeoOthers } from "../types";
 import { ConflictDialog } from "./ConflictDialog";
 import { PreviewDialog } from "./PreviewDialog";
 import { PublishDialog } from "./PublishDialog";
@@ -62,7 +62,7 @@ export function EditorDialogs({
       <PublishDialog
         isUpdate={isPublished}
         missing={missingForSave(form.meta, form.slug)}
-        seo={seoCheckOf(form, publishDoc, others)}
+        seo={seoCheckOf({ ...form, doc: publishDoc, others })}
         onConfirm={actions.onConfirmPublish}
         onCancel={actions.onClose}
       />
@@ -72,19 +72,4 @@ export function EditorDialogs({
     return <PreviewDialog title={form.meta.title} doc={previewDoc} onClose={actions.onClose} />;
   }
   return null;
-}
-
-/** 다른 글과의 중복 비교 없이 매긴 점수는 MCP가 주는 점수와 달라 보이지 않는다(#166) */
-function seoCheckOf(
-  form: EditorDialogsProps["form"],
-  publishDoc: Doc | null,
-  others: SeoOthers,
-): SeoCheck {
-  if (publishDoc === null) return { kind: "unreadable" };
-  if (others.kind === "loading") return { kind: "othersLoading" };
-  if (others.kind === "failed") return { kind: "othersFailed", retry: others.retry };
-  return {
-    kind: "checked",
-    findings: checkSeo({ slug: form.slug, meta: form.meta, doc: publishDoc, others: others.posts }),
-  };
 }

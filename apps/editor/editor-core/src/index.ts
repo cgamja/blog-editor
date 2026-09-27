@@ -59,6 +59,7 @@ export {
   moveBlockKeymap,
   moveBlockUp,
 } from "./commands/move-block";
+export { selectBlock } from "./commands/select-block";
 export {
   applyLastColor,
   rememberColor,

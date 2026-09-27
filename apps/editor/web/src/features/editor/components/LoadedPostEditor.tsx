@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
 import type { Doc } from "@blog-editor/content-schema";
 import {
   EditorScreen,
@@ -11,12 +10,12 @@ import {
 } from "@blog-editor/editor-react";
 import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
-import { categoriesOf, fetchPostSummaries } from "../api";
-import { POST_SUMMARIES_QUERY_KEY } from "../constants";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
+import { usePostCategories } from "../hooks/use-post-categories";
 import { usePublishCheck } from "../hooks/use-publish-check";
+import { useEditorSeo } from "../hooks/use-editor-seo";
 import { readDocOrNull } from "../read-doc";
 import { usePostForm } from "../hooks/use-post-form";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
@@ -26,6 +25,7 @@ import { EditorDialogs } from "./EditorDialogs";
 import { ExpiredBanner } from "./ExpiredBanner";
 import { PostInfoPanel } from "./PostInfoPanel";
 import { SaveStatusLine } from "./SaveStatusLine";
+import { SeoChip } from "./SeoChip";
 import { SlugField } from "./SlugField";
 import { TitleField } from "./TitleField";
 
@@ -55,11 +55,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   // 미리보기는 연 순간의 문서를 그린다 — 렌더마다 읽으면 요청이 되풀이된다
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const uploadImage = useImageUploader();
-  const categories = useQuery({
-    queryKey: POST_SUMMARIES_QUERY_KEY,
-    queryFn: fetchPostSummaries,
-    select: categoriesOf,
-  });
+  const categories = usePostCategories();
   const form = usePostForm(start);
   const server = useServerSave({
     getDoc,
@@ -70,6 +66,13 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   });
   // 자기 글은 제목 중복 비교에서 뺀다 — 주소를 바꾼 초안의 옛 주소도 자기 글이다
   const publishCheck = usePublishCheck(getDoc, [form.slug, start.slug, server.savedSlug()]);
+  const seo = useEditorSeo({
+    editor,
+    getDoc,
+    post: form,
+    others: publishCheck.others,
+    openTab: setTab,
+  });
   const autosave = useAutosave({
     editor,
     save: server.save,
@@ -141,6 +144,8 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         tab={tab}
         onTabChange={setTab}
         status={<SaveStatusLine status={server.status} onRetry={() => void autosave.flush()} />}
+        headerTools={<SeoChip check={seo.check} isStale={seo.isStale} onChoose={seo.jumpTo} />}
+        blockFlags={seo.blockFlags}
         banner={server.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : undefined}
         actions={{
           onBack: () => void handleBack(),
@@ -154,15 +159,17 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
             isAiDraft={form.meta.source !== "editor"}
             onTitleChange={handleTitleChange}
             onEnter={() => focusEditorStart(editor)}
+            inputRef={seo.fieldRefs.title}
           />
         }
         postInfo={
           <PostInfoPanel
             meta={form.meta}
             isPublished={server.isPublished}
-            categories={categories.data ?? []}
+            categories={categories}
             onMetaChange={handleMetaChange}
             onOpenDecorate={() => setTab("decorate")}
+            fieldRefs={seo.fieldRefs}
             slugField={
               <SlugField
                 slug={form.slug}

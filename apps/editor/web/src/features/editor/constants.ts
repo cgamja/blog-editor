@@ -3,6 +3,9 @@ import type { MetaField } from "./types";
 /** 입력이 멈추고 이만큼 지나면 자동 저장한다(디자인 결정 4-A) */
 export const AUTOSAVE_DELAY_MS = 2000;
 
+/** 입력이 멈추고 이만큼 지나면 머리줄 검색 노출 점검을 다시 한다(#151) — 자동 저장보다 짧게, 타자마다는 아니게 */
+export const SEO_LIVE_DELAY_MS = 400;
+
 /** slugSchema의 최대 길이(content-schema meta.ts) */
 export const SLUG_MAX_LENGTH = 80;
 

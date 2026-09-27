@@ -36,6 +36,8 @@
 /* ---------- 머리줄 ---------- */
 
 .editor-screen-header {
+  /* 머리줄 도구(검색 노출 칩)의 팝오버가 좁은 폭에서 머리줄 폭을 기준으로 뜬다 */
+  position: relative;
   grid-area: header;
   display: flex;
   align-items: center;
@@ -228,6 +230,7 @@
  * 종이 여백을 줄인다 — 80px면 375에서 본문 폭이 170px 남짓이다.
  * 블록 손잡이(종이 왼쪽 −104px)는 화면 밖으로 나가서 숨긴다. 모바일 편집은 1단계 범위 밖이고(plan),
  * 블록 옮기기는 키보드 ⌘⇧↑↓가 남는다. 그림 폭 손잡이도 같이 숨기고 폭 도구줄을 쓴다.
+ * 블록 옆 오른쪽 여백의 점도 숨긴다 — 종이 좌우가 24px로 줄어 44px 점이 들어가지 않는다. 같은 발견은 머리줄 검색 노출 칩의 목록에 남는다.
  */
 @media (max-width: 40rem) {
   .editor-screen {
@@ -241,6 +244,7 @@
   }
 
   .editor-screen .block-handles,
+  .editor-screen .block-flags,
   .editor-screen .width-resize {
     display: none;
   }

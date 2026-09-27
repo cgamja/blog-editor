@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Editor } from "@tiptap/react";
 import { BlogEditor } from "./BlogEditor";
+import type { BlockFlagSet } from "./block-flag-types";
 import { DecorationPanel } from "./DecorationPanel";
 import type { StickerId } from "./decoration-types";
 import type { ImageUploader } from "./image-upload-types";
@@ -13,6 +14,10 @@ import { WidthToolbar } from "./WidthToolbar";
 export interface EditorScreenProps {
   editor: Editor;
   actions?: EditorScreenActions;
+  /** 머리줄 저장 상태와 미리보기 사이의 화면 도구(예: 검색 노출 칩) — 없으면 자리를 차지하지 않는다 */
+  headerTools?: ReactNode;
+  /** 본문 블록 옆 오른쪽 여백의 점 — 틀은 쓰지 않고 본문에 그대로 넘긴다(BlogEditorProps.flags) */
+  blockFlags?: BlockFlagSet | undefined;
   /** 머리줄 가운데의 저장 상태 문장 */
   status?: ReactNode;
   /** 「글 정보」 탭 내용 — 없으면 자리 표시 문장 */
@@ -39,6 +44,8 @@ const NO_ACTIONS: EditorScreenActions = {};
 export function EditorScreen({
   editor,
   actions = NO_ACTIONS,
+  headerTools,
+  blockFlags,
   status,
   postInfo,
   title,
@@ -51,12 +58,12 @@ export function EditorScreen({
 }: EditorScreenProps) {
   return (
     <div className="editor-screen">
-      <ScreenHeader actions={actions} status={status} />
+      <ScreenHeader actions={actions} status={status} tools={headerTools} />
       {banner !== undefined && <div className="editor-screen-banner">{banner}</div>}
       <main className="editor-screen-body">
         <article className="editor-screen-paper">
           {title}
-          <BlogEditor editor={editor} uploadImage={uploadImage} />
+          <BlogEditor editor={editor} uploadImage={uploadImage} flags={blockFlags} />
           <WidthToolbar editor={editor} />
         </article>
       </main>

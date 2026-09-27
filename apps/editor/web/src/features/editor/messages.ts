@@ -1,6 +1,9 @@
 import type { SeoLevel } from "@blog-editor/content-schema";
 import type { MetaField } from "./types";
 
+/** 머리줄 검색 노출 칩 글자 — 칩 이름 문장들이 이것으로 시작한다 */
+const SEO_CHIP = "검색 노출";
+
 /** 편집 화면의 사용자 문장 — 디자인 68:2 · 67:2와 디자인 결정(FBoYaNUUHcxHPzpWUibKBR)의 문장을 한 곳에 둔다 */
 export const EDITOR_MESSAGES = {
   bodyLabel: "본문",
@@ -74,6 +77,26 @@ export const EDITOR_MESSAGES = {
     othersFailed: "다른 글 목록을 읽지 못해 제목 · 설명 중복을 점검할 수 없어요.",
     retry: "다시 시도",
     levels: { must: "꼭 고치기", should: "권장", info: "참고" } satisfies Record<SeoLevel, string>,
+    /** 머리줄 칩 · 팝오버 · 본문 여백 점(#151 디자인 C) — 점검 제목(heading)이 팝오버 이름이다 */
+    chip: SEO_CHIP,
+    chipName: (score: number, mustCount: number) =>
+      mustCount > 0 ? `${SEO_CHIP} ${score}점, 꼭 고치기 ${mustCount}개` : `${SEO_CHIP} ${score}점`,
+    /** 점수 대신 까닭(확인 중 · 점검 못 함)을 보일 때의 칩 이름 */
+    chipStatusName: (status: string) => `${SEO_CHIP} ${status}`,
+    chipLoading: "확인 중",
+    chipUnavailable: "점검 못 함",
+    notBlocking: "발행은 막지 않아요.",
+    /** 본문 블록 흐름이 바뀌어 다시 매기는 동안 팝오버 블록 항목에 붙는 안내 */
+    blockPending: "본문이 바뀌어 다시 점검하는 중이에요.",
+    dotName: (levelLabel: string, message: string) => `${levelLabel}: ${message}`,
+    goTo: (place: string) => `→ ${place}`,
+    places: {
+      title: "제목",
+      description: "설명",
+      keyword: "핵심 검색어",
+      body: "본문 전체",
+      block: (block: number) => `블록 ${block}`,
+    },
   },
   preview: {
     title: "미리보기",

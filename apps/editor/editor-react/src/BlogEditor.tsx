@@ -1,6 +1,8 @@
 import { useMemo, useRef } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { BlockHandles } from "./BlockHandles";
+import { BlockFlagLayer } from "./BlockFlagLayer";
+import type { BlockFlagSet } from "./block-flag-types";
 import { LinkPopover } from "./LinkPopover";
 import { PhotoPlaceholderToolbar } from "./PhotoPlaceholderToolbar";
 import { SlashMenu } from "./SlashMenu";
@@ -17,6 +19,8 @@ export interface BlogEditorProps {
    * 길(「+」 · `/` 메뉴 「이미지」, 붙여넣기 · 끌어다 놓기)을 열지 않는다(spec: editor-image-insert)
    */
   uploadImage?: ImageUploader | undefined;
+  /** 블록 옆 오른쪽 여백의 점(예: 검색 노출 점검)과 누를 때 할 일 — 없거나 비면 그리지 않는다 */
+  flags?: BlockFlagSet | undefined;
 }
 
 /**
@@ -25,7 +29,7 @@ export interface BlogEditorProps {
  * 바깥 틀은 블록 손잡이 · 스티커 오버레이 · 폭 손잡이를 띄우는 기준 좌표다(position: relative, editor.css).
  * 둘 다 ProseMirror DOM 밖 형제로 둔다(sticker-drag design.md 1).
  */
-export function BlogEditor({ editor, uploadImage }: BlogEditorProps) {
+export function BlogEditor({ editor, uploadImage, flags }: BlogEditorProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const images = useImageUpload(editor, uploadImage);
   const openPicker = images?.openPicker;
@@ -37,6 +41,7 @@ export function BlogEditor({ editor, uploadImage }: BlogEditorProps) {
     <div ref={frameRef} className="blog-editor-frame">
       <EditorContent editor={editor} className="blog-editor post-body" />
       <BlockHandles editor={editor} frameRef={frameRef} actions={actions} />
+      {flags !== undefined && <BlockFlagLayer editor={editor} frameRef={frameRef} flags={flags} />}
       {images !== null && (
         <input
           ref={images.pickerRef}
