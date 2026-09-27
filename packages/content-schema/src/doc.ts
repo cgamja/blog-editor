@@ -314,8 +314,15 @@ const cellParagraphSchema = z.strictObject({
 
 type InnerParagraphNode = z.infer<typeof innerParagraphSchema>;
 
+/**
+ * 할 일 체크 여부(adr-028 3절) — 값이 없으면 보통 항목. 목록 번호 start처럼 구조라서 안쪽 항목에도 자리가 있다
+ * (꾸미기가 아니다 — 스티커 상한과 무관).
+ */
+const listItemAttrsSchema = z.strictObject({ checked: z.boolean().optional() });
+
 interface ListItemNode {
   type: "listItem";
+  attrs?: z.infer<typeof listItemAttrsSchema> | undefined;
   content: [InnerParagraphNode, ...InnerListNode[]];
 }
 interface InnerBulletListNode {
@@ -337,6 +344,7 @@ type InnerListNode = InnerBulletListNode | InnerOrderedListNode;
 const listItemSchema: z.ZodType<ListItemNode> = z.lazy(() =>
   z.strictObject({
     type: z.literal("listItem"),
+    attrs: listItemAttrsSchema.optional(),
     content: z.tuple([innerParagraphSchema], innerListSchema),
   }),
 );

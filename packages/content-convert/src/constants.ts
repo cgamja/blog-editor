@@ -56,3 +56,16 @@ export const APP_FRAME = "app";
 /** 콜아웃 tone을 생략했을 때의 값 — pm-schema.ts(스키마 기본값) · check.ts(파싱) · parser.ts(doc
  * 조립)가 같은 값을 써야 한다. */
 export const DEFAULT_CALLOUT_TONE = "note";
+
+/**
+ * 할 일 표지(adr-028 3절 · adr-036, GFM task list) — 읽기(task-list.ts) · 검사(check.ts) · 쓰기(serialize.ts)가 같은 표지를 본다.
+ * 읽기: 원문(`inline.content`) 맨 앞 표지 — 뒤에 공백과 글이 있어야 할 일이다. 이스케이프한 `\[`는 맞지 않는다.
+ */
+export const TASK_MARKER_SOURCE = /^\[([ xX])\][ \t]+(?=\S)/;
+
+/** 글 없는 할 일 표지만 있는 원문 — 검사가 거부한다(빈 항목은 markdown으로 나를 수 없다) */
+export const EMPTY_TASK_SOURCE = /^\[[ xX]\]$/;
+
+/** 쓰기 표지 — 체크하지 않음 · 끝남 */
+export const TASK_MARKER_TODO = "[ ]";
+export const TASK_MARKER_DONE = "[x]";

@@ -38,6 +38,51 @@
   background: var(--surface-2);
   font-weight: 700;
 }
+
+/*
+ * 할 일 항목(spec: editor-task-list, adr-036). 에디터 DOM은 `li[data-checked]`이고 체크 칸은 가상 요소로 그린다 —
+ * NodeView · 위젯을 두지 않아 글 흐름과 한글 조합에 끼어들지 않는다. 글머리 기호 자리(목록 왼쪽 여백)를 항목 안으로
+ * 당겨 그 자리를 누르면 이벤트 대상이 항목 요소가 되게 한다(누르기는 editor-core taskToggle). 공개 HTML은 post.css
+ */
+.blog-editor .ProseMirror li[data-checked] {
+  /* 글머리 기호 자리 — post.css 목록 왼쪽 여백(--post-list-gutter)을 그대로 항목 안으로 당긴다. 폭은 post.css 한 곳에서
+     정한다(에디터는 post-body 안이라 부모 목록에서 물려받는다). post.css 없이 쓸 때만 기본값 */
+  --task-marker-gutter: var(--post-list-gutter, 1.4em);
+  position: relative;
+  list-style: none;
+  margin-left: calc(-1 * var(--task-marker-gutter));
+  padding-left: var(--task-marker-gutter);
+}
+.blog-editor .ProseMirror li[data-checked]::before {
+  content: "";
+  position: absolute;
+  top: 0.35em;
+  left: 0.1em;
+  box-sizing: border-box;
+  width: 1em;
+  height: 1em;
+  border: var(--border-width, 1px) solid var(--ink-soft, currentColor);
+  border-radius: 0.2em;
+  background: var(--surface);
+  cursor: pointer;
+}
+.blog-editor .ProseMirror li[data-checked="true"]::before {
+  border-color: var(--brand-ink, currentColor);
+  background: var(--brand-ink, currentColor);
+}
+/* 체크 표시 — 오른쪽 · 아래 두 변만 그린 상자를 45도 돌린다 */
+.blog-editor .ProseMirror li[data-checked="true"]::after {
+  content: "";
+  position: absolute;
+  top: 0.45em;
+  left: 0.45em;
+  width: 0.3em;
+  height: 0.55em;
+  border: solid var(--surface);
+  border-width: 0 0.15em 0.15em 0;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
 .blog-editor .ProseMirror .post-table-scroll td > p {
   margin: 0;
 }

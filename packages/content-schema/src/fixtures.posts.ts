@@ -164,8 +164,10 @@ export const allBlocks = {
               {
                 type: "bulletList",
                 content: [
+                  // 할 일 항목(adr-028 3절) — 안쪽 목록에도 체크 여부가 온다
                   {
                     type: "listItem",
+                    attrs: { checked: true },
                     content: [
                       {
                         type: "paragraph",
@@ -175,6 +177,7 @@ export const allBlocks = {
                   },
                   {
                     type: "listItem",
+                    attrs: { checked: false },
                     content: [
                       {
                         type: "paragraph",

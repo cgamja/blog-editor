@@ -30,9 +30,11 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* 목록 왼쪽 여백 — 글머리 기호 자리. 할 일 체크 칸도 이 여백으로 당겨 들어간다(.post-task) */
 .post-body ul,
 .post-body ol {
-  padding-left: 1.4em;
+  --post-list-gutter: 1.4em;
+  padding-left: var(--post-list-gutter);
 }
 .post-body ul {
   list-style: disc;
@@ -42,6 +44,17 @@
 }
 .post-body li + li {
   margin-top: 0.35em;
+}
+/* 할 일 항목(adr-036) — 글머리 기호 대신 읽기 전용 체크 칸을 그 자리(목록 왼쪽 여백)에 둔다 */
+.post-body .post-task {
+  list-style: none;
+}
+.post-body .post-task > p > input[type="checkbox"] {
+  width: 1em;
+  height: 1em;
+  margin: 0 0.4em 0 calc(-1 * var(--post-list-gutter));
+  vertical-align: -0.1em;
+  accent-color: var(--brand);
 }
 .post-body li > ul,
 .post-body li > ol {

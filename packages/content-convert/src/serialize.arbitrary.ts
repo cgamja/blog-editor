@@ -63,6 +63,8 @@ const TEXT_UNITS = [
   "\\",
   '"',
   "|",
+  // 할 일 표지 모양 — 보통 항목 글 첫머리에 오면 이스케이프해야 한다(adr-036)
+  "[x] ",
 ] as const;
 
 /**
@@ -166,6 +168,12 @@ function withStart(
     );
 }
 
+/** 할 일 체크 여부 — 없음(보통 항목) · false · true(adr-028 3절) */
+const checkedArb = fc.option(fc.boolean(), { nil: undefined });
+
+const withChecked = (checked: boolean | undefined) =>
+  checked === undefined ? {} : { attrs: { checked } };
+
 /**
  * 목록 크기가 깊이마다 곱해지지 않게 한다 — 항목 11개 · 항목당 안쪽 목록 2개를 세 깊이 모두에 두면 한
  * 표본이 항목 1000개를 넘어(최악 11×2×11×2×11) 왕복 테스트 시간의 90% 넘게를 그 표본들이 쓴다(#157).
@@ -180,8 +188,12 @@ function listArb(depth: number, isWideAllowed = true): fc.Arbitrary<Record<strin
           })
         : fc.constant([]);
     const item = fc
-      .tuple(paragraphInner, nested)
-      .map(([paragraph, lists]) => ({ type: "listItem", content: [paragraph, ...lists] }));
+      .tuple(paragraphInner, nested, checkedArb)
+      .map(([paragraph, lists, checked]) => ({
+        type: "listItem",
+        ...withChecked(checked),
+        content: [paragraph, ...lists],
+      }));
     return fc
       .tuple(
         fc.constantFrom("bulletList", "orderedList"),
@@ -260,7 +272,11 @@ const calloutList = withStart(
     .tuple(
       fc.constantFrom("bulletList", "orderedList"),
       fc.array(
-        paragraphInner.map((paragraph) => ({ type: "listItem", content: [paragraph] })),
+        fc.tuple(paragraphInner, checkedArb).map(([paragraph, checked]) => ({
+          type: "listItem",
+          ...withChecked(checked),
+          content: [paragraph],
+        })),
         { minLength: 1, maxLength: 3 },
       ),
     )

@@ -38,6 +38,7 @@ export const TURN_INTO_LABELS: Record<TurnIntoKind, string> = {
   heading3: "작은 제목",
   bulletList: "점 목록",
   orderedList: "번호 목록",
+  taskList: "할 일 목록",
   blockquote: "인용",
   codeBlock: "코드",
 };
@@ -58,6 +59,7 @@ export const INSERTABLE_BLOCK_LABELS: Record<InsertableBlockKind, string> = {
   heading3: "작은 제목",
   bulletList: "점 목록",
   orderedList: "번호 목록",
+  taskList: "할 일 목록",
   blockquote: "인용",
   calloutNote: "콜아웃 · 메모",
   calloutTip: "콜아웃 · 팁",

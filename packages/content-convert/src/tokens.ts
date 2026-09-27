@@ -3,6 +3,7 @@ import container from "markdown-it-container";
 import type Token from "markdown-it/lib/token.mjs";
 import { CALLOUT_CONTAINER_NAME } from "./constants";
 import { bracketSpanRule, type SpanCloseMeta } from "./span";
+import { useTaskList } from "./task-list";
 
 /** 괄호 span 규칙 이름 — 링크 규칙보다 먼저 본다(`[글자]{…}`는 링크가 아니다). */
 const BRACKET_SPAN_RULE = "bracket_span";
@@ -41,6 +42,7 @@ export function createMarkdownIt(): MarkdownIt {
   // 어차피 여기서 못 걸러 containerOptions 변수 선언에서 미리 걸러 둔다.
   md.use(container as unknown as PluginWithParams, CALLOUT_CONTAINER_NAME, containerOptions);
   md.inline.ruler.before("link", BRACKET_SPAN_RULE, bracketSpanRule);
+  useTaskList(md);
   return md;
 }
 

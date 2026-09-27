@@ -2633,6 +2633,15 @@
             "type": "string",
             "const": "listItem"
           },
+          "attrs": {
+            "type": "object",
+            "properties": {
+              "checked": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
           "content": {
             "type": "array",
             "prefixItems": [

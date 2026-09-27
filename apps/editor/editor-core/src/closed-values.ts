@@ -72,6 +72,13 @@ export function orderedListStartOrNull(value: unknown): number | null {
   return start === DEFAULT_ORDERED_LIST_START ? null : start;
 }
 
+/** 에디터 HTML `data-checked` 값 → 할 일 체크 여부(adr-036). 두 값 밖이면 보통 항목 */
+const TASK_CHECKED_VALUES: Readonly<Record<string, boolean>> = { true: true, false: false };
+export const taskCheckedOrNull = (value: unknown): boolean | null =>
+  typeof value === "string" && Object.hasOwn(TASK_CHECKED_VALUES, value)
+    ? TASK_CHECKED_VALUES[value]!
+    : null;
+
 export const stickerIdOrNull = oneOf(STICKER_IDS);
 
 /** 스티커 좌표 한 칸(x · y · size · rotate) — 범위 밖 · 정수 아님은 없는 것 */

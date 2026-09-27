@@ -38,7 +38,11 @@ export const pmSchema = new Schema({
     bulletList: { group: "block", content: "listItem+" },
     // start 없음은 toJSON에 undefined로 남고 normalize가 지운다
     orderedList: { group: "block", content: "listItem+", attrs: { start: { default: undefined } } },
-    listItem: { content: "paragraph (bulletList | orderedList)*" },
+    // 할 일 체크 여부(adr-028 3절) — 보통 항목은 toJSON에 undefined로 남고 normalize가 지운다
+    listItem: {
+      content: "paragraph (bulletList | orderedList)*",
+      attrs: { checked: { default: undefined } },
+    },
     // 칸은 markdown-it이 inline 토큰을 바로 넣으므로 인라인을 받는다 — parser.ts가 문서 모양(칸 안 문단 하나)으로 감싼다
     table: { group: "block", content: "tableRow+" },
     tableRow: { content: "tableCell+" },

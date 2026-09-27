@@ -5,6 +5,7 @@ import { keymap } from "@tiptap/pm/keymap";
 import { liftListItem, sinkListItem, splitListItem } from "@tiptap/pm/schema-list";
 import { TextSelection } from "@tiptap/pm/state";
 import type { Command, EditorState, Plugin, Transaction } from "@tiptap/pm/state";
+import { isList, isTaskItem } from "../commands/list-query";
 import { sameStickers, stickersOf } from "../commands/sticker-query";
 import { carriedAttrs } from "../commands/turn-into";
 import { LIST_KEYS_PRIORITY } from "../keymap-priority.constants";
@@ -14,11 +15,6 @@ import { LIST_KEYS_PRIORITY } from "../keymap-priority.constants";
  * 우리 listItem은 `paragraph (bulletList | orderedList)*`라 prosemirror-schema-list 커맨드가 전제하는 모양과 같다.
  * https://prosemirror.net/docs/ref/#schema-list
  */
-
-const LIST_TYPES = ["bulletList", "orderedList"] as const;
-
-const isList = (node: Node | null | undefined): node is Node =>
-  node != null && (LIST_TYPES as readonly string[]).includes(node.type.name);
 
 const listItemOf = (state: EditorState): NodeType | undefined => state.schema.nodes.listItem;
 
@@ -168,14 +164,34 @@ const liftItemFixingSplit: Command = (state, dispatch) => {
   );
 };
 
+/**
+ * 할 일 항목을 나누면 새 항목은 체크하지 않은 할 일이다(spec: editor-task-list) — 나누기는 옛 항목 attrs를 복사한다
+ * (prosemirror-transform 1.12.1 structure.ts split: typesAfter가 없으면 `$pos.node(d).copy`). 글 맨 앞에서 나누면 위에
+ * 남는 빈 항목이 새 항목이고(항목 자리 `itemPos` 그대로), 그 밖에는 커서가 옮겨 간 뒤 항목이 새 항목이다.
+ * https://prosemirror.net/docs/ref/#transform.Transform.split
+ */
+function uncheckNewTaskItem(tr: Transaction, itemPos: number, splitAtStart: boolean): Transaction {
+  const { $from } = tr.selection;
+  const pos = splitAtStart ? itemPos : $from.before(-1);
+  const item = tr.doc.nodeAt(pos);
+  if (item == null || !isTaskItem(item)) return tr;
+  return tr.setNodeMarkup(pos, undefined, { ...item.attrs, checked: false });
+}
+
 /** 빈 항목은 위치와 상관없이 내어쓴다 — 라이브러리 splitListItem은 가운데 빈 항목이면 빈 항목을 하나 더 만든다(design.md 2) */
 export const enterInList: Command = (state, dispatch) => {
   const listItem = listItemOf(state);
   if (listItem === undefined || !isInListItem(state)) return false;
   const { $from, empty } = state.selection;
   if (empty && $from.parent.content.size === 0) return liftItemFixingSplit(state, dispatch);
+  const isTask = isTaskItem($from.node(-1));
+  const itemPos = $from.before(-1);
+  const splitAtStart = $from.parentOffset === 0;
   // https://prosemirror.net/docs/ref/#schema-list.splitListItem
-  return splitListItem(listItem)(state, dispatch);
+  return splitListItem(listItem)(
+    state,
+    dispatch && ((tr) => dispatch(isTask ? uncheckNewTaskItem(tr, itemPos, splitAtStart) : tr)),
+  );
 };
 
 /** 목록 안에서는 못 해도 키를 삼킨다 — 목록을 쓰다 포커스가 에디터 밖으로 튀지 않게. 목록 밖은 브라우저 기본(design.md 3) */

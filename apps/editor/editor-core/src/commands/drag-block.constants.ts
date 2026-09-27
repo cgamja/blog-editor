@@ -10,6 +10,7 @@ export const INSERTABLE_BLOCKS = {
   heading3: { type: "heading", attrs: { level: 3 } },
   bulletList: { type: "bulletList" },
   orderedList: { type: "orderedList" },
+  taskList: { type: "bulletList", itemAttrs: { checked: false } },
   blockquote: { type: "blockquote" },
   calloutNote: { type: "callout", attrs: { tone: "note" } },
   calloutTip: { type: "callout", attrs: { tone: "tip" } },

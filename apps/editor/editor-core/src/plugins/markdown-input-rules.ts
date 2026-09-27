@@ -5,6 +5,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import type { Command, EditorState, Plugin, Transaction } from "@tiptap/pm/state";
 import { canJoin } from "@tiptap/pm/transform";
 import { orderedListNumberOrNull } from "../closed-values";
+import { turnIntoTaskItem } from "../commands/task-list";
 import { isInTopBlock, turnIntoTextblock } from "../commands/turn-into";
 import {
   carriesDecoration,
@@ -15,7 +16,7 @@ import {
 
 /**
  * Notion식 입력 규칙 — spec: editor-markdown-shortcuts, markdown-shortcuts design.md.
- * 기준: https://www.notion.com/help/keyboard-shortcuts (할 일 · 토글은 스키마에 없어 뺐다).
+ * 기준: https://www.notion.com/help/keyboard-shortcuts (토글은 스키마에 없어 뺐다). 할 일은 GFM 표지 `[ ] ` · `[x] `다.
  * 엔진: https://prosemirror.net/docs/ref/#inputrules — 조합 중(view.composing)이면 규칙이 돌지 않는다
  * (prosemirror-inputrules 1.5.1 run, design.md 2).
  */
@@ -123,6 +124,14 @@ const horizontalRuleRule = new InputRule(/^---$/, (state, _match, start, end) =>
 });
 
 /**
+ * `[ ] ` · `[x] ` → 할 일 항목(spec: editor-task-list, adr-036). 목록 항목 첫 문단 맨 앞이면 그 항목에, 최상위 문단 맨 앞이면
+ * 점 목록으로 감싼 뒤 싣는다. 이미 할 일이거나 인용 · 콜아웃 안 문단이면 커맨드가 거절해 글자로 남는다.
+ */
+const taskItemRule = new InputRule(/^\[([ xX])\]\s$/, (state, match, start, end) =>
+  afterDeleting(state, start, end, turnIntoTaskItem(match[1] !== " ")),
+);
+
+/**
  * `**글자**` 같은 인라인 규칙(design.md 6). 입력 중인 글자는 아직 문서에 없다 — 보통은 닫는 표시의 마지막 한 글자,
  * 조합이 끝난 뒤 다시 볼 때(compositionend)는 0글자다. 문서에 있는 글자 수(end - start)로 나머지를 센다.
  * 고른 글자가 있으면 입력이 선택을 덮어써서 위치가 맞지 않으므로 걸지 않는다.
@@ -159,6 +168,7 @@ const inputRuleList = [
   blockRule(/^[">]\s$/, PARAGRAPH, wrapInBlockquote),
   blockRule(/^```$/, PARAGRAPH, turnIntoTextblock("codeBlock")),
   horizontalRuleRule,
+  taskItemRule,
   // 여는 `*` 앞이 라틴 문자 · 숫자면 곱셈 · 단어 안 표시라 걸지 않는다(`2*3*`). 한글 뒤 붙여 쓰기는 건다
   markRule(/(?:^|[^*A-Za-z0-9])(\*\*([^*\s](?:[^*]*[^*\s])?)\*\*)$/, "bold", "**"),
   markRule(/(?:^|[^*A-Za-z0-9])(\*([^*\s](?:[^*]*[^*\s])?)\*)$/, "italic", "*"),

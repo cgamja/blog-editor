@@ -76,6 +76,8 @@ export type {
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
 export { splitBlockKeepingStickers } from "./commands/split-block";
 export { hardBreakOrEnter, insertHardBreak } from "./commands/hard-break";
+export { toggleTaskItem, turnIntoTaskItem, wrapInTaskList } from "./commands/task-list";
+export { taskToggle, taskToggleKey } from "./plugins/task-toggle";
 export {
   addTableColumnAfter,
   addTableRowAfter,

@@ -267,14 +267,13 @@ export function footnoteInlineMessage(
   return blockMessage(topLevel, line, "각주는 정의 밖이다", received, "각주 없이 글로 쓴다");
 }
 
-export function taskListMessage(topLevel: number, line: number, received: string): FoundMessage {
-  return blockMessage(
-    topLevel,
-    line,
-    "할 일 목록은 정의 밖이다",
-    received,
-    "대괄호 없이 일반 목록으로 쓴다",
-  );
+/** 할 일 표지 뒤에 글이 없는 항목 — 빈 항목은 markdown으로 나를 수 없다(adr-036) */
+export function emptyTaskItemMessage(
+  topLevel: number,
+  line: number,
+  received: string,
+): FoundMessage {
+  return blockMessage(topLevel, line, "할 일 항목에는 글이 있어야 한다", received, "- [ ] 할 일");
 }
 
 export function emptyLinkTextMessage(

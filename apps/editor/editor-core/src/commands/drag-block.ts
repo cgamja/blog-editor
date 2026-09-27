@@ -103,6 +103,9 @@ function insertableBlock(state: EditorState, kind: InsertableBlockKind, from: No
   if (type.spec.tableRole === "table") {
     return createTable(state.schema, NEW_TABLE_SIZE.rows, NEW_TABLE_SIZE.columns, attrs);
   }
+  const item = spec.itemAttrs === undefined ? null : state.schema.nodes.listItem;
+  // 첫 항목에 attrs가 있는 목록(할 일 목록) — createAndFill은 항목을 기본 attrs로 채운다
+  if (item != null) return type.create(attrs, item.createAndFill(spec.itemAttrs));
   return type.createAndFill(attrs);
 }
 
