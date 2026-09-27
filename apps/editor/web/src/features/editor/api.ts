@@ -1,5 +1,4 @@
-import { seoOthersOf } from "@blog-editor/content-schema";
-import type { Doc, PostFile, SeoOtherPost } from "@blog-editor/content-schema";
+import type { Doc, PostFile } from "@blog-editor/content-schema";
 import { apiRequest } from "../../shared/api/http";
 import { POSTS_PATH, PREVIEW_PATH, postQueryKey } from "./constants";
 import { saveHeadersOf } from "./save-model";
@@ -32,21 +31,27 @@ export const latestPostQuery = (slug: string) => ({
   gcTime: 0,
 });
 
-/** 목록 요약 — 편집 화면은 카테고리 제안에만 쓴다(카테고리 목록 API는 설정 화면 #98 몫) */
-export async function fetchPostCategories(): Promise<string[]> {
-  const response = await apiRequest(POSTS_PATH);
-  const { posts } = (await response.json()) as { posts: Array<{ category: string }> };
-  return [...new Set(posts.map((post) => post.category))].sort();
+/** `GET /api/posts` 목록 요약 중 편집 화면이 읽는 칸만 — 글 목록 화면의 `PostSummary`(posts feature)와 다르다 */
+export interface EditorPostSummary {
+  slug: string;
+  title: unknown;
+  description: unknown;
+  category: string;
 }
 
-/** 목록 요약의 주소 · 제목 · 설명 — 발행 확인의 중복 점검. MCP와 같은 함수로 비교 대상을 만든다(adr-034) */
-export async function fetchSeoOtherPosts(): Promise<SeoOtherPost[]> {
+/**
+ * `GET /api/posts` — 편집 화면은 이 쿼리 하나에서 카테고리 제안과 중복 점검 대상을 `select`로 뽑는다.
+ * 같은 목록을 두 쿼리로 읽으면 한쪽만 실패하는 상태가 생긴다(#166)
+ */
+export async function fetchPostSummaries(): Promise<EditorPostSummary[]> {
   const response = await apiRequest(POSTS_PATH);
-  const { posts } = (await response.json()) as {
-    posts: Array<{ slug: string; title: unknown; description: unknown }>;
-  };
-  return seoOthersOf(posts);
+  const { posts } = (await response.json()) as { posts: EditorPostSummary[] };
+  return posts;
 }
+
+/** 카테고리 제안(카테고리 목록 API는 설정 화면 #98 몫) */
+export const categoriesOf = (posts: readonly EditorPostSummary[]): string[] =>
+  [...new Set(posts.map((post) => post.category))].sort();
 
 /** `PUT /api/posts/{slug}` — revision null이면 새 글(`If-None-Match: *`). 새 revision을 돌려준다 */
 export async function savePost(slug: string, file: PostFile, revision: string | null) {

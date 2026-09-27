@@ -4,15 +4,15 @@ import { readDocOrNull } from "../read-doc";
 import { useSeoOtherPosts } from "./use-seo-other-posts";
 
 /**
- * 발행 확인의 검색 노출 점검 재료(adr-030) — 확인을 연 순간의 문서와 제목 중복을 볼 다른 글.
+ * 발행 확인의 검색 노출 점검 재료(adr-030) — 확인을 연 순간의 문서와 제목 중복을 볼 다른 글(조회 상태 포함).
  * 점검 자체(`checkSeo`)는 대화상자가 그릴 때 한다.
  */
 export function usePublishCheck(getDoc: () => Doc, ownSlugs: readonly (string | null)[]) {
   const [publishDoc, setPublishDoc] = useState<Doc | null>(null);
-  const otherPosts = useSeoOtherPosts(ownSlugs);
+  const others = useSeoOtherPosts(ownSlugs);
   return {
     publishDoc,
-    otherPosts,
+    others,
     captureDoc: () => setPublishDoc(readDocOrNull(getDoc)),
   };
 }

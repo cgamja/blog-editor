@@ -1,4 +1,10 @@
-import type { Doc, PostFile, PostMeta } from "@blog-editor/content-schema";
+import type {
+  Doc,
+  PostFile,
+  PostMeta,
+  SeoFinding,
+  SeoOtherPost,
+} from "@blog-editor/content-schema";
 
 /** 저장을 막을 수 있는 「글 정보」 칸 — `missingForSave`가 이 순서로 돌려준다 */
 export type MetaField = "title" | "description" | "category" | "slug";
@@ -11,6 +17,26 @@ export type SaveStatus =
   | { kind: "saved"; at: Date; isPublished: boolean }
   | { kind: "published" }
   | { kind: "failed"; message: string | null };
+
+/**
+ * 제목 · 설명 중복 점검에 쓰는 다른 글의 조회 상태 — 서버 상태(TanStack Query)에서 매번 끌어낸다.
+ * 캐시된 성공 데이터가 있으면 다시 읽다 실패해도 ready다. 데이터 없이 한 번이라도 실패했으면 다시 읽는 중에도
+ * failed, 처음 읽는 중이면 loading — 둘 다 중복 비교 없는 점수를 보이지 않는다(#166)
+ */
+export type SeoOthers =
+  | { kind: "ready"; posts: readonly SeoOtherPost[] }
+  | { kind: "loading" }
+  | { kind: "failed"; retry: () => void };
+
+/** 발행 확인의 검색 노출 점검이 그릴 것 */
+export type SeoCheck =
+  | { kind: "checked"; findings: readonly SeoFinding[] }
+  /** 문서를 읽지 못했다(닫힌 집합 위반) */
+  | { kind: "unreadable" }
+  /** 다른 글 목록을 처음 읽는 중이라 중복을 아직 점검할 수 없다 */
+  | { kind: "othersLoading" }
+  /** 다른 글 목록을 읽지 못해 중복을 점검할 수 없다 — 다시 읽을 수 있다 */
+  | { kind: "othersFailed"; retry: () => void };
 
 /** 저장 실패를 화면이 할 일로 나눈 것 */
 export type SaveErrorKind = "expired" | "slugTaken" | "conflict" | "rejected" | "failed";
