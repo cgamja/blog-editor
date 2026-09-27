@@ -5,6 +5,7 @@ import {
   MAX_STICKERS_PER_DOC,
   MOTIONS,
   NATURAL_SIZE_RANGE,
+  SPACES,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
 import { APP_FRAME, KNOWN_KEYS, SIZE_SEPARATOR, STICKER_DIRECTIVE_KEY } from "./constants";
@@ -26,6 +27,7 @@ import {
   DIRECTIVE_UNKNOWN_KEY_FIX,
   DIRECTIVE_WIDTH_VALUE_FIX,
   DIRECTIVE_SIZE_VALUE_FIX,
+  DIRECTIVE_SPACE_VALUE_FIX,
   DIRECTIVE_FONT_VALUE_FIX,
   directiveCaptionLengthRule,
   directiveFontValueRule,
@@ -38,6 +40,7 @@ import {
   directiveUnknownKeyRule,
   directiveWidthValueRule,
   directiveSizeValueRule,
+  directiveSpaceValueRule,
   directiveSpaceInValueFix,
   DIRECTIVE_SPACE_IN_VALUE_RULE,
   DIRECTIVE_STICKER_KIND_FIX,
@@ -67,16 +70,16 @@ export interface DirectiveCandidate {
 
 /** 블록 의미별로 허용하는 지시어 키(frame은 image에서 따로 검사한다) — directives.ts만 쓴다. */
 const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
-  paragraph: new Set(["font", "motion", "align"]),
-  heading: new Set(["font", "motion", "align"]),
-  bulletList: new Set(["font", "motion"]),
-  orderedList: new Set(["font", "motion"]),
-  blockquote: new Set(["font", "motion"]),
-  callout: new Set(["font", "motion"]),
-  codeBlock: new Set(["motion"]),
-  horizontalRule: new Set(["motion"]),
-  image: new Set(["motion", "width", "size", "frame", "align"]),
-  table: new Set(["font", "motion"]),
+  paragraph: new Set(["font", "motion", "align", "space"]),
+  heading: new Set(["font", "motion", "align", "space"]),
+  bulletList: new Set(["font", "motion", "space"]),
+  orderedList: new Set(["font", "motion", "space"]),
+  blockquote: new Set(["font", "motion", "space"]),
+  callout: new Set(["font", "motion", "space"]),
+  codeBlock: new Set(["motion", "space"]),
+  horizontalRule: new Set(["motion", "space"]),
+  image: new Set(["motion", "width", "size", "frame", "align", "space"]),
+  table: new Set(["font", "motion", "space"]),
   // 사진 자리는 꾸밈 자리가 없다(adr-033) — 채운 그림에서 꾸민다
   photoPlaceholder: new Set(),
 };
@@ -307,6 +310,17 @@ function validateDirective(
           });
         } else {
           resolved.align = value as (typeof ALIGNS)[number];
+        }
+        break;
+      case "space":
+        if (!(SPACES as readonly string[]).includes(value)) {
+          issues.push({
+            rule: directiveSpaceValueRule(),
+            received: value,
+            fix: DIRECTIVE_SPACE_VALUE_FIX,
+          });
+        } else {
+          resolved.space = value as (typeof SPACES)[number];
         }
         break;
       case "frame":

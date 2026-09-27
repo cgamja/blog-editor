@@ -18,8 +18,8 @@ export function isInTopBlock(state: EditorState, pos: number, types: readonly st
 /** 문단 하나를 닫고 다음 문단을 여는 위치 수 — 줄바꿈 한 글자 자리가 문단 경계 둘이 된다 */
 const PARAGRAPH_BOUNDARY_TOKENS = 2;
 
-/** 텍스트 블록이 가질 수 있는 꾸미기 — width는 이미지 · 스크린샷만 가진다 */
-const TEXTBLOCK_DECORATION_KEYS = ["font", "motion", "stickers"] as const;
+/** 텍스트 블록이 가질 수 있는 꾸미기 — width는 이미지 · 스크린샷만 가진다. 간격(adr-037)은 모든 최상위 블록이 가진다 */
+const TEXTBLOCK_DECORATION_KEYS = ["font", "motion", "space", "stickers"] as const;
 
 /** 커서가 든 최상위 텍스트 블록. 목록 · 인용 · 콜아웃 안이거나 선택이 블록을 넘으면 null(design.md 3) */
 function topTextblock(state: EditorState): { pos: number; node: Node } | null {

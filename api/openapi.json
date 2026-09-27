@@ -959,6 +959,10 @@
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1079,6 +1083,10 @@
                           "type": "string",
                           "enum": ["left", "center", "right"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1173,6 +1181,10 @@
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1248,6 +1260,10 @@
                         "motion": {
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
                         },
                         "stickers": {
                           "type": "array",
@@ -1329,6 +1345,10 @@
                         "motion": {
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
                         },
                         "stickers": {
                           "type": "array",
@@ -1453,6 +1473,10 @@
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1535,6 +1559,10 @@
                         "motion": {
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
                         },
                         "stickers": {
                           "type": "array",
@@ -1633,6 +1661,10 @@
                           "type": "string",
                           "enum": ["left", "center", "right"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1706,6 +1738,10 @@
                         "motion": {
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
                         },
                         "stickers": {
                           "type": "array",
@@ -1905,6 +1941,10 @@
                           "type": "string",
                           "enum": ["left", "center", "right"]
                         },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
+                        },
                         "stickers": {
                           "type": "array",
                           "items": {
@@ -1974,6 +2014,10 @@
                         "motion": {
                           "type": "string",
                           "enum": ["fade-in", "fade-up", "slide-left", "slide-right", "pop"]
+                        },
+                        "space": {
+                          "type": "string",
+                          "enum": ["sm", "lg", "xl"]
                         },
                         "stickers": {
                           "type": "array",

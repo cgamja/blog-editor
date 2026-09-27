@@ -16,6 +16,7 @@ export {
   selectedTopBlocks,
   setBlockFont,
   setBlockMotion,
+  setBlockSpace,
   setBlockWidth,
   updateSticker,
 } from "./commands/decoration";
@@ -74,7 +75,7 @@ export type {
   ToolbarMark,
 } from "./commands/text-style.types";
 export { duplicateTopBlock, turnIntoTextblock } from "./commands/turn-into";
-export { splitBlockKeepingStickers } from "./commands/split-block";
+export { splitBlockKeepingDecoration } from "./commands/split-block";
 export { hardBreakOrEnter, insertHardBreak } from "./commands/hard-break";
 export { toggleTaskItem, turnIntoTaskItem, wrapInTaskList } from "./commands/task-list";
 export { taskToggle, taskToggleKey } from "./plugins/task-toggle";
@@ -135,10 +136,10 @@ export type {
 } from "./plugins/slash-menu.types";
 export {
   CUSTOM_BLOCK_KEYS_PRIORITY,
+  DECORATION_SPLIT_PRIORITY,
   LIST_KEYS_PRIORITY,
   MARKDOWN_SHORTCUTS_PRIORITY,
   SLASH_MENU_PRIORITY,
-  STICKER_SPLIT_PRIORITY,
   TABLE_EDITING_PRIORITY,
   TABLE_KEYS_PRIORITY,
 } from "./keymap-priority.constants";

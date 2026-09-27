@@ -24,12 +24,16 @@ function isInListItem(state: EditorState): boolean {
   return $from.depth >= 2 && $from.node(-1).type.name === "listItem";
 }
 
-const hasDecoration = (node: Node) =>
+/** 블록을 합치면 잃는 꾸미기 — 간격은 블록 위 자리라 블록이 합쳐져 사라지면 함께 없어지는 게 맞다(adr-037) */
+const hasLosableDecoration = (node: Node) =>
   node.attrs.font != null || node.attrs.motion != null || stickersOf(node).length > 0;
+
+const hasDecoration = (node: Node) => hasLosableDecoration(node) || node.attrs.space != null;
 
 const sameDecoration = (a: Node, b: Node) =>
   a.attrs.font === b.attrs.font &&
   a.attrs.motion === b.attrs.motion &&
+  a.attrs.space === b.attrs.space &&
   sameStickers(stickersOf(a), stickersOf(b));
 
 /** 원래 최상위 목록이 차지하던 자리의 최상위 블록들 — 다른 곳의 같은 꾸미기를 건드리지 않게 범위를 좁힌다 */
@@ -43,7 +47,8 @@ function topBlocksIn(doc: Node, from: number, to: number): { node: Node; pos: nu
 
 /**
  * 목록이 둘로 갈리면 liftListItem이 두 조각에 같은 attrs를 준다. 글꼴은 보기 연속성 때문에 두 조각 모두 두고,
- * 움직임 · 스티커는 앞 조각에만 남긴다(design.md 5). https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
+ * 움직임 · 스티커 · 간격은 앞 조각에만 남긴다(design.md 5 · adr-037 — 간격은 원래 목록 위 자리라 앞 조각의 것이다).
+ * https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
  */
 function dropDuplicatedDecoration(
   tr: Transaction,
@@ -52,11 +57,13 @@ function dropDuplicatedDecoration(
 ): void {
   const pieces = blocks.filter(({ node }) => node.type === top.type && sameDecoration(node, top));
   for (const { pos } of pieces.slice(1)) {
-    tr.setNodeAttribute(pos, "motion", null).setNodeAttribute(pos, "stickers", null);
+    tr.setNodeAttribute(pos, "motion", null)
+      .setNodeAttribute(pos, "stickers", null)
+      .setNodeAttribute(pos, "space", null);
   }
 }
 
-/** 목록이 통째로 빠지면 목록 노드와 함께 꾸미기가 사라진다 — 빠져나온 첫 블록에 옮긴다(design.md 5) */
+/** 목록이 통째로 빠지면 목록 노드와 함께 꾸미기(간격 포함)가 사라진다 — 빠져나온 첫 블록에 옮긴다(design.md 5) */
 function restoreLostDecoration(
   tr: Transaction,
   top: Node,
@@ -72,7 +79,7 @@ function restoreLostDecoration(
   });
 }
 
-/** 최상위 목록에서 항목을 빼낸 뒤 — 움직임 · 스티커는 한 곳에만, 글꼴은 조각마다 남긴다 */
+/** 최상위 목록에서 항목을 빼낸 뒤 — 움직임 · 스티커 · 간격은 한 곳에만, 글꼴은 조각마다 남긴다 */
 function keepTopListDecoration(state: EditorState, tr: Transaction): Transaction {
   const { $from } = state.selection;
   const top = $from.node(1);
@@ -228,14 +235,14 @@ function lastTextEnd(list: Node, listPos: number): number {
 
 /**
  * 목록 바로 뒤 최상위 문단 맨 앞 Backspace는 앞 목록 마지막 항목 끝에 글자를 합친다(Notion과 같다, design.md 4).
- * 기본 joinBackward는 문단을 목록 항목으로 다시 감싸 내어쓰기와 핑퐁이 된다. 꾸미기가 있는 문단은 꾸미기를 잃지 않게 넘긴다.
+ * 기본 joinBackward는 문단을 목록 항목으로 다시 감싸 내어쓰기와 핑퐁이 된다. 글꼴 · 움직임 · 스티커가 있는 문단은 꾸미기를 잃지 않게 넘긴다(간격은 합치면 함께 사라지는 자리라 합친다).
  * https://prosemirror.net/docs/ref/#commands.joinBackward
  */
 const joinIntoPreviousList: Command = (state, dispatch) => {
   const { $from, empty } = state.selection;
   if (!empty || $from.depth !== 1 || $from.parentOffset !== 0) return false;
   const paragraph = $from.parent;
-  if (paragraph.type.name !== "paragraph" || hasDecoration(paragraph)) return false;
+  if (paragraph.type.name !== "paragraph" || hasLosableDecoration(paragraph)) return false;
   const before = $from.index(0) > 0 ? state.doc.child($from.index(0) - 1) : null;
   if (!isList(before)) return false;
   const paragraphPos = $from.before(1);

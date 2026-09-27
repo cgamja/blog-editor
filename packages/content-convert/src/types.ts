@@ -1,4 +1,4 @@
-import type { ALIGNS, FONTS, MOTIONS, Sticker } from "@blog-editor/content-schema";
+import type { ALIGNS, FONTS, MOTIONS, SPACES, Sticker } from "@blog-editor/content-schema";
 
 /**
  * check.ts(토큰 검사) · directives.ts(지시어) · parser.ts(doc 조립) · references.ts(참조 정의)가
@@ -42,6 +42,7 @@ export interface ResolvedDirective {
   motion?: (typeof MOTIONS)[number];
   width?: number;
   align?: (typeof ALIGNS)[number];
+  space?: (typeof SPACES)[number];
   naturalWidth?: number;
   naturalHeight?: number;
   isAppScreenshot?: boolean;

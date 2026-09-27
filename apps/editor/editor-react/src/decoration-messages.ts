@@ -1,7 +1,8 @@
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
-import type { Align } from "./decoration-types";
+import type { Align, Space } from "./decoration-types";
 
 const ALIGN_NAMES: Record<Align, string> = { left: "왼쪽", center: "가운데", right: "오른쪽" };
+const SPACE_NAMES: Record<Space, string> = { sm: "좁게", lg: "넓게", xl: "아주 넓게" };
 
 /** 꾸미기 패널 · 폭 도구줄이 사용자에게 보이는 문장 — 한 곳에서 고친다(spec: decoration-panel design.md 2) */
 export const decorationMessages = {
@@ -20,6 +21,12 @@ export const decorationMessages = {
   cannotHoldAlign: (block: string) => `${block}에는 정렬을 줄 수 없어요`,
   alignName: (align: Align) => ALIGN_NAMES[align],
   alignButton: (label: string) => `${label} 정렬`,
+  spaceLegend: "간격",
+  spaceNormal: "보통",
+  spaceName: (space: Space) => SPACE_NAMES[space],
+  spaceButton: (label: string) => `간격 ${label}`,
+  spaceHint: "고른 블록 위쪽 여백이에요. 폰에서도 같은 비율로 보여요.",
+  cannotHoldSpace: (block: string) => `${block}에는 간격을 줄 수 없어요`,
   multipleBlocks: (count: number) => `블록 ${String(count)}개`,
   targetLine: (label: string | null) =>
     label === null ? "고른 블록 없음" : `고른 블록 · ${label}`,

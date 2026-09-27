@@ -285,6 +285,35 @@
   margin-inline: auto 0;
   text-align: right;
 }
+/*
+ * 간격(adr-037) — 앞 블록과의 위 여백 단계. 값이 없으면 위 기본 리듬(문단 1.1em · 제목 2.2em 등).
+ * 단위는 본문 리듬과 같은 em이다. 단계 값은 `--post-space` 한 곳에 두고, 에디터(editor.css)도 이 변수를 쓴다.
+ * 래퍼 안 첫 요소(제목 · 구분선)의 자기 위 여백과 앞 블록의 아래 여백(앞 블록이 래퍼면 그 안 마지막 요소의 것까지)은
+ * 지운다 — 단계가 그 틈의 전부다.
+ * 앞 블록의 아래 여백(브라우저 기본 p 여백 등)이 남으면 겹친 여백 중 큰 쪽이 이겨 「좁게」가 좁아지지 않는다.
+ * :has를 모르는 브라우저에서는 두 여백 중 큰 쪽으로 보일 뿐 깨지지 않는다.
+ */
+.post-body [data-space="sm"] {
+  --post-space: 0.4em;
+}
+.post-body [data-space="lg"] {
+  --post-space: 2.4em;
+}
+.post-body [data-space="xl"] {
+  --post-space: 3.6em;
+}
+.post-body > * + [data-space] {
+  margin-top: var(--post-space);
+}
+.post-body > * + [data-space] > :first-child {
+  margin-top: 0;
+}
+.post-body > :has(+ [data-space]) {
+  margin-bottom: 0;
+}
+.post-body > :has(+ [data-space]) > :last-child {
+  margin-bottom: 0;
+}
 /* x · y는 스티커 중심의 블록 기준 %, s는 블록 폭 기준 %, r은 도. 블록이 옮겨지면 같이 간다(adr-008) */
 .post-body .post-sticker {
   position: absolute;

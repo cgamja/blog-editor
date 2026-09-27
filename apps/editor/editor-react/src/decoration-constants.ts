@@ -1,6 +1,6 @@
-import { ALIGNS, STICKER_IDS } from "@blog-editor/content-schema";
+import { ALIGNS, SPACES, STICKER_IDS } from "@blog-editor/content-schema";
 import { decorationMessages } from "./decoration-messages";
-import type { Align, Font, Motion, StickerId } from "./decoration-types";
+import type { Align, Font, Motion, Space, StickerId } from "./decoration-types";
 import { stickerName } from "./sticker-messages";
 
 /**
@@ -33,6 +33,12 @@ export const STICKER_OPTIONS: ReadonlyArray<{ id: StickerId; label: string }> = 
 export const ALIGN_OPTIONS: ReadonlyArray<{ value: Align; label: string }> = ALIGNS.map(
   (value) => ({ value, label: decorationMessages.alignName(value) }),
 );
+
+/** 간격 버튼(adr-037) — 보통(값 없음) + content-schema SPACES 순서, 이름의 원천은 decoration-messages */
+export const SPACE_OPTIONS: ReadonlyArray<{ value: Space | null; label: string }> = [
+  { value: null, label: decorationMessages.spaceNormal },
+  ...SPACES.map((value) => ({ value, label: decorationMessages.spaceName(value) })),
+];
 
 /** 결정 2026-09-24: 작게 50 · 보통 70 · 꽉 차게 100 */
 export const WIDTH_PRESETS: ReadonlyArray<{ value: number; label: string }> = [

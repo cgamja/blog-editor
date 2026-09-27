@@ -9,6 +9,7 @@ import {
   languageOrNull,
   motionOrNull,
   naturalSizeFrom,
+  spaceOrNull,
   widthOrNull,
 } from "../closed-values";
 
@@ -20,7 +21,12 @@ import {
  * 근거: https://prosemirror.net/docs/ref/#view.EditorProps.transformPasted
  */
 
-const DECORATION_VALUES = { font: fontOrNull, motion: motionOrNull, width: widthOrNull } as const;
+const DECORATION_VALUES = {
+  font: fontOrNull,
+  motion: motionOrNull,
+  width: widthOrNull,
+  space: spaceOrNull,
+} as const;
 const MEDIA_NODES = new Set(["image", "appScreenshot"]);
 // 텍스트 선택이 이 깊이 이하면 최상위 블록 안이다 — 붙인 조각의 최상위 노드가 최상위 블록이 된다
 const TOP_LEVEL_DEPTH = 1;

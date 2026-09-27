@@ -29,7 +29,15 @@ export const PHOTO_CONTAINER_NAME = "photo";
 export const RANGE_EDIT_COMMANDS = ["replace", "insert_after"] as const;
 
 /** 지시어 키 — 이 순서가 직렬화(serialize.ts)가 지시어 줄에 쓰는 순서다. */
-export const DIRECTIVE_KEYS = ["frame", "font", "motion", "align", "width", "size"] as const;
+export const DIRECTIVE_KEYS = [
+  "frame",
+  "font",
+  "motion",
+  "align",
+  "width",
+  "size",
+  "space",
+] as const;
 
 /**
  * 괄호 span의 스타일 키 — 이 순서가 직렬화(serialize-inline.ts)가 `{…}`에 쓰는 순서이고, 키 이름은

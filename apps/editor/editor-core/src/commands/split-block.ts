@@ -1,12 +1,14 @@
 import { splitBlockAs } from "@tiptap/pm/commands";
-import type { Attrs, Node, NodeType, ResolvedPos } from "@tiptap/pm/model";
+import type { Attrs, Node, NodeType, ResolvedPos, Slice } from "@tiptap/pm/model";
 import type { Command, Selection, Transaction } from "@tiptap/pm/state";
 
 /**
- * 스티커가 있는 블록을 나눈다 — 스티커는 한 블록에만 남는다(spec: editor-schema, design.md 6).
+ * 스티커 · 간격이 있는 블록을 나눈다 — 스티커는 한 블록에만 남는다(spec: editor-schema, design.md 6).
  * 가운데 · 끝이면 원래(앞) 블록에, 맨 앞이면 글이 남은 뒤 블록에. 글꼴 · 움직임 · 폭은 양쪽에 남는다.
- * 코드 블록 · 스티커 없는 블록 · 나눌 수 없는 자리에서는 false — 코어 Enter(newlineInCode 등)에 넘긴다.
- * 나누기와 스티커 처리가 한 트랜잭션이라 undo 한 번에 되돌아간다.
+ * 간격(블록 위 여백, adr-037)은 어디서 나누든 앞 조각에만 — 간격은 원래 블록 위 자리라 맨 앞에서 나누면 빈 앞 조각이
+ * 그 자리를 갖고, 이어 쓴 뒤 블록이 넓게 띄지 않는다.
+ * 코드 블록 · 스티커도 간격도 없는 블록 · 나눌 수 없는 자리에서는 false — 코어 Enter(newlineInCode 등)에 넘긴다.
+ * 나누기와 스티커 · 간격 처리가 한 트랜잭션이라 undo 한 번에 되돌아간다.
  * 근거: https://prosemirror.net/docs/ref/#commands.splitBlockAs ·
  * https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
  */
@@ -14,11 +16,16 @@ import type { Command, Selection, Transaction } from "@tiptap/pm/state";
 const hasStickers = (node: Node) =>
   Array.isArray(node.attrs.stickers) && node.attrs.stickers.length > 0;
 
-/** 이어 쓰는 블록에 옮길 attrs — 스티커는 빼고, 그 타입이 가진 attrs만. */
+const hasSpace = (node: Node) => node.attrs.space != null;
+
+/** 나눈 뒤 블록에 옮기지 않는 attrs — 원래(앞) 블록에만 남는다 */
+const FRONT_ONLY_ATTRS: ReadonlySet<string> = new Set(["stickers", "space"]);
+
+/** 이어 쓰는 블록에 옮길 attrs — 스티커 · 간격은 빼고, 그 타입이 가진 attrs만. */
 function carriedAttrs(from: Node, to: NodeType): Attrs {
   return Object.fromEntries(
     Object.keys(to.spec.attrs ?? {})
-      .filter((key) => key !== "stickers" && key in from.attrs)
+      .filter((key) => !FRONT_ONLY_ATTRS.has(key) && key in from.attrs)
       .map((key) => [key, from.attrs[key]]),
   );
 }
@@ -29,11 +36,11 @@ function splitTarget(node: Node, atEnd: boolean, $from: ResolvedPos) {
     const type = $from.node(-1).contentMatchAt($from.indexAfter(-1)).defaultType;
     return type ? { type, attrs: carriedAttrs(node, type) } : null;
   }
-  // 맨 앞이면 뒤 블록이 글을 가지므로 스티커까지, 가운데면 스티커만 뺀다
+  // 간격은 늘 앞 조각에. 스티커는 맨 앞이면 글을 가진 뒤 블록으로 가고, 가운데면 앞에 남는다
   const atStart = $from.parentOffset === 0;
   return {
     type: node.type,
-    attrs: atStart ? node.attrs : { ...node.attrs, stickers: null },
+    attrs: { ...node.attrs, space: null, ...(atStart ? {} : { stickers: null }) },
   };
 }
 
@@ -45,10 +52,11 @@ function clearEmptyFrontStickers(tr: Transaction): Transaction {
   return tr.setNodeAttribute(backStart - front.nodeSize, "stickers", null);
 }
 
-export const splitBlockKeepingStickers: Command = (state, dispatch) => {
+export const splitBlockKeepingDecoration: Command = (state, dispatch) => {
   const { $from } = state.selection;
   const block = $from.parent;
-  if (!block.isTextblock || block.type.spec.code || !hasStickers(block)) return false;
+  if (!block.isTextblock || block.type.spec.code) return false;
+  if (!hasStickers(block) && !hasSpace(block)) return false;
   const atStart = $from.parentOffset === 0 && $from.parentOffset !== block.content.size;
   return splitBlockAs(splitTarget)(
     state,
@@ -90,4 +98,40 @@ export function keepStickersOnOnePiece(tr: Transaction, before: Selection): Tran
     if (piece !== keeper) tr.setNodeAttribute(piece.pos, "stickers", null);
   }
   return tr;
+}
+
+/**
+ * 붙여넣은 조각의 끝이 열려 있으면(openEnd > 0) 원래 블록에서 선택 뒤에 남은 글은 조각의 마지막 노드에 이어 붙는다 —
+ * prosemirror-model `replace`의 `joinable($end, $to, depth)`는 조각 쪽 노드(`$end.node`)를 남긴다. 그래서 뒤 조각은
+ * 붙인 마지막 최상위 노드 자신이고 제 간격을 갖는다. 이어 붙일 수 없는 타입이면(Fitter가 원래 블록 타입 · attrs로
+ * 새로 연다) 뒤 조각의 타입이 조각의 마지막 노드와 다르다.
+ * 근거: https://prosemirror.net/docs/ref/#model.Slice · https://prosemirror.net/docs/ref/#transform.ReplaceStep
+ */
+function isPastedLastNode(back: Node, slice: Slice): boolean {
+  const last = slice.content.lastChild;
+  return slice.openEnd > 0 && last !== null && back.type === last.type;
+}
+
+/**
+ * 붙여넣기처럼 선택을 바꾸는 교체가 간격 있는 최상위 블록을 나눴으면 간격은 앞 조각에만 남긴다 — Enter와 같은 규칙이다.
+ * 간격은 문자열이라 스티커처럼 참조로 조각을 알아볼 수 없다. 대신 원래 블록에서 선택 뒤에 남은 글이 있을 때, 그 글의
+ * 새 자리(매핑, assoc 1)가 든 최상위 블록이 앞 조각(원래 블록 시작의 새 자리)과 다르면 그것이 뒤 조각이다. 선택 뒤에
+ * 남은 글이 없거나, 끝이 열린 조각이라 뒤 조각이 붙인 마지막 노드이면(isPastedLastNode) 제 간격을 그대로 둔다.
+ * 근거: https://prosemirror.net/docs/ref/#transform.Mapping.map ·
+ * https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
+ */
+export function keepSpaceOnFrontPiece(
+  tr: Transaction,
+  before: Selection,
+  slice: Slice,
+): Transaction {
+  const { $from, $to } = before;
+  if ($from.depth === 0 || $from.index(0) !== $to.index(0)) return tr;
+  if (!hasSpace($from.node(1)) || $to.pos >= $from.end(1)) return tr;
+  const frontStart = tr.mapping.map($from.before(1), -1);
+  const $back = tr.doc.resolve(tr.mapping.map($to.pos, 1));
+  if ($back.depth === 0 || $back.before(1) === frontStart) return tr;
+  const back = $back.node(1);
+  if (!hasSpace(back) || isPastedLastNode(back, slice)) return tr;
+  return tr.setNodeAttribute($back.before(1), "space", null);
 }

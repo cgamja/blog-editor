@@ -316,6 +316,7 @@ function hasDecoration(attrs: Decoration): boolean {
     attrs.motion !== undefined ||
     attrs.width !== undefined ||
     attrs.align !== undefined ||
+    attrs.space !== undefined ||
     (attrs.stickers?.length ?? 0) > 0
   );
 }
@@ -324,12 +325,13 @@ function finishBlock(elementHtml: string, decoration: Decoration, ctx: RenderCon
   return hasDecoration(decoration) ? wrapDecoration(elementHtml, decoration, ctx) : elementHtml;
 }
 
-/** 속성 순서 고정: class → data-font → data-motion → data-align → style(spec: render-decoration). */
+/** 속성 순서 고정: class → data-font → data-motion → data-align → data-space → style(spec: render-decoration). */
 function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderContext): string {
   // enum · 정수라 타입상 닫혀 있지만, 검증을 건너뛴 doc가 와도 속성 경계는 지킨다(spec: render-safety)
   const fontAttr = attrs.font !== undefined ? ` data-font="${escapeHtml(attrs.font)}"` : "";
   const motionAttr = attrs.motion !== undefined ? ` data-motion="${escapeHtml(attrs.motion)}"` : "";
   const alignAttr = attrs.align !== undefined ? ` data-align="${escapeHtml(attrs.align)}"` : "";
+  const spaceAttr = attrs.space !== undefined ? ` data-space="${escapeHtml(attrs.space)}"` : "";
   const styleAttr =
     attrs.width !== undefined ? ` style="--w:${cssInteger(attrs.width, "폭")}"` : "";
   const stickersHtml = (attrs.stickers ?? [])
@@ -337,7 +339,7 @@ function wrapDecoration(elementHtml: string, attrs: Decoration, ctx: RenderConte
     .join("");
   return tag(
     "div",
-    ` class="post-block"${fontAttr}${motionAttr}${alignAttr}${styleAttr}`,
+    ` class="post-block"${fontAttr}${motionAttr}${alignAttr}${spaceAttr}${styleAttr}`,
     elementHtml + stickersHtml,
   );
 }
