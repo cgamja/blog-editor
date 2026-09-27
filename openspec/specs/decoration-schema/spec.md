@@ -82,3 +82,17 @@
 
 - **WHEN** `{}` · `{ color: "#FFF" }` · `{ color: "red; background:url(x)" }` · `{ size: "3xl" }` · `{ font: "jua", weight: "light" }` · `{ style: "color:red" }`를 각각 쓴다
 - **THEN** 여섯 경우 모두 `success === false`
+
+### Requirement: 간격은 사진 자리를 뺀 모든 최상위 블록의 위 여백 단계다
+
+스키마는 SHALL 최상위 블록 11종(문단 · 제목 · 목록 · 번호 목록 · 인용 · 코드 블록 · 구분선 · 이미지 · 콜아웃 · 앱 스크린샷 · 표 — 사진 자리는 공개 렌더에 나가지 않아 꾸밈 자리가 없다)의 attrs에 `space`를 `sm` · `lg` · `xl`(`SPACES`) 중 하나로만 받는다(adr-037). 값이 없으면 보통이다. 안쪽 노드(인용 · 목록 항목 · 콜아웃 · 표 칸 안)에는 자리가 없다. schemaVersion은 바뀌지 않는다.
+
+#### Scenario: 11종 모두 간격을 받는다
+
+- **WHEN** 최상위 블록 11종에 `space` `sm` · `lg` · `xl`을 각각 둔다
+- **THEN** 모두 통과한다
+
+#### Scenario: 집합 밖 값 · 안쪽 자리는 거부된다
+
+- **WHEN** `space`가 `md` · `12px` · 빈 글이거나, 인용 안 문단에 `space`가 있다
+- **THEN** 거부된다
