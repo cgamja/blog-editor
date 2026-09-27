@@ -20,7 +20,7 @@ export interface WidthDrag {
 /** 블록 메뉴 「바꾸기」 한 항목 — 글자 블록으로 바꾸거나(textblock) 감싼다(wrap) */
 export type TurnIntoTarget =
   | { via: "textblock"; type: string; attrs?: Readonly<Record<string, unknown>> }
-  | { via: "wrap"; wrapper: "bulletList" | "orderedList" | "blockquote" };
+  | { via: "wrap"; wrapper: "bulletList" | "orderedList" | "blockquote" | "taskList" };
 
 /** 폭 미리보기 — 끄는 동안 그 블록에 보일 폭(%). 문서 값이 아니다(widthPreview 플러그인 상태) */
 export interface WidthPreviewState {

@@ -260,6 +260,9 @@ function listArb(
   );
 }
 
+/** 할 일 체크 여부 — 없음(보통 항목) · false · true(adr-028 3절) */
+const checkedArb = fc.option(fc.boolean(), { nil: undefined });
+
 function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
   const paragraph = innerParagraphArb;
   const nested =
@@ -268,8 +271,9 @@ function listItemArb(depth: number): fc.Arbitrary<Record<string, unknown>> {
           maxLength: 1,
         })
       : fc.constant([]);
-  return fc.tuple(paragraph, nested).map(([paragraphNode, nestedLists]) => ({
+  return fc.tuple(paragraph, nested, checkedArb).map(([paragraphNode, nestedLists, checked]) => ({
     type: "listItem" as const,
+    ...(checked === undefined ? {} : { attrs: { checked } }),
     content: [paragraphNode, ...nestedLists],
   }));
 }
@@ -308,10 +312,11 @@ function calloutListArb(type: "bulletList" | "orderedList"): fc.Arbitrary<Record
     fc.record({
       type: fc.constant(type),
       content: fc.array(
-        fc.record({
-          type: fc.constant("listItem" as const),
-          content: innerParagraphArb.map((paragraphNode) => [paragraphNode]),
-        }),
+        fc.tuple(innerParagraphArb, checkedArb).map(([paragraphNode, checked]) => ({
+          type: "listItem" as const,
+          ...(checked === undefined ? {} : { attrs: { checked } }),
+          content: [paragraphNode],
+        })),
         { minLength: 1, maxLength: 2 },
       ),
     }),

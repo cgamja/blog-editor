@@ -8,7 +8,12 @@ import {
   imagePathSchema,
   ORDERED_LIST_START_RANGE,
 } from "@blog-editor/content-schema";
-import { ALLOWED_IN, CALLOUT_CONTAINER_NAME, DEFAULT_CALLOUT_TONE } from "./constants";
+import {
+  ALLOWED_IN,
+  CALLOUT_CONTAINER_NAME,
+  DEFAULT_CALLOUT_TONE,
+  EMPTY_TASK_SOURCE,
+} from "./constants";
 import {
   calloutContainerNameMessage,
   calloutEmptyMessage,
@@ -36,15 +41,15 @@ import {
   orderedListStartMessage,
   blockMessage,
   nestedSpanMessage,
-  taskListMessage,
+  emptyTaskItemMessage,
   type FoundMessage,
 } from "./message";
 import type { SpanOpenMeta } from "./span";
+import { taskCheckedOf } from "./task-list";
 import { imageAltText } from "./tokens";
 import type { BlockRecord, ContainerKind, SemanticType } from "./types";
 
 const FOOTNOTE_INLINE = /\[\^[^\]\s]+\]/;
-const TASK_LIST_MARKER = /^\[[ xX]\]( |$)/;
 
 /** `:::` 닫는 줄인가 — 인용(`>`) · 목록(들여쓰기) 안의 콜아웃도 있어 그 접두사를 먼저 벗긴다. */
 function isClosingLine(line: string | undefined): boolean {
@@ -251,6 +256,7 @@ export function analyzeTokens(
         stack.pop();
         break;
       case "inline":
+        checkEmptyTaskItem(tok, tokens[i - 2], currentBlock, messages);
         checkInline(
           tok,
           currentBlock,
@@ -451,6 +457,23 @@ function checkCalloutOpen(
   return record;
 }
 
+/**
+ * 할 일 표지만 있고 글이 없는 항목을 거부한다 — 표지 판정은 원문으로 한다(task-list.ts, 이스케이프한 `\[`는 글자다).
+ * 표지를 이미 뗀 항목(list_item_open에 checked가 실린 항목)의 남은 글은 표지 뒤 원래 글이라 `[ ]`여도 글이다
+ * (`- [ ] [ ]`). 표지는 뒤에 글이 있어야 떼므로(task-list.ts) 뗀 항목은 빈 할 일이 아니다.
+ */
+function checkEmptyTaskItem(
+  inline: Token,
+  itemOpen: Token | undefined,
+  block: BlockRecord | undefined,
+  messages: FoundMessage[],
+): void {
+  if (block?.container !== "listItem") return;
+  const isMarkedTask = itemOpen?.type === "list_item_open" && taskCheckedOf(itemOpen) !== undefined;
+  if (isMarkedTask || !EMPTY_TASK_SOURCE.test(inline.content)) return;
+  messages.push(emptyTaskItemMessage(block.topLevel, block.mapStart0 + 1, inline.content));
+}
+
 function checkInline(
   tok: Token,
   block: BlockRecord | undefined,
@@ -466,13 +489,13 @@ function checkInline(
   let activeLinkTextLength: number | null = null;
   let spanDepth = 0;
 
-  children.forEach((child, index) => {
-    checkInlineChild(child, index, block);
+  children.forEach((child) => {
+    checkInlineChild(child, block);
     // 토큰 안에 든 줄바꿈(여러 줄 HTML · title 등)도 다음 토큰의 줄 번호에 센다
     currentLine += embeddedLineBreaks(child);
   });
 
-  function checkInlineChild(child: Token, index: number, block: BlockRecord): void {
+  function checkInlineChild(child: Token, block: BlockRecord): void {
     const lineText = sourceLines[currentLine - 1] ?? "";
 
     switch (child.type) {
@@ -505,7 +528,7 @@ function checkInline(
         messages.push(htmlNotAllowedMessage(block.topLevel, currentLine, child.content));
         return;
       case "text":
-        checkInlineText(child, block, currentLine, index, messages);
+        checkInlineText(child, block, currentLine, messages);
         if (activeLinkTextLength !== null) activeLinkTextLength += child.content.length;
         return;
       case "link_open":
@@ -547,12 +570,8 @@ function checkInlineText(
   child: Token,
   block: BlockRecord,
   line: number,
-  index: number,
   messages: FoundMessage[],
 ): void {
-  if (index === 0 && block.container === "listItem" && TASK_LIST_MARKER.test(child.content)) {
-    messages.push(taskListMessage(block.topLevel, line, child.content));
-  }
   const footnote = FOOTNOTE_INLINE.exec(child.content);
   if (footnote) {
     messages.push(footnoteInlineMessage(block.topLevel, line, footnote[0]));

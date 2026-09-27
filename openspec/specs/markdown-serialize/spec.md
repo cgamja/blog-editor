@@ -123,3 +123,12 @@ doc → markdown 직렬화(`serializeMarkdown`) — MCP `get_post`와 내보내�
 - **THEN** `markdown`이 `{sticker=heart@90,10,12,15 sticker=cloud@-5,40,8,0}\n가\n`이고 `losses`가 `[{ block: 2, kind: "stickers", count: 1 }, { block: 2, kind: "emptyParagraph", count: 1 }, { block: 3, kind: "emptyParagraph", count: 1 }]`다
 
 실패 의미론: 해당 없음 — 순수 변환(서버 상태 없음).
+
+### Requirement: 할 일 항목은 GFM 체크 표지로 쓴다
+
+직렬화는 SHALL `checked`가 있는 항목을 목록 표지 뒤에 `[ ] `(`false`) · `[x] `(`true`)를 붙여 쓴다. 보통 항목의 글이 할 일 표지 모양(`[x] `)으로 시작해도 다시 읽으면 보통 항목이다. 글자의 대괄호는 늘 이스케이프하고(`\[x\]`), 표지 판정은 원문으로 하기 때문이다. 이어진 줄 · 안쪽 목록의 들여쓰기는 목록 표지 폭 그대로다(할 일 표지는 글의 일부다). losses가 없는 doc는 왕복해도 같다(생성기가 할 일 항목을 만든다).
+
+#### Scenario: 할 일 항목과 표지 모양 글
+
+- **WHEN** 항목 `할 일`(`checked: false`) · `끝`(`checked: true`) · `[x] 글자 그대로`(checked 없음)인 점 목록을 직렬화한다
+- **THEN** 결과가 `- [ ] 할 일` · `- [x] 끝` · `- \[x\] 글자 그대로` 세 줄이고, 다시 변환하면 원래 doc와 같다

@@ -4,6 +4,7 @@ import type Token from "markdown-it/lib/token.mjs";
 import { parseCalloutTone } from "./check";
 import { DEFAULT_CALLOUT_TONE } from "./constants";
 import { pmSchema } from "./pm-schema";
+import { taskCheckedOf } from "./task-list";
 import { createMarkdownIt, imageAltText } from "./tokens";
 import type { BlockRecord, ResolvedDirective } from "./types";
 
@@ -36,7 +37,8 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
       return start === null ? {} : { start: Number(start) };
     },
   },
-  list_item: { block: "listItem" },
+  // 할 일 표지는 task-list.ts core 규칙이 떼어 항목 토큰에 실었다
+  list_item: { block: "listItem", getAttrs: (tok) => ({ checked: taskCheckedOf(tok) }) },
   code_block: { block: "codeBlock", noCloseToken: true },
   fence: {
     block: "codeBlock",

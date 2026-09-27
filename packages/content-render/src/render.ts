@@ -20,9 +20,11 @@ import {
   CUSTOM_COLOR,
   HEADING_TAGS,
   MARK_INNER_TO_OUTER,
+  TASK_ITEM_CLASS,
   TEXT_STYLE_COLOR_VARS,
 } from "./constants";
 import { escapeHtml } from "./escape";
+import { TASK_CHECKBOX_LABEL } from "./messages";
 import { STICKER_SIZES } from "./stickers";
 import type {
   CalloutChild,
@@ -271,7 +273,21 @@ function renderInnerParagraph(node: InnerParagraph): string {
 
 function renderListItem(item: InnerListItem): string {
   const [paragraph, ...lists] = item.content;
-  return tag("li", "", renderInnerParagraph(paragraph) + lists.map(renderInnerList).join(""));
+  const nested = lists.map(renderInnerList).join("");
+  const checked = item.attrs?.checked;
+  if (checked === undefined) return tag("li", "", renderInnerParagraph(paragraph) + nested);
+  const taskParagraph = tag(
+    "p",
+    "",
+    taskCheckbox(checked === true) + renderInline(paragraph.content),
+  );
+  return tag("li", ` class="${TASK_ITEM_CLASS}"`, taskParagraph + nested);
+}
+
+/** 할 일 항목의 읽기 전용 체크 칸(adr-036) — 읽는 사람은 바꿀 수 없다(`disabled`). 참일 때만 `checked`를 싣는다 */
+function taskCheckbox(checked: boolean): string {
+  const checkedAttr = checked ? " checked" : "";
+  return `<input type="checkbox" disabled${checkedAttr} aria-label="${TASK_CHECKBOX_LABEL}">`;
 }
 
 function renderInnerList(list: InnerList): string {

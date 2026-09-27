@@ -28,3 +28,6 @@ export const HEADING_TAGS: Readonly<Record<(typeof HEADING_LEVELS)[number], stri
   2: "h2",
   3: "h3",
 };
+
+/** 할 일 항목 li의 클래스 — post.css가 글머리 기호 대신 체크 칸을 보인다 */
+export const TASK_ITEM_CLASS = "post-task";

@@ -530,6 +530,28 @@ describe("markdown-range-edit — 코드 블록의 백슬래시 줄 끝은 글�
   });
 });
 
+describe("markdown-range-edit — 할 일 항목 글자도 범위로 고치고 체크 여부는 지킨다", () => {
+  it("WHEN 끝난 할 일 항목 · 할 일 항목 목록에서 한 항목 글자를 바꾼다 THEN 두 항목의 checked가 그대로다", () => {
+    const item = (value: string, checked: boolean) => ({
+      type: "listItem",
+      attrs: { checked },
+      content: [paragraph(value)],
+    });
+    const input = doc({
+      type: "bulletList",
+      content: [item("우유 사기", true), item("빵 사기", false)],
+    });
+
+    const result = editDocRange(input, { command: "replace", selection: "우유", markdown: "두유" });
+
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "bulletList",
+      content: [item("두유 사기", true), item("빵 사기", false)],
+    });
+  });
+});
+
 describe("markdown-range-edit — 스티커 지시어(adr-032)", () => {
   const MINT = { id: "star-mint", x: 5, y: 5, size: 5, rotate: 0 } as const;
   const stickered = () =>

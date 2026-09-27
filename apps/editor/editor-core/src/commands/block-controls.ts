@@ -15,6 +15,7 @@ import type { TurnIntoKind } from "./block-controls.constants";
 import type { TurnIntoTarget, WidthDrag } from "./block-controls.types";
 import { appendCommandStepsAndSelection } from "./derived-command";
 import { blockStart } from "./move-block";
+import { wrapInTaskList } from "./task-list";
 import { turnIntoTextblock } from "./turn-into";
 import { wrapInBlockquote, wrapInBulletList, wrapInOrderedList } from "./wrap";
 
@@ -28,6 +29,7 @@ const WRAPPERS: Record<Extract<TurnIntoTarget, { via: "wrap" }>["wrapper"], Comm
   bulletList: wrapInBulletList,
   orderedList: wrapInOrderedList,
   blockquote: wrapInBlockquote,
+  taskList: wrapInTaskList,
 };
 
 const isTopIndex = (doc: Node, index: number) =>

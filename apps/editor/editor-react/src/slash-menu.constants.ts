@@ -12,6 +12,7 @@ export const SLASH_ALIASES: Record<InsertableBlockKind, readonly string[]> = {
   heading3: ["heading", "h3"],
   bulletList: ["bullet", "list", "ul"],
   orderedList: ["numbered", "list", "ol"],
+  taskList: ["todo", "task", "checkbox", "체크"],
   blockquote: ["quote"],
   calloutNote: ["callout", "note"],
   calloutTip: ["callout", "tip"],

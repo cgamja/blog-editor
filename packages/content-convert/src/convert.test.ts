@@ -219,7 +219,7 @@ describe("markdown-format", () => {
     ["목록 항목 안의 코드 펜스", ["- 항목", "", "  ```", "  code", "  ```"].join("\n")],
     ["javascript 링크", "[x](javascript:alert(1))"],
     ["각주", ["글[^1]", "", "[^1]: 설명"].join("\n")],
-    ["할 일 목록", "- [ ] 할 일"],
+    ["글이 없는 할 일 항목", "- [ ]"],
     ["링크 참조 정의", ["글", "", "[r]: https://a.com"].join("\n")],
     ["목록 항목 안 두 번째 문단", ["- a", "", "  b"].join("\n")],
   ];
@@ -364,6 +364,75 @@ describe("markdown-format — GFM 표는 표 블록이 된다", () => {
       expect(message).toMatch(/^블록 \d+ \(\d+줄\): .+\(받음: ".*"\) → .+$/);
     }
     expect(result.messages[0]).toContain(`(${line}줄)`);
+  });
+});
+
+describe("markdown-format — 할 일 목록은 목록 항목의 체크 여부가 된다", () => {
+  const text = (value: string, marks?: object[]) =>
+    marks === undefined ? { type: "text", text: value } : { type: "text", text: value, marks };
+  const item = (content: object[], attrs?: object, nested: object[] = []) => ({
+    type: "listItem",
+    ...(attrs === undefined ? {} : { attrs }),
+    content: [{ type: "paragraph", content }, ...nested],
+  });
+
+  it("WHEN 점 목록 · 번호 목록 · 안쪽 목록 항목 첫 줄 맨 앞에 [ ] · [x] · [X]를 쓰면 THEN 표지가 글에서 빠지고 항목의 checked가 된다", () => {
+    const result = convertMarkdown(
+      ["- [ ] 할 일", "- [x] **끝** 남", "- 보통", "", "1. [X] 둘", "   - [ ] 안쪽"].join("\n"),
+    );
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      {
+        type: "bulletList",
+        content: [
+          item([text("할 일")], { checked: false }),
+          item([text("끝", [{ type: "bold" }]), text(" 남")], { checked: true }),
+          item([text("보통")]),
+        ],
+      },
+      {
+        type: "orderedList",
+        content: [
+          item([text("둘")], { checked: true }, [
+            { type: "bulletList", content: [item([text("안쪽")], { checked: false })] },
+          ]),
+        ],
+      },
+    ]);
+  });
+
+  it("WHEN 대괄호를 이스케이프한 목록 항목을 변환하면 THEN 할 일이 아니라 글자 [ ]로 남는다", () => {
+    const result = convertMarkdown("- \\[ ] 글자");
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "bulletList", content: [item([text("[ ] 글자")])] },
+    ]);
+  });
+
+  it("WHEN 글이 대괄호뿐인 할 일 항목 - [ ] [ ] · - [x] [x]를 변환하면 THEN 성공하고 표지는 checked, 뒤 [ ] · [x]는 글이다", () => {
+    for (const [markdown, checked, value] of [
+      ["- [ ] [ ]", false, "[ ]"],
+      ["- [x] [x]", true, "[x]"],
+    ] as const) {
+      const result = convertMarkdown(markdown);
+      expectOk(result);
+      expect(result.doc.content).toEqual([
+        { type: "bulletList", content: [item([text(value)], { checked })] },
+      ]);
+    }
+  });
+
+  it("WHEN 표지 뒤에 글이 없는 할 일 항목을 변환하면 THEN 글이 있어야 한다는 메시지로 거부한다", () => {
+    for (const [markdown, received] of [
+      ["- [ ]", "[ ]"],
+      ["- [x]", "[x]"],
+    ] as const) {
+      const result = convertMarkdown(markdown);
+      expectFail(result);
+      expect(result.messages).toEqual([
+        `블록 1 (1줄): 할 일 항목에는 글이 있어야 한다(받음: "${received}") → - [ ] 할 일`,
+      ]);
+    }
   });
 });
 
@@ -914,8 +983,8 @@ describe("리뷰 재현 — 조용히 사라지거나 바뀌지 않는다", () =
       name: "인용 안의 각주",
       markdown: ["> 글[^1]", ">", "> [^1]: https://x.com"].join("\n"),
     },
-    { name: "체크된 할 일 목록([x])", markdown: "- [x] 끝" },
-    { name: "체크된 할 일 목록([X])", markdown: "- [X] 끝" },
+    { name: "글이 없는 체크된 할 일 항목([x])", markdown: "- [x]" },
+    { name: "글이 없는 체크된 할 일 항목([X])", markdown: "- [X]" },
     {
       name: "인라인 링크와 href를 공유하는 안 쓴 정의",
       markdown: ["[t](https://a.com)", "", "[z]: https://a.com"].join("\n"),

@@ -30,6 +30,8 @@ export type DecorationKey = "font" | "motion" | "width" | "align";
 
 // content-render의 꾸밈 래퍼와 같은 어휘(spec: render-decoration) — 에디터 DOM도 같은 구조로 낸다
 export const WRAPPER_CLASS = "post-block";
+/** 할 일 항목 li의 클래스 — content-render(공개 HTML)와 같은 어휘. 붙여넣은 공개 HTML에서 할 일 항목을 읽는다(adr-036) */
+export const TASK_ITEM_CLASS = "post-task";
 const WRAPPER_TAG = `div.${WRAPPER_CLASS}`;
 const STICKER_CLASS = "post-sticker";
 // 에디터 출처 기준 경로 — 배포(M4)에서는 같은 CloudFront 배포가 `/stickers/*`를 자산 버킷으로 라우팅한다

@@ -110,4 +110,9 @@ describe("render-css", () => {
       );
     }
   });
+
+  it("WHEN 할 일 규칙을 찾으면 THEN 할 일 항목은 글머리 기호가 없고 체크 칸 규칙이 있다", () => {
+    expect(css).toMatch(/\.post-task\s*\{[^}]*list-style:\s*none/);
+    expect(css).toMatch(/\.post-task[^{]*input\[type="checkbox"\][^{]*\{/);
+  });
 });

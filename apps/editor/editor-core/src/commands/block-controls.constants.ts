@@ -9,6 +9,7 @@ export const TURN_INTO_TARGETS = {
   heading3: { via: "textblock", type: "heading", attrs: { level: 3 } },
   bulletList: { via: "wrap", wrapper: "bulletList" },
   orderedList: { via: "wrap", wrapper: "orderedList" },
+  taskList: { via: "wrap", wrapper: "taskList" },
   blockquote: { via: "wrap", wrapper: "blockquote" },
   codeBlock: { via: "textblock", type: "codeBlock" },
 } as const satisfies Readonly<Record<string, TurnIntoTarget>>;

@@ -5,6 +5,7 @@ import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { hardBreakOrEnter } from "./commands/hard-break";
 import { splitBlockKeepingStickers } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
+import { taskToggle } from "./plugins/task-toggle";
 import { stickerClipboard } from "./plugins/sticker-clipboard";
 import { stickerSafePaste } from "./plugins/sticker-safe-paste";
 import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
@@ -14,9 +15,11 @@ import {
   hrefOrNull,
   languageOrNull,
   orderedListStartOrNull,
+  taskCheckedOrNull,
   toneOrNull,
 } from "./closed-values";
 import {
+  TASK_ITEM_CLASS,
   TEXT_STYLE_TAG,
   hasClass,
   imageAttrsOf,
@@ -164,12 +167,36 @@ const OrderedList = Node.create({
     ),
 });
 
+/**
+ * 할 일 체크 여부(adr-028 3절 · adr-036) — 에디터 HTML은 `li[data-checked]`, 공개 HTML은 `li.post-task` 안 체크 칸이다.
+ * 체크 칸은 CSS(`li[data-checked]::before`)가 그리고 누르기는 taskToggle 플러그인이 받는다 — NodeView를 두지 않는다.
+ */
+const taskCheckedAttrs = (element: ElementLike) => ({
+  checked: taskCheckedOrNull(element.getAttribute("data-checked")),
+});
+const publishedTaskAttrs = (element: ElementLike) => ({
+  checked: element.querySelector("input")?.getAttribute("checked") != null,
+});
+
 // content-schema의 z.tuple([innerParagraph], innerList)와 같다 — 첫 자식은 문단, 뒤는 안쪽 목록만
 const ListItem = Node.create({
   name: "listItem",
   content: "paragraph (bulletList | orderedList)*",
-  parseHTML: () => [{ tag: "li" }],
-  renderHTML: () => ["li", 0],
+  // 나눈 항목(Enter)은 list-keymap enterInList가 체크하지 않은 할 일로 둔다
+  addAttributes: () => ({ checked: optional }),
+  parseHTML: () => [
+    { tag: "li[data-checked]", getAttrs: (element: ElementLike) => taskCheckedAttrs(element) },
+    {
+      tag: `li.${TASK_ITEM_CLASS}`,
+      getAttrs: (element: ElementLike) => publishedTaskAttrs(element),
+    },
+    { tag: "li" },
+  ],
+  renderHTML: ({ node }) =>
+    node.attrs.checked == null
+      ? ["li", 0]
+      : ["li", { "data-checked": String(node.attrs.checked) }, 0],
+  addProseMirrorPlugins: () => [taskToggle()],
 });
 
 const Blockquote = Node.create({

@@ -1,6 +1,13 @@
 import { naturalSizeOf, normalize, orderedListNumberAt } from "@blog-editor/content-schema";
 import type { Block, Doc, InlineNode, Sticker } from "@blog-editor/content-schema";
-import { APP_FRAME, CALLOUT_CONTAINER_NAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
+import {
+  APP_FRAME,
+  CALLOUT_CONTAINER_NAME,
+  DIRECTIVE_KEYS,
+  SIZE_SEPARATOR,
+  TASK_MARKER_DONE,
+  TASK_MARKER_TODO,
+} from "./constants";
 import { serializeInline, serializeParagraph, serializePlainLabel } from "./serialize-inline";
 import { formatStickerDirective } from "./sticker-directive";
 
@@ -39,6 +46,7 @@ interface ParagraphLike {
 }
 interface ListItemLike {
   type: "listItem";
+  attrs?: { checked?: boolean | undefined } | undefined;
   content: [ParagraphLike, ...ListLike[]];
 }
 interface ListLike {
@@ -97,6 +105,16 @@ class ListMarkers {
   }
 }
 
+/**
+ * 할 일 항목은 글 앞에 표지를 붙인다(adr-028 3절). 보통 항목 글이 `[x] `로 시작해도 할 일로 읽히지 않는다 — 글자의
+ * 대괄호는 늘 이스케이프하고(serialize-inline ALWAYS_ESCAPE), 표지 판정은 원문으로 한다(task-list.ts).
+ */
+function withTaskMarker(item: ListItemLike, text: string): string {
+  const checked = item.attrs?.checked;
+  if (checked === undefined) return text;
+  return `${checked ? TASK_MARKER_DONE : TASK_MARKER_TODO} ${text}`;
+}
+
 /** 번호 목록 표지는 시작 번호부터 센다 — markdown은 첫 표지 번호를 시작 번호로 읽는다(CommonMark 5.2) */
 function listMarker(list: ListLike, index: number, alternate: boolean): string {
   if (list.type === "bulletList") return alternate ? "*" : "-";
@@ -136,7 +154,7 @@ function liftEmptyItems(list: ListLike, dropped: BlockLosses): ListLike[] {
       flush(index + 1);
       lists.push(...liftedNested);
     } else {
-      items.push({ type: "listItem", content: [paragraph, ...liftedNested] });
+      items.push({ ...item, content: [paragraph, ...liftedNested] });
     }
   });
   flush(list.content.length);
@@ -178,7 +196,8 @@ function renderList(list: ListLike, dropped: BlockLosses, alternate: boolean): s
       const marker = listMarker(list, index, alternate);
       const indent = " ".repeat(marker.length + 1);
       // liftEmptyItems가 첫 문단이 빈 항목을 이미 뺐으므로 inlineOf는 늘 글자를 돌려준다.
-      const lines = [`${marker} ${inlineOf(paragraph, dropped, indent) ?? ""}`];
+      const itemText = withTaskMarker(item, inlineOf(paragraph, dropped, indent) ?? "");
+      const lines = [`${marker} ${itemText}`];
       const nestedText = renderLists(nested, dropped, new ListMarkers(), "\n");
       if (nestedText !== undefined) {
         if (nested[0] !== undefined && cannotInterruptParagraph(nested[0])) lines.push("");
