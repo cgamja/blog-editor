@@ -4,7 +4,7 @@ import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { blockGuard, createEditorSchema } from "../index";
-import { stickerSafePaste } from "./sticker-safe-paste";
+import { decorationSafePaste } from "./decoration-safe-paste";
 
 const schema = createEditorSchema();
 const paragraph = schema.nodes.paragraph!;
@@ -26,7 +26,7 @@ function stateAt(blocks: Node[], pos: number): EditorState {
 
 // editor-core는 DOM lib 없이 타입 검사한다 — 이벤트는 쓰지 않으므로 훅 타입에서 꺼낸다
 type PasteEvent = Parameters<
-  NonNullable<ReturnType<typeof stickerSafePaste>["props"]["handlePaste"]>
+  NonNullable<ReturnType<typeof decorationSafePaste>["props"]["handlePaste"]>
 >[1];
 
 /**
@@ -35,7 +35,7 @@ type PasteEvent = Parameters<
  * 거친다 — 거부되면 문서가 그대로다.
  */
 function paste(state: EditorState, slice: Slice, event = {} as PasteEvent) {
-  const plugin = stickerSafePaste();
+  const plugin = decorationSafePaste();
   let dispatched: Transaction | null = null;
   const view = {
     state,
@@ -146,7 +146,7 @@ describe("editor-paste: 붙여넣기로 문단이 나뉘어도 스티커는 한 
 });
 
 describe("editor-paste: 표 칸 자리의 붙여넣기는 표 칸 편집에 맡긴다", () => {
-  it("WHEN 스티커 있는 표의 본문 칸 글자 가운데에 닫힌 표 조각을 붙인다 THEN stickerSafePaste는 받지 않는다", () => {
+  it("WHEN 스티커 있는 표의 본문 칸 글자 가운데에 닫힌 표 조각을 붙인다 THEN decorationSafePaste는 받지 않는다", () => {
     const { table, tableRow, tableCell } = schema.nodes as Record<string, NodeType>;
     const cell = (text: string) =>
       tableCell!.create(null, paragraph.create(null, schema.text(text)));
