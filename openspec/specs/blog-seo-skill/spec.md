@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change blog-seo-skill. Update Purpose after archive.
+레포 스킬 `/blog-seo`(Codex `$blog-seo`) — 블로그 초안 하나의 규칙 점수(`check_draft`)와 글 품질 점수를 함께 보이고, 사용자가 확인한 것만 부분 고치기(`update_draft edit`)로 반영한다. 발행은 하지 않는다(#150).
 
 ## Requirements
 
