@@ -1,4 +1,4 @@
-# AI 연결 — `/mcp`에 Claude 붙이기
+# AI 연결 — `/mcp`에 Claude · Codex 붙이기
 
 AI(채팅 앱)가 블로그 초안을 쓰게 하는 MCP 커넥터(adr-007 · adr-016). 도구는 6개이고 **초안만** 쓴다 — 발행은 사람이 에디터에서 한다.
 
@@ -24,7 +24,7 @@ claude mcp add --transport http blog-editor http://127.0.0.1:8787/mcp \
   --header "Authorization: Bearer <위에서 만든 토큰>"
 ```
 
-Claude Code에서 `/mcp`로 `connected`를 확인하고 "블로그 초안 하나 써 줘"라고 하면 된다. Claude는 `get_writing_guide`를 먼저 읽고 `create_draft`를 부르며, 응답의 에디터 링크를 알려 준다.
+Claude Code에서 `/mcp`로 `connected`를 확인하고 "블로그 초안 하나 써 줘"라고 하면 된다. Claude는 `get_writing_guide`를 먼저 읽고 `create_draft`를 부르며, 응답의 에디터 링크를 알려 준다. 레포 스킬로 한 번에 쓰려면 `/blog-write <주제>`.
 
 ## 2-b. claude.ai 커스텀 커넥터
 
@@ -55,6 +55,67 @@ OAuth 상태(등록 · 토큰)는 메모리에 있다 — 서버를 다시 켜�
 2. URL: `https://<공개 주소>/mcp`
 3. Authentication: **No sign-in** → **Request headers**에 `authorization` = `Bearer <토큰>`(앞의 `Bearer `까지 입력)
 4. 채팅의 **+ › Connectors**에서 켠다
+
+## 2-c. Codex CLI (로컬 그대로)
+
+Codex도 같은 `/mcp`에 붙는다. 도구 6개와 "초안만" 규칙은 Claude Code와 같다. 설정 파일에는 토큰 값을 적지 않고 **환경 변수 이름만** 적는다(`bearer_token_env_var`, https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+```bash
+codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN
+codex mcp list   # blog-editor가 보이면 된다
+```
+
+**토큰 넣기.** 값은 1절의 `MCP_CONNECTION_TOKEN`과 같다. 셸 설정 파일(`~/.zshrc`)에 평문으로 적지 않는다. 그 파일은 백업 · dotfiles 저장소로 퍼지기 쉽다. 두 가지 방법이 있다.
+
+- macOS 키체인에 한 번 넣어 두고, Codex를 켤 때만 꺼내 쓴다:
+  ```bash
+  security add-generic-password -a "$USER" -s blog-editor-mcp -w   # 토큰을 묻는다(한 번)
+  BLOG_EDITOR_MCP_TOKEN="$(security find-generic-password -a "$USER" -s blog-editor-mcp -w)" codex
+  ```
+- 그 셸에서만 쓴다. 값을 입력 프롬프트로 받아 셸 기록(`~/.zsh_history`)에 남지 않게 한다. 창을 닫으면 사라지므로 매번 넣어야 한다:
+  ```bash
+  read -rs BLOG_EDITOR_MCP_TOKEN && export BLOG_EDITOR_MCP_TOKEN   # 토큰을 붙여 넣고 Enter(화면에 안 보인다)
+  ```
+
+어느 쪽이든 명령줄에 토큰 값을 직접 쓰지 않는다.
+
+로컬 루프백 서버라 `~/.zshrc`에 두는 편리함을 고를 수도 있다. 그 경우에는 그 파일이 어디로 복사 · 동기화되는지 알고 고른다.
+
+**도구 허락 — 도구별로.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 매번 묻는 것이 번거로우면 **읽기 도구와 `create_draft`만** 자동 허락한다. `update_draft`는 묻게 둔다(`~/.codex/config.toml`, 키는 https://learn.chatgpt.com/docs/config-file/config-reference).
+
+```toml
+[mcp_servers.blog-editor]
+url = "http://127.0.0.1:8787/mcp"
+bearer_token_env_var = "BLOG_EDITOR_MCP_TOKEN"
+
+# 읽기 4개 — 글을 바꾸지 않는다
+[mcp_servers.blog-editor.tools.get_writing_guide]
+approval_mode = "approve"
+[mcp_servers.blog-editor.tools.list_posts]
+approval_mode = "approve"
+[mcp_servers.blog-editor.tools.get_post]
+approval_mode = "approve"
+[mcp_servers.blog-editor.tools.check_draft]
+approval_mode = "approve"
+# 새 초안만 만든다 — 이미 있는 주소면 거부되어 남의 글을 덮지 못한다
+[mcp_servers.blog-editor.tools.create_draft]
+approval_mode = "approve"
+# 기존 초안을 고친다 — 사람이 에디터에서 쓰는 중인 글을 바꿀 수 있어 늘 묻는다
+[mcp_servers.blog-editor.tools.update_draft]
+approval_mode = "prompt"
+```
+
+서버 전체를 자동 허락하는 `default_tools_approval_mode = "approve"`는 권하지 않는다. 사용자 설정에 넣으면 모든 Codex 세션이 묻지 않고 `update_draft`로 초안을 바꿀 수 있다. 스킬은 웹 문서를 읽으므로, 웹 문서에 숨은 지시(프롬프트 인젝션)가 그 길로 초안을 고칠 위험도 생긴다.
+
+**비대화형 `codex exec`.** 이 모드는 허락을 물을 수 없다. 그래서 `prompt`로 둔 도구는 `MCP tool call requires approval, but approval policy is never`로 실패한다. 위 설정이면 읽기와 `create_draft`는 되고 `update_draft`만 실패한다(2026-09-25 실제로 확인). 그 한 번의 실행에서 고치기까지 맡길 때만 그 실행에 `-c`로 허락을 준다:
+
+```bash
+codex exec -c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"' '$blog-write <주제>'
+```
+
+**웹 검색.** Codex 기본 웹 검색(`web_search = "cached"`)은 OpenAI가 관리하는 색인만 보고 원문 페이지에 가지 않는다(같은 config-reference). `/blog-write`는 숫자 · 사실을 원문에서 확인하므로 실시간 검색을 켠다: 대화형은 `codex --search`, `codex exec`는 `-c 'web_search="live"'`, 늘 쓰려면 `web_search = "live"`. 켜지 않으면 스킬은 원문을 확인하지 못한 사실을 쓰지 않고 그렇다고 알린다.
+
+레포 스킬은 Codex에서 `$blog-write <주제>`로 부른다. "블로그 초안 써 줘"처럼 말해도 설명을 보고 고른다. Codex는 레포의 `.agents/skills/`를 읽고, 그 안의 `blog-write`는 `.claude/skills/blog-write`를 가리키는 링크다. 그래서 원본은 하나다(adr-035, https://learn.chatgpt.com/docs/build-skills). Claude Code에는 저장 직후 SEO 훅이 생길 예정이다(#149). Codex에는 그런 장치가 없으므로, 저장 응답의 seo 결과를 스킬 규칙이 확인한다.
 
 ## 도구
 
