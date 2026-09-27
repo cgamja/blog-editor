@@ -52,6 +52,27 @@ export interface DraftToolsOptions {
 
 const SERVER_INFO = { name: "simsimee-blog-editor", version: "0.1.0" };
 const markdownSchema = z.string().max(MAX_MARKDOWN_LENGTH);
+/**
+ * 도구 표시(ToolAnnotations — @modelcontextprotocol/core `ToolAnnotationsSchema`,
+ * https://modelcontextprotocol.io/specification/2025-11-25/schema#toolannotations).
+ * 클라이언트(Codex `default_tools_approval_mode = "writes"` 등)는 readOnlyHint로 확인 없이 부를 도구를 고른다.
+ * openWorldHint: false — 이 서버의 글 저장소 · 설정만 만지고 바깥 세계(웹 등)에 닿지 않는다.
+ */
+const READ_ONLY_TOOL = { readOnlyHint: true, openWorldHint: false } as const;
+/** 새 초안만 만든다 — 같은 slug가 있으면 거절(조건부 생성)하므로 덮어쓰지 않고, 같은 인자로 다시 불러도 더 바뀌는 것이 없다 */
+const CREATE_DRAFT_TOOL = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+/** 초안 내용을 바꿔 쓴다(이전 본문 · 글 정보가 사라진다 → destructive). revision을 맞춰야 쓰므로 같은 인자로 다시 부르면 충돌로 거절되거나 같은 내용이 된다 */
+const UPDATE_DRAFT_TOOL = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
 /** 부분 고치기(adr-031) — 범위는 "시작 글...끝 글", 새 글은 markdown */
 const rangeEditSchema = z.strictObject({
   command: z.enum(RANGE_EDIT_COMMANDS),
@@ -187,6 +208,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "get_writing_guide",
     {
       ...MCP_TOOL_TEXT.get_writing_guide,
+      annotations: READ_ONLY_TOOL,
     },
     guarded(async () => {
       const { guide } = await settings.get();
@@ -198,6 +220,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "list_posts",
     {
       ...MCP_TOOL_TEXT.list_posts,
+      annotations: READ_ONLY_TOOL,
     },
     guarded(async () => {
       const posts = (await store.list()).map(({ slug, meta }) => ({
@@ -215,6 +238,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "get_post",
     {
       ...MCP_TOOL_TEXT.get_post,
+      annotations: READ_ONLY_TOOL,
       inputSchema: z.strictObject({ slug: slugSchema }),
     },
     guarded(async ({ slug }) => {
@@ -235,6 +259,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "check_draft",
     {
       ...MCP_TOOL_TEXT.check_draft,
+      annotations: READ_ONLY_TOOL,
       // create_draft와 같은 인자를 그대로 넘겨도 되게 아래 밖의 키는 무시한다
       inputSchema: z.object({
         markdown: markdownSchema,
@@ -261,6 +286,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "create_draft",
     {
       ...MCP_TOOL_TEXT.create_draft,
+      annotations: CREATE_DRAFT_TOOL,
       inputSchema: z.strictObject({
         slug: slugSchema,
         title: z.string(),
@@ -292,6 +318,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     "update_draft",
     {
       ...MCP_TOOL_TEXT.update_draft,
+      annotations: UPDATE_DRAFT_TOOL,
       inputSchema: z.strictObject({
         slug: slugSchema,
         revision: z.string(),

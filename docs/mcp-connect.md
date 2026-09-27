@@ -81,36 +81,32 @@ codex mcp list   # blog-editor가 보이면 된다
 
 로컬 루프백 서버라 `~/.zshrc`에 두는 편리함을 고를 수도 있다. 그 경우에는 그 파일이 어디로 복사 · 동기화되는지 알고 고른다.
 
-**도구 허락 — 도구별로.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 매번 묻는 것이 번거로우면 **읽기 도구와 `create_draft`만** 자동 허락한다. `update_draft`는 묻게 둔다(`~/.codex/config.toml`, 키는 https://learn.chatgpt.com/docs/config-file/config-reference).
+**도구 허락 — 쓰기만 묻기.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 서버가 읽기 도구 4개(`get_writing_guide` · `list_posts` · `get_post` · `check_draft`)에 `readOnlyHint: true`를 달아 두었으므로(#159), `default_tools_approval_mode = "writes"` 한 줄이면 읽기는 묻지 않고 쓰기 도구 2개(`create_draft` · `update_draft`)만 묻는다("The `writes` mode prompts for tools that aren't marked read-only", https://learn.chatgpt.com/docs/extend/mcp?surface=cli · 키는 https://learn.chatgpt.com/docs/config-file/config-reference). `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.blog-editor]
 url = "http://127.0.0.1:8787/mcp"
 bearer_token_env_var = "BLOG_EDITOR_MCP_TOKEN"
+# 읽기 4개는 묻지 않고, 초안을 만들거나 고치는 2개만 묻는다
+default_tools_approval_mode = "writes"
+```
 
-# 읽기 4개 — 글을 바꾸지 않는다
-[mcp_servers.blog-editor.tools.get_writing_guide]
-approval_mode = "approve"
-[mcp_servers.blog-editor.tools.list_posts]
-approval_mode = "approve"
-[mcp_servers.blog-editor.tools.get_post]
-approval_mode = "approve"
-[mcp_servers.blog-editor.tools.check_draft]
-approval_mode = "approve"
-# 새 초안만 만든다 — 이미 있는 주소면 거부되어 남의 글을 덮지 못한다
+대안 — 도구별 설정. `create_draft`까지 묻지 않게 하려면(새 초안만 만들고, 이미 있는 주소면 거부되어 남의 글을 덮지 못한다) 그 도구만 덮어쓴다. `update_draft`는 사람이 에디터에서 쓰는 중인 글을 바꿀 수 있어 늘 묻게 둔다:
+
+```toml
 [mcp_servers.blog-editor.tools.create_draft]
 approval_mode = "approve"
-# 기존 초안을 고친다 — 사람이 에디터에서 쓰는 중인 글을 바꿀 수 있어 늘 묻는다
-[mcp_servers.blog-editor.tools.update_draft]
-approval_mode = "prompt"
 ```
 
 서버 전체를 자동 허락하는 `default_tools_approval_mode = "approve"`는 권하지 않는다. 사용자 설정에 넣으면 모든 Codex 세션이 묻지 않고 `update_draft`로 초안을 바꿀 수 있다. 스킬은 웹 문서를 읽으므로, 웹 문서에 숨은 지시(프롬프트 인젝션)가 그 길로 초안을 고칠 위험도 생긴다.
 
-**비대화형 `codex exec`.** 이 모드는 허락을 물을 수 없다. 그래서 `prompt`로 둔 도구는 `MCP tool call requires approval, but approval policy is never`로 실패한다. 위 설정이면 읽기와 `create_draft`는 되고 `update_draft`만 실패한다(2026-09-25 실제로 확인). 그 한 번의 실행에서 고치기까지 맡길 때만 그 실행에 `-c`로 허락을 준다:
+**비대화형 `codex exec`.** 이 모드는 허락을 물을 수 없다. 그래서 묻게 둔 도구는 `MCP tool call requires approval, but approval policy is never`로 실패한다(2026-09-25 도구별 설정으로 실제로 확인). `writes`만 두면 읽기는 되고 `create_draft` · `update_draft`가 실패한다 — 위 대안처럼 `create_draft`를 허락해 두면 `update_draft`만 실패한다. 그 한 번의 실행에서 저장 · 고치기까지 맡길 때만 그 실행에 `-c`로 허락을 준다:
 
 ```bash
-codex exec -c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"' '$blog-write <주제>'
+codex exec \
+  -c 'mcp_servers.blog-editor.tools.create_draft.approval_mode="approve"' \
+  -c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"' \
+  '$blog-write <주제>'
 ```
 
 **웹 검색.** Codex 기본 웹 검색(`web_search = "cached"`)은 OpenAI가 관리하는 색인만 보고 원문 페이지에 가지 않는다(같은 config-reference). `/blog-write`는 숫자 · 사실을 원문에서 확인하므로 실시간 검색을 켠다: 대화형은 `codex --search`, `codex exec`는 `-c 'web_search="live"'`, 늘 쓰려면 `web_search = "live"`. 켜지 않으면 스킬은 원문을 확인하지 못한 사실을 쓰지 않고 그렇다고 알린다.

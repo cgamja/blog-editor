@@ -16,7 +16,7 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 1. `blog-editor` MCP 도구가 보이는지 확인한다. 안 보이면 멈추고 이렇게 안내한다.
    - 레포 루트에서 `pnpm --filter @blog-editor/api dev`로 API를 켠다(127.0.0.1:8787).
    - Claude Code면 `/mcp`로 `blog-editor`를 다시 연결한다.
-   - Codex면 `codex mcp list`로 `blog-editor`가 있는지 본다. 없으면 `docs/mcp-connect.md`의 Codex 절(`codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN`)을 따르고 Codex를 다시 켠다. 도구 호출이 "requires approval"로 실패하면(비대화형 `codex exec`) 같은 절의 **도구별** 허락 설정을 안내한다(읽기 도구 · `create_draft`만 자동, `update_draft`는 묻게).
+   - Codex면 `codex mcp list`로 `blog-editor`가 있는지 본다. 없으면 `docs/mcp-connect.md`의 Codex 절(`codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN`)을 따르고 Codex를 다시 켠다. 도구 호출이 "requires approval"로 실패하면(비대화형 `codex exec`) 같은 절의 허락 설정을 안내한다(`default_tools_approval_mode = "writes"`로 읽기는 묻지 않고 `create_draft` · `update_draft`만 묻게, 그 실행에서 저장까지 맡길 때만 `-c`로 두 도구를 허락).
    - 처음 등록은 `docs/mcp-connect.md`를 따른다.
 2. `get_writing_guide`를 읽는다. 형식 가이드(문법)와 이 블로그 주인의 글쓰기 가이드(말투 · 독자 · 구성)가 온다. **이후 모든 단계는 이 가이드가 이 파일보다 우선한다.**
 3. `list_posts`로 기존 글 제목 · 주소 · 카테고리를 본다. 제목 · 주소가 겹치지 않게 하고, 내부 링크 후보를 고르는 데 쓴다.
