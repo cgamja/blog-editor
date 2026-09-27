@@ -28,7 +28,7 @@
     "eslint.config.*", "vitest.config.*", ".env", ".env.*", "lefthook.yml", "commitlint.config.*",
     ".claude/settings.json", ".claude/hooks/*", ".claude/cgamja.json"
   ],
-  "parallel": { "worktrees": ".claude/worktrees", "port_env": "PORT", "max_concurrent": 3 },
+  "parallel": { "worktrees": ".claude/worktrees", "port_env": "PORT", "max_concurrent": 2 },
   "lint_file": {
     "extensions": ["ts", "tsx", "mjs", "js"],
     "command": "pnpm exec prettier --log-level warn --write {file} && pnpm exec eslint --fix {file}"

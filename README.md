@@ -118,12 +118,21 @@ pnpm install   # lefthook 훅(commit-msg · pre-commit · pre-push)도 건다
 | `PUBLIC_BASE_URL`      | claude.ai가 닿는 주소(터널 등). 있으면 OAuth 연결을 연다 — [docs/mcp-connect.md](docs/mcp-connect.md) |
 
 ```bash
-pnpm --filter @blog-editor/api dev                       # API → http://127.0.0.1:8787
-PORT=5199 pnpm --filter @blog-editor/editor-react dev    # 편집 화면 → http://127.0.0.1:5199
-pnpm verify                                              # typecheck · lint · format · test · docs — 완료의 기준
+pnpm start    # API + 백오피스 화면을 한 번에 → http://127.0.0.1:5173
 ```
 
-편집 화면은 개발용 페이지다. 주소에 `?dev`를 붙이면 픽스처 고르기 · 확인 버튼 · 저장 형식 JSON이 함께 보인다(`?dev&fixture=decorationMax`처럼 픽스처도 고를 수 있다). Claude를 MCP로 붙이는 방법은 [docs/mcp-connect.md](docs/mcp-connect.md)에 있다.
+<http://127.0.0.1:5173>에서 `.env`의 아이디 · 비밀번호로 로그인하면 글 목록 → 새 글 · 편집 → 저장 · 발행까지 된다. 글은 `.data/`에 쌓인다. 포트는 `API_PORT`(기본 8787) · `WEB_PORT`(기본 5173)로 바꾼다. Ctrl-C 한 번에 둘 다 멈춘다.
+
+따로 띄울 때:
+
+```bash
+pnpm --filter @blog-editor/api dev                     # API → http://127.0.0.1:8787
+PORT=5173 pnpm --filter @blog-editor/web dev           # 백오피스 화면 → http://127.0.0.1:5173 (/api를 API로 넘긴다)
+PORT=5199 pnpm --filter @blog-editor/editor-react dev  # 에디터 플레이그라운드(개발용, 저장 없음) → http://127.0.0.1:5199
+pnpm verify                                            # typecheck · lint · format · test · docs — 완료의 기준
+```
+
+플레이그라운드는 에디터 부품만 확인하는 페이지라 글을 불러오거나 저장하지 않는다. 주소에 `?dev`를 붙이면 픽스처 고르기 · 확인 버튼 · 저장 형식 JSON이 함께 보인다(`?dev&fixture=decorationMax`). Claude를 MCP로 붙이는 방법은 [docs/mcp-connect.md](docs/mcp-connect.md)에 있다.
 
 ## 문서
 

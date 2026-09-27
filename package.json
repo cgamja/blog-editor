@@ -8,6 +8,7 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "start": "node scripts/start.ts",
     "typecheck": "pnpm -r --parallel typecheck && tsc --noEmit -p . && tsc --noEmit -p tsconfig.e2e.json",
     "lint": "eslint .",
     "lint:css": "node scripts/check-css-tokens.ts",
