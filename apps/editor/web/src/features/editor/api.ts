@@ -1,4 +1,5 @@
-import type { Doc, PostFile } from "@blog-editor/content-schema";
+import { seoOthersOf } from "@blog-editor/content-schema";
+import type { Doc, PostFile, SeoOtherPost } from "@blog-editor/content-schema";
 import { apiRequest } from "../../shared/api/http";
 import { POSTS_PATH, PREVIEW_PATH, postQueryKey } from "./constants";
 import { saveHeadersOf } from "./save-model";
@@ -38,12 +39,13 @@ export async function fetchPostCategories(): Promise<string[]> {
   return [...new Set(posts.map((post) => post.category))].sort();
 }
 
-/** 목록 요약의 주소 · 제목 — 발행 확인의 제목 중복 점검(목록 요약에는 설명이 없다) */
-export async function fetchPostTitles(): Promise<Array<{ slug: string; title: string }>> {
+/** 목록 요약의 주소 · 제목 · 설명 — 발행 확인의 중복 점검. MCP와 같은 함수로 비교 대상을 만든다(adr-034) */
+export async function fetchSeoOtherPosts(): Promise<SeoOtherPost[]> {
   const response = await apiRequest(POSTS_PATH);
-  const { posts } = (await response.json()) as { posts: Array<{ slug: string; title: unknown }> };
-  // 목록 요약은 저장소가 검증 없이 준 값이다 — 제목이 문자열인 것만 비교에 쓴다
-  return posts.flatMap(({ slug, title }) => (typeof title === "string" ? [{ slug, title }] : []));
+  const { posts } = (await response.json()) as {
+    posts: Array<{ slug: string; title: unknown; description: unknown }>;
+  };
+  return seoOthersOf(posts);
 }
 
 /** `PUT /api/posts/{slug}` — revision null이면 새 글(`If-None-Match: *`). 새 revision을 돌려준다 */

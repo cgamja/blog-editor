@@ -1,5 +1,6 @@
 import type { Doc } from "./doc";
-import { checkSeo } from "./seo";
+import { checkSeo, scoreSeo, seoOthersOf } from "./seo";
+import type { SeoFinding, SeoLevel, SeoRule } from "./seo.types";
 
 type Block = Doc["content"][number];
 
@@ -187,5 +188,88 @@ describe("seo-check — checkSeo", () => {
     );
 
     expect(findings.map((finding) => finding.rule)).not.toContain("duplicate-title");
+  });
+});
+
+describe("seo-check — 비교 대상", () => {
+  it("WHEN 다른 글 목록에 자기 글만 있으면 THEN internal-link-missing이 나오지 않는다", () => {
+    const findings = checkSeo(
+      input({ doc: docOf({ 4: null }), others: [{ slug: "spring-walk", title: "옛 제목" }] }),
+    );
+
+    expect(findings.map((finding) => finding.rule)).not.toContain("internal-link-missing");
+  });
+
+  it("WHEN 같은 글들을 API 요약 모양 · 저장소 모양의 목록으로 seoOthersOf에 넣어 점검하면 THEN 설명 중복까지 잡혀 점수가 같다", () => {
+    // web은 GET /api/posts 요약을, MCP는 저장소 목록의 메타를 넘긴다 — 제목이 문자열이 아닌 항목은 빠진다
+    const apiSummaries = [
+      { slug: "old", title: "다른 글", description: DESCRIPTION, draft: false },
+      { slug: "broken", title: 42 },
+    ];
+    const storeList = [
+      { slug: "old", meta: { title: "다른 글", description: DESCRIPTION, draft: false } },
+      { slug: "broken", meta: { title: 42 } },
+    ];
+    const web = checkSeo(input({ others: seoOthersOf(apiSummaries) }));
+    const mcp = checkSeo(
+      input({ others: seoOthersOf(storeList.map(({ slug, meta }) => ({ slug, ...meta }))) }),
+    );
+
+    expect(web.map((finding) => finding.rule)).toContain("duplicate-description");
+    expect(scoreSeo(web)).toBe(scoreSeo(mcp));
+  });
+});
+
+describe("seo-check — checkSeo는 강제 줄바꿈을 글자 하나로 센다", () => {
+  it("WHEN 첫 문단이 글자 100자 · hardBreak · 글자 100자면 THEN 201자로 세어 first-paragraph-length가 걸린다", () => {
+    const broken: Block = {
+      type: "paragraph",
+      content: [
+        { type: "text", text: `봄 산책${"가".repeat(96)}` },
+        { type: "hardBreak" },
+        { type: "text", text: "나".repeat(100) },
+      ],
+    };
+
+    const rules = checkSeo(input({ doc: docOf({ 1: broken }) })).map((finding) => finding.rule);
+
+    expect(rules).toContain("first-paragraph-length");
+  });
+});
+
+describe("seo-check — scoreSeo", () => {
+  const found = (rule: SeoRule, level: SeoLevel, block = 1): SeoFinding => ({
+    rule,
+    level,
+    target: { kind: "block", block },
+    message: "문제",
+    fix: "고치기",
+  });
+
+  it("WHEN 발견이 없으면 THEN 100점이다", () => {
+    expect(scoreSeo([])).toBe(100);
+  });
+
+  it("WHEN image-alt 두 개 · title-length · keyword-missing이면 THEN 등급별로 한 번씩 깎아 62점이다", () => {
+    const findings = [
+      found("image-alt", "must", 2),
+      found("image-alt", "must", 5),
+      found("title-length", "should"),
+      found("keyword-missing", "info"),
+    ];
+
+    expect(scoreSeo(findings)).toBe(62);
+  });
+
+  it("WHEN must 네 규칙과 should 한 규칙이면 THEN 0 아래로 내려가지 않는다", () => {
+    const findings = [
+      found("image-alt", "must"),
+      found("heading-missing", "must"),
+      found("duplicate-title", "must"),
+      found("duplicate-description", "must"),
+      found("title-length", "should"),
+    ];
+
+    expect(scoreSeo(findings)).toBe(0);
   });
 });

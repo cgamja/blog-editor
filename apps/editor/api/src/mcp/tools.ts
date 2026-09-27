@@ -11,6 +11,8 @@ import type { RangeEdit } from "@blog-editor/content-convert";
 import {
   SCHEMA_VERSION,
   checkSeo,
+  scoreSeo,
+  seoOthersOf,
   createPostFileSchema,
   normalize,
   slugSchema,
@@ -118,20 +120,13 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     meta: SeoInput["meta"],
     doc: Doc,
   ): Promise<SeoFinding[]> {
-    // 목록은 저장소가 검증 없이 돌려준 요약이다 — 모양이 어긋난 항목은 비교에서 뺀다
-    const others = (await store.list()).flatMap(({ slug: other, meta: summary }) =>
-      typeof summary.title === "string"
-        ? [
-            {
-              slug: other,
-              title: summary.title,
-              description:
-                typeof summary.description === "string" ? summary.description : undefined,
-            },
-          ]
-        : [],
-    );
-    return checkSeo({ slug, meta, doc, others });
+    // 에디터 발행 확인과 같은 함수로 비교 대상을 만든다 — 같은 글이면 같은 점수(adr-034)
+    const summaries = (await store.list()).map(({ slug: other, meta: summary }) => ({
+      slug: other,
+      title: summary.title,
+      description: summary.description,
+    }));
+    return checkSeo({ slug, meta, doc, others: seoOthersOf(summaries) });
   }
 
   /**
@@ -146,6 +141,12 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       return null;
     }
   }
+
+  /** seo와 seoScore는 늘 함께 null이다 — 클라이언트는 하나만 보고 "점검 못 함"을 안다(adr-034) */
+  const seoReport = (seo: SeoFinding[] | null) => ({
+    seo,
+    seoScore: seo === null ? null : scoreSeo(seo),
+  });
 
   /** 실패하면 AI가 고칠 수 있게 변환 · 검증 메시지를 그대로 돌려준다 */
   function buildFile(markdown: string, meta: PostFile["meta"]): BuiltFile {
@@ -252,7 +253,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       const isAboutGivenField = ({ target }: SeoFinding) =>
         target.kind !== "meta" || target.field === "keyword" || given[target.field];
       const seo = (await seoOf(slug, meta, normalize(converted.doc))).filter(isAboutGivenField);
-      return jsonResult({ ok: true, blocks: converted.doc.content.length, seo });
+      return jsonResult({ ok: true, blocks: converted.doc.content.length, ...seoReport(seo) });
     }),
   );
 
@@ -283,7 +284,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       if (!built.ok) return built.error;
       const { revision } = await store.put(slug, built.file, null);
       const seo = await seoAfterSave(slug, built.file);
-      return jsonResult({ slug, revision, editorUrl: editorUrlOf(slug), seo });
+      return jsonResult({ slug, revision, editorUrl: editorUrlOf(slug), ...seoReport(seo) });
     }, MCP_SLUG_TAKEN_MESSAGE),
   );
 
@@ -330,7 +331,12 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       if (!built.ok) return built.error;
       const saved = await store.put(slug, built.file, found.revision);
       const seo = await seoAfterSave(slug, built.file);
-      return jsonResult({ slug, revision: saved.revision, editorUrl: editorUrlOf(slug), seo });
+      return jsonResult({
+        slug,
+        revision: saved.revision,
+        editorUrl: editorUrlOf(slug),
+        ...seoReport(seo),
+      });
     }, MCP_CONFLICT_MESSAGE),
   );
 

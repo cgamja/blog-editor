@@ -5,6 +5,7 @@ import { POST_SUMMARY_KEYS, POST_SUMMARY_OPTIONAL_KEYS } from "./constants";
 const item = (slug: string, overrides: Record<string, unknown> = {}) => ({
   slug,
   title: slug,
+  description: `${slug} 설명`,
   date: "2026-09-21",
   category: "parenting",
   draft: true,

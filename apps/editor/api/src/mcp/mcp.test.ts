@@ -1,6 +1,6 @@
 import { convertMarkdown, serializeMarkdown } from "@blog-editor/content-convert";
-import { fixtures } from "@blog-editor/content-schema";
-import type { PostFile } from "@blog-editor/content-schema";
+import { fixtures, scoreSeo } from "@blog-editor/content-schema";
+import type { PostFile, SeoFinding } from "@blog-editor/content-schema";
 import { createApp } from "../app";
 import { createMemoryPostStore } from "../memory-store";
 import type { PostStore } from "../store";
@@ -361,6 +361,60 @@ describe("mcp-drafts — SEO 검사", () => {
     expect(created.isError).toBe(false);
     expect(await store.get(NEW_DRAFT.slug)).not.toBeNull();
     expect(body.seo).toContainEqual(expect.objectContaining({ rule: "image-alt", level: "must" }));
+  });
+
+  it("WHEN alt가 빈 이미지가 든 markdown으로 check_draft · create_draft를 부르면 THEN 응답 seoScore가 그 seo의 점수이고 100보다 작다", async () => {
+    const { app } = setup();
+    const markdown = "첫 문단입니다.\n\n![](/images/cherry-walk.webp)";
+
+    const checked = await callTool(app, "check_draft", { markdown });
+    const created = await callTool(app, "create_draft", { ...NEW_DRAFT, markdown });
+
+    for (const result of [checked, created]) {
+      const body = JSON.parse(result.text) as { seo: SeoFinding[]; seoScore: number };
+      expect(result.isError).toBe(false);
+      expect(body.seoScore).toBe(scoreSeo(body.seo));
+      expect(body.seoScore).toBeLessThan(100);
+    }
+  });
+
+  it("WHEN update_draft로 제목만 · edit로 고치면 THEN 두 응답 모두 seoScore가 그 seo의 점수다", async () => {
+    const { app } = setup();
+    const created = await callTool(app, "create_draft", NEW_DRAFT);
+    const first = JSON.parse(created.text) as { revision: string };
+
+    const titled = await callTool(app, "update_draft", {
+      slug: NEW_DRAFT.slug,
+      revision: first.revision,
+      title: "고친 제목",
+    });
+    const second = JSON.parse(titled.text) as { revision: string };
+    const edited = await callTool(app, "update_draft", {
+      slug: NEW_DRAFT.slug,
+      revision: second.revision,
+      edit: { command: "insert_after", selection: "첫 문단", markdown: "둘째 문단입니다." },
+    });
+
+    for (const result of [titled, edited]) {
+      const body = JSON.parse(result.text) as { seo: SeoFinding[]; seoScore: number };
+      expect(result.isError).toBe(false);
+      expect(body.seoScore).toBe(scoreSeo(body.seo));
+    }
+  });
+
+  it("WHEN 저장한 뒤 목록 읽기가 실패하면 THEN 저장 성공이고 seo · seoScore가 둘 다 null이다", async () => {
+    const failing: PostStore = {
+      ...createMemoryPostStore(),
+      list: async () => {
+        throw new Error("목록 실패");
+      },
+    };
+    const { app } = setup(failing);
+
+    const created = await callTool(app, "create_draft", NEW_DRAFT);
+
+    expect(created.isError).toBe(false);
+    expect(JSON.parse(created.text)).toMatchObject({ seo: null, seoScore: null });
   });
 
   it("WHEN keyword를 넣어 create_draft한 뒤 keyword 없이 update_draft하면 THEN 처음 keyword가 그대로다", async () => {

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { logIn } from "./app.test.helpers";
 
-test("WHEN alt 없는 이미지가 든 글에 핵심 검색어를 적고 발행을 누르면 THEN 점검 목록에 이미지 설명이 보이고 발행된다", async ({
+test("WHEN alt 없는 이미지가 든 글에 핵심 검색어를 적고 발행을 누르면 THEN 점검 목록에 이미지 설명과 100보다 작은 점수가 보이고 발행된다", async ({
   page,
 }, testInfo) => {
   await logIn(page);
@@ -44,6 +44,8 @@ test("WHEN alt 없는 이미지가 든 글에 핵심 검색어를 적고 발행�
   const checklist = dialog.getByRole("list", { name: "검색 노출 점검" });
 
   await expect(checklist).toContainText("이미지 설명");
+  const score = await dialog.getByText(/^검색 노출 점수 \d+점$/).textContent();
+  expect(Number(score?.match(/\d+/)?.[0])).toBeLessThan(100);
   await dialog.getByRole("button", { name: "발행", exact: true }).click();
 
   await expect

@@ -66,6 +66,7 @@ export const EDITOR_MESSAGES = {
   /** 발행 확인의 검색 노출 점검(adr-030) — 알리기만 하고 발행은 막지 않는다 */
   seo: {
     heading: "검색 노출 점검",
+    score: (value: number) => `검색 노출 점수 ${value}점`,
     mustNotice: "꼭 고칠 것이 있어요. 그래도 발행할 수는 있어요.",
     empty: "점검할 것이 없어요.",
     unavailable: "본문을 읽지 못해 점검할 수 없어요.",
