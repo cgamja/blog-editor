@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, Ref } from "react";
 import { EDITOR_MESSAGES } from "../messages";
 
 export interface TitleFieldProps {
@@ -8,13 +8,21 @@ export interface TitleFieldProps {
   onTitleChange: (title: string) => void;
   /** Enter — 본문 맨 앞으로 */
   onEnter: () => void;
+  /** 검색 노출 점검이 제목 칸으로 옮길 때 */
+  inputRef?: Ref<HTMLTextAreaElement>;
 }
 
 /**
  * 종이 위 글 제목(디자인 68:2의 h1 자리). 제목은 문서 블록이 아니라 글 메타라 에디터 밖의 입력 칸이다.
  * 조합 중 Enter(keyCode 229)는 한글 확정이라 넘기지 않는다.
  */
-export function TitleField({ title, isAiDraft, onTitleChange, onEnter }: TitleFieldProps) {
+export function TitleField({
+  title,
+  isAiDraft,
+  onTitleChange,
+  onEnter,
+  inputRef,
+}: TitleFieldProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
     event.preventDefault();
@@ -24,6 +32,7 @@ export function TitleField({ title, isAiDraft, onTitleChange, onEnter }: TitleFi
     <div className="post-title">
       {isAiDraft && <p className="post-title-note">{EDITOR_MESSAGES.aiDraftNote}</p>}
       <textarea
+        ref={inputRef}
         className="post-title-input"
         aria-label={EDITOR_MESSAGES.titleLabel}
         placeholder={EDITOR_MESSAGES.titlePlaceholder}

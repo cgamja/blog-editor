@@ -6,6 +6,8 @@ export interface MeasuredBlocks {
   frame: DOMRect;
   /** 최상위 블록 각각의 틀 기준 left */
   lefts: number[];
+  /** 최상위 블록 각각의 틀 기준 right */
+  rights: number[];
 }
 
 /** 최상위 블록마다 화면 사각형을 읽는다 — https://prosemirror.net/docs/ref/#view.EditorView.nodeDOM */
@@ -14,6 +16,7 @@ export function measureBlocks(editor: Editor, frameEl: HTMLElement): MeasuredBlo
   const frame = frameEl.getBoundingClientRect();
   const bands: BlockBand[] = [];
   const lefts: number[] = [];
+  const rights: number[] = [];
   let pos = 0;
   view.state.doc.forEach((node) => {
     const dom = view.nodeDOM(pos);
@@ -22,13 +25,15 @@ export function measureBlocks(editor: Editor, frameEl: HTMLElement): MeasuredBlo
       const rect = dom.getBoundingClientRect();
       bands.push({ top: rect.top, bottom: rect.bottom });
       lefts.push(rect.left - frame.left);
+      rights.push(rect.right - frame.left);
     } else {
       bands.push({ top: previous, bottom: previous });
       lefts.push(0);
+      rights.push(0);
     }
     pos += node.nodeSize;
   });
-  return { bands, frame, lefts };
+  return { bands, frame, lefts, rights };
 }
 
 /** gap 자리 표시선의 틀 기준 y — 두 블록 사이 가운데, 양 끝이면 블록 바깥 가장자리. */

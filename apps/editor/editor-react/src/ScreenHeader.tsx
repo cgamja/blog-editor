@@ -5,6 +5,8 @@ import type { EditorScreenActions } from "./screen-types";
 export interface ScreenHeaderProps {
   actions: EditorScreenActions;
   status?: ReactNode;
+  /** 저장 상태 뒤 · 미리보기 앞의 화면 도구 */
+  tools?: ReactNode;
 }
 
 interface HeaderActionProps {
@@ -35,8 +37,8 @@ function HeaderAction({ label, onPress, reasonId, className, children }: HeaderA
   );
 }
 
-/** 편집 화면 머리줄(디자인 68:2) — ← 글 목록 · 저장 상태 · 미리보기 · 초안 저장 · 발행 */
-export function ScreenHeader({ actions, status }: ScreenHeaderProps) {
+/** 편집 화면 머리줄(디자인 68:2) — ← 글 목록 · 저장 상태 · (화면 도구) · 미리보기 · 초안 저장 · 발행 */
+export function ScreenHeader({ actions, status, tools }: ScreenHeaderProps) {
   const reasonId = useId();
   return (
     <header className="editor-screen-header">
@@ -63,6 +65,7 @@ export function ScreenHeader({ actions, status }: ScreenHeaderProps) {
       <p className="editor-screen-status" role="status">
         {status}
       </p>
+      {tools}
       <HeaderAction
         label={screenMessages.preview}
         onPress={actions.onPreview}

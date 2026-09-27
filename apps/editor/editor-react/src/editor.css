@@ -410,6 +410,72 @@
   --layer-slash-menu: 2;
 }
 
+/*
+ * 본문 블록 옆 오른쪽 여백의 점(#151 디자인 C) — 블록 오른쪽 가장자리에서 종이 오른쪽 끝까지(block-flag-rows.ts).
+ * 줄 top은 블록 첫 줄 가운데라 점 높이 절반만큼 올린다. 여백이 점 여러 개보다 좁으면 아래로 접힌다.
+ * 누르는 자리는 44px, 보이는 점은 그 가운데 28px 원이다. 세기(tone) 색은 발행 확인 점검 목록의 등급 pill과 같은 토큰이다.
+ */
+.block-flags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.block-flag-row {
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  translate: 0 calc(var(--control-height, 2.75rem) / -2);
+}
+
+/* 점에 올리거나 포커스한 동안 대상 블록을 옅게 칠한다 — 곱하기 섞기라 글자는 그대로 보인다 */
+.block-flag-highlight {
+  position: absolute;
+  border-radius: var(--radius-input);
+  background: var(--postit);
+  mix-blend-mode: multiply;
+}
+
+.block-flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height, 2.75rem);
+  height: var(--control-height, 2.75rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.block-flag::before {
+  content: "";
+  box-sizing: border-box;
+  width: 1.75rem; /* token-lint-ignore: 점 지름 28px(#151 디자인 C) — 크기 토큰에 없다 */
+  height: 1.75rem; /* token-lint-ignore: 점 지름 28px(#151 디자인 C) — 크기 토큰에 없다 */
+  border: var(--border-width, 1px) solid var(--line, currentColor);
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.block-flag[data-tone="strong"]::before {
+  border-color: var(--danger-ink);
+  background: var(--brand-soft);
+}
+
+.block-flag[data-tone="medium"]::before {
+  border-color: var(--postit-ink);
+  background: var(--postit);
+}
+
+.block-flag:focus-visible {
+  outline: var(--focus-ring-width, 2px) solid var(--brand-ink, currentColor);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 50%;
+}
+
 .block-handles {
   position: absolute;
   display: flex;

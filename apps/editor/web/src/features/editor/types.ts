@@ -38,6 +38,14 @@ export type SeoCheck =
   /** 다른 글 목록을 읽지 못해 중복을 점검할 수 없다 — 다시 읽을 수 있다 */
   | { kind: "othersFailed"; retry: () => void };
 
+/** 검색 노출 점검 재료 — 문서를 읽지 못했으면(닫힌 집합 위반) doc이 null */
+export interface SeoCheckInput {
+  slug: string;
+  meta: PostMeta;
+  doc: Doc | null;
+  others: SeoOthers;
+}
+
 /** 저장 실패를 화면이 할 일로 나눈 것 */
 export type SaveErrorKind = "expired" | "slugTaken" | "conflict" | "rejected" | "failed";
 

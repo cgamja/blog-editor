@@ -3,6 +3,7 @@ export { readDoc, toEditorContent } from "./content";
 export { useBlogEditor } from "./use-blog-editor";
 export {
   editorPlainText,
+  focusEditorBlock,
   focusEditorStart,
   isEditorComposing,
   useDocChange,
@@ -34,3 +35,4 @@ export type { EditorScreenProps } from "./EditorScreen";
 export type { EditorScreenActions, SideTab } from "./screen-types";
 export { uploadResultFrom } from "./image-insert-model";
 export type { ImageUploader, UploadResult } from "./image-upload-types";
+export type { BlockFlag, BlockFlagSet, BlockFlagTone } from "./block-flag-types";

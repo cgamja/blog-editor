@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, type ReactNode, type Ref } from "react";
 import type { PostMeta } from "@blog-editor/content-schema";
 import { EDITOR_MESSAGES } from "../messages";
 import type { EditableMeta } from "../types";
@@ -12,6 +12,11 @@ export interface PostInfoPanelProps {
   categories: readonly string[];
   onMetaChange: (patch: EditableMeta) => void;
   onOpenDecorate: () => void;
+  /** 검색 노출 점검이 설명 · 핵심 검색어 칸으로 옮길 때 */
+  fieldRefs?: {
+    description?: Ref<HTMLTextAreaElement>;
+    keyword?: Ref<HTMLInputElement>;
+  };
 }
 
 /** 「글 정보」 탭(디자인 68:2) — 주소 · 카테고리 · 설명 · 핵심 검색어 · 날짜 · 꾸미기 열기 · AI와 다듬기 */
@@ -22,6 +27,7 @@ export function PostInfoPanel({
   categories,
   onMetaChange,
   onOpenDecorate,
+  fieldRefs,
 }: PostInfoPanelProps) {
   const { info } = EDITOR_MESSAGES;
   const id = useId();
@@ -70,6 +76,7 @@ export function PostInfoPanel({
       <div className="post-info-field">
         <label htmlFor={ids.description}>{info.description}</label>
         <textarea
+          ref={fieldRefs?.description}
           id={ids.description}
           rows={4}
           value={meta.description}
@@ -84,6 +91,7 @@ export function PostInfoPanel({
       <div className="post-info-field">
         <label htmlFor={ids.keyword}>{info.keyword}</label>
         <input
+          ref={fieldRefs?.keyword}
           id={ids.keyword}
           type="text"
           value={meta.keyword ?? ""}
