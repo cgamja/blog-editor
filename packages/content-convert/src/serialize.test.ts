@@ -383,4 +383,32 @@ describe("serializeMarkdown", () => {
       messages: [],
     });
   });
+
+  it("WHEN 할 일 항목과 표지 모양 글로 시작하는 보통 항목을 직렬화하면 THEN - [ ] · - [x] · - \\[x\\]로 쓰고 다시 변환하면 같다", () => {
+    const item = (value: string, attrs?: Record<string, unknown>) => ({
+      type: "listItem",
+      ...(attrs === undefined ? {} : { attrs }),
+      content: [paragraph(text(value))],
+    });
+    const input = doc({
+      type: "bulletList",
+      content: [
+        item("할 일", { checked: false }),
+        item("끝", { checked: true }),
+        item("[x] 글자 그대로"),
+      ],
+    });
+
+    const result = serializeMarkdown(input);
+
+    expect(result.markdown).toBe(
+      ["- [ ] 할 일", "- [x] 끝", "- \\[x\\] 글자 그대로", ""].join("\n"),
+    );
+    expect(result.losses).toEqual([]);
+    expect(convertMarkdown(result.markdown)).toEqual({
+      ok: true,
+      doc: normalize(input),
+      messages: [],
+    });
+  });
 });

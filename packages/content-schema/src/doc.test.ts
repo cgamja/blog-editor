@@ -676,3 +676,50 @@ describe("document-schema — 강제 줄바꿈은 문단 안에만 온다", () =
     expect(docSchema.safeParse({ type: "doc", content: [block] }).success).toBe(false);
   });
 });
+
+describe("document-schema — 목록 항목은 할 일 체크 여부를 선택으로 가진다", () => {
+  const item = (text: string, attrs?: Record<string, unknown>) => ({
+    type: "listItem",
+    ...(attrs === undefined ? {} : { attrs }),
+    content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+  });
+
+  it("WHEN 체크 여부가 참/거짓 · 없음인 항목과 안쪽 할 일 항목을 파싱하고, 참/거짓 밖 값 · 다른 키를 넣으면 THEN 앞은 통과해 그대로이고 뒤는 거부된다", () => {
+    const mixed = {
+      type: "doc",
+      content: [
+        {
+          type: "bulletList",
+          content: [item("할 일", { checked: false }), item("끝", { checked: true }), item("보통")],
+        },
+      ],
+    };
+    const nested = {
+      type: "doc",
+      content: [
+        {
+          type: "orderedList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "바깥" }] },
+                { type: "bulletList", content: [item("안쪽", { checked: true })] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    for (const doc of [mixed, nested]) {
+      const parsed = docSchema.safeParse(doc);
+      expect(parsed.success).toBe(true);
+      expect(parsed.data).toEqual(doc);
+    }
+    for (const attrs of [{ checked: "yes" }, { done: true }]) {
+      const bad = { type: "doc", content: [{ type: "bulletList", content: [item("글", attrs)] }] };
+      expect(docSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});

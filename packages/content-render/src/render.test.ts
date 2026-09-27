@@ -146,6 +146,29 @@ describe("html-render — 강제 줄바꿈은 br로 낸다", () => {
   });
 });
 
+describe("html-render — 할 일 항목은 읽기 전용 체크 칸으로 낸다", () => {
+  it("WHEN 할 일 · 끝난 할 일 · 보통 항목이 섞인 점 목록을 렌더하면 THEN 할 일 항목은 li.post-task 안 disabled 체크 칸이다", () => {
+    const item = (text: string, attrs?: { checked: boolean }) => ({
+      type: "listItem",
+      ...(attrs === undefined ? {} : { attrs }),
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    });
+    const file = docOf({
+      type: "bulletList",
+      content: [item("할 일", { checked: false }), item("끝", { checked: true }), item("보통")],
+    } as unknown as Block);
+    expect(renderHtml(file, { imageBaseUrl: BASE })).toContain(
+      [
+        "<ul>",
+        '<li class="post-task"><p><input type="checkbox" disabled aria-label="완료">할 일</p></li>',
+        '<li class="post-task"><p><input type="checkbox" disabled checked aria-label="완료">끝</p></li>',
+        "<li><p>보통</p></li>",
+        "</ul>",
+      ].join(""),
+    );
+  });
+});
+
 // ── render-safety (보호 대상 — 고쳐서 통과시키지 않는다) ─────────────────────
 
 describe("render-safety", () => {
