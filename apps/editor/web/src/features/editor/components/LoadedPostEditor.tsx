@@ -11,8 +11,8 @@ import {
 } from "@blog-editor/editor-react";
 import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
-import { fetchPostCategories } from "../api";
-import { POST_CATEGORIES_QUERY_KEY } from "../constants";
+import { categoriesOf, fetchPostSummaries } from "../api";
+import { POST_SUMMARIES_QUERY_KEY } from "../constants";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
@@ -56,8 +56,9 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const uploadImage = useImageUploader();
   const categories = useQuery({
-    queryKey: POST_CATEGORIES_QUERY_KEY,
-    queryFn: fetchPostCategories,
+    queryKey: POST_SUMMARIES_QUERY_KEY,
+    queryFn: fetchPostSummaries,
+    select: categoriesOf,
   });
   const form = usePostForm(start);
   const server = useServerSave({
@@ -179,7 +180,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         isPublished={server.isPublished}
         previewDoc={previewDoc}
         publishDoc={publishCheck.publishDoc}
-        otherPosts={publishCheck.otherPosts}
+        others={publishCheck.others}
         actions={{
           onClose: () => setOverlay(null),
           ...conflict,

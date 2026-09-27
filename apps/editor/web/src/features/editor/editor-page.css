@@ -307,6 +307,13 @@
   color: var(--danger-ink);
 }
 
+.seo-checklist-failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 .seo-checklist-list {
   display: flex;
   flex-direction: column;

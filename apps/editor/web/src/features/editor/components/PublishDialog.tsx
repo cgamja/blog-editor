@@ -1,7 +1,6 @@
 import { useId } from "react";
-import type { SeoFinding } from "@blog-editor/content-schema";
 import { EDITOR_MESSAGES } from "../messages";
-import type { MetaField } from "../types";
+import type { MetaField, SeoCheck } from "../types";
 import { ModalDialog } from "../../../shared/ui/ModalDialog";
 import { SeoChecklist } from "./SeoChecklist";
 
@@ -10,8 +9,8 @@ export interface PublishDialogProps {
   isUpdate: boolean;
   /** 비어서 발행할 수 없는 칸 — 있으면 확인 버튼이 없다 */
   missing: readonly MetaField[];
-  /** 검색 노출 점검(adr-030) — 알리기만 하고 발행 버튼은 남긴다. 문서를 읽지 못했으면 null */
-  seo: readonly SeoFinding[] | null;
+  /** 검색 노출 점검(adr-030) — 알리기만 하고 발행 버튼은 남긴다 */
+  seo: SeoCheck;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -33,7 +32,7 @@ export function PublishDialog({ isUpdate, missing, seo, onConfirm, onCancel }: P
       ) : (
         <>
           <p className="editor-dialog-body">{isUpdate ? publish.updateBody : publish.body}</p>
-          <SeoChecklist findings={seo} />
+          <SeoChecklist check={seo} />
         </>
       )}
       <div className="editor-dialog-row">

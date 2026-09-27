@@ -1,9 +1,9 @@
 import { checkSeo } from "@blog-editor/content-schema";
-import type { Doc, PostMeta, SeoOtherPost } from "@blog-editor/content-schema";
+import type { Doc, PostMeta } from "@blog-editor/content-schema";
 import { useWarmDisplayFont } from "../../../shared/ui/use-warm-display-font";
 import { EDITOR_MESSAGES } from "../messages";
 import { missingForSave } from "../post-meta";
-import type { EditorOverlay } from "../types";
+import type { EditorOverlay, SeoCheck, SeoOthers } from "../types";
 import { ConflictDialog } from "./ConflictDialog";
 import { PreviewDialog } from "./PreviewDialog";
 import { PublishDialog } from "./PublishDialog";
@@ -32,8 +32,8 @@ export interface EditorDialogsProps {
   previewDoc: Doc | null;
   /** 발행 확인을 연 순간의 문서 — 검색 노출 점검이 읽는다(닫힌 집합을 어기면 null) */
   publishDoc: Doc | null;
-  /** 제목 중복 점검에 쓰는 다른 글 */
-  otherPosts: readonly SeoOtherPost[];
+  /** 제목 · 설명 중복 점검에 쓰는 다른 글과 조회 상태 */
+  others: SeoOthers;
   actions: EditorDialogActions;
 }
 
@@ -44,7 +44,7 @@ export function EditorDialogs({
   isPublished,
   previewDoc,
   publishDoc,
-  otherPosts,
+  others,
   actions,
 }: EditorDialogsProps) {
   useWarmDisplayFont(DIALOG_TITLES);
@@ -62,11 +62,7 @@ export function EditorDialogs({
       <PublishDialog
         isUpdate={isPublished}
         missing={missingForSave(form.meta, form.slug)}
-        seo={
-          publishDoc === null
-            ? null
-            : checkSeo({ slug: form.slug, meta: form.meta, doc: publishDoc, others: otherPosts })
-        }
+        seo={seoCheckOf(form, publishDoc, others)}
         onConfirm={actions.onConfirmPublish}
         onCancel={actions.onClose}
       />
@@ -76,4 +72,19 @@ export function EditorDialogs({
     return <PreviewDialog title={form.meta.title} doc={previewDoc} onClose={actions.onClose} />;
   }
   return null;
+}
+
+/** 다른 글과의 중복 비교 없이 매긴 점수는 MCP가 주는 점수와 달라 보이지 않는다(#166) */
+function seoCheckOf(
+  form: EditorDialogsProps["form"],
+  publishDoc: Doc | null,
+  others: SeoOthers,
+): SeoCheck {
+  if (publishDoc === null) return { kind: "unreadable" };
+  if (others.kind === "loading") return { kind: "othersLoading" };
+  if (others.kind === "failed") return { kind: "othersFailed", retry: others.retry };
+  return {
+    kind: "checked",
+    findings: checkSeo({ slug: form.slug, meta: form.meta, doc: publishDoc, others: others.posts }),
+  };
 }

@@ -70,6 +70,9 @@ export const EDITOR_MESSAGES = {
     mustNotice: "꼭 고칠 것이 있어요. 그래도 발행할 수는 있어요.",
     empty: "점검할 것이 없어요.",
     unavailable: "본문을 읽지 못해 점검할 수 없어요.",
+    othersLoading: "다른 글과 겹치는지 확인하는 중이에요.",
+    othersFailed: "다른 글 목록을 읽지 못해 제목 · 설명 중복을 점검할 수 없어요.",
+    retry: "다시 시도",
     levels: { must: "꼭 고치기", should: "권장", info: "참고" } satisfies Record<SeoLevel, string>,
   },
   preview: {
