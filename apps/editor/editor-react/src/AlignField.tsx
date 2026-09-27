@@ -24,7 +24,7 @@ export function AlignField({ value, availability, onChange }: AlignFieldProps) {
           <button
             key={option.value}
             type="button"
-            className="decoration-panel-choice decoration-panel-align"
+            className="decoration-panel-choice decoration-panel-compact"
             aria-label={decorationMessages.alignButton(option.label)}
             aria-pressed={value === option.value}
             disabled={reason !== null}

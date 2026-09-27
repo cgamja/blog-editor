@@ -113,6 +113,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
         ...(directive.motion !== undefined ? { motion: directive.motion } : {}),
         ...(directive.width !== undefined ? { width: directive.width } : {}),
         ...(directive.align !== undefined ? { align: directive.align } : {}),
+        ...(directive.space !== undefined ? { space: directive.space } : {}),
         ...naturalSizeAttrs(directive),
         ...stickerAttrs(directive),
       },
@@ -126,6 +127,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
       ...(directive?.motion !== undefined ? { motion: directive.motion } : {}),
       ...(directive?.width !== undefined ? { width: directive.width } : {}),
       ...(directive?.align !== undefined ? { align: directive.align } : {}),
+      ...(directive?.space !== undefined ? { space: directive.space } : {}),
       ...naturalSizeAttrs(directive),
       ...stickerAttrs(directive),
     },
@@ -148,6 +150,7 @@ function withDecoration(block: RawNode, directive: ResolvedDirective | undefined
   if (directive.font !== undefined) attrs.font = directive.font;
   if (directive.motion !== undefined) attrs.motion = directive.motion;
   if (directive.align !== undefined) attrs.align = directive.align;
+  if (directive.space !== undefined) attrs.space = directive.space;
   Object.assign(attrs, stickerAttrs(directive));
   return { ...block, attrs };
 }

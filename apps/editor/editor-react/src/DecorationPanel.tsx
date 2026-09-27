@@ -6,6 +6,7 @@ import {
   setBlockAlign,
   setBlockFont,
   setBlockMotion,
+  setBlockSpace,
 } from "@blog-editor/editor-core";
 import { AlignField } from "./AlignField";
 import { decorationMessages } from "./decoration-messages";
@@ -14,6 +15,7 @@ import type { StickerId } from "./decoration-types";
 import { FontField } from "./FontField";
 import { MotionField } from "./MotionField";
 import { MotionPreviewButton } from "./MotionPreviewButton";
+import { SpaceField } from "./SpaceField";
 import { StickerField } from "./StickerField";
 import { useCommandRunner } from "./use-command-runner";
 
@@ -52,6 +54,11 @@ export function DecorationPanel({ editor, stickerSrc }: DecorationPanelProps) {
         value={panel.align.value}
         availability={panel.align.availability}
         onChange={(align) => run(setBlockAlign(align))}
+      />
+      <SpaceField
+        value={panel.space.value}
+        availability={panel.space.availability}
+        onChange={(space) => run(setBlockSpace(space))}
       />
       <StickerField
         count={panel.sticker.count}

@@ -1,13 +1,13 @@
 import type { Node, Slice } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-import type { EditorState, Transaction } from "@tiptap/pm/state";
-import { keepStickersOnOnePiece } from "../commands/split-block";
+import type { EditorState, Selection, Transaction } from "@tiptap/pm/state";
+import { keepSpaceOnFrontPiece, keepStickersOnOnePiece } from "../commands/split-block";
 import { isTableCellTarget } from "./paste-normalizer";
 import { pastedImageFiles } from "./image-file-input";
 
 /**
  * 붙여넣기가 스티커 있는 최상위 블록을 나눠도 스티커는 한 조각에만 남긴다(spec: editor-paste, #126 — Enter의
- * splitBlockKeepingStickers와 같은 규칙). 기본 붙여넣기(prosemirror-view 1.42.5 doPaste)는 교체만 하고 dispatch하므로
+ * splitBlockKeepingDecoration과 같은 규칙). 간격 있는 블록을 나누면 간격은 앞 조각에만 남긴다(adr-037, #140). 기본 붙여넣기(prosemirror-view 1.42.5 doPaste)는 교체만 하고 dispatch하므로
  * 뒤 조각에 스티커가 복제되고, 합이 글 하나 상한을 넘으면 blockGuard(filterTransaction)가 붙여넣기를 통째로 거부한다.
  * appendTransaction은 거부된 트랜잭션 뒤에는 돌지 않으므로, 나누게 되는 붙여넣기만 handlePaste에서 같은 교체를 만들고
  * 조각을 고쳐 한 트랜잭션으로 보낸다. 나누지 않는 붙여넣기는 기본 동작에 맡긴다.
@@ -18,7 +18,7 @@ import { pastedImageFiles } from "./image-file-input";
  * https://prosemirror.net/docs/ref/#transform.dropPoint
  */
 
-export const stickerSafePasteKey = new PluginKey("stickerSafePaste");
+export const decorationSafePasteKey = new PluginKey("decorationSafePaste");
 
 /** 기본 붙여넣기가 한 노드로 넣는 조각 — prosemirror-view 1.42.5 sliceSingleNode와 같다 */
 function singleNodeOf(slice: Slice): Node | null {
@@ -38,9 +38,14 @@ function replacePasted(state: EditorState, slice: Slice): Transaction {
     : state.tr.replaceSelectionWith(single, false);
 }
 
-/** 붙여넣은 결과 트랜잭션 — 나뉜 조각의 스티커까지 고친 것. 상한을 미리 셀 때(sticker-clipboard)도 이것으로 센다 */
+/** 나뉜 조각을 고친다 — 스티커는 한 조각에만, 간격은 앞 조각에만(Enter와 같은 규칙) */
+function fixSplitPieces(tr: Transaction, before: Selection, slice: Slice): Transaction {
+  return keepSpaceOnFrontPiece(keepStickersOnOnePiece(tr, before), before, slice);
+}
+
+/** 붙여넣은 결과 트랜잭션 — 나뉜 조각의 스티커 · 간격까지 고친 것. 상한을 미리 셀 때(sticker-clipboard)도 이것으로 센다 */
 export function pasteTransaction(state: EditorState, slice: Slice): Transaction {
-  return keepStickersOnOnePiece(replacePasted(state, slice), state.selection);
+  return fixSplitPieces(replacePasted(state, slice), state.selection, slice);
 }
 
 /**
@@ -57,9 +62,9 @@ const isInlinePaste = (slice: Slice) => singleNodeOf(slice)?.isInline === true;
  */
 const isImageFilePaste = (event: { clipboardData?: unknown }) => pastedImageFiles(event).length > 0;
 
-export function stickerSafePaste(): Plugin {
+export function decorationSafePaste(): Plugin {
   return new Plugin({
-    key: stickerSafePasteKey,
+    key: decorationSafePasteKey,
     props: {
       handlePaste(view, event, slice) {
         // 조합 중에는 문서를 바꾸는 부수 효과를 얹지 않는다(CLAUDE.md) — 기본 붙여넣기에 맡긴다
@@ -69,7 +74,7 @@ export function stickerSafePaste(): Plugin {
         if (isTableCellTarget(view.state.selection)) return false;
         const tr = replacePasted(view.state, slice);
         const replaced = tr.steps.length;
-        keepStickersOnOnePiece(tr, view.state.selection);
+        fixSplitPieces(tr, view.state.selection, slice);
         // 조각을 고친 단계가 없으면 나뉘지 않은 것 — 기본 붙여넣기와 같다
         if (tr.steps.length === replaced) return false;
         view.dispatch(tr.scrollIntoView().setMeta("paste", true).setMeta("uiEvent", "paste"));

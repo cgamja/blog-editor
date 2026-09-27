@@ -3,11 +3,11 @@ import type { Attribute } from "@tiptap/core";
 import type { Schema, TagParseRule } from "@tiptap/pm/model";
 import { CAPTION_MAX_LENGTH } from "@blog-editor/content-schema";
 import { hardBreakOrEnter } from "./commands/hard-break";
-import { splitBlockKeepingStickers } from "./commands/split-block";
+import { splitBlockKeepingDecoration } from "./commands/split-block";
 import { pasteNormalizer } from "./plugins/paste-normalizer";
 import { taskToggle } from "./plugins/task-toggle";
 import { stickerClipboard } from "./plugins/sticker-clipboard";
-import { stickerSafePaste } from "./plugins/sticker-safe-paste";
+import { decorationSafePaste } from "./plugins/decoration-safe-paste";
 import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
 import {
   alignOrNull,
@@ -32,7 +32,7 @@ import {
   wrapperRule,
 } from "./dom";
 import type { ElementLike } from "./dom";
-import { STICKER_SPLIT_PRIORITY } from "./keymap-priority.constants";
+import { DECORATION_SPLIT_PRIORITY } from "./keymap-priority.constants";
 
 /**
  * content-schema(zod)의 닫힌 집합을 ProseMirror 스키마로 옮긴다(spec: editor-schema, design.md 2).
@@ -54,19 +54,23 @@ const optional: Attribute = { default: null, rendered: false, parseHTML: ignoreH
 // 이 동작은 공식 문서에 없다 — @tiptap/core 3.31.3 buildAttributeSpec · prosemirror-model 1.25.12 computeAttrs 소스로 확인
 const required: Attribute = { isRequired: true, rendered: false, parseHTML: ignoreHtml };
 // 나눈 블록에 스티커가 복제되면 문서 상한을 넘어 blockGuard가 Enter를 거부한다 — 앞 블록에만 남긴다.
-// TipTap splitBlock이 끝에서 나눌 때만 효력이 있다(스티커 있는 블록의 Enter는 StickerSafeSplit). https://tiptap.dev/docs/editor/extensions/custom-extensions/extend-existing#attributes
+// TipTap splitBlock이 끝에서 나눌 때만 효력이 있다(스티커 · 간격 있는 블록의 Enter는 DecorationSafeSplit). https://tiptap.dev/docs/editor/extensions/custom-extensions/extend-existing#attributes
 const stickers: Attribute = { ...optional, keepOnSplit: false };
 
-const decoration = { font: optional, motion: optional, stickers };
+// 간격은 모든 최상위 블록에(adr-037) — 꾸밈이 있는 노드 속성 묶음마다 둔다. 블록 "위" 여백이라 나눈 블록의
+// 앞(원래) 블록에만 남긴다 — Enter로 이어 쓴 새 블록까지 넓게 띄지 않게(스티커와 같은 keepOnSplit, 위 링크)
+const space: Attribute = { ...optional, keepOnSplit: false };
+const decoration = { font: optional, motion: optional, space, stickers };
 // 정렬은 문단 · 제목 · 이미지 · 스크린샷만(ADR-020) — 목록 · 인용 · 콜아웃은 정렬하지 않는다
 const alignedText = { ...decoration, align: optional };
-const motionOnly = { motion: optional, stickers };
+const motionOnly = { motion: optional, space, stickers };
 const media = {
   naturalWidth: optional,
   naturalHeight: optional,
   motion: optional,
   width: optional,
   align: optional,
+  space,
   stickers,
 };
 
@@ -84,7 +88,7 @@ const Paragraph = Node.create({
   content: "(text | hardBreak)*",
   addAttributes: () => alignedText,
   parseHTML: () => [
-    wrapperRule({ matches: isTag("P"), keys: ["font", "motion", "align"] }),
+    wrapperRule({ matches: isTag("P"), keys: ["font", "motion", "align", "space"] }),
     { tag: "p" },
   ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["p", 0]),
@@ -127,7 +131,7 @@ const Heading = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: (inner) => HEADING_TAG.test(inner.tagName),
-      keys: ["font", "motion", "align"],
+      keys: ["font", "motion", "align", "space"],
       attrs: headingAttrs,
     }),
     ...["h1", "h2", "h3", "h4", "h5", "h6"].map((tag) => ({
@@ -144,7 +148,10 @@ const BulletList = Node.create({
   group: "block",
   content: "listItem+",
   addAttributes: () => decoration,
-  parseHTML: () => [wrapperRule({ matches: isTag("UL"), keys: ["font", "motion"] }), { tag: "ul" }],
+  parseHTML: () => [
+    wrapperRule({ matches: isTag("UL"), keys: ["font", "motion", "space"] }),
+    { tag: "ul" },
+  ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["ul", 0]),
 });
 
@@ -159,7 +166,7 @@ const OrderedList = Node.create({
   content: "listItem+",
   addAttributes: () => ({ ...decoration, start: optional }),
   parseHTML: () => [
-    wrapperRule({ matches: isTag("OL"), keys: ["font", "motion"], attrs: olStartAttrs }),
+    wrapperRule({ matches: isTag("OL"), keys: ["font", "motion", "space"], attrs: olStartAttrs }),
     { tag: "ol", getAttrs: (element: ElementLike) => olStartAttrs(element) },
   ],
   renderHTML: ({ node }) =>
@@ -207,7 +214,7 @@ const Blockquote = Node.create({
   content: "paragraph+",
   addAttributes: () => decoration,
   parseHTML: () => [
-    wrapperRule({ matches: isTag("BLOCKQUOTE"), keys: ["font", "motion"] }),
+    wrapperRule({ matches: isTag("BLOCKQUOTE"), keys: ["font", "motion", "space"] }),
     { tag: "blockquote" },
   ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["blockquote", 0]),
@@ -227,7 +234,7 @@ const CodeBlock = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTag("PRE"),
-      keys: ["motion"],
+      keys: ["motion", "space"],
       attrs: codeAttrs,
       preserveWhitespace: "full",
     }),
@@ -250,7 +257,7 @@ const HorizontalRule = Node.create({
   atom: true,
   addAttributes: () => motionOnly,
   parseHTML: () => [
-    wrapperRule({ matches: isTag("HR"), keys: ["motion"], hasContent: false }),
+    wrapperRule({ matches: isTag("HR"), keys: ["motion", "space"], hasContent: false }),
     { tag: "hr" },
   ],
   renderHTML: ({ node }) => withDecoration(node.attrs, ["hr"]),
@@ -279,7 +286,7 @@ const Image = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-image"),
-      keys: ["motion", "width", "align"],
+      keys: ["motion", "width", "align", "space"],
       attrs: imageFromFigure,
       hasContent: false,
     }),
@@ -348,7 +355,7 @@ const AppScreenshot = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-screenshot"),
-      keys: ["motion", "width", "align"],
+      keys: ["motion", "width", "align", "space"],
       attrs: screenshotFromFigure,
       hasContent: false,
     }),
@@ -379,7 +386,7 @@ const Table = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTableFrame,
-      keys: ["font", "motion"],
+      keys: ["font", "motion", "space"],
       contentOf: (wrapper) => wrapper.querySelector("table"),
     }),
     // 공개 HTML 틀은 모르는 div라 그대로 두면 틀째 문단으로 읽힌다 — 틀을 건너 안의 table에서 행을 읽는다.
@@ -468,7 +475,7 @@ const Callout = Node.create({
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("ASIDE", "post-callout"),
-      keys: ["font", "motion"],
+      keys: ["font", "motion", "space"],
       attrs: calloutAttrs,
     }),
     { tag: "aside.post-callout", getAttrs: calloutAttrs },
@@ -557,19 +564,21 @@ const Underline = Mark.create({
 });
 
 /**
- * 스티커가 있는 블록이 나뉠 때 스티커를 한 블록에만 남긴다 — Enter는 splitBlockKeepingStickers에, 붙여넣기는
- * stickerSafePaste에 넘긴다. 등록만(design.md 6, .claude/rules/editor.md).
+ * 스티커 · 간격이 있는 블록이 나뉠 때 스티커는 한 블록에만, 간격은 앞 조각에만 남긴다 — Enter는
+ * splitBlockKeepingDecoration에, 붙여넣기는 decorationSafePaste에 넘긴다. 등록만(design.md 6, .claude/rules/editor.md).
  * TipTap chain은 중간 커맨드가 실패해도 dispatch하므로 체인으로 잇지 않는다.
  * https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension#keyboard-shortcuts
  */
-const StickerSafeSplit = Extension.create({
-  name: "stickerSafeSplit",
-  priority: STICKER_SPLIT_PRIORITY,
+const DecorationSafeSplit = Extension.create({
+  name: "decorationSafeSplit",
+  priority: DECORATION_SPLIT_PRIORITY,
   addKeyboardShortcuts: () => ({
     Enter: ({ editor }) =>
-      editor.commands.command(({ state, dispatch }) => splitBlockKeepingStickers(state, dispatch)),
+      editor.commands.command(({ state, dispatch }) =>
+        splitBlockKeepingDecoration(state, dispatch),
+      ),
   }),
-  addProseMirrorPlugins: () => [stickerSafePaste()],
+  addProseMirrorPlugins: () => [decorationSafePaste()],
 });
 
 /** 붙여넣기 정규화를 에디터 기본으로 켠다(spec: editor-paste). */
@@ -617,7 +626,7 @@ export const editorExtensions = [
   Bold,
   Italic,
   Code,
-  StickerSafeSplit,
+  DecorationSafeSplit,
   PasteNormalizer,
   StickerClipboard,
 ];

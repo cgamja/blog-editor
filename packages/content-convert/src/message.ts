@@ -9,6 +9,7 @@
 
 import {
   ALIGNS,
+  SPACES,
   ALT_MAX_LENGTH,
   CALLOUT_TONES,
   CAPTION_MAX_LENGTH,
@@ -490,6 +491,11 @@ export function directiveAlignValueRule(): string {
 }
 export const DIRECTIVE_ALIGN_VALUE_FIX = "center";
 
+export function directiveSpaceValueRule(): string {
+  return `space는 ${SPACES.join(" · ")}만 쓴다(보통은 space를 쓰지 않는다)`;
+}
+export const DIRECTIVE_SPACE_VALUE_FIX = "lg";
+
 // 스티커 지시어(adr-032) — 모양 · 범위 · 종류는 닫힌 집합과 구분자 상수에서 파생한다
 const STICKER_NUMBERS = ["<x>", "<y>", "<크기>"].join(STICKER_NUMBER_SEPARATOR);
 const STICKER_SHAPE = `${STICKER_DIRECTIVE_KEY}=<종류>${STICKER_KIND_SEPARATOR}${STICKER_NUMBERS}[${STICKER_NUMBER_SEPARATOR}<회전>]`;
@@ -522,6 +528,7 @@ const SPACE_FREE_EXAMPLE: Readonly<Record<string, string>> = {
   align: `align=${DIRECTIVE_ALIGN_VALUE_FIX}`,
   width: `width=${DIRECTIVE_WIDTH_VALUE_FIX}`,
   size: `size=${DIRECTIVE_SIZE_VALUE_FIX}`,
+  space: `space=${DIRECTIVE_SPACE_VALUE_FIX}`,
   [STICKER_DIRECTIVE_KEY]: STICKER_EXAMPLE,
 };
 

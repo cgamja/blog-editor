@@ -8,19 +8,23 @@ import { orderedListNumberOrNull, orderedListStartOrNull, toneOrNull } from "../
 /**
  * 감싸기 커맨드 — spec: editor-wrap, design.md.
  * 최상위 블록을 감싸면 그 블록들은 꾸미기 자리가 없는 안쪽 노드가 된다(adr-008). 그래서 꾸미기를 새 바깥 블록으로 옮긴다.
+ * 간격(adr-037)도 바깥 블록으로 옮긴다. 정렬은 감싸는 노드(인용 · 목록 · 콜아웃)에 자리가 없어 지운다.
  * 감싸기와 옮기기는 한 트랜잭션이다. 적용할 수 없으면 dispatch 없이 false를 돌려준다(https://prosemirror.net/docs/ref/#state.Command).
  */
 
 /** 감싸는 노드(인용 · 목록 · 콜아웃)가 가질 수 있는 꾸미기 — width는 이미지 · 스크린샷만 가져서 여기 없다(design.md 2) */
-const DECORATION_KEYS = ["font", "motion", "stickers"] as const;
+const DECORATION_KEYS = ["font", "motion", "space", "stickers"] as const;
 type DecorationKey = (typeof DECORATION_KEYS)[number];
 type BlockDecoration = Partial<Record<DecorationKey, unknown>>;
 
 /** 값이 하나만 들어가는 꾸미기 — 감싼 블록 중 값이 있는 첫 블록의 것을 쓴다(design.md 2) */
-const SINGLE_VALUE_KEYS = ["font", "motion"] as const satisfies readonly DecorationKey[];
+const SINGLE_VALUE_KEYS = ["font", "motion", "space"] as const satisfies readonly DecorationKey[];
 
-const isDecorationKey = (key: string): key is DecorationKey =>
-  (DECORATION_KEYS as readonly string[]).includes(key);
+/**
+ * 감싼 안쪽 노드에서 지우는 attrs — 옮기는 꾸미기와, 감싸는 노드가 받지 못하는 정렬. 감싸는 노드의 내용은
+ * 문단 · 목록뿐이라(표 칸 정렬이 들 자리가 없다) 안쪽 정렬은 모두 최상위였던 블록의 것이다.
+ */
+const INNER_CLEARED_KEYS: readonly string[] = [...DECORATION_KEYS, "align"];
 
 /** 감싸는 노드가 꾸미기를 가졌나 — 감싸기가 옮겨 준 꾸미기가 있는지 볼 때 */
 export const carriesDecoration = (node: Node): boolean =>
@@ -72,8 +76,7 @@ function moveDecorationOutward(tr: Transaction, range: NodeRange, decoration: Bl
   outer.descendants((node, offset) => {
     const cleared = Object.fromEntries(
       Object.keys(node.attrs)
-        .filter(isDecorationKey)
-        .filter((key) => node.attrs[key] !== null)
+        .filter((key) => INNER_CLEARED_KEYS.includes(key) && node.attrs[key] != null)
         .map((key) => [key, null]),
     );
     if (Object.keys(cleared).length > 0) {

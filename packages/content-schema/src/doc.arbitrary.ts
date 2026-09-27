@@ -15,6 +15,7 @@ import {
   STICKER_RANGES,
   MAX_STICKERS_PER_DOC,
   ORDERED_LIST_START_RANGE,
+  SPACES,
   PHOTO_RATIOS,
   textStyleAttrsSchema,
 } from "./doc";
@@ -116,7 +117,7 @@ const stickerArb = fc.record({
   rotate: fc.integer({ min: STICKER_RANGES.rotate.min, max: STICKER_RANGES.rotate.max }),
 });
 
-/** 최상위 블록 attrs — font/width/align은 자리가 있는 블록에서만 켠다(옵션으로 제어). */
+/** 최상위 블록 attrs — font/width/align은 자리가 있는 블록에서만 켠다(옵션으로 제어). 간격은 사진 자리를 뺀 모든 최상위 블록에 있다. */
 export function decorationArbitrary(opts: {
   font: boolean;
   width: boolean;
@@ -137,14 +138,16 @@ export function decorationArbitrary(opts: {
       align: opts.align
         ? fc.option(fc.constantFrom(...ALIGNS), { nil: undefined })
         : fc.constant(undefined),
+      space: fc.option(fc.constantFrom(...SPACES), { nil: undefined }),
       stickers: fc.array(stickerArb, { maxLength: opts.maxStickers }),
     })
-    .map(({ font, motion, width, align, stickers }) => {
+    .map(({ font, motion, width, align, space, stickers }) => {
       const attrs: Record<string, unknown> = {};
       if (font !== undefined) attrs.font = font;
       if (motion !== undefined) attrs.motion = motion;
       if (width !== undefined) attrs.width = width;
       if (align !== undefined) attrs.align = align;
+      if (space !== undefined) attrs.space = space;
       if (stickers.length > 0) attrs.stickers = stickers;
       return attrs;
     });

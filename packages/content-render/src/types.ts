@@ -32,5 +32,6 @@ export interface Decoration {
   motion?: DecorationAttrs["motion"] | undefined;
   width?: DecorationAttrs["width"] | undefined;
   align?: DecorationAttrs["align"] | undefined;
+  space?: DecorationAttrs["space"] | undefined;
   stickers?: DecorationAttrs["stickers"] | undefined;
 }

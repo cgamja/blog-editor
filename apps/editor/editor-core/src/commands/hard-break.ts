@@ -9,7 +9,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { enterInList } from "../plugins/list-keymap";
 import { isTableCellTarget } from "../plugins/paste-normalizer";
-import { splitBlockKeepingStickers } from "./split-block";
+import { splitBlockKeepingDecoration } from "./split-block";
 import { enterInTable } from "./table";
 
 /**
@@ -46,7 +46,7 @@ const swallow: Command = () => true;
  * Shift+Enter — 문단이면 강제 줄바꿈, 표 칸이면 Enter처럼 삼키고(칸 안은 문단 하나), 그 밖(제목 · 코드 블록 · 목록 ·
  * 노드 선택)은 Enter와 같다. 끝까지 아무도 받지 않으면 삼킨다 — 브라우저 기본 줄바꿈(contenteditable의 `<br>` 삽입)이
  * 제목 · 칸에 자리가 없는 모양을 DOM에서 거꾸로 읽혀 들이게 두지 않는다. Enter 쪽 순서는 우리 Enter 키맵과 같다:
- * 목록(ListKeys `enterInList`) → StickerSafeSplit(스티커는 한 블록에만) → TipTap 코어 Enter(`newlineInCode` ·
+ * 목록(ListKeys `enterInList`) → DecorationSafeSplit(스티커는 한 블록에만 · 간격은 앞 조각에만) → TipTap 코어 Enter(`newlineInCode` ·
  * `createParagraphNear` · `liftEmptyBlock` · `splitBlock`, @tiptap/core 3.31.3 extensions/keymap.ts handleEnter).
  * 한글 조합 중에는 이 키가 오지 않는다 — prosemirror-view 1.42.5 `editHandlers.keydown`이 handleKeyDown 전에
  * `inOrNearComposition(view)`로 버린다(dist/index.js:3192 · 정의 :3547 — `view.composing`이거나, Safari(WebKit)에서
@@ -57,7 +57,7 @@ export const hardBreakOrEnter: Command = chainCommands(
   insertHardBreak,
   enterInTable,
   enterInList,
-  splitBlockKeepingStickers,
+  splitBlockKeepingDecoration,
   newlineInCode,
   createParagraphNear,
   liftEmptyBlock,

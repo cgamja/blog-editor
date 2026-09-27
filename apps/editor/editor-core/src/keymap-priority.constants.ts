@@ -10,19 +10,19 @@ export const SLASH_MENU_PRIORITY = 1200;
 /** 입력 규칙 직후 Backspace로 되돌리기 — 되돌릴 게 없으면 넘긴다 */
 export const MARKDOWN_SHORTCUTS_PRIORITY = 1100;
 
-/** 목록 항목의 Enter · Tab · Backspace — 스티커 분할 · 커스텀 블록 Backspace보다 앞 */
+/** 목록 항목의 Enter · Tab · Backspace — 꾸밈 나누기(DecorationSafeSplit) · 커스텀 블록 Backspace보다 앞 */
 export const LIST_KEYS_PRIORITY = 1050;
 
 /**
  * 표 칸의 Tab · Shift+Tab · Enter — 칸 안에는 목록이 없어 목록 키와 겹치지 않는다.
- * 스티커 분할보다 앞이어야 칸 안 Enter가 칸을 나누지 않는다. prosemirror-tables 편집은 TABLE_EDITING_PRIORITY
+ * 꾸밈 나누기(DecorationSafeSplit)보다 앞이어야 칸 안 Enter가 칸을 나누지 않는다. prosemirror-tables 편집은 TABLE_EDITING_PRIORITY
  */
 export const TABLE_KEYS_PRIORITY = 1050;
 
-/** 스티커가 있는 블록의 Enter — 스티커 없는 블록이면 넘긴다 */
-export const STICKER_SPLIT_PRIORITY = 1000;
+/** 스티커 · 간격이 있는 블록의 Enter — 둘 다 없는 블록이면 넘긴다 */
+export const DECORATION_SPLIT_PRIORITY = 1000;
 
-/** 커스텀 블록 바로 뒤 Backspace(editor-react가 등록) — 스티커 분할과 서로 다른 키라 같은 층이다 */
+/** 커스텀 블록 바로 뒤 Backspace(editor-react가 등록) — 꾸밈 나누기(DecorationSafeSplit)와 서로 다른 키라 같은 층이다 */
 export const CUSTOM_BLOCK_KEYS_PRIORITY = 1000;
 
 /**

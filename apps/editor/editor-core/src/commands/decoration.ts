@@ -3,7 +3,13 @@ import { AllSelection } from "@tiptap/pm/state";
 import type { Command, EditorState } from "@tiptap/pm/state";
 import { MAX_STICKERS_PER_DOC } from "@blog-editor/content-schema";
 import type { Sticker } from "@blog-editor/content-schema";
-import { fontOrNull, motionOrNull, stickerOrNull, widthOrNull } from "../closed-values";
+import {
+  fontOrNull,
+  motionOrNull,
+  spaceOrNull,
+  stickerOrNull,
+  widthOrNull,
+} from "../closed-values";
 import { DEFAULT_COORDINATES } from "./decoration.constants";
 import { sameStickers, stickerCount, stickersOf } from "./sticker-query";
 import type { StickerPatch, StickerPlacement, StickerTarget, TopBlock } from "./decoration.types";
@@ -18,7 +24,7 @@ import type { StickerPatch, StickerPlacement, StickerTarget, TopBlock } from "./
 
 type Coordinates = Omit<StickerPlacement, "blockPos">;
 
-/** 이 블록 노드가 꾸미기 속성 key(font · motion · width · align · stickers)를 가질 수 있나 — 패널의 막힌 이유 판정도 이것을 쓴다 */
+/** 이 블록 노드가 꾸미기 속성 key(font · motion · width · align · space · stickers)를 가질 수 있나 — 패널의 막힌 이유 판정도 이것을 쓴다 */
 export const canHoldDecoration = (node: Node, key: string) =>
   Object.hasOwn(node.type.spec.attrs ?? {}, key);
 
@@ -81,6 +87,10 @@ export const setBlockFont = (font: string | null): Command =>
 
 export const setBlockMotion = (motion: string | null): Command =>
   setClosedValue("motion", motion, motionOrNull);
+
+/** 블록 위 간격(adr-037) — null이면 보통(지운다). 모든 최상위 블록에 자리가 있다 */
+export const setBlockSpace = (space: string | null): Command =>
+  setClosedValue("space", space, spaceOrNull);
 
 export function setBlockWidth(percent: number): Command {
   const width = widthOrNull(percent);

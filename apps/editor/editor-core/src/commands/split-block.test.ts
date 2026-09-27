@@ -1,6 +1,6 @@
 import type { Node } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
-import { createEditorSchema, docFromNode, splitBlockKeepingStickers } from "../index";
+import { createEditorSchema, docFromNode, splitBlockKeepingDecoration } from "../index";
 
 const schema = createEditorSchema();
 const { paragraph, heading, codeBlock } = {
@@ -20,7 +20,7 @@ function stateAt(block: Node, offset: number): EditorState {
 /** 커맨드를 부르고 dispatch된 결과 상태(없으면 null)를 돌려준다. */
 function run(state: EditorState): { ok: boolean; next: EditorState | null } {
   let next: EditorState | null = null;
-  const ok = splitBlockKeepingStickers(state, (tr) => {
+  const ok = splitBlockKeepingDecoration(state, (tr) => {
     next = state.apply(tr);
   });
   return { ok, next };

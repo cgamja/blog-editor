@@ -8,6 +8,7 @@ import {
   imagePathOrNull,
   motionOrNull,
   naturalSizeFrom,
+  spaceOrNull,
   textColorPresetOrNull,
   textSizeOrNull,
   textWeightOrNull,
@@ -26,7 +27,7 @@ export interface ElementLike {
   querySelector(selector: string): ElementLike | null;
 }
 
-export type DecorationKey = "font" | "motion" | "width" | "align";
+export type DecorationKey = "font" | "motion" | "width" | "align" | "space";
 
 // content-render의 꾸밈 래퍼와 같은 어휘(spec: render-decoration) — 에디터 DOM도 같은 구조로 낸다
 export const WRAPPER_CLASS = "post-block";
@@ -47,6 +48,7 @@ function decorationDomAttrs(attrs: Attrs): Record<string, string> {
   if (attrs.font != null) dom["data-font"] = String(attrs.font);
   if (attrs.motion != null) dom["data-motion"] = String(attrs.motion);
   if (attrs.align != null) dom["data-align"] = String(attrs.align);
+  if (attrs.space != null) dom["data-space"] = String(attrs.space);
   if (attrs.width != null) dom.style = `--w:${String(attrs.width)}`;
   return dom;
 }
@@ -91,6 +93,7 @@ function readDecoration(wrapper: ElementLike, keys: readonly DecorationKey[]): A
     motion: motionOrNull(wrapper.getAttribute("data-motion")),
     width: widthOrNull(WIDTH_STYLE.exec(wrapper.getAttribute("style") ?? "")?.[1]),
     align: alignOrNull(wrapper.getAttribute("data-align")),
+    space: spaceOrNull(wrapper.getAttribute("data-space")),
   };
   return Object.fromEntries(
     keys.map((key) => [key, read[key]]).filter(([, value]) => value !== null),

@@ -49,7 +49,7 @@ function filesIn<T extends ImageFileLike>(transfer: TransferLike | null | undefi
 
 /**
  * 이 붙여넣기에서 이미지 올리기가 가져갈 파일 — 이미지 파일이 있고 글이 함께 오지 않았을 때만(shouldTakePastedFiles).
- * 빈 배열이면 이미지 올리기는 받지 않는다. 다른 붙여넣기 플러그인(stickerSafePaste)도 이것으로 양보할지 정한다.
+ * 빈 배열이면 이미지 올리기는 받지 않는다. 다른 붙여넣기 플러그인(decorationSafePaste)도 이것으로 양보할지 정한다.
  */
 export function pastedImageFiles<T extends ImageFileLike>(event: { clipboardData?: unknown }): T[] {
   const transfer = event.clipboardData as TransferLike | null | undefined;

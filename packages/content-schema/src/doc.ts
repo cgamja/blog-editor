@@ -27,6 +27,13 @@ export const HEADING_LEVELS = [2, 3] as const;
 /** 블록 정렬(adr-020) — 없으면 블록 종류의 기본(글은 왼쪽, 폭을 줄인 그림은 가운데). */
 export const ALIGNS = ["left", "center", "right"] as const;
 
+/**
+ * 블록 위 간격 단계(adr-037) — 좁게 · 넓게 · 아주 넓게. 보통은 값이 없는 것이다(본문 기본 리듬).
+ * 사진 자리를 뺀 모든 최상위 블록에 둘 수 있고(사진 자리는 공개 렌더에 나가지 않아 꾸밈 자리가 없다, adr-033),
+ * 여백 크기는 post.css가 정한다.
+ */
+export const SPACES = ["sm", "lg", "xl"] as const;
+
 /** 글자 두께 이름(adr-020) — 300 · 500 · 800. 굵게(700)는 bold 마크가 맡는다. */
 export const TEXT_WEIGHTS = ["light", "medium", "heavy"] as const;
 /** 글꼴마다 실제로 있는 두께만 — textStyle에 font가 없으면 본문 기본 Pretendard 기준. */
@@ -206,10 +213,14 @@ const stickerSchema = z.strictObject({
   rotate: intInRange(STICKER_RANGES.rotate.min, STICKER_RANGES.rotate.max),
 });
 
+/** 간격은 사진 자리를 뺀 모든 최상위 블록에 — 안쪽 노드에는 attrs 자리가 없다(adr-037) */
+const spaceSchema = z.enum(SPACES);
+
 /** 글자가 있는 블록(paragraph · blockquote · bulletList · orderedList · table)의 attrs. */
 const textDecorationAttrsSchema = z.strictObject({
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
+  space: spaceSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
@@ -239,6 +250,7 @@ const headingAttrsSchema = z.strictObject({
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
   align: alignSchema.optional(),
+  space: spaceSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
@@ -246,18 +258,21 @@ const calloutAttrsSchema = z.strictObject({
   tone: z.enum(CALLOUT_TONES),
   font: z.enum(FONTS).optional(),
   motion: z.enum(MOTIONS).optional(),
+  space: spaceSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
 /** font는 글자가 있는 블록에만 — codeBlock/horizontalRule은 motion·stickers만. */
 const motionOnlyAttrsSchema = z.strictObject({
   motion: z.enum(MOTIONS).optional(),
+  space: spaceSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
 const codeBlockAttrsSchema = z.strictObject({
   language: z.string().regex(CODE_LANGUAGE_PATTERN).optional(),
   motion: z.enum(MOTIONS).optional(),
+  space: spaceSchema.optional(),
   stickers: z.array(stickerSchema).optional(),
 });
 
@@ -301,6 +316,7 @@ const imageAttrsSchema = z
     motion: z.enum(MOTIONS).optional(),
     width: widthSchema.optional(),
     align: alignSchema.optional(),
+    space: spaceSchema.optional(),
     stickers: z.array(stickerSchema).optional(),
   })
   .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
@@ -314,6 +330,7 @@ const appScreenshotAttrsSchema = z
     motion: z.enum(MOTIONS).optional(),
     width: widthSchema.optional(),
     align: alignSchema.optional(),
+    space: spaceSchema.optional(),
     stickers: z.array(stickerSchema).optional(),
   })
   .refine(hasNaturalSizePair, { message: NATURAL_SIZE_PAIR_MESSAGE });
@@ -572,6 +589,7 @@ export type DecorationAttrs = Partial<{
   motion: (typeof MOTIONS)[number];
   width: z.infer<typeof widthSchema>;
   align: (typeof ALIGNS)[number];
+  space: (typeof SPACES)[number];
   stickers: Sticker[];
 }>;
 export type TextStyleAttrs = z.infer<typeof textStyleAttrsSchema>;

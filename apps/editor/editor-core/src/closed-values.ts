@@ -11,6 +11,7 @@ import {
   MOTIONS,
   NATURAL_SIZE_RANGE,
   ORDERED_LIST_START_RANGE,
+  SPACES,
   PHOTO_RATIOS,
   STICKER_IDS,
   STICKER_RANGES,
@@ -40,6 +41,7 @@ export const fontOrNull = oneOf(FONTS);
 export const motionOrNull = oneOf(MOTIONS);
 export const toneOrNull = oneOf(CALLOUT_TONES);
 export const alignOrNull = oneOf(ALIGNS);
+export const spaceOrNull = oneOf(SPACES);
 export const photoRatioOrNull = oneOf(PHOTO_RATIOS);
 
 /**

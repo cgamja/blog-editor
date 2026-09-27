@@ -6,6 +6,7 @@ import {
   FONTS,
   MAX_STICKERS_PER_DOC,
   MOTIONS,
+  SPACES,
   STICKER_IDS,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
@@ -17,13 +18,21 @@ import {
   setBlockAlign,
   setBlockFont,
   setBlockMotion,
+  setBlockSpace,
   setBlockWidth,
   stickerCount,
 } from "@blog-editor/editor-core";
 import type { TopBlock } from "@blog-editor/editor-core";
 import { BLOCK_LABELS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
-import type { Align, Availability, DecorationPanelState, Font, Motion } from "./decoration-types";
+import type {
+  Align,
+  Availability,
+  DecorationPanelState,
+  Font,
+  Motion,
+  Space,
+} from "./decoration-types";
 
 /**
  * 꾸미기 패널이 보여 주는 값 — spec: decoration-panel, design.md 1 · 2.
@@ -109,6 +118,12 @@ export function decorationPanelStateOf(state: EditorState): DecorationPanelState
       availability: setBlockAlign(ALIGNS[0])(state)
         ? ENABLED
         : blockedBy(blocks, "align", decorationMessages.cannotHoldAlign),
+    },
+    space: {
+      value: valueOf<Space>("space"),
+      availability: setBlockSpace(SPACES[0])(state)
+        ? ENABLED
+        : blockedBy(blocks, "space", decorationMessages.cannotHoldSpace),
     },
     sticker: { count, availability: stickerAvailability(state, first !== undefined, count) },
     width: widthTargetOf(state),
