@@ -10,7 +10,7 @@ changed="$( { git diff --name-only; git diff --cached --name-only; git ls-files 
 if [ -f .claude/state/handoff ]; then
   reason="$(head -c 500 .claude/state/handoff)"; rm -f .claude/state/handoff
   echo "[stop] verify 미해결 상태로 사용자에게 넘김: ${reason:-사유 없음} — 로그 .claude/state/verify.last.log" >&2; exit 0; fi
-if git diff --name-only 2>/dev/null | grep -qE "$(cfg protected | globs_to_regex)"; then
+if git diff --name-only 2>/dev/null | grep -qE "$(cfg protected | globs_to_regex | anchor_rooted)"; then
   echo "[stop] 보호 파일(의존성·설정)이 바뀌었습니다 — 사용자 확인이 필요합니다." >&2; fi
 out="$(bash -c "$verify" 2>&1)"; code=$?
 mkdir -p .claude/state; { echo "# $(date -u +%FT%TZ) \`$verify\` exit $code"; echo "$out" | tail -200; } > .claude/state/verify.last.log   # 증거 보존(리뷰 2축 — review-cgamja·code-review — 이 읽는다). 커밋하지 않는다(.gitignore)
