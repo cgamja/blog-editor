@@ -2,6 +2,7 @@ import { naturalSizeOf } from "@blog-editor/content-schema";
 import { MarkdownParser } from "prosemirror-markdown";
 import type Token from "markdown-it/lib/token.mjs";
 import { parseCalloutTone } from "./check";
+import { parsePhotoInfo } from "./photo-check";
 import { DEFAULT_CALLOUT_TONE } from "./constants";
 import { pmSchema } from "./pm-schema";
 import { taskCheckedOf } from "./task-list";
@@ -56,6 +57,14 @@ const markdownParser = new MarkdownParser(pmSchema, createMarkdownIt(), {
   image: {
     node: "image",
     getAttrs: (tok) => ({ src: tok.attrGet("src") ?? "", alt: imageAltText(tok) }),
+  },
+  // 사진 자리(adr-033) — 비율은 check.ts가 검사한 뒤라 유효한 값만 온다
+  container_photo: {
+    block: "photoPlaceholder",
+    getAttrs: (tok) => {
+      const info = parsePhotoInfo(tok.info);
+      return { ratio: info.ok ? info.ratio : undefined };
+    },
   },
   container_callout: {
     block: "callout",
@@ -171,7 +180,22 @@ function withoutHardBreakMarks(node: RawNode): RawNode {
   return { ...node, content: node.content.map(withoutHardBreakMarks) };
 }
 
+/** 사진 자리 — 설명 문단의 글자를 attrs.brief로 옮긴다(줄은 파서가 공백으로 이었다). 꾸밈 자리는 없다 */
+function toPhotoPlaceholder(block: RawNode): RawNode {
+  const paragraph = block.content?.[0];
+  const brief = (paragraph?.content ?? [])
+    .map((node) => node.text ?? "")
+    .join("")
+    .trim();
+  const ratio = block.attrs?.ratio;
+  return {
+    type: "photoPlaceholder",
+    attrs: ratio === undefined ? { brief } : { brief, ratio },
+  };
+}
+
 function applyTopLevelBlock(block: RawNode, directive: ResolvedDirective | undefined): RawNode {
+  if (block.type === "photoPlaceholder") return toPhotoPlaceholder(block);
   if (block.type === "table") return withDecoration(toTableBlock(block), directive);
   const solelyImage =
     block.type === "paragraph" && block.content?.length === 1 && block.content[0]?.type === "image";

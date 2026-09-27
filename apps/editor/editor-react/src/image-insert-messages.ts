@@ -16,4 +16,12 @@ export const IMAGE_INSERT_MESSAGES = {
   altMissing: "대체 텍스트 없음",
   altLabel: "이 그림을 설명하는 글(대체 텍스트)",
   altHint: "화면을 읽어 주는 프로그램과 검색에 쓰여요. Enter로 적용, Esc로 닫기",
+  // 사진 자리 · 사진 설명(adr-033)
+  placeholderToolbar: "사진 자리",
+  uploadPhoto: "사진 올리기",
+  briefButton: "사진 설명",
+  briefLabel: "사진 설명(에디터에만 보여요)",
+  briefHint:
+    "어떤 사진인지 적어 두면 사진을 고르거나 바꿀 때 참고가 돼요. 공개 글에는 나오지 않아요. Enter로 적용, Esc로 닫기",
+  toPlaceholder: "사진 자리로 되돌리기",
 } as const;

@@ -15,6 +15,7 @@ import {
   STICKER_RANGES,
   MAX_STICKERS_PER_DOC,
   ORDERED_LIST_START_RANGE,
+  PHOTO_RATIOS,
   textStyleAttrsSchema,
 } from "./doc";
 
@@ -289,6 +290,9 @@ export const naturalSizeArbitrary = fc
   )
   .map((size) => (size === undefined ? {} : { naturalWidth: size[0], naturalHeight: size[1] }));
 
+/** 사진 설명(adr-033) — 한 줄 · 앞뒤 공백 없음. 문법 글자가 든 설명도 나오게 */
+const briefArb = fc.constantFrom("잠든 아기 옆 낮잠 방", "# 공원 *벤치* [도시락]", "a");
+
 const imageArb = fc.record({
   type: fc.constant("image" as const),
   attrs: fc
@@ -301,8 +305,22 @@ const imageArb = fc.record({
         align: true,
         maxStickers: STICKER_CAP_PER_BLOCK,
       }),
+      fc.option(briefArb, { nil: undefined }),
     )
-    .map(([src, size, deco]) => ({ src, alt: "", ...size, ...deco })),
+    .map(([src, size, deco, brief]) => ({
+      src,
+      alt: "",
+      ...size,
+      ...deco,
+      ...(brief === undefined ? {} : { brief }),
+    })),
+});
+
+const photoPlaceholderArb = fc.record({
+  type: fc.constant("photoPlaceholder" as const),
+  attrs: fc
+    .tuple(briefArb, fc.option(fc.constantFrom(...PHOTO_RATIOS), { nil: undefined }))
+    .map(([brief, ratio]) => (ratio === undefined ? { brief } : { brief, ratio })),
 });
 
 /** callout 안 bulletList/orderedList — 안쪽 노드라 꾸미기 자리가 없다(listArb depth 0과 다르다). */
@@ -408,6 +426,7 @@ const topLevelBlockArb = fc.oneof(
   listArb("bulletList", 0),
   listArb("orderedList", 0),
   tableArb,
+  photoPlaceholderArb,
 );
 
 /** 블록 최대 MAX_BLOCKS_PER_DOC개 × 블록당 최대 STICKER_CAP_PER_BLOCK개 — 문서당 스티커 상한을 절대 넘지 않는다. */

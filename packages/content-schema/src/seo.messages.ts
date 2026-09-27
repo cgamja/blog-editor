@@ -8,6 +8,10 @@ import type { SeoRule } from "./seo.types";
 
 /** 사람과 AI가 읽는 문장 — MCP 응답 · 발행 확인 목록이 그대로 보인다 */
 export const SEO_MESSAGES = {
+  "photo-placeholder": {
+    message: "사진 자리가 비어 있어요. 발행하면 이 자리는 공개 글에 나오지 않아요.",
+    fix: "사진 자리를 눌러 「사진 올리기」로 채우거나, 필요 없으면 지워요.",
+  },
   "image-alt": {
     message: "이미지 설명(alt)이 비어 있어요.",
     fix: "사진에 무엇이 보이는지 한 문장으로 적어요. 검색 · 화면 읽기 프로그램이 이 글을 읽어요.",

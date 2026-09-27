@@ -11,10 +11,12 @@ import { stickerSafePaste } from "./plugins/sticker-safe-paste";
 import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constants";
 import {
   alignOrNull,
+  briefOrNull,
   headingLevelOf,
   hrefOrNull,
   languageOrNull,
   orderedListStartOrNull,
+  photoRatioOrNull,
   taskCheckedOrNull,
   toneOrNull,
 } from "./closed-values";
@@ -257,16 +259,23 @@ const HorizontalRule = Node.create({
 const isTagWithClass = (tag: string, className: string) => (element: ElementLike) =>
   element.tagName === tag && hasClass(element, className);
 
+/** 에디터 DOM의 사진 설명(adr-033) — 에디터 안 복사 · 붙여넣기에서 설명이 따라오게 figure에 싣는다 */
+const BRIEF_ATTR = "data-brief";
+const briefDom = (brief: unknown) => (brief == null ? {} : { [BRIEF_ATTR]: String(brief) });
+
 const imageFromFigure = (figure: ElementLike) => {
   const img = figure.querySelector("img");
-  return imageAttrsOf(img, img?.getAttribute("alt") ?? "");
+  const attrs = imageAttrsOf(img, img?.getAttribute("alt") ?? "");
+  const brief = briefOrNull(figure.getAttribute(BRIEF_ATTR));
+  return attrs === false || brief === null ? attrs : { ...attrs, brief };
 };
 
 const Image = Node.create({
   name: "image",
   group: "block",
   atom: true,
-  addAttributes: () => ({ src: required, alt: required, ...media }),
+  // brief는 에디터 전용 사진 설명(adr-033) — 공개 렌더(content-render)에는 없다
+  addAttributes: () => ({ src: required, alt: required, brief: optional, ...media }),
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-image"),
@@ -284,9 +293,41 @@ const Image = Node.create({
   renderHTML: ({ node }) =>
     withDecoration(node.attrs, [
       "figure",
-      { class: "post-image" },
+      { class: "post-image", ...briefDom(node.attrs.brief) },
       imgSpec(node.attrs, String(node.attrs.alt)),
     ]),
+});
+
+/** 사진 자리 비율 → CSS aspect-ratio 값(`4:3` → `4 / 3`) — 점선 상자가 채울 사진의 모양을 미리 보인다 */
+const aspectRatioStyle = (ratio: unknown) =>
+  ratio == null ? {} : { style: `aspect-ratio: ${String(ratio).replace(":", " / ")}` };
+
+const placeholderFromFigure = (figure: ElementLike) => {
+  const brief = briefOrNull(figure.getAttribute(BRIEF_ATTR));
+  if (brief === null) return false;
+  return { brief, ratio: photoRatioOrNull(figure.getAttribute("data-ratio")) };
+};
+
+/**
+ * 사진 자리(adr-033) — 사진이 들어갈 곳에 설명만 둔 원자 블록. 점선 상자 안에 설명을 보인다. 사진을 놓거나 올리면
+ * 그림으로 바뀐다(image-upload · image-file-input). 꾸밈 자리가 없다 — 채운 그림에서 꾸민다.
+ */
+const PhotoPlaceholder = Node.create({
+  name: "photoPlaceholder",
+  group: "block",
+  atom: true,
+  addAttributes: () => ({ brief: required, ratio: optional }),
+  parseHTML: () => [{ tag: "figure.photo-placeholder", getAttrs: placeholderFromFigure }],
+  renderHTML: ({ node }) => [
+    "figure",
+    {
+      class: "photo-placeholder",
+      ...briefDom(node.attrs.brief),
+      ...(node.attrs.ratio == null ? {} : { "data-ratio": String(node.attrs.ratio) }),
+      ...aspectRatioStyle(node.attrs.ratio),
+    },
+    ["p", { class: "photo-placeholder-brief" }, String(node.attrs.brief)],
+  ],
 });
 
 const screenshotFromFigure = (figure: ElementLike) => {
@@ -559,6 +600,7 @@ export const editorExtensions = [
   CodeBlock,
   HorizontalRule,
   Image,
+  PhotoPlaceholder,
   Callout,
   AppScreenshot,
   Table,

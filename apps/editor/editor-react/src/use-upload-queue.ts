@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Editor } from "@tiptap/react";
+import type { ImageUploadPlacement } from "@blog-editor/editor-core";
 import {
   cancelImageUpload,
   failImageUpload,
@@ -17,7 +18,8 @@ import { useCommandRunner } from "./use-command-runner";
 const UPLOAD_TIMEOUT_MS = 30_000;
 
 export interface UploadQueue {
-  enqueue: (files: readonly File[], gap: number) => void;
+  /** fill이면 첫 파일이 자리 바로 뒤 사진 자리를 채운다(adr-033) — 나머지는 그 뒤에 들어간다 */
+  enqueue: (files: readonly File[], gap: number, placement?: ImageUploadPlacement) => void;
   actions: PlaceholderActions;
 }
 
@@ -102,9 +104,9 @@ export function useUploadQueue(editor: Editor, upload: ImageUploader | undefined
   );
 
   const enqueueOne = useCallback(
-    (file: File, gap: number) => {
+    (file: File, gap: number, fill = false) => {
       const id = `image-${(nextId.current += 1)}`;
-      if (!run(startImageUpload(id, gap))) return;
+      if (!run(startImageUpload(id, gap, { fill }))) return;
       files.current.set(id, file);
       const { signal } = lifetime.current;
       queue.current = queue.current.then(() => process(id, signal)).catch(() => undefined);
@@ -113,8 +115,8 @@ export function useUploadQueue(editor: Editor, upload: ImageUploader | undefined
   );
 
   const enqueue = useCallback(
-    (list: readonly File[], gap: number) => {
-      for (const file of list) enqueueOne(file, gap);
+    (list: readonly File[], gap: number, placement: ImageUploadPlacement = {}) => {
+      list.forEach((file, index) => enqueueOne(file, gap, index === 0 && placement.fill === true));
     },
     [enqueueOne],
   );

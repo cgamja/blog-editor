@@ -95,7 +95,10 @@ type PasteEvent = Parameters<
 >[1];
 
 const stickerCountOf = (doc: Node) =>
-  docFromNode(doc).content.reduce((sum, b) => sum + (b.attrs?.stickers?.length ?? 0), 0);
+  docFromNode(doc).content.reduce(
+    (sum, b) => sum + ((b.attrs as { stickers?: unknown[] } | undefined)?.stickers?.length ?? 0),
+    0,
+  );
 
 describe("editor-paste: 같은 탭에서 복사한 스티커는 붙여넣어도 남는다", () => {
   it("WHEN 스티커 있는 블록을 복사해 최상위에 붙인다 THEN 붙은 블록에 같은 스티커가 있다", () => {

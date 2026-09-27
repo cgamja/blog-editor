@@ -6,6 +6,7 @@ import {
   createPostFileSchema,
   createPublicPostsResponseSchema,
   normalize,
+  publicDocOf,
   slugSchema,
 } from "@blog-editor/content-schema";
 import type { PostFile } from "@blog-editor/content-schema";
@@ -175,7 +176,8 @@ export function createApp(options: AppOptions): Hono {
         // 실제 값을 넘긴다 — 아래 계약 재검사(`draft: z.literal(false)`)가 이 값을 본다
         draft,
         ...(image === undefined ? {} : { image: new URL(image, imageBaseUrl).href }),
-        html: renderHtml(found.file, { imageBaseUrl }),
+        // 두 번째 방어(adr-033) — 렌더러도 그리지 않지만 사진 자리 · 그림 설명은 공개 조회 입력에서 먼저 뺀다
+        html: renderHtml({ doc: publicDocOf(found.file.doc) }, { imageBaseUrl }),
       });
     }
     // 보호 대상 — 나가기 전에 계약으로 한 번 더 검사한다. 초안이 섞이면 응답 대신 500이다

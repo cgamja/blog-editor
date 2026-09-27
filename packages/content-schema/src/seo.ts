@@ -127,6 +127,10 @@ function bodyFindings({ slug, doc, others }: SeoInput, first: FirstParagraph | n
   const blocks = doc.content;
   const found: SeoFinding[] = [];
   blocks.forEach((block, index) => {
+    // 사진 자리는 공개 글에 나가지 않는다(adr-033) — 채우지 않고 발행하면 사진이 빠진다
+    if (block.type === "photoPlaceholder") {
+      found.push(finding("must", "photo-placeholder", { kind: "block", block: index + 1 }));
+    }
     if (block.type === "image" && block.attrs.alt.trim() === "") {
       found.push(finding("must", "image-alt", { kind: "block", block: index + 1 }));
     }

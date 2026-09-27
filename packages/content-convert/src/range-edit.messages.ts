@@ -48,7 +48,14 @@ export function documentWouldBeEmptyMessage(): string {
 /**
  * 스티커가 붙은 블록 여럿을 `sticker=` 없는 새 블록들로 바꾸면 스티커가 말없이 사라진다(adr-032).
  * @param stickerDirectives 옛 스티커를 AI가 그대로 베낄 수 있게 쓴 `sticker=…` 글
+ * @param canKeep 새 블록이 스티커를 받을 수 있나 — 사진 자리뿐이면 false라 남기는 법(지시어)을 안내하지 않는다
  */
-export function stickersWouldDropMessage(stickerDirectives: readonly string[]): string {
-  return `바꾸는 블록에 붙은 스티커 ${stickerDirectives.length}개가 사라진다 — 남기려면 새 markdown 블록의 지시어에 ${stickerDirectives.join(" ")}를 적고, 버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤, 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다`;
+export function stickersWouldDropMessage(
+  stickerDirectives: readonly string[],
+  canKeep: boolean,
+): string {
+  const keep = canKeep
+    ? `남기려면 새 markdown 블록의 지시어에 ${stickerDirectives.join(" ")}를 적고, `
+    : "새 블록(사진 자리)은 스티커를 받지 않는다. ";
+  return `바꾸는 블록에 붙은 스티커 ${stickerDirectives.length}개가 사라진다 — ${keep}버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤, 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다`;
 }

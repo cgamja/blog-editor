@@ -605,6 +605,21 @@ describe("markdown-range-edit — 스티커 지시어(adr-032)", () => {
     expect(input).toEqual(before);
   });
 
+  it("WHEN 스티커가 있는 블록 하나를 sticker= 없는 사진 자리 하나로 바꾸면 THEN 스티커를 버리는 법을 알리며 실패하고 zod 원문이 없다", () => {
+    const result = editDocRange(stickered(), {
+      command: "replace",
+      selection: "첫째 스티커 문단",
+      markdown: ":::photo\n벚꽃길 도시락\n:::",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("insert_after");
+    expect(message).not.toContain("Unrecognized key");
+    // 사진 자리는 sticker=를 받지 않는다 — 남기는 법으로 지시어를 안내하지 않는다
+    expect(message).not.toContain("지시어에");
+  });
+
   it("WHEN 스티커가 있는 블록 둘을 sticker=를 쓴 블록으로 바꾸거나 빈 markdown으로 지우면 THEN 쓴 대로 된다", () => {
     const rewritten = editDocRange(stickered(), {
       command: "replace",

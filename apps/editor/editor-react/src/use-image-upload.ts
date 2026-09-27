@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { ChangeEvent, RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Transaction } from "@tiptap/pm/state";
+import type { ImageUploadPlacement } from "@blog-editor/editor-core";
 import {
   imageFileInput,
   imageFileInputKey,
@@ -19,8 +20,11 @@ export interface ImageUpload {
   /** 숨은 파일 입력칸 — BlogEditor가 그린다 */
   pickerRef: RefObject<HTMLInputElement | null>;
   onPickerChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  /** gap(최상위 블록 사이 자리)에 넣을 파일을 고르게 한다. 생략하면 선택이 든 블록 뒤 */
-  openPicker: (gap?: number) => void;
+  /**
+   * gap(최상위 블록 사이 자리)에 넣을 파일을 고르게 한다. 생략하면 선택이 든 블록 뒤. fill이면 첫 파일이 gap 바로 뒤
+   * 사진 자리를 채운다(adr-033)
+   */
+  openPicker: (gap?: number, placement?: ImageUploadPlacement) => void;
 }
 
 /**
@@ -36,6 +40,7 @@ export function useImageUpload(
   const { enqueue, actions } = useUploadQueue(editor, upload);
   const pickerRef = useRef<HTMLInputElement>(null);
   const pickerGap = useRef<number | null>(null);
+  const pickerPlacement = useRef<ImageUploadPlacement>({});
   const canUpload = upload !== undefined;
 
   useEffect(() => {
@@ -61,8 +66,9 @@ export function useImageUpload(
   }, [editor]);
 
   const openPicker = useCallback(
-    (gap?: number) => {
+    (gap?: number, placement: ImageUploadPlacement = {}) => {
       pickerGap.current = gap ?? topGapAfterSelection(editor.state);
+      pickerPlacement.current = placement;
       pickerRef.current?.click();
     },
     [editor],
@@ -74,9 +80,11 @@ export function useImageUpload(
       // 같은 파일을 다시 고를 수 있게 비운다
       event.target.value = "";
       const gap = pickerGap.current;
+      const placement = pickerPlacement.current;
       pickerGap.current = null;
+      pickerPlacement.current = {};
       // 고른 파일은 조용히 버리지 않는다 — 매핑된 자리가 블록 안이면 가장 가까운 블록 사이 자리로 옮긴다
-      if (gap !== null) enqueue(picked, nearestTopGap(editor.state.doc, gap, false));
+      if (gap !== null) enqueue(picked, nearestTopGap(editor.state.doc, gap, false), placement);
     },
     [editor, enqueue],
   );

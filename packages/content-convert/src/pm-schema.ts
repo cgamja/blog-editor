@@ -35,6 +35,12 @@ export const pmSchema = new Schema({
       content: "(paragraph | bulletList | orderedList)+",
       attrs: { tone: { default: DEFAULT_CALLOUT_TONE } },
     },
+    // 사진 자리(adr-033) — `:::photo` 안 설명 한 문단. parser.ts가 문단 글자를 attrs.brief로 옮긴다
+    photoPlaceholder: {
+      group: "block",
+      content: "paragraph",
+      attrs: { ratio: { default: undefined } },
+    },
     bulletList: { group: "block", content: "listItem+" },
     // start 없음은 toJSON에 undefined로 남고 normalize가 지운다
     orderedList: { group: "block", content: "listItem+", attrs: { start: { default: undefined } } },

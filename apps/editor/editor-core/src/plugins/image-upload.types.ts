@@ -12,6 +12,14 @@ export interface ImageUploadEntry {
   message?: string;
 }
 
+/**
+ * 올리기를 어떻게 넣나 — fill이면 자리 바로 뒤 사진 자리를 채운다(adr-033). 입력 플러그인(붙여넣기 · 놓기) ·
+ * 올리기 커맨드 · editor-react 대기열이 같은 모양을 쓴다.
+ */
+export interface ImageUploadPlacement {
+  fill?: boolean;
+}
+
 /** 올리기가 끝난 그림의 attrs — 응답 `{ path, naturalWidth, naturalHeight }`에서 만든다 */
 export interface UploadedImageAttrs {
   src: string;

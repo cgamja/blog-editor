@@ -6,7 +6,7 @@
  *   https://prosemirror.net/docs/ref/#view.EditorProps.handleDrop — true를 돌리면 기본 붙여넣기 · 놓기를 막는다
  * - EditorView.posAtCoords · nodeDOM: https://prosemirror.net/docs/ref/#view.EditorView.posAtCoords
  */
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";
 import { nearestTopGap, topGapAfterSelection } from "./image-upload";
 import type { ImageFileInputOptions, ImageFileLike, PastedContent } from "./image-file-input.types";
@@ -62,19 +62,37 @@ export function pastedImageFiles<T extends ImageFileLike>(event: { clipboardData
   return shouldTakePastedFiles(pasted) ? files : [];
 }
 
-/** 놓은 좌표의 최상위 블록 위 · 아래 절반으로 자리를 고른다. 편집 영역 밖이면 null */
-function dropGap(view: EditorView, event: PointerLike): number | null {
+/**
+ * 놓은 좌표가 사진 자리 위면 그 사진 자리 앞 자리(채우기, adr-033). posAtCoords의 `inside`는 좌표가 든 가장 안쪽
+ * 노드의 앞 위치다 — 원자 블록 위면 그 블록 앞이다(https://prosemirror.net/docs/ref/#view.EditorView.posAtCoords).
+ */
+function photoPlaceholderGapAt(view: EditorView, inside: number): number | null {
+  if (inside < 0) return null;
+  const node = view.state.doc.nodeAt(inside);
+  const isTopPlaceholder =
+    node?.type.name === "photoPlaceholder" && view.state.doc.resolve(inside).depth === 0;
+  return isTopPlaceholder ? inside : null;
+}
+
+/** 편집 영역 밖이면 null */
+function dropPlace(view: EditorView, event: PointerLike): { gap: number; fill: boolean } | null {
   const found = view.posAtCoords({ left: event.clientX, top: event.clientY });
   if (found === null) return null;
+  const photoPlaceholderGap = photoPlaceholderGapAt(view, found.inside);
+  if (photoPlaceholderGap !== null) return { gap: photoPlaceholderGap, fill: true };
+  return { gap: dropGap(view, event, found.pos), fill: false };
+}
+
+function dropGap(view: EditorView, event: PointerLike, pos: number): number {
   const { doc } = view.state;
-  const $pos = doc.resolve(found.pos);
-  if ($pos.depth === 0) return found.pos;
+  const $pos = doc.resolve(pos);
+  if ($pos.depth === 0) return pos;
   const block = view.nodeDOM($pos.before(1)) as {
     getBoundingClientRect?: () => { top: number; height: number };
   } | null;
   const rect = block?.getBoundingClientRect?.();
-  if (rect === undefined) return nearestTopGap(doc, found.pos, false);
-  return nearestTopGap(doc, found.pos, event.clientY < rect.top + rect.height / 2);
+  if (rect === undefined) return nearestTopGap(doc, pos, false);
+  return nearestTopGap(doc, pos, event.clientY < rect.top + rect.height / 2);
 }
 
 export const imageFileInputKey = new PluginKey("imageFileInput");
@@ -88,14 +106,21 @@ export function imageFileInput<T extends ImageFileLike>({
       handlePaste(view, event) {
         const files = pastedImageFiles<T>(event);
         if (files.length === 0) return false;
-        onFiles(files, topGapAfterSelection(view.state));
+        // 사진 자리를 노드로 골라 두고 붙여넣으면 그 사진 자리를 채운다(adr-033)
+        const { selection } = view.state;
+        const isPlaceholderSelected =
+          selection instanceof NodeSelection &&
+          selection.node.type.name === "photoPlaceholder" &&
+          selection.$from.depth === 0;
+        if (isPlaceholderSelected) onFiles(files, selection.from, { fill: true });
+        else onFiles(files, topGapAfterSelection(view.state));
         return true;
       },
       handleDrop(view, event) {
         const files = filesIn<T>(event.dataTransfer as TransferLike | null);
         if (files.length === 0) return false;
-        const gap = dropGap(view, event as PointerLike);
-        if (gap !== null) onFiles(files, gap);
+        const place = dropPlace(view, event as PointerLike);
+        if (place !== null) onFiles(files, place.gap, { fill: place.fill });
         return true;
       },
     },
