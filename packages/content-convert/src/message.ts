@@ -14,8 +14,11 @@ import {
   CAPTION_MAX_LENGTH,
   FONTS,
   HIGHLIGHT_COLORS,
+  MAX_STICKERS_PER_DOC,
   MOTIONS,
   NATURAL_SIZE_RANGE,
+  STICKER_IDS,
+  STICKER_RANGES,
   TEXT_COLORS,
   TEXT_SIZES,
   TEXT_WEIGHTS,
@@ -31,6 +34,9 @@ import {
   SIZE_SEPARATOR,
   SPAN_STYLE_KEYS,
   SPAN_UNDERLINE_KEY,
+  STICKER_DIRECTIVE_KEY,
+  STICKER_KIND_SEPARATOR,
+  STICKER_NUMBER_SEPARATOR,
 } from "./constants";
 import type { ContainerKind, SemanticType } from "./types";
 
@@ -484,6 +490,46 @@ export function directiveAlignValueRule(): string {
   return `align은 ${ALIGNS.join(" · ")}만 쓴다`;
 }
 export const DIRECTIVE_ALIGN_VALUE_FIX = "center";
+
+// 스티커 지시어(adr-032) — 모양 · 범위 · 종류는 닫힌 집합과 구분자 상수에서 파생한다
+const STICKER_NUMBERS = ["<x>", "<y>", "<크기>"].join(STICKER_NUMBER_SEPARATOR);
+const STICKER_SHAPE = `${STICKER_DIRECTIVE_KEY}=<종류>${STICKER_KIND_SEPARATOR}${STICKER_NUMBERS}[${STICKER_NUMBER_SEPARATOR}<회전>]`;
+const STICKER_EXAMPLE = `${STICKER_DIRECTIVE_KEY}=heart${STICKER_KIND_SEPARATOR}${[90, 10, 12, 15].join(STICKER_NUMBER_SEPARATOR)}`;
+const rangeText = ({ min, max }: { min: number; max: number }) => `${min}~${max}`;
+
+export function directiveStickerKindRule(): string {
+  return `스티커 종류는 ${STICKER_IDS.join(" · ")}만 쓴다`;
+}
+export const DIRECTIVE_STICKER_KIND_FIX = `목록의 종류로 쓴다(예: ${STICKER_EXAMPLE})`;
+
+export function directiveStickerValueRule(): string {
+  return `스티커는 ${STICKER_SHAPE} 모양의 정수다 — x ${rangeText(STICKER_RANGES.x)} · y ${rangeText(STICKER_RANGES.y)}(블록 기준 %, 스티커 가운데 자리), 크기 ${rangeText(STICKER_RANGES.size)}, 회전 ${rangeText(STICKER_RANGES.rotate)}(빼면 0)`;
+}
+export const DIRECTIVE_STICKER_VALUE_FIX = `${STICKER_EXAMPLE}처럼 쓴다`;
+
+export function directiveStickerTotalRule(): string {
+  return `스티커는 글 하나에 최대 ${MAX_STICKERS_PER_DOC}개까지 쓸 수 있다`;
+}
+export const DIRECTIVE_STICKER_TOTAL_FIX = `지시어의 ${STICKER_DIRECTIVE_KEY}=를 줄인다`;
+
+/** 알려진 키로 시작한 지시어 줄에 `키=값` 모양이 아닌 토큰이 섞였다 — 값 안 공백이 흔한 원인이다 */
+export const DIRECTIVE_SPACE_IN_VALUE_RULE = "지시어는 키=값을 공백으로만 나눈다";
+
+/** 키마다 공백 없이 쓴 예 — 깨진 줄의 첫 키를 따라 준다(size 줄에 스티커 예를 주면 엉뚱하게 고친다) */
+const SPACE_FREE_EXAMPLE: Readonly<Record<string, string>> = {
+  frame: `frame=${DIRECTIVE_FRAME_VALUE_FIX}`,
+  font: `font=${DIRECTIVE_FONT_VALUE_FIX}`,
+  motion: `motion=${DIRECTIVE_MOTION_VALUE_FIX}`,
+  align: `align=${DIRECTIVE_ALIGN_VALUE_FIX}`,
+  width: `width=${DIRECTIVE_WIDTH_VALUE_FIX}`,
+  size: `size=${DIRECTIVE_SIZE_VALUE_FIX}`,
+  [STICKER_DIRECTIVE_KEY]: STICKER_EXAMPLE,
+};
+
+/** @param key 그 지시어 줄의 첫 키(알려진 키) */
+export function directiveSpaceInValueFix(key: string): string {
+  return `값 안에는 공백 없이 붙여 쓴다(예: ${SPACE_FREE_EXAMPLE[key] ?? STICKER_EXAMPLE})`;
+}
 
 // ── 괄호 span `[글자]{…}`(span.ts, ADR-020) ─────────────────────────────
 

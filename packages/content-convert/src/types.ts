@@ -1,4 +1,4 @@
-import type { ALIGNS, FONTS, MOTIONS } from "@blog-editor/content-schema";
+import type { ALIGNS, FONTS, MOTIONS, Sticker } from "@blog-editor/content-schema";
 
 /**
  * check.ts(토큰 검사) · directives.ts(지시어) · parser.ts(doc 조립) · references.ts(참조 정의)가
@@ -44,6 +44,8 @@ export interface ResolvedDirective {
   naturalWidth?: number;
   naturalHeight?: number;
   isAppScreenshot?: boolean;
+  /** `sticker=`를 쓴 순서(adr-032) */
+  stickers?: Sticker[];
 }
 
 /** markdown-it이 `md.parse(text, env)`로 받는 그릇 — references.ts가 참조 정의 · 사용 라벨을 채운다. */

@@ -1,5 +1,10 @@
 import fc from "fast-check";
-import { CALLOUT_TONES, docSchema, ORDERED_LIST_START_RANGE } from "@blog-editor/content-schema";
+import {
+  CALLOUT_TONES,
+  docSchema,
+  MAX_STICKERS_PER_DOC,
+  ORDERED_LIST_START_RANGE,
+} from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import {
   decorationArbitrary,
@@ -8,7 +13,7 @@ import {
 } from "@blog-editor/content-schema/testing";
 
 /**
- * 왕복 속성 테스트(markdown-serialize) 전용 — 스티커 · 빈 문단이 없는 유효 doc를 만든다. 테스트
+ * 왕복 속성 테스트(markdown-serialize) 전용 — 빈 문단이 없는 유효 doc를 만든다(스티커는 지시어로 오간다). 테스트
  * 전용이라 index.ts에서 export하지 않는다. 꾸미기 · 원본 크기 생성기는 content-schema `./testing`의
  * 것을 쓴다 — 스키마에 속성이 늘면 거기 한 곳만 고친다(document-fixtures). docArbitrary 전체를 쓰지
  * 않는 이유: 그 글자는 ASCII뿐이라 한글 · 줄바꿈 · markdown 문법 경계를 못 만든다.
@@ -127,9 +132,13 @@ const inlinesArb = fc
 
 const paragraphInner = inlinesArb.map((content) => ({ type: "paragraph", content }));
 
-/** markdown에는 스티커 자리가 없다 — 공용 생성기에서 스티커만 끈다. */
+/** 최상위 블록 최대 개수(losslessDocArbitrary) × 블록당 스티커가 문서 상한을 넘지 않게 */
+const MAX_TOP_LEVEL_BLOCKS = 5;
+const STICKERS_PER_BLOCK = Math.floor(MAX_STICKERS_PER_DOC / MAX_TOP_LEVEL_BLOCKS);
+
+/** 스티커는 지시어 `sticker=`로 오간다(adr-032) */
 const decoration = (opts: { font: boolean; width: boolean; align?: boolean }) =>
-  decorationArbitrary({ ...opts, maxStickers: 0 });
+  decorationArbitrary({ ...opts, maxStickers: STICKERS_PER_BLOCK });
 
 function withAttrs<T extends Record<string, unknown>>(
   node: T,
@@ -330,7 +339,7 @@ const topLevelBlock = fc.oneof(
   table,
 );
 
-/** 스티커 · 빈 문단 없는 유효 doc — 만든 즉시 docSchema로 거른다(생성기 자체의 실수를 가리지 않게 parse). */
+/** 빈 문단 없는 유효 doc — 만든 즉시 docSchema로 거른다(생성기 자체의 실수를 가리지 않게 parse). */
 export const losslessDocArbitrary: fc.Arbitrary<Doc> = fc
-  .array(topLevelBlock, { minLength: 1, maxLength: 5 })
+  .array(topLevelBlock, { minLength: 1, maxLength: MAX_TOP_LEVEL_BLOCKS })
   .map((content) => docSchema.parse({ type: "doc", content }));

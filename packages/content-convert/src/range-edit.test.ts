@@ -529,3 +529,75 @@ describe("markdown-range-edit — 코드 블록의 백슬래시 줄 끝은 글�
     });
   });
 });
+
+describe("markdown-range-edit — 스티커 지시어(adr-032)", () => {
+  const MINT = { id: "star-mint", x: 5, y: 5, size: 5, rotate: 0 } as const;
+  const stickered = () =>
+    doc(
+      paragraph("첫째 스티커 문단", { stickers: [HEART] }),
+      paragraph("둘째 문단"),
+      paragraph("끝"),
+    );
+
+  it("WHEN 스티커 문단을 {sticker=star-mint@5,5,5} 문단으로 바꾸면 THEN 쓴 스티커만 남는다", () => {
+    const result = editDocRange(stickered(), {
+      command: "replace",
+      selection: "첫째 스티커 문단",
+      markdown: "{sticker=star-mint@5,5,5}\n새 문단",
+    });
+
+    expectOk(result);
+    expect(result.doc.content[0]).toEqual({
+      type: "paragraph",
+      attrs: { stickers: [MINT] },
+      content: [text("새 문단")],
+    });
+  });
+
+  it("WHEN get_post의 sticker= 지시어를 그대로 베껴 블록을 바꾸면 THEN 스티커가 한 벌만 있다", () => {
+    const result = editDocRange(stickered(), {
+      command: "replace",
+      selection: "첫째 스티커 문단",
+      markdown: "{sticker=heart@90,10,12,15}\n다시 쓴 문단",
+    });
+
+    expectOk(result);
+    expect(result.doc.content[0]?.attrs).toEqual({ stickers: [HEART] });
+  });
+
+  it("WHEN 스티커가 있는 블록 둘을 sticker= 없는 블록 하나로 바꾸면 THEN 옛 스티커를 베낄 sticker= 글과 버리는 법을 알리며 실패하고 문서는 그대로다", () => {
+    const input = stickered();
+    const before = structuredClone(input);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "첫째...둘째 문단",
+      markdown: "합친 문단",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("sticker=heart@90,10,12,15");
+    expect(message).toContain("insert_after");
+    expect(message).toContain("글 전체 markdown");
+    expect(input).toEqual(before);
+  });
+
+  it("WHEN 스티커가 있는 블록 둘을 sticker=를 쓴 블록으로 바꾸거나 빈 markdown으로 지우면 THEN 쓴 대로 된다", () => {
+    const rewritten = editDocRange(stickered(), {
+      command: "replace",
+      selection: "첫째...둘째 문단",
+      markdown: "{sticker=star-mint@5,5,5}\n합친 문단",
+    });
+    const removed = editDocRange(stickered(), {
+      command: "replace",
+      selection: "첫째...둘째 문단",
+      markdown: "",
+    });
+
+    expectOk(rewritten);
+    expect(rewritten.doc.content[0]?.attrs).toEqual({ stickers: [MINT] });
+    expectOk(removed);
+    expect(removed.doc.content).toEqual([paragraph("끝")]);
+  });
+});

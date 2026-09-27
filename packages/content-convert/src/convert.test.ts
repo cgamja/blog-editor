@@ -596,11 +596,11 @@ describe("markdown-directive", () => {
     ]);
   });
 
-  it("WHEN 토큰 모양이 다른 {size=1200 x800}를 쓰면 THEN 지시어가 아니라 글자로 남는다", () => {
-    const result = convertMarkdown(["{size=1200 x800}", "문단"].join("\n"));
+  it("WHEN 알 수 없는 키로 시작하고 공백이 끼는 {foo=1 x2}를 쓰면 THEN 지시어가 아니라 글자로 남는다", () => {
+    const result = convertMarkdown(["{foo=1 x2}", "문단"].join("\n"));
     expectOk(result);
     expect(result.doc.content).toEqual([
-      { type: "paragraph", content: [{ type: "text", text: "{size=1200 x800} 문단" }] },
+      { type: "paragraph", content: [{ type: "text", text: "{foo=1 x2} 문단" }] },
     ]);
   });
 

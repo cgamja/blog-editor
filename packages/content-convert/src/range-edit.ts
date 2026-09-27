@@ -9,6 +9,7 @@ import {
   selectionNotFoundMessage,
   selectionPartialBlockMessage,
   selectionPlace,
+  stickersWouldDropMessage,
 } from "./range-edit.messages";
 import type {
   EditRange,
@@ -21,6 +22,7 @@ import type {
   TextBlockRef,
   TextPoint,
 } from "./range-edit.types";
+import { formatStickerDirective } from "./sticker-directive";
 
 /**
  * 시작 · 끝 글을 나누는 표시 — AI가 말줄임표 한 글자로 써도 받는다. 점은 넷 이상 이어질 수 있다
@@ -216,8 +218,8 @@ function stickersOf(node: JsonNode | undefined): Sticker[] | undefined {
 }
 
 /**
- * 블록 하나를 블록 하나로 바꿀 때 옛 스티커를 옮긴다 — 마크다운에는 아직 스티커 문법이 없어서(#134)
- * AI가 다시 쓴 블록에는 늘 스티커가 없다. 새 블록이 스티커를 가지면 그쪽을 따른다.
+ * 블록 하나를 블록 하나로 바꿀 때 옛 스티커를 옮긴다 — 새 markdown이 sticker=를 쓰지 않았을 때 사람이 붙인
+ * 스티커를 지키려고 옮긴다(adr-032). 새 블록이 스티커를 가지면 그쪽을 따른다(sticker=는 옛 것을 대신한다).
  */
 function carryStickers(replaced: readonly JsonNode[], added: readonly JsonNode[]): JsonNode[] {
   const [old, ...moreOld] = replaced;
@@ -228,6 +230,18 @@ function carryStickers(replaced: readonly JsonNode[], added: readonly JsonNode[]
   }
   if (stickersOf(fresh) !== undefined) return [fresh];
   return [{ ...fresh, attrs: { ...fresh.attrs, stickers } }];
+}
+
+/**
+ * 블록 여럿이 걸친 바꾸기에서 새 markdown이 sticker=를 하나도 쓰지 않으면 옛 스티커가 옮겨 갈 자리가 없다 —
+ * 사람이 붙인 것이 말없이 사라지지 않게 그 스티커들을 돌려준다(부르는 쪽이 실패로 알린다). 하나 → 하나는
+ * carryStickers가 옮기고, 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다.
+ */
+function droppedStickers(replaced: readonly JsonNode[], added: readonly JsonNode[]): Sticker[] {
+  const isOneToOne = replaced.length === 1 && added.length === 1;
+  const hasWrittenStickers = added.some((node) => stickersOf(node) !== undefined);
+  if (isOneToOne || added.length === 0 || hasWrittenStickers) return [];
+  return replaced.flatMap((node) => stickersOf(node) ?? []);
 }
 
 /**
@@ -309,6 +323,9 @@ function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditR
   }
   const { content, startRef, endRef } = range;
   const replaced = content.slice(startRef.top, endRef.top + 1);
+  const dropped = droppedStickers(replaced, added);
+  if (dropped.length > 0)
+    return fail(stickersWouldDropMessage(dropped.map(formatStickerDirective)));
   return finish([
     ...content.slice(0, startRef.top),
     ...carryStickers(replaced, added),
@@ -330,8 +347,8 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
  *   - 한 코드 블록 안이고 새 글이 코드 펜스가 아니면 그 글자만 새 글 그대로 바꾼다.
  *   - 한 글자 블록 안이고 새 글이 꾸밈 없는 문단 하나(또는 빈 글)면 그 글자만 바꾼다.
  *   - 그 밖에는 범위가 걸친 최상위 블록들을 새 markdown 블록들로 바꾼다. 범위가 그 블록들 전체를
- *     덮지 않으면 실패한다. 블록 하나를 블록 하나로 바꾸면 옛 스티커를 새 블록으로 옮긴다
- *     (마크다운에 스티커 문법이 생기기 전까지 — #134).
+ *     덮지 않으면 실패한다. 새 markdown이 sticker=를 쓰지 않았을 때 사람이 붙인 스티커를 지키려고,
+ *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032).
  * - `insert_after`: 범위 끝이 든 최상위 블록 뒤에 넣는다.
  */
 export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
