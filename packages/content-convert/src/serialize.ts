@@ -4,6 +4,7 @@ import {
   APP_FRAME,
   CALLOUT_CONTAINER_NAME,
   DIRECTIVE_KEYS,
+  PHOTO_CONTAINER_NAME,
   SIZE_SEPARATOR,
   TASK_MARKER_DONE,
   TASK_MARKER_TODO,
@@ -21,7 +22,8 @@ import { formatStickerDirective } from "./sticker-directive";
 export interface SerializeLoss {
   /** 원래 doc의 최상위 블록 번호(1부터). */
   block: number;
-  kind: "stickers" | "emptyParagraph" | "codeMark";
+  /** imageBrief — 그림의 에디터 전용 사진 설명(adr-033)은 markdown에 자리가 없다 */
+  kind: "stickers" | "emptyParagraph" | "codeMark" | "imageBrief";
   count: number;
 }
 
@@ -301,6 +303,15 @@ function serializeTable(block: Extract<Block, { type: "table" }>, dropped: Block
   return [lines[0], tableLine(delimiters), ...lines.slice(1)].join("\n");
 }
 
+/** 사진 자리(adr-033) — `:::photo ratio=…` · 설명 한 줄 · `:::`. 설명의 문법 글자는 문단처럼 이스케이프한다 */
+function serializePhotoPlaceholder(block: Extract<Block, { type: "photoPlaceholder" }>): string {
+  const { ratio, brief } = block.attrs;
+  const opening =
+    ratio === undefined ? PHOTO_CONTAINER_NAME : `${PHOTO_CONTAINER_NAME} ratio=${ratio}`;
+  const { text } = serializeInline([{ type: "text", text: brief }], "paragraph");
+  return [`:::${opening}`, text, ":::"].join("\n");
+}
+
 function serializeBlockBody(
   block: Block,
   dropped: BlockLosses,
@@ -343,6 +354,8 @@ function serializeBlockBody(
       return serializeListAmong(block as ListLike, dropped, markers);
     case "table":
       return serializeTable(block, dropped);
+    case "photoPlaceholder":
+      return serializePhotoPlaceholder(block);
   }
 }
 
@@ -354,6 +367,10 @@ export function serializeMarkdown(doc: Doc): SerializeResult {
 
   normalize(doc).content.forEach((block, index) => {
     const blockNumber = index + 1;
+    if (block.type === "image" && block.attrs.brief !== undefined) {
+      losses.push({ block: blockNumber, kind: "imageBrief", count: 1 });
+    }
+
     const dropped: BlockLosses = { emptyParagraph: 0, codeMark: 0 };
     const body = serializeBlockBody(block, dropped, markers);
     // 스티커는 지시어로 나른다(adr-032) — 블록째 빠질 때만 그 스티커가 빠진다

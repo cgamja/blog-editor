@@ -85,6 +85,14 @@ export const IMAGE_MAX_BYTES = 1024 * 1024;
 export const ALT_MAX_LENGTH = 200;
 export const CAPTION_MAX_LENGTH = 120;
 
+/**
+ * 사진 설명(adr-033) — 사진 자리가 비워 둔 "이런 사진"이고, 채운 뒤에는 그림의 에디터 전용 칸으로 남는다.
+ * AI 이미지 생성(adr-029)의 주문서라 한 문단이 넉넉히 들어가는 길이다.
+ */
+export const BRIEF_MAX_LENGTH = 300;
+/** 사진 자리가 바라는 비율 — 가로 · 정사각 · 세로. 이미지 생성 모델이 받는 비율 범위에 맞췄다(adr-029). */
+export const PHOTO_RATIOS = ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"] as const;
+
 const intInRange = (min: number, max: number) => z.number().int().min(min).max(max);
 
 const widthSchema = intInRange(WIDTH_RANGE.min, WIDTH_RANGE.max);
@@ -273,10 +281,21 @@ export function naturalSizeOf(attrs: NaturalSizeAttrs): { width: number; height:
   return { width: naturalWidth, height: naturalHeight };
 }
 
+/** 한 줄 · 앞뒤 공백 없음 — markdown 한 줄로 오가고, 보이지 않는 차이로 같은 설명이 둘이 되지 않게 */
+const briefSchema = z
+  .string()
+  .min(1)
+  .max(BRIEF_MAX_LENGTH)
+  .refine((brief) => !/[\r\n]/.test(brief) && brief === brief.trim(), {
+    message: "사진 설명은 한 줄이고 앞뒤 공백이 없다",
+  });
+
 const imageAttrsSchema = z
   .strictObject({
     src: imagePathSchema,
     alt: z.string().max(ALT_MAX_LENGTH),
+    // 에디터 전용(adr-033) — 공개 렌더 · 공개 API에는 나가지 않는다
+    brief: briefSchema.optional(),
     naturalWidth: naturalSizeSchema.optional(),
     naturalHeight: naturalSizeSchema.optional(),
     motion: z.enum(MOTIONS).optional(),
@@ -424,6 +443,18 @@ const appScreenshotSchema = z.strictObject({
   attrs: appScreenshotAttrsSchema,
 });
 
+/**
+ * 사진 자리(adr-033) — 사진이 들어갈 곳에 설명만 둔 블록. 에디터에서 채우면 그림이 된다. 공개 렌더 · 공개 API에는
+ * 나가지 않으므로 꾸밈 자리가 없다(채운 그림에서 꾸민다).
+ */
+const photoPlaceholderSchema = z.strictObject({
+  type: z.literal("photoPlaceholder"),
+  attrs: z.strictObject({
+    brief: briefSchema,
+    ratio: z.enum(PHOTO_RATIOS).optional(),
+  }),
+});
+
 /** doc.content에 바로 있을 때만 attrs(꾸미기)가 있다 — listItem/callout 안 리스트는 innerBulletList/innerOrderedList를 쓴다. */
 const bulletListSchema = z.strictObject({
   type: z.literal("bulletList"),
@@ -495,6 +526,7 @@ const topLevelBlockSchema = z.union([
   calloutSchema,
   appScreenshotSchema,
   tableSchema,
+  photoPlaceholderSchema,
 ]);
 
 // ── 6. doc 루트 + 스티커 합계 12개 refine(보호 대상) ───────────────────────

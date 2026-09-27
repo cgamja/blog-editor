@@ -11,8 +11,14 @@ import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Command, EditorState, Transaction } from "@tiptap/pm/state";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { ALT_MAX_LENGTH } from "@blog-editor/content-schema";
 import { imagePathOrNull, naturalSizeFrom } from "../closed-values";
-import type { ImageUploadEntry, ImageUploadRender, UploadedImageAttrs } from "./image-upload.types";
+import type {
+  ImageUploadEntry,
+  ImageUploadPlacement,
+  ImageUploadRender,
+  UploadedImageAttrs,
+} from "./image-upload.types";
 
 /**
  * 플러그인 상태의 자리 — 밖에 보이는 ImageUploadEntry에 더해, 자리를 둔 뒤 사용자가 손을 댔는지(글 · 선택이
@@ -21,14 +27,18 @@ import type { ImageUploadEntry, ImageUploadRender, UploadedImageAttrs } from "./
  */
 interface TrackedUpload extends ImageUploadEntry {
   isTouched: boolean;
+  /** 자리 바로 뒤 사진 자리를 채우는 올리기(adr-033) — 끝날 때 그 사진 자리를 그림으로 바꾼다 */
+  fill: boolean;
 }
 
 export const imageUploadKey = new PluginKey<readonly TrackedUpload[]>("imageUpload");
 
 type UploadMeta =
-  | { type: "start"; id: string; pos: number }
+  | { type: "start"; id: string; pos: number; fill: boolean }
   | { type: "fail"; id: string; message: string }
-  | { type: "remove"; id: string };
+  | { type: "remove"; id: string }
+  /** 끝난 올리기 — 그 자리(`pos`, 이 트랜잭션 전 좌표)에서 기다리던 다른 자리는 넣은 그림 뒤(`after`)로 간다 */
+  | { type: "finish"; id: string; pos: number; after: number };
 
 /** 자리는 뒤 블록 쪽에 붙는다 — 같은 자리에 앞 그림이 들어가면 뒤 자리는 그 뒤로 밀린다(파일 순서 유지) */
 const STICK_TO_NEXT = 1;
@@ -47,8 +57,22 @@ function survives(entry: TrackedUpload, tr: Transaction): { pos: number } | null
   return isLost ? null : { pos: result.pos };
 }
 
-function mapEntries(entries: readonly TrackedUpload[], tr: Transaction): TrackedUpload[] {
+/**
+ * 끝난 올리기와 같은 자리에서 기다리던 자리는 매핑하지 않고 넣은 그림 바로 뒤로 옮긴다 — 파일 순서를 지키고,
+ * 채우기가 사진 자리를 지운 것을 그 자리의 삭제로 잘못 읽지 않으려고다. StepMap은 바뀐 범위의 시작(pos === start)을
+ * 앞쪽으로 매핑하고(assoc와 무관하게 side -1) DEL_AFTER를 단다 — 끼워 넣기(oldSize 0)도 DEL_AFTER다. 그래서 매핑에
+ * 맡기면 사진 자리를 바꾼 그림 앞에 남아 순서가 뒤집히고, 문서 맨 앞 자리는 지워진 자리로 버려진다.
+ * 근거: https://prosemirror.net/docs/ref/#transform.StepMap · https://prosemirror.net/docs/ref/#transform.MapResult.deletedAfter
+ */
+function mapEntries(
+  entries: readonly TrackedUpload[],
+  tr: Transaction,
+  meta: UploadMeta | undefined,
+): TrackedUpload[] {
   return entries.flatMap((entry) => {
+    const isBehindFinished =
+      meta?.type === "finish" && entry.id !== meta.id && entry.pos === meta.pos;
+    if (isBehindFinished) return [{ ...entry, pos: meta.after }];
     const mapped = survives(entry, tr);
     return mapped === null ? [] : [{ ...entry, pos: mapped.pos }];
   });
@@ -56,14 +80,15 @@ function mapEntries(entries: readonly TrackedUpload[], tr: Transaction): Tracked
 
 function applyMeta(entries: TrackedUpload[], meta: UploadMeta): TrackedUpload[] {
   if (meta.type === "start") {
-    const { id, pos } = meta;
-    return [...entries, { id, pos, status: "uploading", isTouched: false }];
+    const { id, pos, fill } = meta;
+    return [...entries, { id, pos, status: "uploading", isTouched: false, fill }];
   }
   if (meta.type === "fail") {
     return entries.map((entry) =>
       entry.id === meta.id ? { ...entry, status: "failed", message: meta.message } : entry,
     );
   }
+  // remove · finish — 끝난 자리도 목록에서 빠진다
   return entries.filter((entry) => entry.id !== meta.id);
 }
 
@@ -74,8 +99,8 @@ export function imageUpload(render?: ImageUploadRender): Plugin<readonly Tracked
     state: {
       init: () => [],
       apply(tr, previous) {
-        const mapped = tr.docChanged ? mapEntries(previous, tr) : [...previous];
         const meta = tr.getMeta(imageUploadKey) as UploadMeta | undefined;
+        const mapped = tr.docChanged ? mapEntries(previous, tr, meta) : [...previous];
         // 자리를 두는 트랜잭션 말고 글이나 선택이 바뀌면 그 전부터 있던 자리는 모두 "손댔다"
         const isEdited = meta?.type !== "start" && (tr.docChanged || tr.selectionSet);
         const marked = isEdited ? mapped.map((entry) => ({ ...entry, isTouched: true })) : mapped;
@@ -131,18 +156,40 @@ const isTopGap = (doc: PmNode, pos: number) =>
 
 const hasPlugin = (state: EditorState) => imageUploadKey.getState(state) !== undefined;
 
+/**
+ * 올린 사람이 대체 텍스트를 따로 쓰지 않았으면 사진 자리 설명을 alt 기본값으로 쓴다(adr-033). 설명이 alt보다 길면
+ * 코드포인트 단위로 자른다 — UTF-16 단위로 자르면 이모지 한가운데서 끊겨 외톨이 서러게이트가 남는다.
+ */
+function altFromBrief(alt: string, brief: string | null): string {
+  if (alt !== "" || brief === null) return alt;
+  return Array.from(brief).slice(0, ALT_MAX_LENGTH).join("");
+}
+
 const findEntry = (state: EditorState, id: string) =>
   (imageUploadKey.getState(state) ?? []).find((entry) => entry.id === id);
 
 /** 최상위 자리 pos에 올리는 중 자리를 더한다 — 문서는 그대로다(메타만) */
-export function startImageUpload(id: string, pos: number): Command {
+export function startImageUpload(
+  id: string,
+  pos: number,
+  placement: ImageUploadPlacement = {},
+): Command {
   return (state, dispatch) => {
     if (!hasPlugin(state) || !isTopGap(state.doc, pos) || findEntry(state, id) !== undefined) {
       return false;
     }
-    dispatch?.(state.tr.setMeta(imageUploadKey, { type: "start", id, pos } satisfies UploadMeta));
+    const fill = placement.fill ?? false;
+    dispatch?.(
+      state.tr.setMeta(imageUploadKey, { type: "start", id, pos, fill } satisfies UploadMeta),
+    );
     return true;
   };
+}
+
+/** 자리 바로 뒤가 사진 자리면 그 노드 — 채우기 올리기가 바꿀 대상이다 */
+function photoPlaceholderAt(doc: PmNode, gap: number): PmNode | null {
+  const next = doc.resolve(gap).nodeAfter;
+  return next?.type.name === "photoPlaceholder" ? next : null;
 }
 
 /** 올리기가 실패하면 자리에 이유를 남긴다 — 다시 시도 · 지우기는 자리를 그린 쪽이 한다 */
@@ -180,15 +227,26 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
     if (dispatch === undefined) return true;
 
     const gap = nearestTopGap(state.doc, entry.pos, false);
+    // 채우기면 사진 자리의 설명을 alt 기본값과 그림 설명으로 옮긴다(adr-033). 그새 사진 자리가 없어졌으면 그냥 넣는다
+    const placeholder = entry.fill ? photoPlaceholderAt(state.doc, gap) : null;
+    const brief = (placeholder?.attrs.brief as string | undefined) ?? null;
     const image = imageType.create({
       src: attrs.src,
-      alt: attrs.alt,
+      alt: altFromBrief(attrs.alt, brief),
+      brief,
       naturalWidth: size.width,
       naturalHeight: size.height,
     });
-    const tr = state.tr
-      .insert(gap, image)
-      .setMeta(imageUploadKey, { type: "remove", id } satisfies UploadMeta);
+    const tr = (
+      placeholder === null
+        ? state.tr.insert(gap, image)
+        : state.tr.replaceWith(gap, gap + placeholder.nodeSize, image)
+    ).setMeta(imageUploadKey, {
+      type: "finish",
+      id,
+      pos: entry.pos,
+      after: gap + image.nodeSize,
+    } satisfies UploadMeta);
     if (!entry.isTouched) {
       tr.setSelection(NodeSelection.create(tr.doc, gap)).scrollIntoView();
     }

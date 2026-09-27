@@ -41,8 +41,11 @@ export {
   STICKER_RANGES,
   ALT_MAX_LENGTH,
   CAPTION_MAX_LENGTH,
+  BRIEF_MAX_LENGTH,
+  PHOTO_RATIOS,
   CODE_LANGUAGE_PATTERN,
 } from "./doc";
+export { publicDocOf } from "./public-doc";
 export type {
   Doc,
   Block,

@@ -50,6 +50,7 @@ import {
   footnoteDefinitionMessage,
   type FoundMessage,
 } from "./message";
+import { PHOTO_DIRECTIVE_FIX, PHOTO_DIRECTIVE_RULE } from "./photo.messages";
 import type { BlockRecord, ResolvedDirective, SemanticType } from "./types";
 
 /** 지시어 줄 한 개(check 전) — directives.ts만 쓴다(사용 범위가 이 파일뿐이라 여기 둔다). */
@@ -76,6 +77,8 @@ const KEY_ALLOW: Record<SemanticType, ReadonlySet<string>> = {
   horizontalRule: new Set(["motion"]),
   image: new Set(["motion", "width", "size", "frame", "align"]),
   table: new Set(["font", "motion"]),
+  // 사진 자리는 꾸밈 자리가 없다(adr-033) — 채운 그림에서 꾸민다
+  photoPlaceholder: new Set(),
 };
 
 const CLEAN_LINE = /^\{([^{}]+)\}[ \t]*$/;
@@ -192,6 +195,13 @@ function validateDirective(
     }));
   const seenKeys = new Set<string>();
   const resolved: ResolvedDirective = {};
+  // 사진 자리는 꾸밈 자리가 없다(adr-033) — 키마다 따로 알리지 않고 한 번에 알린다
+  if (target === "photoPlaceholder") {
+    return {
+      resolved,
+      issues: [{ rule: PHOTO_DIRECTIVE_RULE, received: pairsText, fix: PHOTO_DIRECTIVE_FIX }],
+    };
+  }
 
   for (const { key, value } of pairs) {
     // 스티커는 한 블록에 여럿이라 되풀이한다 — 모든 최상위 블록에 자리가 있다(decoration-schema)

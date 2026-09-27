@@ -4,6 +4,7 @@ import {
   docSchema,
   MAX_STICKERS_PER_DOC,
   ORDERED_LIST_START_RANGE,
+  PHOTO_RATIOS,
 } from "@blog-editor/content-schema";
 import type { Doc } from "@blog-editor/content-schema";
 import {
@@ -342,6 +343,17 @@ const table = fc
     ),
   );
 
+/** 사진 자리(adr-033) — 설명은 한 줄 · 앞뒤 공백 없음(스키마), 문법 글자가 든 설명도 나오게 */
+const photoPlaceholder = fc
+  .tuple(
+    textArb.map((text) => text.replace(/[\r\n]/g, "").trim()).filter((brief) => brief !== ""),
+    fc.option(fc.constantFrom(...PHOTO_RATIOS), { nil: undefined }),
+  )
+  .map(([brief, ratio]) => ({
+    type: "photoPlaceholder",
+    attrs: ratio === undefined ? { brief } : { brief, ratio },
+  }));
+
 const topLevelBlock = fc.oneof(
   topParagraph,
   heading,
@@ -353,6 +365,7 @@ const topLevelBlock = fc.oneof(
   callout,
   topList,
   table,
+  photoPlaceholder,
 );
 
 /** 빈 문단 없는 유효 doc — 만든 즉시 docSchema로 거른다(생성기 자체의 실수를 가리지 않게 parse). */

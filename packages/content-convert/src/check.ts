@@ -44,6 +44,7 @@ import {
   emptyTaskItemMessage,
   type FoundMessage,
 } from "./message";
+import { checkPhotoContainer } from "./photo-check";
 import type { SpanOpenMeta } from "./span";
 import { taskCheckedOf } from "./task-list";
 import { imageAltText } from "./tokens";
@@ -255,6 +256,12 @@ export function analyzeTokens(
       case "container_callout_close":
         stack.pop();
         break;
+      // 사진 자리(adr-033) — 안쪽 설명 문단까지 여기서 보고 짝인 닫는 토큰으로 건너뛴다
+      case "container_photo_open": {
+        const record = openBlockRecord("photoPlaceholder", ...mapOf(tok));
+        i = checkPhotoContainer(tokens, i, record, sourceLines, messages);
+        break;
+      }
       case "inline":
         checkEmptyTaskItem(tok, tokens[i - 2], currentBlock, messages);
         checkInline(

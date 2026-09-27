@@ -36,6 +36,8 @@ const AROUND_CHARS = 12;
 const MAX_PLACES = 3;
 /** 인라인 글만 담는 글자 블록 — 코드 블록은 마크 없는 글이라 따로 다룬다 */
 const INLINE_TEXT_BLOCKS = new Set(["paragraph", "heading"]);
+/** 스티커 자리가 없는 블록 — 사진 자리(adr-033)는 공개 렌더에 나가지 않아 꾸밈 자리가 없다 */
+const BLOCKS_WITHOUT_STICKERS = new Set(["photoPlaceholder"]);
 /** 코드 펜스로 시작하는 새 글은 코드 블록 글자가 아니라 블록 바꾸기다 */
 const CODE_FENCE = /^\s*(```|~~~)/;
 /**
@@ -65,8 +67,20 @@ function textOf(node: JsonNode): string {
 function collectTextBlocks(doc: JsonNode): TextBlockRef[] {
   const found: TextBlockRef[] = [];
   const visit = (node: JsonNode, top: number, path: number[]) => {
+    // 사진 자리(adr-033)는 설명을 그 블록의 글로 찾는다 — AI가 get_post에서 본 `:::photo` 안 글 그대로
+    if (node.type === "photoPlaceholder") {
+      const brief = typeof node.attrs?.brief === "string" ? node.attrs.brief : "";
+      found.push({ top, path, text: brief, isCode: false, isWholeBlockOnly: true });
+      return;
+    }
     if (node.type === "codeBlock" || INLINE_TEXT_BLOCKS.has(node.type)) {
-      found.push({ top, path, text: textOf(node), isCode: node.type === "codeBlock" });
+      found.push({
+        top,
+        path,
+        text: textOf(node),
+        isCode: node.type === "codeBlock",
+        isWholeBlockOnly: false,
+      });
       return;
     }
     node.content?.forEach((child, index) => visit(child, top, [...path, index]));
@@ -212,6 +226,8 @@ function updateAt(
   });
 }
 
+const canHoldStickers = (node: JsonNode) => !BLOCKS_WITHOUT_STICKERS.has(node.type);
+
 function stickersOf(node: JsonNode | undefined): Sticker[] | undefined {
   const stickers = node?.attrs?.stickers;
   return Array.isArray(stickers) ? (stickers as Sticker[]) : undefined;
@@ -235,12 +251,13 @@ function carryStickers(replaced: readonly JsonNode[], added: readonly JsonNode[]
 /**
  * 블록 여럿이 걸친 바꾸기에서 새 markdown이 sticker=를 하나도 쓰지 않으면 옛 스티커가 옮겨 갈 자리가 없다 —
  * 사람이 붙인 것이 말없이 사라지지 않게 그 스티커들을 돌려준다(부르는 쪽이 실패로 알린다). 하나 → 하나는
- * carryStickers가 옮기고, 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다.
+ * carryStickers가 옮기되, 새 블록에 스티커 자리가 없으면(사진 자리) 옮길 수 없어 마찬가지로 돌려준다.
+ * 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다.
  */
 function droppedStickers(replaced: readonly JsonNode[], added: readonly JsonNode[]): Sticker[] {
-  const isOneToOne = replaced.length === 1 && added.length === 1;
+  const isCarried = replaced.length === 1 && added.length === 1 && added.every(canHoldStickers);
   const hasWrittenStickers = added.some((node) => stickersOf(node) !== undefined);
-  if (isOneToOne || added.length === 0 || hasWrittenStickers) return [];
+  if (isCarried || added.length === 0 || hasWrittenStickers) return [];
   return replaced.flatMap((node) => stickersOf(node) ?? []);
 }
 
@@ -325,7 +342,9 @@ function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditR
   const replaced = content.slice(startRef.top, endRef.top + 1);
   const dropped = droppedStickers(replaced, added);
   if (dropped.length > 0)
-    return fail(stickersWouldDropMessage(dropped.map(formatStickerDirective)));
+    return fail(
+      stickersWouldDropMessage(dropped.map(formatStickerDirective), added.some(canHoldStickers)),
+    );
   return finish([
     ...content.slice(0, startRef.top),
     ...carryStickers(replaced, added),
@@ -345,7 +364,8 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
  * - `replace`
  *   - 빈 글이고 범위가 걸친 최상위 블록 전체를 덮으면 그 블록들을 지운다.
  *   - 한 코드 블록 안이고 새 글이 코드 펜스가 아니면 그 글자만 새 글 그대로 바꾼다.
- *   - 한 글자 블록 안이고 새 글이 꾸밈 없는 문단 하나(또는 빈 글)면 그 글자만 바꾼다.
+ *   - 한 글자 블록 안이고 새 글이 꾸밈 없는 문단 하나(또는 빈 글)면 그 글자만 바꾼다. 사진 자리는 설명으로
+ *     찾지만 글자만 바꾸는 길이 없다 — 블록째 바꾼다(adr-033).
  *   - 그 밖에는 범위가 걸친 최상위 블록들을 새 markdown 블록들로 바꾼다. 범위가 그 블록들 전체를
  *     덮지 않으면 실패한다. 새 markdown이 sticker=를 쓰지 않았을 때 사람이 붙인 스티커를 지키려고,
  *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032).
@@ -380,7 +400,12 @@ export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   const converted = isEmpty ? null : convertMarkdown(edit.markdown);
   if (converted !== null && !converted.ok) return converted;
   const inline = converted === null ? [] : inlineOnly(converted.doc);
-  if (isSameBlock && !range.startRef.isCode && inline !== null) {
+  if (
+    isSameBlock &&
+    !range.startRef.isCode &&
+    !range.startRef.isWholeBlockOnly &&
+    inline !== null
+  ) {
     return replaceInline(range, inline);
   }
   const added = converted === null ? [] : (converted.doc.content as unknown as JsonNode[]);

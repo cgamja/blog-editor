@@ -1,21 +1,18 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 import { NodeSelection } from "@tiptap/pm/state";
 import { alignOf, setBlockAlign, setBlockWidth } from "@blog-editor/editor-core";
 import { AlignIcon } from "./AlignIcon";
+import { BriefControl } from "./BriefControl";
 import { ALIGN_OPTIONS, WIDTH_PRESETS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
 import { widthTargetOf } from "./decoration-state";
 import { ImageAltControl } from "./ImageAltControl";
+import { useBlockAnchor } from "./use-block-anchor";
 import { useCommandRunner } from "./use-command-runner";
 
 export interface WidthToolbarProps {
   editor: Editor;
-}
-
-interface Anchor {
-  left: number;
-  top: number;
 }
 
 /**
@@ -45,50 +42,20 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
         : null;
     },
   });
+  // 그림의 에디터 전용 사진 설명(adr-033) — 그림이 아니면 null, 설명 없는 그림이면 빈 글(설명은 빈 글일 수 없다)
+  const imageBrief = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const { selection } = current.state;
+      if (!(selection instanceof NodeSelection) || selection.node.type.name !== "image")
+        return null;
+      const brief = selection.node.attrs.brief as string | null;
+      return brief ?? "";
+    },
+  });
   const run = useCommandRunner(editor);
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const [anchor, setAnchor] = useState<Anchor | null>(null);
-
-  // 잴 때마다 블록 DOM을 다시 구한다 — 같은 블록이라도 속성(폭 · 움직임 · 스티커)이 바뀌면 ProseMirror가
-  // DOM을 새로 그리므로, 옛 DOM을 붙잡으면 도구줄이 튄다. 트랜잭션 · 크기 변화(이미지 로드 · 창 크기) ·
-  // 안쪽 스크롤 상자의 스크롤(capture — scroll은 버블링하지 않는다)마다 다시 잰다
-  useLayoutEffect(() => {
-    if (target === null) return undefined;
-    const offsetParent = toolbarRef.current?.offsetParent;
-    if (!(offsetParent instanceof HTMLElement)) return undefined;
-    const frame = offsetParent;
-    const { pos } = target;
-    let block: HTMLElement | null = null;
-    // https://developer.mozilla.org/docs/Web/API/ResizeObserver
-    const observer = new ResizeObserver(() => measure());
-    function measure() {
-      // https://prosemirror.net/docs/ref/#view.EditorView.nodeDOM
-      const current = editor.view.nodeDOM(pos);
-      const next = current instanceof HTMLElement ? current : null;
-      if (next !== block) {
-        if (block !== null) observer.unobserve(block);
-        if (next !== null) observer.observe(next);
-        block = next;
-      }
-      if (block === null) return;
-      const blockRect = block.getBoundingClientRect();
-      const frameRect = frame.getBoundingClientRect();
-      setAnchor({
-        left: blockRect.left - frameRect.left + blockRect.width / 2,
-        top: blockRect.top - frameRect.top,
-      });
-    }
-    observer.observe(frame);
-    measure();
-    // TipTap은 뷰가 새 상태를 그린 뒤 transaction 이벤트를 낸다 — https://tiptap.dev/docs/editor/api/events#transaction
-    editor.on("transaction", measure);
-    window.addEventListener("scroll", measure, { capture: true, passive: true });
-    return () => {
-      observer.disconnect();
-      editor.off("transaction", measure);
-      window.removeEventListener("scroll", measure, { capture: true });
-    };
-  }, [editor, target?.pos]);
+  const anchor = useBlockAnchor(editor, target?.pos ?? null, toolbarRef);
 
   if (target === null) return null;
 
@@ -130,6 +97,15 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
           <span className="width-toolbar-divider" aria-hidden="true" />
           <ImageAltControl key={target.pos} editor={editor} pos={target.pos} alt={imageAlt} />
         </>
+      )}
+      {imageBrief !== null && (
+        <BriefControl
+          key={`brief-${target.pos}`}
+          editor={editor}
+          pos={target.pos}
+          brief={imageBrief === "" ? null : imageBrief}
+          canRevert
+        />
       )}
     </div>
   );

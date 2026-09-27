@@ -10,6 +10,7 @@
 export const SEO_LEVELS = ["must", "should", "info"] as const;
 
 export const SEO_RULES = [
+  "photo-placeholder",
   "image-alt",
   "heading-missing",
   "duplicate-title",

@@ -308,7 +308,7 @@ export function imagePathMessage(topLevel: number, line: number, received: strin
     line,
     "이미지는 /images/<이름>.<확장자> 경로만",
     received,
-    '이미지 줄을 지우고 사람에게 업로드를 요청한다. 이미 올린 "/images/…" 경로만 쓸 수 있다',
+    '이미지 줄을 사진 자리(:::photo · 사진 설명 · :::)로 바꾼다. 이미 올린 "/images/…" 경로만 그림으로 쓸 수 있다',
   );
 }
 

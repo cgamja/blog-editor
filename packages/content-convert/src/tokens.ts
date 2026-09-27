@@ -1,7 +1,7 @@
 import MarkdownIt, { type PluginWithParams } from "markdown-it";
 import container from "markdown-it-container";
 import type Token from "markdown-it/lib/token.mjs";
-import { CALLOUT_CONTAINER_NAME } from "./constants";
+import { CALLOUT_CONTAINER_NAME, PHOTO_CONTAINER_NAME } from "./constants";
 import { bracketSpanRule, type SpanCloseMeta } from "./span";
 import { useTaskList } from "./task-list";
 
@@ -19,6 +19,11 @@ type ContainerOpts = NonNullable<Parameters<typeof container>[2]>;
  */
 function validateCalloutMarker(): boolean {
   return true;
+}
+
+/** `:::photo`(adr-033)만 사진 자리 컨테이너다 — 이름 뒤는 공백이거나 끝이어야 한다(`:::photograph`는 콜아웃 쪽이 거부) */
+function validatePhotoMarker(params: string): boolean {
+  return new RegExp(`^${PHOTO_CONTAINER_NAME}(\\s|$)`).test(params.trim());
 }
 
 /**
@@ -40,6 +45,11 @@ export function createMarkdownIt(): MarkdownIt {
   // node_modules/prosemirror-markdown/src/from_markdown.ts도 같은 이유로 markdown-it import
   // 위에 @ts-ignore를 둔다). md.use()의 매개변수 타입 자체가 `...params: any[]`라 옵션 타입은
   // 어차피 여기서 못 걸러 containerOptions 변수 선언에서 미리 걸러 둔다.
+  // 사진 자리를 먼저 건다 — markdown-it-container 4.0.0은 규칙을 `fence` 바로 앞에 넣으므로(index.mjs:134
+  // `md.block.ruler.before('fence', …)`) 먼저 건 규칙이 먼저 본다.
+  // 콜아웃 규칙은 모든 이름을 받으므로(validateCalloutMarker) 뒤에 둬야 `:::photo`를 가로채지 않는다
+  const photoOptions: ContainerOpts = { validate: validatePhotoMarker };
+  md.use(container as unknown as PluginWithParams, PHOTO_CONTAINER_NAME, photoOptions);
   md.use(container as unknown as PluginWithParams, CALLOUT_CONTAINER_NAME, containerOptions);
   md.inline.ruler.before("link", BRACKET_SPAN_RULE, bracketSpanRule);
   useTaskList(md);

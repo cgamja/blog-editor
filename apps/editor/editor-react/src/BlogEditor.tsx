@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { EditorContent, type Editor } from "@tiptap/react";
 import { BlockHandles } from "./BlockHandles";
 import { LinkPopover } from "./LinkPopover";
+import { PhotoPlaceholderToolbar } from "./PhotoPlaceholderToolbar";
 import { SlashMenu } from "./SlashMenu";
 import { StickerLayer } from "./StickerLayer";
 import { TextToolbar } from "./TextToolbar";
@@ -46,6 +47,7 @@ export function BlogEditor({ editor, uploadImage }: BlogEditorProps) {
           onChange={images.onPickerChange}
         />
       )}
+      <PhotoPlaceholderToolbar editor={editor} openPicker={openPicker} />
       <StickerLayer editor={editor} />
       <WidthResizeHandles editor={editor} />
       <TextToolbar editor={editor} frameRef={frameRef} />

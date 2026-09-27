@@ -17,7 +17,8 @@ export type SemanticType =
   | "codeBlock"
   | "horizontalRule"
   | "image"
-  | "table";
+  | "table"
+  | "photoPlaceholder";
 
 export type ContainerKind = "blockquote" | "listItem" | "callout";
 

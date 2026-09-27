@@ -29,6 +29,8 @@ export interface TextBlockRef {
   path: number[];
   text: string;
   isCode: boolean;
+  /** 글자만 바꾸는 길이 없어 블록째 바꾼다 — 사진 자리(adr-033)는 설명으로 찾지만 설명은 글자 노드가 아니다 */
+  isWholeBlockOnly: boolean;
 }
 
 /** 글자 블록 목록 안의 한 자리 — `block`은 TextBlockRef 순번, `offset`은 그 블록 글자 안 위치 */

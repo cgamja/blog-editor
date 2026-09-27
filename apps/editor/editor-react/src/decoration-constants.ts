@@ -53,4 +53,5 @@ export const BLOCK_LABELS: Readonly<Record<string, string>> = {
   image: "사진",
   appScreenshot: "앱 스크린샷",
   callout: "콜아웃",
+  photoPlaceholder: "사진 자리",
 };

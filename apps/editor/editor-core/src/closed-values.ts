@@ -1,5 +1,6 @@
 import {
   ALIGNS,
+  BRIEF_MAX_LENGTH,
   CALLOUT_TONES,
   CODE_LANGUAGE_PATTERN,
   DEFAULT_ORDERED_LIST_START,
@@ -10,6 +11,7 @@ import {
   MOTIONS,
   NATURAL_SIZE_RANGE,
   ORDERED_LIST_START_RANGE,
+  PHOTO_RATIOS,
   STICKER_IDS,
   STICKER_RANGES,
   TEXT_COLORS,
@@ -38,6 +40,17 @@ export const fontOrNull = oneOf(FONTS);
 export const motionOrNull = oneOf(MOTIONS);
 export const toneOrNull = oneOf(CALLOUT_TONES);
 export const alignOrNull = oneOf(ALIGNS);
+export const photoRatioOrNull = oneOf(PHOTO_RATIOS);
+
+/**
+ * 사진 설명(adr-033) — 한 줄로 모으고 앞뒤 공백을 뗀 뒤 한도 안이면 그 글, 비었거나 넘으면 null.
+ * 붙여넣은 `data-brief`와 설명 입력칸이 같은 규칙을 쓴다(content-schema briefSchema와 같은 모양).
+ */
+export function briefOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const brief = value.replace(/[\r\n]+/g, " ").trim();
+  return brief === "" || brief.length > BRIEF_MAX_LENGTH ? null : brief;
+}
 export const textWeightOrNull = oneOf(TEXT_WEIGHTS);
 export const textSizeOrNull = oneOf(TEXT_SIZES);
 export const textColorPresetOrNull = oneOf(TEXT_COLORS);

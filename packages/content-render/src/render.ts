@@ -97,6 +97,9 @@ function renderTopLevelBlock(block: Block, ctx: RenderContext): string {
       return finishBlock(renderScreenshotFigure(block.attrs, ctx), block.attrs, ctx);
     case "table":
       return finishBlock(renderTable(block.content), block.attrs ?? {}, ctx);
+    // 에디터 전용(adr-033) — 공개 HTML에는 사진 자리를 그리지 않는다(그림 설명 brief도 어느 속성에도 싣지 않는다)
+    case "photoPlaceholder":
+      return "";
     case "callout":
       return finishBlock(
         tag(
