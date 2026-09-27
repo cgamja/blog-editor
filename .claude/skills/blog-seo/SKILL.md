@@ -14,7 +14,7 @@ description: 심심이스튜디오 블로그 초안 하나의 검색 노출(SEO)
 ## 0. 준비
 
 1. `blog-editor` MCP 도구가 보이는지 확인한다. 안 보이면 `/blog-write`의 0단계 안내(API 켜기 · 연결)를 그대로 한다.
-   - Codex면: 이 스킬은 `update_draft`를 부른다. 권장 설정(`docs/mcp-connect.md` 2-c)에서 `update_draft`는 늘 묻는다. 대화형이면 허락하면 되고, 비대화형 `codex exec`는 물을 수 없어 4단계에서 "requires approval"로 실패한다. 그러면 고치지 말고 3단계 목록까지만 보여 주고, 고치기를 맡길 실행에만 `-c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"'`를 주라고 안내한다.
+   - Codex면: 이 스킬은 `update_draft`를 부른다. 권장 설정(`docs/mcp-connect.md` 2-c, `default_tools_approval_mode = "writes"`)에서 `update_draft`는 늘 묻는다. 대화형이면 허락하면 되고, 비대화형 `codex exec`는 물을 수 없어 4단계에서 "requires approval"로 실패한다. 그러면 고치지 말고 3단계 목록까지만 보여 주고, 고치기를 맡길 실행에만 `-c 'mcp_servers.blog-editor.tools.update_draft.approval_mode="approve"'`를 주라고 안내한다.
 2. 주소(slug)가 없으면 `list_posts`로 초안 목록을 보여 주고 고르게 한다.
 3. `get_writing_guide`의 형식 가이드를 읽는다. 고칠 때 쓰는 markdown은 이 문법만 쓴다.
 
