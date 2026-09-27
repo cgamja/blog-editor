@@ -5,7 +5,13 @@ import { collectErrors, createDraft, createDraftWithBlocks, logIn } from "./app.
 const slugOf = (name: string, testInfo: TestInfo) =>
   `e2e-${name}-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
 
-/** Chromium이 sandbox(allow-scripts 없음) iframe에서 스크립트 실행을 막을 때 찍는 콘솔 오류의 앞부분(#144) */
+/**
+ * Playwright 추적(use.trace: "retain-on-failure" — 성공해도 기록은 늘 켜진다)의 스냅숏 수집기가 모든 프레임의 main world에
+ * 스크립트를 넣고(addInitScript) 동작마다 captureSnapshot을 평가한다. allow-scripts 없는 미리보기 iframe(sandbox)은 이를 막고
+ * 이 문구를 콘솔 오류로 찍는다(Chromium · WebKit). 앱이 아니라 테스트 도구가 원인이라 걸러 둔다 — 추적을 끄면 0건이고, 미리보기
+ * 문서에는 스크립트가 없다(#144 실험). sandbox에 allow-scripts를 더해 없애지 않는다(보안 경계).
+ * https://github.com/microsoft/playwright/blob/main/packages/playwright-core/src/server/trace/recorder/snapshotter.ts
+ */
 const SANDBOX_SCRIPT_BLOCKED = "Blocked script execution in 'about:srcdoc'";
 
 test("WHEN 문단 끝에서 Shift+Enter를 누르고 둘째 줄을 친 뒤 미리보기를 열면 THEN 문단 하나 안에 br로 두 줄이 보인다", async ({
