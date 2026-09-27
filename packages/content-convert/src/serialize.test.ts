@@ -263,23 +263,20 @@ describe("serializeMarkdown", () => {
     });
   });
 
-  it("스티커와 빈 문단은 빠지고 목록에 남는다", () => {
-    const sticker = { id: "heart", x: 10, y: 10, size: 10, rotate: 0 };
+  it("WHEN 스티커 문단 · 스티커 붙은 빈 문단 · 빈 항목 목록을 직렬화하면 THEN 스티커는 지시어로 나르고 빠지는 블록의 스티커만 목록에 남는다", () => {
+    const heart = { id: "heart", x: 90, y: 10, size: 12, rotate: 15 };
+    const cloud = { id: "cloud", x: -5, y: 40, size: 8, rotate: 0 };
     const input = doc(
-      {
-        type: "paragraph",
-        attrs: { stickers: [sticker, { ...sticker, id: "cloud" }] },
-        content: [text("가")],
-      },
-      { type: "paragraph" },
+      { type: "paragraph", attrs: { stickers: [heart, cloud] }, content: [text("가")] },
+      { type: "paragraph", attrs: { stickers: [heart] } },
       { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph" }] }] },
     );
 
     const result = serializeMarkdown(input);
 
-    expect(result.markdown).toBe("가\n");
+    expect(result.markdown).toBe("{sticker=heart@90,10,12,15 sticker=cloud@-5,40,8,0}\n가\n");
     expect(result.losses).toEqual([
-      { block: 1, kind: "stickers", count: 2 },
+      { block: 2, kind: "stickers", count: 1 },
       { block: 2, kind: "emptyParagraph", count: 1 },
       { block: 3, kind: "emptyParagraph", count: 1 },
     ]);
