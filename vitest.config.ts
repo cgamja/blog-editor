@@ -11,6 +11,7 @@ export default defineConfig({
     globals: true,
     include: [
       "*.test.ts", // 루트 도구 검사 (eslint.boundaries.test.ts)
+      "scripts/**/*.test.ts", // 레포 도구 스크립트의 순수 함수(seo-hook 판정 등)
       "packages/*/src/**/*.test.ts",
       "apps/editor/*/src/**/*.test.{ts,tsx}",
     ],
