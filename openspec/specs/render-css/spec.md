@@ -78,3 +78,12 @@ CSS는 SHALL `.post-table-scroll`에 `overflow-x: auto`를 두어 본문보다 �
 
 - **WHEN** 실브라우저 375px 폭에서 열이 많은 표가 든 글의 편집 화면을 연다(편집 본문도 `post-body`라 같은 CSS를 쓴다)
 - **THEN** 문서의 가로 스크롤 폭이 화면 폭을 넘지 않고, 표 틀의 스크롤 폭은 틀 폭보다 크다
+
+### Requirement: 할 일 항목은 글머리 기호 대신 체크 칸을 보인다
+
+CSS는 SHALL `.post-task`의 글머리 기호를 지우고(`list-style: none`), 체크 칸(`.post-task > p > input[type="checkbox"]`)을 글머리 기호 자리(글 왼쪽)에 둔다. 값은 토큰만 쓴다.
+
+#### Scenario: 할 일 어휘에 규칙이 있다
+
+- **WHEN** `post.css`를 읽는다
+- **THEN** `.post-task` 규칙에 `list-style: none`이, 체크 칸 규칙에 `input[type="checkbox"]` 선택자가 있다
