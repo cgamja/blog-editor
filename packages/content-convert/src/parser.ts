@@ -103,6 +103,7 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
         ...(directive.width !== undefined ? { width: directive.width } : {}),
         ...(directive.align !== undefined ? { align: directive.align } : {}),
         ...naturalSizeAttrs(directive),
+        ...stickerAttrs(directive),
       },
     };
   }
@@ -115,8 +116,14 @@ function toImageBlock(image: RawNode, directive: ResolvedDirective | undefined):
       ...(directive?.width !== undefined ? { width: directive.width } : {}),
       ...(directive?.align !== undefined ? { align: directive.align } : {}),
       ...naturalSizeAttrs(directive),
+      ...stickerAttrs(directive),
     },
   };
+}
+
+/** 지시어 `sticker=`(adr-032) — 없으면 키를 두지 않는다 */
+function stickerAttrs(directive: ResolvedDirective | undefined): Record<string, unknown> {
+  return directive?.stickers === undefined ? {} : { stickers: directive.stickers };
 }
 
 function naturalSizeAttrs(directive: ResolvedDirective | undefined): Record<string, number> {
@@ -130,6 +137,7 @@ function withDecoration(block: RawNode, directive: ResolvedDirective | undefined
   if (directive.font !== undefined) attrs.font = directive.font;
   if (directive.motion !== undefined) attrs.motion = directive.motion;
   if (directive.align !== undefined) attrs.align = directive.align;
+  Object.assign(attrs, stickerAttrs(directive));
   return { ...block, attrs };
 }
 

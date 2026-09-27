@@ -35,10 +35,20 @@ export const DIRECTIVE_KEYS = ["frame", "font", "motion", "align", "width", "siz
 export const SPAN_STYLE_KEYS = ["font", "weight", "size", "color", "highlight"] as const;
 export const SPAN_UNDERLINE_KEY = "underline";
 
-export const KNOWN_KEYS: ReadonlySet<string> = new Set(DIRECTIVE_KEYS);
+/**
+ * 스티커 지시어 키(adr-032) — 한 줄에 되풀이할 수 있고 모든 최상위 블록에 쓴다. 직렬화는 DIRECTIVE_KEYS 뒤에
+ * 블록 안 스티커 순서대로 쓴다.
+ */
+export const STICKER_DIRECTIVE_KEY = "sticker";
+
+export const KNOWN_KEYS: ReadonlySet<string> = new Set([...DIRECTIVE_KEYS, STICKER_DIRECTIVE_KEY]);
 
 /** `size=<가로>x<세로>`의 가로 · 세로 구분자 — directives.ts(읽기)와 serialize.ts(쓰기)가 같이 쓴다. */
 export const SIZE_SEPARATOR = "x";
+
+/** `sticker=<종류>@<x>,<y>,<크기>[,<회전>]`의 구분자(adr-032) — sticker-directive.ts(읽기 · 쓰기)와 message.ts가 같이 쓴다. */
+export const STICKER_KIND_SEPARATOR = "@";
+export const STICKER_NUMBER_SEPARATOR = ",";
 
 /** `frame`의 유일한 값 — 앱 스크린샷(appScreenshot). */
 export const APP_FRAME = "app";

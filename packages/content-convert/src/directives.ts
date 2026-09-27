@@ -2,11 +2,13 @@ import {
   ALIGNS,
   CAPTION_MAX_LENGTH,
   FONTS,
+  MAX_STICKERS_PER_DOC,
   MOTIONS,
   NATURAL_SIZE_RANGE,
   WIDTH_RANGE,
 } from "@blog-editor/content-schema";
-import { APP_FRAME, KNOWN_KEYS, SIZE_SEPARATOR } from "./constants";
+import { APP_FRAME, KNOWN_KEYS, SIZE_SEPARATOR, STICKER_DIRECTIVE_KEY } from "./constants";
+import { readStickerValue } from "./sticker-directive";
 import { computeFenceMask } from "./fence";
 import {
   blockMessage,
@@ -36,6 +38,15 @@ import {
   directiveUnknownKeyRule,
   directiveWidthValueRule,
   directiveSizeValueRule,
+  directiveSpaceInValueFix,
+  DIRECTIVE_SPACE_IN_VALUE_RULE,
+  DIRECTIVE_STICKER_KIND_FIX,
+  DIRECTIVE_STICKER_TOTAL_FIX,
+  DIRECTIVE_STICKER_VALUE_FIX,
+  directiveStickerKindRule,
+  directiveStickerTotalRule,
+  directiveStickerValueRule,
+  docMessage,
   footnoteDefinitionMessage,
   type FoundMessage,
 } from "./message";
@@ -90,7 +101,12 @@ function isDirectiveToken(token: string): boolean {
 
 function isDirectiveBody(body: string): boolean {
   const tokens = body.trim().split(/\s+/);
-  return tokens.length > 0 && tokens.every(isDirectiveToken);
+  if (tokens.length > 0 && tokens.every(isDirectiveToken)) return true;
+  // 알려진 키로 시작하면 지시어를 쓰려던 줄이다 — 값 안 공백으로 토큰이 깨져도 글자로 흘리지 않고
+  // 값 오류로 알린다(글자로 남으면 AI가 고칠 단서가 없다)
+  const first = tokens[0] ?? "";
+  const eq = first.indexOf("=");
+  return eq > 0 && KNOWN_KEYS.has(first.slice(0, eq));
 }
 
 export interface StripResult {
@@ -161,19 +177,28 @@ function validateDirective(
   pairsText: string,
   target: SemanticType,
 ): { resolved: ResolvedDirective; issues: DirectiveIssue[] } {
-  const pairs = pairsText
-    .trim()
-    .split(/\s+/)
-    .map((token) => {
-      const eq = token.indexOf("=");
-      return { key: token.slice(0, eq), value: token.slice(eq + 1) };
-    });
+  const tokens = pairsText.trim().split(/\s+/);
+  const pairs = tokens.filter(isDirectiveToken).map((token) => {
+    const eq = token.indexOf("=");
+    return { key: token.slice(0, eq), value: token.slice(eq + 1) };
+  });
 
-  const issues: DirectiveIssue[] = [];
+  const issues: DirectiveIssue[] = tokens
+    .filter((token) => !isDirectiveToken(token))
+    .map((token) => ({
+      rule: DIRECTIVE_SPACE_IN_VALUE_RULE,
+      received: token,
+      fix: directiveSpaceInValueFix(pairs[0]?.key ?? ""),
+    }));
   const seenKeys = new Set<string>();
   const resolved: ResolvedDirective = {};
 
   for (const { key, value } of pairs) {
+    // 스티커는 한 블록에 여럿이라 되풀이한다 — 모든 최상위 블록에 자리가 있다(decoration-schema)
+    if (key === STICKER_DIRECTIVE_KEY) {
+      readSticker(value, resolved, issues);
+      continue;
+    }
     if (seenKeys.has(key)) {
       issues.push({
         rule: DIRECTIVE_DUPLICATE_KEY_RULE,
@@ -293,6 +318,19 @@ function validateDirective(
   return { resolved, issues };
 }
 
+function readSticker(value: string, resolved: ResolvedDirective, issues: DirectiveIssue[]): void {
+  const read = readStickerValue(value);
+  if (read.ok) {
+    resolved.stickers = [...(resolved.stickers ?? []), read.sticker];
+    return;
+  }
+  issues.push(
+    read.reason === "kind"
+      ? { rule: directiveStickerKindRule(), received: value, fix: DIRECTIVE_STICKER_KIND_FIX }
+      : { rule: directiveStickerValueRule(), received: value, fix: DIRECTIVE_STICKER_VALUE_FIX },
+  );
+}
+
 function checkAppScreenshotCaption(
   resolved: ResolvedDirective,
   target: BlockRecord,
@@ -324,6 +362,7 @@ export function resolveDirectives(
   const resolvedByMapStart = new Map<number, ResolvedDirective>();
   const messages: FoundMessage[] = [];
   const candidateLines = new Set(candidates.map((c) => c.lineIndex0));
+  let stickerTotal = 0;
 
   for (const candidate of candidates) {
     const line = candidate.lineIndex0 + 1;
@@ -360,6 +399,17 @@ export function resolveDirectives(
       for (const issue of issues) {
         messages.push(blockMessageFromIssue(target.topLevel, line, issue));
       }
+      continue;
+    }
+    // 문서 상한(decoration-schema refine)은 zod보다 먼저 여기서 — 넘기 시작한 지시어 줄을 짚어 준다
+    const stickerCount = resolved.stickers?.length ?? 0;
+    const isOverTotal =
+      stickerTotal <= MAX_STICKERS_PER_DOC && stickerTotal + stickerCount > MAX_STICKERS_PER_DOC;
+    stickerTotal += stickerCount;
+    if (isOverTotal) {
+      messages.push(
+        docMessage(line, directiveStickerTotalRule(), candidate.raw, DIRECTIVE_STICKER_TOTAL_FIX),
+      );
       continue;
     }
     resolvedByMapStart.set(target.mapStart0, resolved);

@@ -1,12 +1,13 @@
 import { naturalSizeOf, normalize, orderedListNumberAt } from "@blog-editor/content-schema";
-import type { Block, Doc, InlineNode } from "@blog-editor/content-schema";
+import type { Block, Doc, InlineNode, Sticker } from "@blog-editor/content-schema";
 import { APP_FRAME, CALLOUT_CONTAINER_NAME, DIRECTIVE_KEYS, SIZE_SEPARATOR } from "./constants";
 import { serializeInline, serializeParagraph, serializePlainLabel } from "./serialize-inline";
+import { formatStickerDirective } from "./sticker-directive";
 
 /**
  * doc → markdown(spec: markdown-serialize) — `get_post`가 AI에게 주는 글. 정답은 "다시 변환하면 같은
  * doc" 하나이고, 문법은 입력 스펙(markdown-format · markdown-callout · markdown-directive)을 그대로
- * 쓴다. markdown에 자리가 없는 것(스티커 · 빈 문단 · 참조 정의로 읽히는 코드 마크)은 조용히 버리지
+ * 쓴다. markdown에 자리가 없는 것(빈 문단 · 참조 정의로 읽히는 코드 마크 · 빠지는 블록의 스티커)은 조용히 버리지
  * 않고 losses로 돌려준다(design.md 1 · 2 · 2-b · 7번).
  */
 
@@ -216,7 +217,13 @@ function directiveLine(block: Block): string | undefined {
     const value = directiveValue(block, key);
     return value === undefined ? [] : [`${key}=${String(value)}`];
   });
-  return parts.length > 0 ? `{${parts.join(" ")}}` : undefined;
+  const stickers = stickersOf(block).map(formatStickerDirective);
+  const all = [...parts, ...stickers];
+  return all.length > 0 ? `{${all.join(" ")}}` : undefined;
+}
+
+function stickersOf(block: Block): Sticker[] {
+  return (block.attrs as { stickers?: Sticker[] } | undefined)?.stickers ?? [];
 }
 
 function codeFence(text: string): string {
@@ -328,13 +335,13 @@ export function serializeMarkdown(doc: Doc): SerializeResult {
 
   normalize(doc).content.forEach((block, index) => {
     const blockNumber = index + 1;
-    const stickers = (block.attrs as { stickers?: unknown[] } | undefined)?.stickers ?? [];
-    if (stickers.length > 0) {
-      losses.push({ block: blockNumber, kind: "stickers", count: stickers.length });
-    }
-
     const dropped: BlockLosses = { emptyParagraph: 0, codeMark: 0 };
     const body = serializeBlockBody(block, dropped, markers);
+    // 스티커는 지시어로 나른다(adr-032) — 블록째 빠질 때만 그 스티커가 빠진다
+    const stickerCount = stickersOf(block).length;
+    if (body === undefined && stickerCount > 0) {
+      losses.push({ block: blockNumber, kind: "stickers", count: stickerCount });
+    }
     for (const kind of DROPPED_KINDS) {
       if (dropped[kind] > 0) losses.push({ block: blockNumber, kind, count: dropped[kind] });
     }
