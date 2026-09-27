@@ -17,14 +17,18 @@ function run(filter: string, port: string): ChildProcess {
 
 const children = [run("@blog-editor/api", apiPort), run("@blog-editor/web", webPort)];
 
+// 사람이 멈춘 종료(Ctrl-C)는 실패가 아니다 — 자식 종료 코드는 먼저 스스로 끝난 쪽만 따른다
+let stopping = false;
+
 function stopAll(): void {
+  stopping = true;
   for (const child of children) if (child.exitCode === null) child.kill("SIGTERM");
 }
 
 for (const child of children) {
   child.on("exit", (code) => {
+    if (!stopping) process.exitCode = code ?? 1;
     stopAll();
-    process.exitCode ??= code ?? 1;
   });
 }
 process.on("SIGINT", stopAll);

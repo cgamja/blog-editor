@@ -34,22 +34,27 @@
 - 연결은 연결용 토큰(Bearer) 또는 OAuth(DCR · PKCE S256) — [ADR-016](adr/2026-09-24-adr-016-mcp-server-sdk-connection-token.md) · [ADR-018](adr/2026-09-24-adr-018-mcp-oauth-authorization-server-in-service.md)
 - 이미지 올리기 API(`/api/images`): 형식 · 크기를 헤더로 검사하고 내용 해시 이름으로 저장한다. 줄이기는 브라우저가 한다 — [ADR-021](adr/2026-09-24-adr-021-image-upload-client-resize-no-server-codec.md)
 
-**예정** — 백오피스 화면(로그인 · 글 목록 · 저장 · 발행), 에디터에서 이미지 넣기(올리기 UI), AWS 배포. 진행은 [마일스톤](https://github.com/cgamja/blog-editor/milestones) M3~M6.
+**백오피스 화면**
+
+- 로그인 · 글 목록 · 로그아웃, 편집 화면에서 불러오기 · 저장 · 충돌 알림 · 발행
+- 에디터에서 이미지 넣기 — 고르기 · 붙여넣기 · 끌어다 놓기
+
+**예정** — AWS 배포. 진행은 [마일스톤](https://github.com/cgamja/blog-editor/milestones)에서 본다.
 
 ## 기술 스택
 
-| 영역            | 기술                                                      | 선택 이유                                                                                                                                                                              |
-| --------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 모노레포        | pnpm 11 워크스페이스, TypeScript 5.9, Node 22 이상        | 패키지 경계를 린트로 강제한다 — [ADR-009](adr/2026-09-22-adr-009-package-boundaries.md)                                                                                                |
-| 문서 형식       | zod 4                                                     | 문서에 들어갈 수 있는 것을 한 곳에서 정의한다 — [ADR-003](adr/2026-09-22-adr-003-json-document-is-source-of-truth.md)                                                                  |
-| markdown → 문서 | prosemirror-markdown 1.13 · markdown-it 14                | 토큰 단계에서 먼저 검사한다 — [ADR-013](adr/2026-09-23-adr-013-markdown-parser-prosemirror-markdown.md)                                                                                |
-| 에디터          | TipTap 3.31 (ProseMirror)                                 | 핵심 로직은 ProseMirror 순수 함수로 — [ADR-002](adr/2026-09-22-adr-002-tiptap-v3-prosemirror-core.md) · [ADR-017](adr/2026-09-24-adr-017-editor-schema-own-extensions.md)              |
-| 에디터 화면     | React 19.3 · Vite 8                                       | [ADR-019](adr/2026-09-24-adr-019-editor-react-tiptap-react-vite.md) · 백오피스 화면은 React Router · TanStack Query 예정([ADR-006](adr/2026-09-22-adr-006-vite-spa-tanstack-query.md)) |
-| API             | Hono 4 · `@hono/node-server`                              | M1~M3는 로컬 Node에서 — [ADR-014](adr/2026-09-23-adr-014-hono-api-local-node.md)                                                                                                       |
-| AI 연결         | MCP 공식 SDK(`@modelcontextprotocol/server` 2.0)          | 무상태 fetch 핸들러로 Hono에 붙인다 — [ADR-016](adr/2026-09-24-adr-016-mcp-server-sdk-connection-token.md)                                                                             |
-| 테스트          | Vitest 5 · fast-check 4                                   | 순수 함수는 DOM 없이, 불변식은 속성 기반으로 — [ADR-012](adr/2026-09-23-adr-012-fast-check-property-tests.md)                                                                          |
-| 개발 흐름       | OpenSpec · lefthook · commitlint · ESLint 10 · Prettier 3 | [ADR-010](adr/2026-09-22-adr-010-develop-workflow-tooling.md)                                                                                                                          |
-| 배포(예정)      | AWS 서버리스(Lambda · API Gateway · S3 · CloudFront)      | [ADR-004](adr/2026-09-22-adr-004-s3-poststore-etag-conflict.md) · [ADR-005](adr/2026-09-22-adr-005-aws-serverless-no-waf.md)                                                           |
+| 영역            | 기술                                                      | 선택 이유                                                                                                                                                                         |
+| --------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 모노레포        | pnpm 11 워크스페이스, TypeScript 5.9, Node 22 이상        | 패키지 경계를 린트로 강제한다 — [ADR-009](adr/2026-09-22-adr-009-package-boundaries.md)                                                                                           |
+| 문서 형식       | zod 4                                                     | 문서에 들어갈 수 있는 것을 한 곳에서 정의한다 — [ADR-003](adr/2026-09-22-adr-003-json-document-is-source-of-truth.md)                                                             |
+| markdown → 문서 | prosemirror-markdown 1.13 · markdown-it 14                | 토큰 단계에서 먼저 검사한다 — [ADR-013](adr/2026-09-23-adr-013-markdown-parser-prosemirror-markdown.md)                                                                           |
+| 에디터          | TipTap 3.31 (ProseMirror)                                 | 핵심 로직은 ProseMirror 순수 함수로 — [ADR-002](adr/2026-09-22-adr-002-tiptap-v3-prosemirror-core.md) · [ADR-017](adr/2026-09-24-adr-017-editor-schema-own-extensions.md)         |
+| 에디터 화면     | React 19.3 · Vite 8                                       | [ADR-019](adr/2026-09-24-adr-019-editor-react-tiptap-react-vite.md) · 백오피스 화면은 React Router · TanStack Query([ADR-006](adr/2026-09-22-adr-006-vite-spa-tanstack-query.md)) |
+| API             | Hono 4 · `@hono/node-server`                              | M1~M3는 로컬 Node에서 — [ADR-014](adr/2026-09-23-adr-014-hono-api-local-node.md)                                                                                                  |
+| AI 연결         | MCP 공식 SDK(`@modelcontextprotocol/server` 2.0)          | 무상태 fetch 핸들러로 Hono에 붙인다 — [ADR-016](adr/2026-09-24-adr-016-mcp-server-sdk-connection-token.md)                                                                        |
+| 테스트          | Vitest 5 · fast-check 4                                   | 순수 함수는 DOM 없이, 불변식은 속성 기반으로 — [ADR-012](adr/2026-09-23-adr-012-fast-check-property-tests.md)                                                                     |
+| 개발 흐름       | OpenSpec · lefthook · commitlint · ESLint 10 · Prettier 3 | [ADR-010](adr/2026-09-22-adr-010-develop-workflow-tooling.md)                                                                                                                     |
+| 배포(예정)      | AWS 서버리스(Lambda · API Gateway · S3 · CloudFront)      | [ADR-004](adr/2026-09-22-adr-004-s3-poststore-etag-conflict.md) · [ADR-005](adr/2026-09-22-adr-005-aws-serverless-no-waf.md)                                                      |
 
 ## 아키텍처
 
@@ -67,7 +72,7 @@ flowchart RL
   api --> schema
   api --> convert
   api --> render
-  web["web (예정)"] --> react
+  web["web"] --> react
   web --> schema
   web --> tokens[design-tokens]
   react --> tokens
