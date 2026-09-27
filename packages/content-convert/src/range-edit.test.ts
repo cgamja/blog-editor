@@ -437,6 +437,143 @@ describe("markdown-range-edit — 범위 찾기 보강", () => {
   });
 });
 
+describe("markdown-range-edit — 여러 곳이면 블록 전체와 같은 곳을 고른다(#158)", () => {
+  const WALK_HEADING = { type: "heading", attrs: { level: 2 }, content: [text("산책")] };
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 소제목만 바뀌고 문단은 그대로다", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [text("아침 산책")] },
+      input.content[1],
+    ]);
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'으로 replace하면 THEN 실패이고 블록 전체와 같은 곳(블록 1 · 블록 2)을 한 줄로 따로 알린다", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/블록 전체[^\n]*블록 1[^\n]*블록 2/);
+  });
+
+  it("WHEN 문단 '산책 가자'와 '산책은 좋다'에서 '산책'으로 replace하면 THEN 블록 전체와 같은 곳이 없어 지금처럼 실패한다", () => {
+    const input = doc(paragraph("산책 가자"), paragraph("산책은 좋다"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("2곳");
+    expect(message).not.toContain("블록 전체");
+  });
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 빈 markdown으로 replace하면 THEN 지우기엔 블록 전체 고르기를 쓰지 않아 '여러 곳'으로 실패하고 소제목이 남는다", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, { command: "replace", selection: "산책", markdown: "" });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toContain("2곳");
+  });
+
+  it("WHEN 머리 칸이 '산책'인 표와 문단 '오늘 산책'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 표 칸은 최상위 블록이 아니라 실패한다", () => {
+    const cell = (value: string) => ({
+      type: "tableCell",
+      content: [value === "" ? { type: "paragraph" } : paragraph(value)],
+    });
+    const row = (...values: string[]) => ({ type: "tableRow", content: values.map(cell) });
+    const input = doc(
+      { type: "table", content: [row("산책", ""), row("", "")] },
+      paragraph("오늘 산책"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectFail(result);
+  });
+
+  it("WHEN 점 목록 항목 '산책' 하나와 문단 '오늘 산책'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 목록 항목은 최상위 블록이 아니라 실패한다", () => {
+    const input = doc(
+      { type: "bulletList", content: [{ type: "listItem", content: [paragraph("산책")] }] },
+      paragraph("오늘 산책"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectFail(result);
+  });
+
+  it("WHEN 소제목 '잠깐...'과 문단 '그래서 잠깐... 했다'에서 '잠깐...'을 '## 잠깐만'으로 replace하면 THEN 글자 그대로 찾기로 돌아온 것이라 소제목만 바뀐다", () => {
+    const input = doc(
+      { type: "heading", attrs: { level: 2 }, content: [text("잠깐...")] },
+      paragraph("그래서 잠깐... 했다"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "잠깐...",
+      markdown: "## 잠깐만",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [text("잠깐만")] },
+      input.content[1],
+    ]);
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'으로 replace하면 THEN 안내에 되지 않는 길 '앞뒤 블록 글자까지 넣어'가 없다", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).not.toContain("앞뒤 블록 글자까지 넣어");
+  });
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책' 뒤에 insert_after로 새 문단을 넣으면 THEN 소제목 바로 뒤에 들어간다", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, {
+      command: "insert_after",
+      selection: "산책",
+      markdown: "새 문단",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([input.content[0], paragraph("새 문단"), input.content[1]]);
+  });
+});
+
 describe("markdown-range-edit — 표", () => {
   it("WHEN 표의 두 행에 걸친 일부를 골라 replace하면 THEN 실패이고 '블록 일부'와 표 전체를 고르라고 알린다", () => {
     const cell = (value: string) => ({ type: "tableCell", content: [paragraph(value)] });
