@@ -1,6 +1,6 @@
 ---
 name: blog-write
-description: 심심이스튜디오 블로그 글을 주제 하나로 자동으로 쓴다. 글 종류 판단 → 리서치(출처 포함) → 제목 · 목차 방향 확인(여기서 멈춤) → 본문 · 꾸밈 → blog-editor MCP로 초안 저장 · 스스로 고치기 → 에디터 링크 보고. 사용자가 "/blog-write <주제>", "블로그 글 써줘", "이 주제로 초안 만들어줘"라고 할 때 쓴다. 발행은 하지 않는다 — 사람이 에디터에서 한다.
+description: 심심이스튜디오 블로그 글을 주제 하나로 자동으로 쓴다. 글 종류 판단 → 리서치(출처 포함) → 제목 · 목차 방향 확인(여기서 멈춤) → 본문 · 꾸밈 → blog-editor MCP로 초안 저장 · 스스로 고치기 → 에디터 링크 보고. 사용자가 "/blog-write <주제>"(Claude Code), "$blog-write <주제>"(Codex), "블로그 글 써줘", "이 주제로 초안 만들어줘"라고 할 때 쓴다. 발행은 하지 않는다 — 사람이 에디터에서 한다.
 ---
 
 # /blog-write — 주제 하나로 블로그 초안 만들기
@@ -9,11 +9,14 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 도구 이름은 `blog-editor` MCP 서버 기준이다: `get_writing_guide` · `list_posts` · `get_post` · `check_draft` · `create_draft` · `update_draft`. 아래에서 "있으면"이라고 적은 인자 · 기능은 도구 설명(스키마)에 있을 때만 쓰고, 없으면 그 단계를 건너뛴다.
 
+이 스킬은 Claude Code와 Codex가 같은 파일을 읽는다(Codex는 `.agents/skills/blog-write` 링크로, adr-035). 대부분의 단계는 같다. 도구마다 다른 곳만 "Claude Code면 … / Codex면 …"으로 적었다. 웹 검색 · 페이지 열기는 쓰는 쪽의 웹 도구를 쓴다(Claude Code는 WebSearch · WebFetch, Codex는 웹 검색 — Codex면 원문 확인에 `web_search = "live"`(또는 `--search`)가 필요하다).
+
 ## 0. 준비
 
 1. `blog-editor` MCP 도구가 보이는지 확인한다. 안 보이면 멈추고 이렇게 안내한다.
    - 레포 루트에서 `pnpm --filter @blog-editor/api dev`로 API를 켠다(127.0.0.1:8787).
-   - Claude Code에서 `/mcp`로 `blog-editor`를 다시 연결한다.
+   - Claude Code면 `/mcp`로 `blog-editor`를 다시 연결한다.
+   - Codex면 `codex mcp list`로 `blog-editor`가 있는지 본다. 없으면 `docs/mcp-connect.md`의 Codex 절(`codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN`)을 따르고 Codex를 다시 켠다. 도구 호출이 "requires approval"로 실패하면(비대화형 `codex exec`) 같은 절의 **도구별** 허락 설정을 안내한다(읽기 도구 · `create_draft`만 자동, `update_draft`는 묻게).
    - 처음 등록은 `docs/mcp-connect.md`를 따른다.
 2. `get_writing_guide`를 읽는다. 형식 가이드(문법)와 이 블로그 주인의 글쓰기 가이드(말투 · 독자 · 구성)가 온다. **이후 모든 단계는 이 가이드가 이 파일보다 우선한다.**
 3. `list_posts`로 기존 글 제목 · 주소 · 카테고리를 본다. 제목 · 주소가 겹치지 않게 하고, 내부 링크 후보를 고르는 데 쓴다.
@@ -33,7 +36,8 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 ## 2. 리서치
 
-- WebSearch로 찾고, **숫자 · 날짜 · 사실은 WebFetch로 원문 페이지를 열어서** 확인한다. 검색 스니펫만 보고 쓰지 않는다.
+- 웹 검색으로 찾고, **숫자 · 날짜 · 사실은 원문 페이지를 열어서** 확인한다. 검색 스니펫만 보고 쓰지 않는다.
+- Codex면 원문 확인에 실시간 검색(`web_search = "live"` 또는 `--search`)이 필요하다. 기본값(`cached`)은 색인만 본다. 원문을 열 수 없으면 그 사실은 확인하지 못했다고 방향 확인에서 알리고 본문에 쓰지 않는다.
 - 사실마다 출처 URL을 기억해 두고, 글 끝 "참고한 곳"에 링크로 단다.
 - 의학 · 안전 · 법률처럼 틀리면 해가 되는 정보는 공신력 있는 출처(기관 · 공식 문서)만 쓴다. 없으면 쓰지 않고, 확인이 필요하다고 사용자에게 알린다.
 - 경험담(육아 이야기)은 지어내지 않는다. 사용자에게 받은 내용이 없으면 방향 확인에서 "넣을 경험이 있나요?"를 묻는다.
@@ -104,7 +108,7 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 1. `check_draft`로 형식을 먼저 검사한다. 실패 메시지(`블록 n (m줄): 규칙 → 고친 예`)를 보고 고친다.
 2. `create_draft`로 저장한다(slug · title · description · category · markdown, **keyword 인자가 있으면** 핵심 검색어도).
-3. 응답을 읽는다. 오류면 고쳐서 다시 한다. 검색 노출 점검(seo) 결과가 **있으면** `must`는 모두, `should`는 가능한 만큼 고친다.
+3. 응답을 읽는다. 오류면 고쳐서 다시 한다. 검색 노출 점검(seo) 결과가 **있으면** `must`는 모두, `should`는 가능한 만큼 고친다. 저장할 때마다(`update_draft` 포함) 이 확인을 스스로 한다 — Claude Code에 저장 직후 SEO 훅(#149, 예정)이 생기면 훅이 같은 것을 알려 주지만, Codex처럼 훅이 없는 쪽은 이 규칙이 유일한 확인이다.
 4. 이 고치기는 **최대 3번**까지만 한다. 그래도 남으면 남은 경고를 7단계에서 알린다.
 5. 주소가 이미 있다는 오류면 주소를 바꿔 다시 만든다(`-2`를 붙이는 것보다 다른 키워드를 먼저 쓴다).
 
@@ -117,21 +121,15 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 3. 없으면 `get_post`의 `markdown` 위에 고칠 곳만 바꿔 `update_draft`로 통째로 저장한다. 단 **`losses`가 비어 있지 않으면 저장하지 않는다.** 통째로 저장하면 그것(예: 스티커 3개)이 사라진다. 무엇이 사라지는지 알리고, 그래도 저장할지 사용자에게 먼저 묻는다.
 4. 충돌 메시지("그사이 다른 곳에서 글이 바뀌었다")가 오면 `get_post`로 다시 읽고, 새 markdown 위에 같은 수정을 다시 적용한다.
 
-## 6. 선택: claude-seo로 깊게 보기
+## 6. 선택: 글 품질 깊게 보기
 
-사용자가 원하거나 방향 확인에서 "SEO 점수도 봐 줘"라고 했으면 이 단계를 한다. `claude-seo:seo-content` 스킬이 설치돼 있으면 그 기준으로 본다. 설치돼 있지 않으면 E-E-A-T · 읽기 쉬움 · 검색 의도 관점으로 직접 본다.
-
-1. `get_post`의 마크다운과 제목 · 설명 · 핵심 검색어를 평가한다.
-2. 점수와 고칠 점을 짧게 보여 준다.
-3. 목표 점수(말이 없으면 80점)까지 5단계 방식으로 고친다.
-
-초안은 공개 주소가 없으므로 URL 분석이 아니라 내용 분석으로 한다.
+사용자가 원하거나 방향 확인에서 "SEO 점수도 봐 줘"라고 했으면, 저장한 초안의 주소로 **`/blog-seo` 스킬의 절차를 그대로 한다**(Claude Code는 `/blog-seo <주소>`, Codex는 `$blog-seo <주소>`). 채점(규칙 점수 + Claude Code면 claude-seo 품질 점수) → 고칠 목록에서 멈춤 → 확인받은 것만 부분 고치기 → 전후 점수다. 스킬이 보이지 않으면 `.claude/skills/blog-seo/SKILL.md`를 읽고 따른다.
 
 ## 7. 보고
 
 짧게 알린다.
 
-- **에디터 링크:** `create_draft` · `update_draft` 응답의 `editorUrl`. "미리보기로 실제 모양을 보고, 괜찮으면 발행을 눌러 주세요"를 붙인다. 로컬 API(`127.0.0.1`)에 연결돼 있는데 `editorUrl`이 `https://editor.simsimeestudio.com`으로 시작하면, 켜 둔 에디터 주소로 바꿔 준다(예: `http://127.0.0.1:5173/posts/<주소>/edit`, 화면이 꺼져 있으면 `PORT=5173 pnpm --filter @blog-editor/web dev`). 근본 해결은 `.env`에 `EDITOR_BASE_URL=http://127.0.0.1:<PORT>`를 넣는 것이라고 한 줄 덧붙인다
+- **에디터 링크:** `create_draft` · `update_draft` 응답의 `editorUrl`(Claude Code · Codex 같음). "미리보기로 실제 모양을 보고, 괜찮으면 발행을 눌러 주세요"를 붙인다. 로컬 API(`127.0.0.1`)에 연결돼 있는데 `editorUrl`이 `https://editor.simsimeestudio.com`으로 시작하면, 켜 둔 에디터 주소로 바꿔 준다(예: `http://127.0.0.1:5173/posts/<주소>/edit`, 화면이 꺼져 있으면 `PORT=5173 pnpm --filter @blog-editor/web dev`). 근본 해결은 `.env`에 `EDITOR_BASE_URL=http://127.0.0.1:<PORT>`를 넣는 것이라고 한 줄 덧붙인다
 - **사진이 필요한 자리:** 목록으로
 - **남은 검사 경고:** 있으면
 - **이어서 고치는 법:** 5단계 "다시 고칠 때" 절차로 한다. 같은 대화에서 "둘째 문단 더 짧게", "제목을 2번 후보로", "도시락 문단은 `font=gaegu`로"처럼 말하면 된다
@@ -139,5 +137,5 @@ description: 심심이스튜디오 블로그 글을 주제 하나로 자동으�
 
 ## 아직 없는 단계 (결정 · 구현 뒤 추가)
 
-- **AI 이미지 생성:** 결정 뒤 추가한다(#137). 그전에는 사진이 필요한 자리를 목록으로만 알린다.
+- **AI 이미지 생성:** 방법은 정해졌고(ADR-029) 구현은 #155에서 한다. 그전에는 사진이 필요한 자리를 목록으로만 알린다. 갈림길만 미리 적어 둔다 — Codex면 `$imagegen`을 바로 쓰고, Claude Code면 공식 Codex CLI(`codex exec`)에 그림만 맡긴다. 한도가 끝나거나 실패하면 사진 자리로 둔다.
 - **미리보기 이미지로 디자인 확인:** `preview_post` 도구가 생기면(#139) 저장 뒤 화면을 보고 스티커 겹침 · 어색한 꾸밈을 스스로 고친다.
