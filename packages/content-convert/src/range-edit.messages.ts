@@ -15,13 +15,27 @@ export function selectionNotFoundMessage(selection: string, hasEllipsis: boolean
     : base;
 }
 
-/** @param count 찾은 곳 전체 수 — `places`는 그중 보여 줄 앞쪽 몇 곳이다 */
+/**
+ * @param count 찾은 곳 전체 수 — `places`는 그중 보여 줄 앞쪽 몇 곳이다
+ * @param wholeBlockNumbers 블록 글자 전체와 같은 곳의 블록 번호(1부터) — 비면 그 줄을 쓰지 않는다(#158 · adr-038)
+ */
 export function selectionAmbiguousMessage(
   selection: string,
   count: number,
   places: readonly string[],
+  wholeBlockNumbers: readonly number[],
 ): string {
-  return `범위가 ${count}곳에 있다(받음: "${selection}") — 더 긴 글로 한 곳만 집는다:\n${places.map((place) => `- ${place}`).join("\n")}`;
+  const lines = [
+    `범위가 ${count}곳에 있다(받음: "${selection}") — 더 긴 글로 한 곳만 집는다:`,
+    ...places.map((place) => `- ${place}`),
+  ];
+  if (wholeBlockNumbers.length > 0) {
+    const numbers = wholeBlockNumbers.map((number) => `블록 ${number}`).join(", ");
+    lines.push(
+      `블록 전체와 같은 곳이 ${wholeBlockNumbers.length}곳이다: ${numbers} — 하나만 고치려면 범위형으로 바로 앞 블록 글자부터 이 블록까지(시작 글=앞 블록 글자...끝 글=이 블록 글자) 집어 함께 다시 쓰거나 글 전체 markdown으로 저장한다`,
+    );
+  }
+  return lines.join("\n");
 }
 
 /** 여러 곳을 알릴 때 한 곳의 모습 — 블록 번호는 1부터(형식 가이드의 '블록 n'과 같다) */

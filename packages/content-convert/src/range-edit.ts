@@ -138,15 +138,35 @@ function candidatesOf(blocks: readonly TextBlockRef[], start: string, end: strin
   return candidates;
 }
 
+/** 여러 곳 중 고를 수 있는 블록 전체 — 최상위 블록 하나의 보이는 글자 전체와 같은 곳 */
+function isWholeTopBlock(blocks: readonly TextBlockRef[], found: Found): boolean {
+  const ref = refAt(blocks, found.start.block);
+  return (
+    found.start.block === found.end.block &&
+    ref.path.length === 1 &&
+    coversWholeBlocks(blocks, found)
+  );
+}
+
+/**
+ * 소제목 "산책"을 집었는데 문단 "오늘 산책을 했다"에도 있으면 AI가 뜻한 것은 소제목이다. 지우기는 잘못 고르면
+ * 글이 말없이 사라지고, 목록 항목 · 표 칸 · 인용 안 문단은 AI가 그 블록 하나를 뜻했다고 볼 근거가 약하다.
+ * 범위형은 AI가 이미 앞뒤를 골랐다(#158 · adr-038).
+ */
 function pick(
   blocks: readonly TextBlockRef[],
   selection: string,
   candidates: readonly Found[],
-  hasEllipsis: boolean,
+  { hasEllipsis, canPickWholeBlock }: { hasEllipsis: boolean; canPickWholeBlock: boolean },
 ): Located {
   const [only, ...rest] = candidates;
   if (only === undefined) return fail(selectionNotFoundMessage(selection, hasEllipsis));
   if (rest.length === 0) return { ok: true, found: only };
+  const wholeBlocks = canPickWholeBlock
+    ? candidates.filter((found) => isWholeTopBlock(blocks, found))
+    : [];
+  const [onlyWhole, ...moreWhole] = wholeBlocks;
+  if (onlyWhole !== undefined && moreWhole.length === 0) return { ok: true, found: onlyWhole };
   const places = candidates.slice(0, MAX_PLACES).map(({ start, end }) => {
     const ref = blocks[start.block];
     const text = ref?.text ?? "";
@@ -154,29 +174,35 @@ function pick(
     const around = text.slice(Math.max(0, start.offset - AROUND_CHARS), until + AROUND_CHARS);
     return selectionPlace((ref?.top ?? 0) + 1, around);
   });
-  return fail(selectionAmbiguousMessage(selection, candidates.length, places));
+  const wholeBlockNumbers = wholeBlocks.map(({ start }) => refAt(blocks, start.block).top + 1);
+  return fail(selectionAmbiguousMessage(selection, candidates.length, places, wholeBlockNumbers));
 }
 
 /**
  * 시도 순서는 첫 `...`에서 나누기 → (점이 넷 이상이면) 마지막 `...`에서 나누기 → 글자 그대로다.
  * 한 곳으로 정해지는 첫 시도를 쓰고, 없으면 여러 곳인 첫 시도로 알리고, 그것도 없으면 못 찾았다고 알린다.
+ * 글자 그대로 찾기로 돌아왔으면 `...`는 글자라 범위형이 아니다 — 블록 전체 고르기를 쓴다.
+ * @param isDeletion 빈 markdown으로 바꾸기(지우기)인가 — 블록 전체 고르기를 쓰지 않는다
  */
-function locate(blocks: readonly TextBlockRef[], selection: string): Located {
+function locate(blocks: readonly TextBlockRef[], selection: string, isDeletion: boolean): Located {
   if (selection === "") return fail(selectionEmptyMessage());
-  const literal = () => candidatesOf(blocks, selection, null);
+  const literal = candidatesOf(blocks, selection, null);
   const splits = splitSelection(selection);
-  if (splits.length === 0) return pick(blocks, selection, literal(), false);
+  const hasEllipsis = splits.length > 0;
   const attempts = [
     ...splits.map(({ start, end }) =>
       start === "" || end === "" ? [] : candidatesOf(blocks, start, end),
     ),
-    literal(),
+    literal,
   ];
   const chosen =
     attempts.find((found) => found.length === 1) ??
     attempts.find((found) => found.length > 1) ??
     [];
-  return pick(blocks, selection, chosen, true);
+  return pick(blocks, selection, chosen, {
+    hasEllipsis,
+    canPickWholeBlock: !isDeletion && chosen === literal,
+  });
 }
 
 /** 꾸밈 없는 문단 하나면 그 인라인 글 — 한 블록 안 글자 바꾸기로 쓸 수 있다 */
@@ -266,7 +292,9 @@ function droppedStickers(replaced: readonly JsonNode[], added: readonly JsonNode
  * 바꾸면 고르지 않은 글자(다른 목록 항목 · 인용 문단)가 말없이 사라진다. 앞뒤 공백은 보이지 않으므로
  * 덮지 않아도 된다.
  */
-function coversWholeBlocks({ blocks, start, end, startRef, endRef }: EditRange): boolean {
+function coversWholeBlocks(blocks: readonly TextBlockRef[], { start, end }: Found): boolean {
+  const startRef = refAt(blocks, start.block);
+  const endRef = refAt(blocks, end.block);
   const isBlank = (ref: TextBlockRef) => ref.text.trim() === "";
   const leadingSpaces = startRef.text.length - startRef.text.trimStart().length;
   const beforeStart = blocks.slice(0, start.block).filter(({ top }) => top === startRef.top);
@@ -334,7 +362,7 @@ function replaceInline(
 
 /** 범위가 걸친 최상위 블록 전체를 덮지 않으면 실패한다. `added`가 비면 그 블록들을 지운다 */
 function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditResult {
-  if (!coversWholeBlocks(range)) {
+  if (!coversWholeBlocks(range.blocks, range)) {
     const isInOneCodeBlock = range.start.block === range.end.block && range.startRef.isCode;
     return fail(selectionPartialBlockMessage(isInOneCodeBlock));
   }
@@ -376,9 +404,12 @@ export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   const blocks = collectTextBlocks(root);
   // 글자 그대로 먼저 — 코드 블록에는 `\` + 줄바꿈이 글자로 있다. 못 찾으면 get_post의 강제 줄바꿈 표기로 읽는다
   const asHardBreaks = edit.selection.replace(MARKDOWN_HARD_BREAK, HARD_BREAK_TEXT);
-  const literal = locate(blocks, edit.selection);
+  const isDeletion = edit.command === "replace" && edit.markdown.trim() === "";
+  const literal = locate(blocks, edit.selection, isDeletion);
   const located =
-    literal.ok || asHardBreaks === edit.selection ? literal : locate(blocks, asHardBreaks);
+    literal.ok || asHardBreaks === edit.selection
+      ? literal
+      : locate(blocks, asHardBreaks, isDeletion);
   if (!located.ok) return located;
   const { start, end } = located.found;
   const range: EditRange = {
@@ -391,13 +422,12 @@ export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   };
   if (edit.command === "insert_after") return insertAfterRange(range, edit.markdown);
 
-  const isEmpty = edit.markdown.trim() === "";
-  if (isEmpty && coversWholeBlocks(range)) return replaceBlocks(range, []);
+  if (isDeletion && coversWholeBlocks(blocks, range)) return replaceBlocks(range, []);
   const isSameBlock = start.block === end.block;
   if (isSameBlock && range.startRef.isCode && !CODE_FENCE.test(edit.markdown)) {
     return replaceCodeText(range, edit.markdown);
   }
-  const converted = isEmpty ? null : convertMarkdown(edit.markdown);
+  const converted = isDeletion ? null : convertMarkdown(edit.markdown);
   if (converted !== null && !converted.ok) return converted;
   const inline = converted === null ? [] : inlineOnly(converted.doc);
   if (
