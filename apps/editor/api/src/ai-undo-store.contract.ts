@@ -32,5 +32,35 @@ export function describeAiUndoStoreContract(name: string, createStore: () => Pro
       expect(await store.get("beta-open")).toBeNull();
       expect(await store.get("never-written")).toBeNull();
     });
+
+    it("WHEN after를 주고 지우면 THEN 지금 기록의 after가 같을 때만 지워지고 다르면 기록이 남는다", async () => {
+      const store = await createStore();
+      await store.put("beta-open", { before: fixtures.minimal, after: "revision-2" });
+      await store.put("other-post", { before: fixtures.minimal, after: "revision-3" });
+
+      await store.delete("beta-open", "revision-1");
+      await store.delete("other-post", "revision-3");
+      await store.delete("never-written", "revision-4");
+
+      expect(await store.get("beta-open")).toEqual({
+        before: fixtures.minimal,
+        after: "revision-2",
+      });
+      expect(await store.get("other-post")).toBeNull();
+    });
+
+    it("WHEN 같은 slug에 두 판을 기다리지 않고 잇달아 쓰면 THEN 나중에 부른 판이 남는다", async () => {
+      const store = await createStore();
+
+      await Promise.all([
+        store.put("beta-open", { before: fixtures.allBlocks, after: "revision-1" }),
+        store.put("beta-open", { before: fixtures.minimal, after: "revision-2" }),
+      ]);
+
+      expect(await store.get("beta-open")).toEqual({
+        before: fixtures.minimal,
+        after: "revision-2",
+      });
+    });
   });
 }
