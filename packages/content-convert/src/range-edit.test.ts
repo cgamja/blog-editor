@@ -484,10 +484,44 @@ describe("markdown-range-edit — 여러 곳이면 블록 전체와 같은 곳�
     expect(message).not.toContain("블록 전체");
   });
 
-  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 빈 markdown으로 replace하면 THEN 지우기엔 블록 전체 고르기를 쓰지 않아 '여러 곳'으로 실패하고 소제목이 남는다", () => {
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 빈 markdown으로 replace하면 THEN 지우기엔 블록 전체 고르기를 쓰지 않아 '여러 곳'으로 실패하고, 블록 전체와 같은 곳(블록 1)을 지우는 길 — 범위형으로 앞 블록부터 · 이웃 블록 지시어도 함께 — 을 알린다(#178)", () => {
     const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
 
     const result = editDocRange(input, { command: "replace", selection: "산책", markdown: "" });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("2곳");
+    expect(message).toMatch(/블록 전체[^\n]*블록 1/);
+    expect(message).toContain("범위형");
+    expect(message).toContain("앞 블록");
+    expect(message).toContain("지시어");
+    expect(message).toContain("고르지 않는다");
+    expect(message).toContain("이웃 블록 글만");
+    expect(message).toContain("뒤 블록");
+    expect(message).toContain("유일하게");
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'을 빈 markdown으로 replace하면 THEN 블록 전체와 같은 곳이 둘이라 '먼저 바꿔 유일하게 만든 뒤 지우기' 길은 알리지 않고 범위형 · 글 전체 저장만 알린다(#178)", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, { command: "replace", selection: "산책", markdown: "" });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toMatch(/블록 전체[^\n]*블록 1[^\n]*블록 2/);
+    expect(message).toContain("범위형");
+    expect(message).toContain("글 전체 markdown");
+    expect(message).not.toContain("유일하게");
+  });
+
+  it("WHEN 문단 'a⏎b'(강제 줄바꿈 — 소제목은 줄바꿈을 받지 않는다)와 문단 'x a⏎b y'에서 get_post 표기 'a\\⏎b'를 빈 markdown으로 replace하면 THEN 강제 줄바꿈으로 다시 찾을 때도 지우기라 블록 전체 고르기를 쓰지 않고 '2곳'으로 실패한다", () => {
+    const input = doc(
+      { type: "paragraph", content: [text("a"), { type: "hardBreak" }, text("b")] },
+      { type: "paragraph", content: [text("x a"), { type: "hardBreak" }, text("b y")] },
+    );
+
+    const result = editDocRange(input, { command: "replace", selection: "a\\\nb", markdown: "" });
 
     expectFail(result);
     expect(result.messages.join("\n")).toContain("2곳");
