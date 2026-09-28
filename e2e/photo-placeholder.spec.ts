@@ -61,3 +61,41 @@ test("WHEN 사진 자리를 고르고 「사진 올리기」로 이미지를 올
     .toMatchObject({ alt: BRIEF, brief: NEW_BRIEF });
   expect(errors).toEqual([]);
 });
+
+test("WHEN 사진 자리에 올린 이미지가 서버에 닿지 못해 실패하고 「다시 시도」를 누른다 THEN 그림이 사진 자리를 채우고 사진 자리 · 앞에 새 그림이 남지 않는다", async ({
+  page,
+}, testInfo) => {
+  await logIn(page);
+  const errors = collectErrors(page);
+  const slug = `e2e-photo-retry-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
+  await createDraftWithBlocks(page, slug, "사진 자리 다시 시도", [
+    { type: "paragraph", content: [{ type: "text", text: "낮잠 이야기" }] },
+    { type: "photoPlaceholder", attrs: { brief: BRIEF, ratio: "4:3" } },
+  ]);
+  let uploads = 0;
+  // 첫 올리기만 연결을 끊는다 — 다시 시도는 실제 API로 간다
+  await page.route("**/api/images", async (route) => {
+    uploads += 1;
+    if (uploads === 1) await route.abort("failed");
+    else await route.continue();
+  });
+  await page.goto(`/posts/${slug}/edit`);
+  const body = page.getByLabel("본문", { exact: true });
+  const placeholder = body.locator("figure.photo-placeholder");
+  await placeholder.click();
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("toolbar", { name: "사진 자리" })
+    .getByRole("button", { name: "사진 올리기" })
+    .click();
+  await (await chooser).setFiles({ name: "nap.png", mimeType: "image/png", buffer: PNG_4X3 });
+
+  await body.getByRole("alert").getByRole("button", { name: "다시 시도" }).click();
+
+  const images = body.locator("figure.post-image img");
+  await expect(images).toHaveCount(1);
+  await expect(images).toHaveAttribute("alt", BRIEF);
+  await expect(placeholder).toHaveCount(0);
+  // 끊긴 올리기가 콘솔에 남기는 네트워크 오류는 이 시나리오의 일부다
+  expect(errors.filter((error) => !error.includes("net::"))).toEqual([]);
+});
