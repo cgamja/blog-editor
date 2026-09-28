@@ -90,8 +90,8 @@ export interface EditingStart {
   restore: RestoreDecision;
 }
 
-/** 머리줄 위에 띄우는 것 — 세션 만료 띠 · 충돌 · 발행 확인 · 미리보기 */
-export type EditorOverlay = "conflict" | "publish" | "preview" | null;
+/** 머리줄 위에 띄우는 것 — 세션 만료 띠 · 충돌 · 발행 확인 · 미리보기 · AI 수정 되돌리기 확인 */
+export type EditorOverlay = "conflict" | "publish" | "preview" | "aiUndo" | null;
 
 /** 편집 세션 — 화면이 스스로 옮긴 주소(adopted)에서는 `sessionKey`를 이어 간다 */
 export interface EditingSession {

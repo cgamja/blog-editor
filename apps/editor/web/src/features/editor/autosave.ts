@@ -15,6 +15,8 @@ export interface Autosave {
   flush: () => Promise<void>;
   /** 이 방식으로 저장한다 — 자동 저장과 같은 줄에 선다(발행 · 덮어쓰기) */
   run: (mode: SaveMode) => Promise<void>;
+  /** 줄에 선 저장이 모두 끝나면 풀린다(성공 · 실패 모두) — 저장과 겹치면 안 되는 요청이 기다린다 */
+  settled: () => Promise<void>;
   dispose: () => void;
 }
 
@@ -82,6 +84,7 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
     schedule,
     flush: () => run("draft"),
     run: (mode) => run(mode),
+    settled: () => queue,
     dispose: clearTimer,
   };
 }

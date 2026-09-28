@@ -24,6 +24,9 @@ import { etagOf, revisionFromEtag } from "./etag";
 import { needsSavedForUpdate, withPublishedUpdate } from "./published-update";
 import { registerPreviewRoute } from "./post-preview";
 import { registerRenameRoute } from "./post-rename";
+import { registerAiUndoRoutes } from "./ai-undo-routes";
+import type { AiUndoStore } from "./ai-undo-store";
+import { createMemoryAiUndoStore } from "./memory-ai-undo-store";
 import { issuesOf } from "./schema-issues";
 import { registerSessionRoutes, requireSession, resolveSessionConfig } from "./session";
 import type { SessionOptions } from "./session";
@@ -51,6 +54,8 @@ export interface AppOptions extends SessionOptions {
   images?: ImageStore;
   /** 워크스페이스 설정(글쓰기 가이드) — 없으면 메모리. 라우트는 늘 있어 계약의 라우트 집합이 옵션으로 바뀌지 않는다 */
   settings?: SettingsStore;
+  /** 글마다 마지막 AI 저장(ADR-041) — 없으면 메모리. REST 되돌리기와 `/mcp`가 같은 인스턴스를 쓴다 */
+  aiUndo?: AiUndoStore;
   /** 발행 글 `updated`에 쓰는 오늘(`YYYY-MM-DD`). 기본은 블로그 시간대의 오늘 */
   today?: () => string;
 }
@@ -93,6 +98,7 @@ export function createApp(options: AppOptions): Hono {
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
   const postCss = readPostCss();
   const session = resolveSessionConfig(options);
+  const aiUndo = options.aiUndo ?? createMemoryAiUndoStore();
   const app = new Hono();
   app.use("/api/*", requireSession(session));
   registerSessionRoutes(app, session);
@@ -151,7 +157,8 @@ export function createApp(options: AppOptions): Hono {
     }
   });
 
-  registerRenameRoute(app, store);
+  registerRenameRoute(app, store, aiUndo);
+  registerAiUndoRoutes(app, { store, aiUndo });
   registerPreviewRoute(app, imageBaseUrl);
 
   app.get("/public/posts", async (c) => {
@@ -209,7 +216,7 @@ export function createApp(options: AppOptions): Hono {
   registerImportRoutes(app, { imageBaseUrl });
 
   if (options.mcp !== undefined) {
-    registerMcpRoute(app, { ...options.mcp, store, categories, session, settings });
+    registerMcpRoute(app, { ...options.mcp, store, categories, session, settings, aiUndo });
   }
 
   return app;

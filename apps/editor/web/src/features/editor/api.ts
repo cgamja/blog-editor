@@ -73,6 +73,25 @@ export async function renamePost(from: string, to: string, revision: string) {
   return revisionOf(response);
 }
 
+/**
+ * `GET /api/posts/{slug}/ai-undo?revision=` — 마지막 AI 저장을 지금 되돌릴 수 있는가(ADR-041). 내가 가진 판이
+ * 지금 판일 때만 true다 — 옛 판으로 누르면 409뿐이라 버튼을 보이지 않는다
+ */
+export async function fetchAiUndo(slug: string, revision: string): Promise<boolean> {
+  const query = new URLSearchParams({ revision });
+  const response = await apiRequest(`${postPath(slug)}/ai-undo?${query.toString()}`);
+  return ((await response.json()) as { available: boolean }).available;
+}
+
+/** `POST /api/posts/{slug}/ai-undo` — 마지막 AI 저장을 되돌린다. 되돌린 판의 revision을 돌려준다 */
+export async function revertAiEdit(slug: string, revision: string): Promise<string> {
+  const response = await apiRequest(`${postPath(slug)}/ai-undo`, {
+    method: "POST",
+    headers: saveHeadersOf(revision),
+  });
+  return revisionOf(response);
+}
+
 /** `POST /api/preview` — 공개 렌더러가 그린 본문 HTML */
 export async function fetchPreviewHtml(doc: Doc): Promise<string> {
   const response = await apiRequest(PREVIEW_PATH, {

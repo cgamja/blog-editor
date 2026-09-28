@@ -5,7 +5,7 @@ import { HTTP_NOT_FOUND, HTTP_SERVER_ERROR } from "../../../shared/api/constants
 import { ApiError } from "../../../shared/api/errors";
 import { ROUTES } from "../../../shared/routes/constants";
 import { fetchPost, latestPostQuery } from "../api";
-import { NEW_POST_KEY, postQueryKey } from "../constants";
+import { NEW_POST_KEY, liveRevisionQueryKey, postQueryKey } from "../constants";
 import { editingStartOf } from "../editing-start";
 import { readLocalDraft } from "../local-draft";
 import { EDITOR_MESSAGES } from "../messages";
@@ -49,11 +49,12 @@ export function EditSession({ initialSlug, onAdopt }: EditSessionProps) {
   const [local] = useState(() => readLocalDraft(initialSlug ?? NEW_POST_KEY));
 
   const handleReload = (slug: string) => {
-    void queryClient
-      .fetchQuery(latestPostQuery(slug))
-      .then((post) =>
-        setReloaded((previous) => ({ version: (previous?.version ?? 0) + 1, slug, post })),
-      );
+    void queryClient.fetchQuery(latestPostQuery(slug)).then((post) => {
+      // 옛 에디터가 읽어 둔 서버 판(live-reflect)을 버린다 — 새 에디터와 같은 렌더에 붙어 gcTime 0으로도 남으면,
+      // 새 에디터가 그 옛 판을 "다른 곳의 새 판"으로 보고 방금 불러온 본문을 바꿔 끼운다(AI 수정 되돌리기에서 드러남)
+      queryClient.removeQueries({ queryKey: liveRevisionQueryKey(slug) });
+      setReloaded((previous) => ({ version: (previous?.version ?? 0) + 1, slug, post }));
+    });
   };
 
   if (reloaded !== null) {

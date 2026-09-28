@@ -11,6 +11,9 @@ export const PRECONDITION_REQUIRED_MESSAGE =
 export const BODY_NOT_JSON_MESSAGE = "본문이 JSON이 아니다";
 export const SCHEMA_MISMATCH_MESSAGE = "문서가 스키마에 맞지 않는다";
 export const CONFLICT_MESSAGE = "다른 곳에서 수정됐다 — 다시 불러온 뒤 저장한다";
+/** AI 수정 되돌리기 422 — 화면은 버튼을 숨길 뿐이라 거의 보이지 않지만, 그사이 바뀐 경우 그대로 보여 준다 */
+export const AI_UNDO_UNAVAILABLE_MESSAGE =
+  "되돌릴 AI 수정이 없다 — 그 뒤 글이 바뀌었거나 이미 되돌렸다";
 export const PUBLISHED_SLUG_LOCKED_MESSAGE = "발행한 글은 주소를 바꿀 수 없다";
 export const SLUG_TAKEN_MESSAGE = "그 주소를 쓰는 글이 이미 있다";
 export const PREVIEW_TOO_LARGE_MESSAGE = "미리보기로 보내기엔 글이 너무 크다";

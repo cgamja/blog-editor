@@ -6,6 +6,7 @@ import {
   imagePathSchema,
   slugSchema,
 } from "@blog-editor/content-schema";
+import { AI_UNDO_UNAVAILABLE_REASONS } from "../ai-undo-reasons";
 import { RENAME_CONFLICT_REASONS } from "../rename-reasons";
 import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 
@@ -34,6 +35,15 @@ export const renameConflictBodySchema = z.strictObject({
 });
 
 export const renameResultSchema = z.strictObject({ slug: slugSchema, revision: z.string() });
+
+/** `GET /api/posts/{slug}/ai-undo` — 지금 마지막 AI 저장을 되돌릴 수 있는가(ADR-041) */
+export const aiUndoStatusSchema = z.strictObject({ available: z.boolean() });
+
+/** AI 수정 되돌리기 422 — `reason`은 되돌릴 수 없는 까닭(ai-undo.ts) */
+export const aiUndoUnavailableBodySchema = z.strictObject({
+  message: z.string(),
+  reason: z.enum(AI_UNDO_UNAVAILABLE_REASONS),
+});
 
 /** 공개 렌더러가 그린 본문 HTML(`<div class="post-body">…</div>`) */
 export const previewResultSchema = z.strictObject({ html: z.string() });

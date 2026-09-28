@@ -568,9 +568,30 @@
   color: var(--ink-soft);
 }
 
+/* 머리줄 「AI 수정 되돌리기」(ADR-041) — 되돌릴 수 있을 때만 뜬다. 검색 노출 칩과 같은 알약 틀 */
+.editor-ai-undo {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-height);
+  padding: 0 var(--space-14);
+  border: var(--border-width) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-mid);
+  font: inherit;
+  font-size: var(--font-size-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-ai-undo:hover {
+  border-color: var(--brand-ink);
+}
+
 /* 640px 미만: 머리줄에 들어가게 「검색 노출」 글자를 숨기고 점수만 — 이름(aria-label)은 그대로다 */
 @media (max-width: 40rem) {
-  .seo-chip {
+  .seo-chip,
+  .editor-ai-undo {
     padding: 0 var(--space-10);
   }
 

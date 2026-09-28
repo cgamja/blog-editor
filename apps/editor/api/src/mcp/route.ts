@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { blogToday } from "../blog-date";
 import type { SessionConfig } from "../session";
+import type { AiUndoStore } from "../ai-undo-store";
 import type { SettingsStore } from "../settings-store";
 import type { PostStore } from "../store";
 import { hashConnectionToken } from "./connection-tokens";
@@ -48,6 +49,7 @@ export function registerMcpRoute(
     categories: readonly [string, ...string[]];
     session: SessionConfig;
     settings: SettingsStore;
+    aiUndo: AiUndoStore;
   },
 ): void {
   const {
@@ -59,6 +61,7 @@ export function registerMcpRoute(
     oauth,
     session,
     settings,
+    aiUndo,
   } = options;
   if (oauth !== undefined) registerOAuthRoutes(app, { ...oauth, session });
   const today = options.today ?? blogToday;
@@ -71,6 +74,7 @@ export function registerMcpRoute(
       editorBaseUrl,
       formatGuide,
       settings,
+      aiUndo,
       today,
       source: `token:${authInfo.clientId}`,
     });

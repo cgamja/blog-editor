@@ -46,6 +46,7 @@ const { createApp } = await import("./app");
 const { createFilePostStore } = await import("./file-store");
 const { createFileImageStore } = await import("./file-image-store");
 const { createFileSettingsStore } = await import("./file-settings-store");
+const { createFileAiUndoStore } = await import("./file-ai-undo-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
 const { readLocalConfig } = await import("./local-config");
 const { readMcpOptionsFromEnv } = await import("./mcp/env");
@@ -95,6 +96,7 @@ const app = createApp({
   store: createFilePostStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
   images: createFileImageStore({ root }),
   settings: createFileSettingsStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
+  aiUndo: createFileAiUndoStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
   categories: DEFAULT_CATEGORIES,
   imageBaseUrl: process.env.IMAGE_BASE_URL ?? DEFAULT_IMAGE_BASE_URL,
   accounts: createMemoryAccountStore([

@@ -10,6 +10,7 @@ import {
 } from "@blog-editor/editor-react";
 import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
+import { useAiUndo } from "../hooks/use-ai-undo";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
@@ -23,6 +24,7 @@ import { usePostForm } from "../hooks/use-post-form";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
 import { useServerSave } from "../hooks/use-server-save";
 import type { EditableMeta, EditingStart, EditorOverlay } from "../types";
+import { AiUndoButton } from "./AiUndoButton";
 import { EditorDialogs } from "./EditorDialogs";
 import { ExpiredBanner } from "./ExpiredBanner";
 import { LiveReflectBanner } from "./LiveReflectBanner";
@@ -142,6 +144,17 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     onReload,
   });
 
+  const aiUndo = useAiUndo({
+    server,
+    autosave,
+    onConflict: () => setOverlay("conflict"),
+    onReload,
+  });
+  const closeAiUndo = () => {
+    aiUndo.clearFailure();
+    setOverlay(null);
+  };
+
   const handleConfirmPublish = () => {
     setOverlay(null);
     void autosave.run("publish");
@@ -160,7 +173,12 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         tab={tab}
         onTabChange={setTab}
         status={<SaveStatusLine status={server.status} onRetry={() => void autosave.flush()} />}
-        headerTools={<SeoChip check={seo.check} isStale={seo.isStale} onChoose={seo.jumpTo} />}
+        headerTools={
+          <>
+            {aiUndo.isAvailable && <AiUndoButton onPress={() => setOverlay("aiUndo")} />}
+            <SeoChip check={seo.check} isStale={seo.isStale} onChoose={seo.jumpTo} />
+          </>
+        }
         blockFlags={seo.blockFlags}
         banner={banner}
         actions={{
@@ -204,10 +222,13 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         previewDoc={previewDoc}
         publishDoc={publishCheck.publishDoc}
         others={publishCheck.others}
+        aiUndo={aiUndo}
         actions={{
           onClose: () => setOverlay(null),
           ...conflict,
           onConfirmPublish: handleConfirmPublish,
+          onConfirmAiUndo: aiUndo.discardAndRevert,
+          onCancelAiUndo: closeAiUndo,
         }}
       />
     </>
