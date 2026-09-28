@@ -156,7 +156,7 @@ export {
   startImageUpload,
   topGapAfterSelection,
 } from "./plugins/image-upload";
-export { imageToPlaceholder, setBrief } from "./commands/photo-placeholder";
+export { imageToPlaceholder, setBrief, setPrompt } from "./commands/photo-placeholder";
 export type {
   ImageUploadEntry,
   ImageUploadPlacement,

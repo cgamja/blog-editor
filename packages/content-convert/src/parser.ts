@@ -3,7 +3,7 @@ import { MarkdownParser } from "prosemirror-markdown";
 import type Token from "markdown-it/lib/token.mjs";
 import { parseCalloutTone } from "./check";
 import { parsePhotoInfo } from "./photo-check";
-import { DEFAULT_CALLOUT_TONE } from "./constants";
+import { DEFAULT_CALLOUT_TONE, PHOTO_PROMPT_PREFIX } from "./constants";
 import { pmSchema } from "./pm-schema";
 import { taskCheckedOf } from "./task-list";
 import { createMarkdownIt, imageAltText } from "./tokens";
@@ -183,17 +183,32 @@ function withoutHardBreakMarks(node: RawNode): RawNode {
   return { ...node, content: node.content.map(withoutHardBreakMarks) };
 }
 
-/** 사진 자리 — 설명 문단의 글자를 attrs.brief로 옮긴다(줄은 파서가 공백으로 이었다). 꾸밈 자리는 없다 */
-function toPhotoPlaceholder(block: RawNode): RawNode {
-  const paragraph = block.content?.[0];
-  const brief = (paragraph?.content ?? [])
+function paragraphTextOf(paragraph: RawNode | undefined): string {
+  return (paragraph?.content ?? [])
     .map((node) => node.text ?? "")
     .join("")
     .trim();
+}
+
+/**
+ * 사진 자리 — 설명 문단의 글자를 attrs.brief로, 둘째 문단(`prompt:`, check.ts가 검사한 뒤)의 나머지 글자를
+ * attrs.prompt로 옮긴다(줄은 파서가 공백으로 이었다). 꾸밈 자리는 없다
+ */
+function toPhotoPlaceholder(block: RawNode): RawNode {
+  const brief = paragraphTextOf(block.content?.[0]);
+  const promptParagraph = block.content?.[1];
+  const prompt =
+    promptParagraph === undefined
+      ? undefined
+      : paragraphTextOf(promptParagraph).slice(PHOTO_PROMPT_PREFIX.length).trim();
   const ratio = block.attrs?.ratio;
   return {
     type: "photoPlaceholder",
-    attrs: ratio === undefined ? { brief } : { brief, ratio },
+    attrs: {
+      brief,
+      ...(ratio === undefined ? {} : { ratio }),
+      ...(prompt === undefined ? {} : { prompt }),
+    },
   };
 }
 

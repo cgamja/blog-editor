@@ -12,6 +12,7 @@ import { STICKER_CLIPBOARD_PRIORITY } from "./plugins/sticker-clipboard.constant
 import {
   alignOrNull,
   briefOrNull,
+  promptOrNull,
   headingLevelOf,
   hrefOrNull,
   languageOrNull,
@@ -266,23 +267,47 @@ const HorizontalRule = Node.create({
 const isTagWithClass = (tag: string, className: string) => (element: ElementLike) =>
   element.tagName === tag && hasClass(element, className);
 
-/** 에디터 DOM의 사진 설명(adr-033) — 에디터 안 복사 · 붙여넣기에서 설명이 따라오게 figure에 싣는다 */
+/**
+ * 에디터 DOM의 사진 설명(adr-033) · 이미지 프롬프트(adr-043) — 에디터 안 복사 · 붙여넣기에서 둘이 따라오게 figure에
+ * 싣는다
+ */
 const BRIEF_ATTR = "data-brief";
-const briefDom = (brief: unknown) => (brief == null ? {} : { [BRIEF_ATTR]: String(brief) });
+const PROMPT_ATTR = "data-prompt";
+const editorOnlyDom = (attrs: { brief?: unknown; prompt?: unknown }) => ({
+  ...(attrs.brief == null ? {} : { [BRIEF_ATTR]: String(attrs.brief) }),
+  ...(attrs.prompt == null ? {} : { [PROMPT_ATTR]: String(attrs.prompt) }),
+});
+const promptFromFigure = (figure: ElementLike) => {
+  const prompt = promptOrNull(figure.getAttribute(PROMPT_ATTR));
+  return prompt === null ? {} : { prompt };
+};
 
+const briefFromFigure = (figure: ElementLike) => {
+  const brief = briefOrNull(figure.getAttribute(BRIEF_ATTR));
+  return brief === null ? {} : { brief };
+};
+
+/** 설명 · 프롬프트는 따로 읽는다 — 설명을 지운 뒤 프롬프트만 남은 그림도 있다 */
 const imageFromFigure = (figure: ElementLike) => {
   const img = figure.querySelector("img");
   const attrs = imageAttrsOf(img, img?.getAttribute("alt") ?? "");
-  const brief = briefOrNull(figure.getAttribute(BRIEF_ATTR));
-  return attrs === false || brief === null ? attrs : { ...attrs, brief };
+  return attrs === false
+    ? attrs
+    : { ...attrs, ...briefFromFigure(figure), ...promptFromFigure(figure) };
 };
 
 const Image = Node.create({
   name: "image",
   group: "block",
   atom: true,
-  // brief는 에디터 전용 사진 설명(adr-033) — 공개 렌더(content-render)에는 없다
-  addAttributes: () => ({ src: required, alt: required, brief: optional, ...media }),
+  // brief · prompt는 에디터 전용 사진 설명(adr-033) · 이미지 프롬프트(adr-043) — 공개 렌더(content-render)에는 없다
+  addAttributes: () => ({
+    src: required,
+    alt: required,
+    brief: optional,
+    prompt: optional,
+    ...media,
+  }),
   parseHTML: () => [
     wrapperRule({
       matches: isTagWithClass("FIGURE", "post-image"),
@@ -300,7 +325,7 @@ const Image = Node.create({
   renderHTML: ({ node }) =>
     withDecoration(node.attrs, [
       "figure",
-      { class: "post-image", ...briefDom(node.attrs.brief) },
+      { class: "post-image", ...editorOnlyDom(node.attrs) },
       imgSpec(node.attrs, String(node.attrs.alt)),
     ]),
 });
@@ -312,7 +337,11 @@ const aspectRatioStyle = (ratio: unknown) =>
 const placeholderFromFigure = (figure: ElementLike) => {
   const brief = briefOrNull(figure.getAttribute(BRIEF_ATTR));
   if (brief === null) return false;
-  return { brief, ratio: photoRatioOrNull(figure.getAttribute("data-ratio")) };
+  return {
+    brief,
+    ratio: photoRatioOrNull(figure.getAttribute("data-ratio")),
+    ...promptFromFigure(figure),
+  };
 };
 
 /**
@@ -323,13 +352,13 @@ const PhotoPlaceholder = Node.create({
   name: "photoPlaceholder",
   group: "block",
   atom: true,
-  addAttributes: () => ({ brief: required, ratio: optional }),
+  addAttributes: () => ({ brief: required, ratio: optional, prompt: optional }),
   parseHTML: () => [{ tag: "figure.photo-placeholder", getAttrs: placeholderFromFigure }],
   renderHTML: ({ node }) => [
     "figure",
     {
       class: "photo-placeholder",
-      ...briefDom(node.attrs.brief),
+      ...editorOnlyDom(node.attrs),
       ...(node.attrs.ratio == null ? {} : { "data-ratio": String(node.attrs.ratio) }),
       ...aspectRatioStyle(node.attrs.ratio),
     },

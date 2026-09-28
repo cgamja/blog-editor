@@ -94,9 +94,14 @@ export const CAPTION_MAX_LENGTH = 120;
 
 /**
  * 사진 설명(adr-033) — 사진 자리가 비워 둔 "이런 사진"이고, 채운 뒤에는 그림의 에디터 전용 칸으로 남는다.
- * AI 이미지 생성(adr-029)의 주문서라 한 문단이 넉넉히 들어가는 길이다.
+ * 사람이 사진을 고르거나 만들 때 기준이 되는 설명이라 한 문단이 넉넉히 들어가는 길이다(이미지 도구용 영어 글은 prompt).
  */
 export const BRIEF_MAX_LENGTH = 300;
+/**
+ * 이미지 프롬프트(adr-043) — 사람이 Midjourney 등 이미지 도구에 붙여 넣을 영어 주문서. 설명(brief)은 대체 글자도
+ * 겸하는 한국어라 따로 둔다. 스타일 · 조명 · 구도까지 한 문단에 담는 길이다.
+ */
+export const PROMPT_MAX_LENGTH = 1000;
 /** 사진 자리가 바라는 비율 — 가로 · 정사각 · 세로. 이미지 생성 모델이 받는 비율 범위에 맞췄다(adr-029). */
 export const PHOTO_RATIOS = ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"] as const;
 
@@ -305,12 +310,22 @@ const briefSchema = z
     message: "사진 설명은 한 줄이고 앞뒤 공백이 없다",
   });
 
+/** 한 줄 · 앞뒤 공백 없음 — 설명(brief)과 같은 까닭으로 markdown 한 문단으로 오간다 */
+const promptSchema = z
+  .string()
+  .min(1)
+  .max(PROMPT_MAX_LENGTH)
+  .refine((prompt) => !/[\r\n]/.test(prompt) && prompt === prompt.trim(), {
+    message: "이미지 프롬프트는 한 줄이고 앞뒤 공백이 없다",
+  });
+
 const imageAttrsSchema = z
   .strictObject({
     src: imagePathSchema,
     alt: z.string().max(ALT_MAX_LENGTH),
     // 에디터 전용(adr-033) — 공개 렌더 · 공개 API에는 나가지 않는다
     brief: briefSchema.optional(),
+    prompt: promptSchema.optional(),
     naturalWidth: naturalSizeSchema.optional(),
     naturalHeight: naturalSizeSchema.optional(),
     motion: z.enum(MOTIONS).optional(),
@@ -469,6 +484,8 @@ const photoPlaceholderSchema = z.strictObject({
   attrs: z.strictObject({
     brief: briefSchema,
     ratio: z.enum(PHOTO_RATIOS).optional(),
+    // 에디터 전용(adr-043) — 설명처럼 공개 렌더 · 공개 API에 나가지 않는다
+    prompt: promptSchema.optional(),
   }),
 });
 

@@ -86,14 +86,18 @@ export function stickersWouldDropMessage(
 }
 
 /**
- * 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮는데 새 markdown에 같은 src 그림이 없다(#172 · adr-039).
+ * 여러 블록 바꾸기가 사진 설명(brief) · 이미지 프롬프트(prompt) 있는 그림을 덮는데 새 markdown에 같은 src 그림이
+ * 없다(#172 · adr-039 · adr-043).
  * markdown에는 설명 자리가 없어 AI가 설명을 다시 쓸 수 없다 — 같은 src로 그림을 다시 쓰게 안내한다.
  */
 export function briefsWouldDropMessage(
-  images: readonly { src: string; brief: string; blockNumber: number }[],
+  images: readonly { src: string; brief?: string; prompt?: string; blockNumber: number }[],
 ): string {
   const list = images
-    .map(({ src, brief, blockNumber }) => `블록 ${blockNumber}: ![](${src}) (설명: "${brief}")`)
+    .map(({ src, brief, prompt, blockNumber }) => {
+      const kept = brief === undefined ? `프롬프트: "${prompt ?? ""}"` : `설명: "${brief}"`;
+      return `블록 ${blockNumber}: ![](${src}) (${kept})`;
+    })
     .join(", ");
-  return `바꾸는 블록의 그림 ${images.length}개에 붙은 사진 설명이 사라진다 — ${list}. 그림을 같은 src로 다시 쓰면 설명이 옮겨진다(![대체 글](src)). 그림째 버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다(그때 사진 설명은 남지 않는다)`;
+  return `바꾸는 블록의 그림 ${images.length}개에 붙은 사진 설명 · 프롬프트가 사라진다 — ${list}. 그림을 같은 src로 다시 쓰면 설명 · 프롬프트가 옮겨진다(![대체 글](src)). 그림째 버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다(그때 사진 설명 · 프롬프트는 남지 않는다)`;
 }

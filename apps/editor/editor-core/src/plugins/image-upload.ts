@@ -285,8 +285,8 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
     if (dispatch === undefined) return true;
 
     const gap = nearestTopGap(state.doc, entry.pos, false);
-    // 채우기면 사진 자리의 설명을 alt 기본값과 그림 설명으로 옮긴다(adr-033). 그새 그 사진 자리가 없어졌으면
-    // (바로 뒤가 사진 자리가 아니거나 설명이 다른 사진 자리) 채우지 않고 그냥 넣는다(adr-039)
+    // 채우기면 사진 자리의 설명을 alt 기본값과 그림 설명으로, 프롬프트를 그림 프롬프트로 옮긴다(adr-033 · adr-043).
+    // 그새 그 사진 자리가 없어졌으면(바로 뒤가 사진 자리가 아니거나 설명이 다른 사진 자리) 채우지 않고 그냥 넣는다(adr-039)
     const next = entry.fillBrief === null ? null : photoPlaceholderAt(state.doc, gap);
     const placeholder = next?.attrs.brief === entry.fillBrief ? next : null;
     const brief = (placeholder?.attrs.brief as string | undefined) ?? null;
@@ -294,6 +294,7 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
       src: attrs.src,
       alt: altFromBrief(attrs.alt, brief),
       brief,
+      prompt: (placeholder?.attrs.prompt as string | null | undefined) ?? null,
       naturalWidth: size.width,
       naturalHeight: size.height,
     });

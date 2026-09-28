@@ -4,6 +4,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 import { alignOf, setBlockAlign, setBlockWidth } from "@blog-editor/editor-core";
 import { AlignIcon } from "./AlignIcon";
 import { BriefControl } from "./BriefControl";
+import { PromptControl } from "./PromptControl";
 import { ALIGN_OPTIONS, WIDTH_PRESETS } from "./decoration-constants";
 import { decorationMessages } from "./decoration-messages";
 import { widthTargetOf } from "./decoration-state";
@@ -51,6 +52,16 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
         return null;
       const brief = selection.node.attrs.brief as string | null;
       return brief ?? "";
+    },
+  });
+  // 사진 자리에서 옮겨 온 이미지 프롬프트(adr-043) — 있는 그림에서만 보인다(사진을 다시 만들 때 참고)
+  const imagePrompt = useEditorState({
+    editor,
+    selector: ({ editor: current }) => {
+      const { selection } = current.state;
+      if (!(selection instanceof NodeSelection) || selection.node.type.name !== "image")
+        return null;
+      return (selection.node.attrs.prompt as string | null) ?? null;
     },
   });
   const run = useCommandRunner(editor);
@@ -105,6 +116,15 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
           pos={target.pos}
           brief={imageBrief === "" ? null : imageBrief}
           canRevert
+        />
+      )}
+      {imagePrompt !== null && (
+        <PromptControl
+          key={`prompt-${target.pos}`}
+          editor={editor}
+          pos={target.pos}
+          prompt={imagePrompt}
+          ratio={null}
         />
       )}
     </div>

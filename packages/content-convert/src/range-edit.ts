@@ -303,20 +303,34 @@ function imagesIn(node: JsonNode): JsonNode[] {
   return (node.content ?? []).flatMap(imagesIn);
 }
 
+/** 그림과 함께 옮기는 에디터 전용 칸 — 설명 · 사진 자리에서 온 프롬프트(adr-043). 한 묶음으로 옮긴다 */
+type CarriedBrief = Pick<BriefedImage, "brief" | "prompt">;
+
+/** 그림의 에디터 전용 칸 — 설명도 프롬프트도 없으면 null */
+function carriedOf(image: JsonNode): CarriedBrief | null {
+  const { brief, prompt } = image.attrs ?? {};
+  const carried: CarriedBrief = {
+    ...(typeof brief === "string" ? { brief } : {}),
+    ...(typeof prompt === "string" ? { prompt } : {}),
+  };
+  return Object.keys(carried).length === 0 ? null : carried;
+}
+
 function briefedImages(replaced: readonly JsonNode[], firstTop: number): BriefedImage[] {
   return replaced.flatMap((node, index) =>
     imagesIn(node).flatMap((image) => {
-      const { src, brief } = image.attrs ?? {};
-      if (typeof src !== "string" || typeof brief !== "string") return [];
-      return [{ src, brief, blockNumber: firstTop + index + 1 }];
+      const src = image.attrs?.src;
+      const carried = carriedOf(image);
+      if (typeof src !== "string" || carried === null) return [];
+      return [{ src, ...carried, blockNumber: firstTop + index + 1 }];
     }),
   );
 }
 
-/** 새 블록들의 같은 src 그림에 옛 brief를 앞에서부터 준다 */
+/** 새 블록들의 같은 src 그림(에디터 전용 칸이 없는 것)에 옛 설명 · 프롬프트를 앞에서부터 준다 */
 function withCarriedBriefs(
   nodes: readonly JsonNode[],
-  briefs: ReadonlyMap<string, readonly string[]>,
+  briefs: ReadonlyMap<string, readonly CarriedBrief[]>,
 ): JsonNode[] {
   const used = new Map<string, number>();
   const visit = (node: JsonNode): JsonNode => {
@@ -324,20 +338,20 @@ function withCarriedBriefs(
       return node.content === undefined ? node : { ...node, content: node.content.map(visit) };
     }
     const src = node.attrs?.src;
-    if (node.attrs?.brief !== undefined || typeof src !== "string") return node;
+    if (carriedOf(node) !== null || typeof src !== "string") return node;
     const at = used.get(src) ?? 0;
-    const brief = briefs.get(src)?.[at];
-    if (brief === undefined) return node;
+    const carried = briefs.get(src)?.[at];
+    if (carried === undefined) return node;
     used.set(src, at + 1);
-    return { ...node, attrs: { ...node.attrs, brief } };
+    return { ...node, attrs: { ...node.attrs, ...carried } };
   };
   return nodes.map(visit);
 }
 
 /**
- * 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮을 때(#172) — 새 markdown에 같은 src 그림이 있으면 설명을
- * 그 그림으로 옮기고, 옮길 그림이 없는 옛 그림은 `missing`으로 돌려준다(부르는 쪽이 실패로 알린다). 사람이 쓴
- * 설명이 말없이 사라지지 않게 한다. 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다(스티커와 같다).
+ * 여러 블록 바꾸기가 사진 설명(brief) · 이미지 프롬프트(prompt) 있는 그림을 덮을 때(#172 · adr-043) — 새 markdown에
+ * 같은 src 그림이 있으면 둘을 그 그림으로 옮기고, 옮길 그림이 없는 옛 그림은 `missing`으로 돌려준다(부르는 쪽이
+ * 실패로 알린다). 사람이 쓴 설명이 말없이 사라지지 않게 한다. 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다(스티커와 같다).
  */
 function carryBriefs(
   replaced: readonly JsonNode[],
@@ -349,11 +363,11 @@ function carryBriefs(
   const available = new Map<string, number>();
   added.flatMap(imagesIn).forEach((image) => {
     const src = image.attrs?.src;
-    if (typeof src === "string" && image.attrs?.brief === undefined) {
+    if (typeof src === "string" && carriedOf(image) === null) {
       available.set(src, (available.get(src) ?? 0) + 1);
     }
   });
-  const briefs = new Map<string, string[]>();
+  const briefs = new Map<string, CarriedBrief[]>();
   const missing: BriefedImage[] = [];
   old.forEach((image) => {
     const left = available.get(image.src) ?? 0;
@@ -362,7 +376,12 @@ function carryBriefs(
       return;
     }
     available.set(image.src, left - 1);
-    briefs.set(image.src, [...(briefs.get(image.src) ?? []), image.brief]);
+    const { brief, prompt } = image;
+    const carried: CarriedBrief = {
+      ...(brief === undefined ? {} : { brief }),
+      ...(prompt === undefined ? {} : { prompt }),
+    };
+    briefs.set(image.src, [...(briefs.get(image.src) ?? []), carried]);
   });
   return { nodes: withCarriedBriefs(added, briefs), missing };
 }

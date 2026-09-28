@@ -5,6 +5,7 @@ import {
   CALLOUT_CONTAINER_NAME,
   DIRECTIVE_KEYS,
   PHOTO_CONTAINER_NAME,
+  PHOTO_PROMPT_PREFIX,
   SIZE_SEPARATOR,
   TASK_MARKER_DONE,
   TASK_MARKER_TODO,
@@ -22,7 +23,7 @@ import { formatStickerDirective } from "./sticker-directive";
 export interface SerializeLoss {
   /** 원래 doc의 최상위 블록 번호(1부터). */
   block: number;
-  /** imageBrief — 그림의 에디터 전용 사진 설명(adr-033)은 markdown에 자리가 없다 */
+  /** imageBrief — 그림의 에디터 전용 사진 설명(adr-033) · 이미지 프롬프트(adr-043)는 markdown에 자리가 없다 */
   kind: "stickers" | "emptyParagraph" | "codeMark" | "imageBrief";
   count: number;
 }
@@ -303,13 +304,23 @@ function serializeTable(block: Extract<Block, { type: "table" }>, dropped: Block
   return [lines[0], tableLine(delimiters), ...lines.slice(1)].join("\n");
 }
 
-/** 사진 자리(adr-033) — `:::photo ratio=…` · 설명 한 줄 · `:::`. 설명의 문법 글자는 문단처럼 이스케이프한다 */
+/** `prompt:`로 시작하는 설명은 콜론을 이스케이프한다 — 그대로면 프롬프트 줄로 읽혀 실패한다(photo-check) */
+function escapePromptPrefix(line: string): string {
+  if (!line.startsWith(PHOTO_PROMPT_PREFIX)) return line;
+  return `${PHOTO_PROMPT_PREFIX.slice(0, -1)}\\:${line.slice(PHOTO_PROMPT_PREFIX.length)}`;
+}
+
+/**
+ * 사진 자리(adr-033 · adr-043) — `:::photo ratio=…` · 설명 한 줄 · (빈 줄 · `prompt: …` 한 줄) · `:::`. 설명 · 프롬프트의
+ * 문법 글자는 문단처럼 이스케이프한다
+ */
 function serializePhotoPlaceholder(block: Extract<Block, { type: "photoPlaceholder" }>): string {
-  const { ratio, brief } = block.attrs;
+  const { ratio, brief, prompt } = block.attrs;
   const opening =
     ratio === undefined ? PHOTO_CONTAINER_NAME : `${PHOTO_CONTAINER_NAME} ratio=${ratio}`;
-  const { text } = serializeInline([{ type: "text", text: brief }], "paragraph");
-  return [`:::${opening}`, text, ":::"].join("\n");
+  const plain = (text: string) => serializeInline([{ type: "text", text }], "paragraph").text;
+  const promptLines = prompt === undefined ? [] : ["", `${PHOTO_PROMPT_PREFIX} ${plain(prompt)}`];
+  return [`:::${opening}`, escapePromptPrefix(plain(brief)), ...promptLines, ":::"].join("\n");
 }
 
 function serializeBlockBody(
@@ -367,7 +378,10 @@ export function serializeMarkdown(doc: Doc): SerializeResult {
 
   normalize(doc).content.forEach((block, index) => {
     const blockNumber = index + 1;
-    if (block.type === "image" && block.attrs.brief !== undefined) {
+    if (
+      block.type === "image" &&
+      (block.attrs.brief !== undefined || block.attrs.prompt !== undefined)
+    ) {
       losses.push({ block: blockNumber, kind: "imageBrief", count: 1 });
     }
 

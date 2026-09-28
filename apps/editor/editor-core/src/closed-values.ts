@@ -13,6 +13,7 @@ import {
   ORDERED_LIST_START_RANGE,
   SPACES,
   PHOTO_RATIOS,
+  PROMPT_MAX_LENGTH,
   STICKER_IDS,
   STICKER_RANGES,
   TEXT_COLORS,
@@ -49,9 +50,18 @@ export const photoRatioOrNull = oneOf(PHOTO_RATIOS);
  * 붙여넣은 `data-brief`와 설명 입력칸이 같은 규칙을 쓴다(content-schema briefSchema와 같은 모양).
  */
 export function briefOrNull(value: unknown): string | null {
+  return oneLineOrNull(value, BRIEF_MAX_LENGTH);
+}
+
+/** 이미지 프롬프트(adr-043) — 설명과 같은 규칙(한 줄 · 앞뒤 공백 없음), 한도만 다르다(content-schema promptSchema) */
+export function promptOrNull(value: unknown): string | null {
+  return oneLineOrNull(value, PROMPT_MAX_LENGTH);
+}
+
+function oneLineOrNull(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
-  const brief = value.replace(/[\r\n]+/g, " ").trim();
-  return brief === "" || brief.length > BRIEF_MAX_LENGTH ? null : brief;
+  const line = value.replace(/[\r\n]+/g, " ").trim();
+  return line === "" || line.length > maxLength ? null : line;
 }
 export const textWeightOrNull = oneOf(TEXT_WEIGHTS);
 export const textSizeOrNull = oneOf(TEXT_SIZES);
