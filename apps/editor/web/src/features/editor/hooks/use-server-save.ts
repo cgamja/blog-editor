@@ -55,8 +55,8 @@ export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseS
     };
   }, []);
 
-  const [saver] = useState<PostSaver>(() =>
-    createPostSaver(start, {
+  const [saver] = useState<PostSaver>(() => {
+    const created = createPostSaver(start, {
       getDoc: () => latest.current.getDoc(),
       readForm: () => latest.current.form,
       savePost: (slug, file, revision) =>
@@ -74,8 +74,12 @@ export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseS
         onSlugError: setSlugError,
         onPublished: () => setPublished(true),
       },
-    }),
-  );
+    });
+    // 서버 판 그대로 연 화면의 처음이 "서버와 맞춘 상태"다 — 에디터가 그린 문서(정규형)로 잡는다.
+    // 되살린 글 · 충돌로 연 글은 처음부터 저장 안 한 고침이 있다(live-reflect)
+    if (start.restore === "none") created.markSynced();
+    return created;
+  });
 
   return {
     status,
@@ -95,6 +99,18 @@ export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseS
       }
     },
     currentDraft: saver.currentDraft,
+    isPaused: saver.isPaused,
+    revision: saver.revision,
+    syncMark: saver.syncMark,
+    isSending: saver.isSending,
+    hold: saver.hold,
+    hasUnsavedChanges: saver.hasUnsavedChanges,
+    markSynced: saver.markSynced,
+    /** `PostSaver.adoptLatestAndDropDraft` — 화면의 발행 여부 사본도 받은 판으로 맞춘다 */
+    adoptLatestAndDropDraft: (latest: string, next: { meta: PostMeta; slug: string }) => {
+      saver.adoptLatestAndDropDraft(latest, next);
+      setPublished(saver.isPublished());
+    },
     savedSlug: saver.savedSlug,
     localKey: saver.localKey,
   };

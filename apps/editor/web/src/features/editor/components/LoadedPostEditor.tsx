@@ -13,6 +13,8 @@ import { loginPathFor } from "../../../shared/routes/next-path";
 import { useAutosave } from "../hooks/use-autosave";
 import { useConflictActions } from "../hooks/use-conflict-actions";
 import { useImageUploader } from "../hooks/use-image-uploader";
+import { useLiveReflectDecision } from "../hooks/use-live-reflect-decision";
+import { useLiveRevisionQuery } from "../hooks/use-live-revision-query";
 import { usePostCategories } from "../hooks/use-post-categories";
 import { usePublishCheck } from "../hooks/use-publish-check";
 import { useEditorSeo } from "../hooks/use-editor-seo";
@@ -23,6 +25,7 @@ import { useServerSave } from "../hooks/use-server-save";
 import type { EditableMeta, EditingStart, EditorOverlay } from "../types";
 import { EditorDialogs } from "./EditorDialogs";
 import { ExpiredBanner } from "./ExpiredBanner";
+import { LiveReflectBanner } from "./LiveReflectBanner";
 import { PostInfoPanel } from "./PostInfoPanel";
 import { SaveStatusLine } from "./SaveStatusLine";
 import { SeoChip } from "./SeoChip";
@@ -72,6 +75,15 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     post: form,
     others: publishCheck.others,
     openTab: setTab,
+  });
+  const revision = useLiveRevisionQuery(server.savedSlug(), server.syncMark);
+  const live = useLiveReflectDecision({
+    editor,
+    getDoc,
+    server,
+    form,
+    isOverlayOpen: overlay !== null,
+    revision,
   });
   const autosave = useAutosave({
     editor,
@@ -135,6 +147,10 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     void autosave.run("publish");
   };
 
+  // 세션 만료가 먼저다 — 다시 로그인해야 불러오기도 된다
+  const liveBanner = live.notice === null ? undefined : <LiveReflectBanner onLoad={live.load} />;
+  const banner = server.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : liveBanner;
+
   return (
     <>
       <EditorScreen
@@ -146,7 +162,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         status={<SaveStatusLine status={server.status} onRetry={() => void autosave.flush()} />}
         headerTools={<SeoChip check={seo.check} isStale={seo.isStale} onChoose={seo.jumpTo} />}
         blockFlags={seo.blockFlags}
-        banner={server.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : undefined}
+        banner={banner}
         actions={{
           onBack: () => void handleBack(),
           onPreview: handleOpenPreview,

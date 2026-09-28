@@ -4,7 +4,8 @@ export interface AutosaveOptions {
   delayMs: number;
   /** 한글 조합 중이면 true — 그 사이에는 문서를 읽어 보내지 않는다(CLAUDE.md `view.composing`) */
   isComposing: () => boolean;
-  save: (mode: SaveMode) => Promise<void>;
+  /** 저장 한 번 — 시계가 부른 저장이면 `isTimer`가 true다(붙잡아 둔 동안 보내지 않게, `PostSaver.hold`) */
+  save: (mode: SaveMode, isTimer?: boolean) => Promise<void>;
 }
 
 export interface Autosave {
@@ -47,11 +48,13 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
       check();
     });
 
-  const run = (mode: SaveMode): Promise<void> => {
+  const run = (mode: SaveMode, isTimer = false): Promise<void> => {
     clearTimer();
     hasPendingChange = false;
     queued += 1;
-    const task = queue.then(untilNotComposing).then(() => save(mode));
+    const task = queue
+      .then(untilNotComposing)
+      .then(() => (isTimer ? save(mode, true) : save(mode)));
     queue = task
       .catch(() => undefined)
       .finally(() => {
@@ -63,7 +66,7 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
 
   const fire = () => {
     timer = null;
-    void run("draft").catch(() => undefined);
+    void run("draft", true).catch(() => undefined);
   };
 
   function schedule() {
@@ -78,7 +81,7 @@ export function createAutosave({ delayMs, isComposing, save }: AutosaveOptions):
   return {
     schedule,
     flush: () => run("draft"),
-    run,
+    run: (mode) => run(mode),
     dispose: clearTimer,
   };
 }

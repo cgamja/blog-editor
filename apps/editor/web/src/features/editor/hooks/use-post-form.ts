@@ -28,6 +28,11 @@ export function usePostForm(start: EditingStart) {
       setSlug(next);
       setSlugEdited(true);
     },
+    /** 다른 곳에서 바뀐 서버 판으로 바꿔 끼운다 — 글 정보와 주소 칸을 그 판으로 */
+    replace: (next: PostMeta, nextSlug: string) => {
+      setMeta(next);
+      setSlug(nextSlug);
+    },
   };
 }
 

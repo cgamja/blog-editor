@@ -102,3 +102,47 @@ describe("web-post-save — 수정일은 서버가 정한다", () => {
     expect(puts[0]?.file.meta.updated).toBe("2026-08-01");
   });
 });
+
+describe("web-edit-screen — 다른 곳에서 바뀐 판을 받아들인 뒤의 저장(live-reflect)", () => {
+  it("WHEN 충돌에서 「계속 쓰기」로 멈춘 뒤 새 판을 받아들이고 초안 저장하면 THEN 멈춤이 풀려 새 revision으로 PUT한다", async () => {
+    const start = loadedStart(false);
+    const { saver, puts } = setup(start);
+    saver.pause();
+
+    saver.adoptLatestAndDropDraft("r9", { meta: start.meta, slug: start.slug });
+    void saver.save("draft");
+    await Promise.resolve();
+
+    expect(saver.isPaused()).toBe(false);
+    expect(puts.map(({ revision }) => revision)).toEqual(["r9"]);
+  });
+
+  it("WHEN 붙잡아 둔 동안 시계가 저장을 부르면 THEN localDraft만 남기고 PUT하지 않으며, ⌘S 저장은 보낸다", async () => {
+    const { saver, puts, drafts } = setup(loadedStart(false));
+    saver.hold(true);
+
+    await saver.save("draft", true);
+
+    expect(drafts.has("beta-open")).toBe(true);
+    expect(puts).toHaveLength(0);
+
+    void saver.save("draft");
+    await Promise.resolve();
+
+    expect(puts).toHaveLength(1);
+  });
+
+  it("WHEN 다른 곳에서 발행된 판을 받아들이면 THEN 발행 글이 되어 자동 저장이 초안으로 되돌리지 않는다", async () => {
+    const start = loadedStart(false);
+    const { saver, puts } = setup(start);
+
+    saver.adoptLatestAndDropDraft("r9", {
+      meta: { ...start.meta, draft: false },
+      slug: start.slug,
+    });
+    await saver.save("draft", true);
+
+    expect(saver.isPublished()).toBe(true);
+    expect(puts).toHaveLength(0);
+  });
+});

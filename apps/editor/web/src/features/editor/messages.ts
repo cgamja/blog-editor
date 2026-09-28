@@ -49,6 +49,11 @@ export const EDITOR_MESSAGES = {
     text: "로그인이 끝났어요. 쓰던 글은 이 브라우저에 남아 있어요.",
     action: "다시 로그인",
   },
+  /** 열린 편집 화면에서 다른 곳(AI)의 고침을 알아챘다(openspec editor-live-reflect) */
+  liveReflect: {
+    text: "AI가 고쳤어요. 불러오면 지금 고친 내용은 사라져요.",
+    action: "불러오기",
+  },
   conflict: {
     title: "저장하지 못했어요. 이 글이 다른 곳에서 먼저 바뀌었어요.",
     body: "지금 저장하면 그 내용이 사라지기 때문에 멈췄습니다. 쓰던 내용은 이 브라우저에 그대로 남아 있어요.",
