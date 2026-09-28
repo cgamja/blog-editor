@@ -9,7 +9,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "dev": "node src/serve.ts"
+    "dev": "node src/serve.ts",
+    "build:edge": "node scripts/build-edge.ts"
   },
   "dependencies": {
     "@blog-editor/content-convert": "workspace:*",
@@ -17,8 +18,12 @@
     "@blog-editor/content-schema": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "@modelcontextprotocol/server": "~2.0.0",
+    "@supabase/supabase-js": "^2.117.2",
     "hono": "^4.13.8",
     "playwright-core": "1.63.0",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "rolldown": "1.2.9"
   }
 }
