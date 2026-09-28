@@ -31,6 +31,11 @@ jobs:
       - run: pnpm exec playwright install-deps chromium webkit
         if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: pnpm verify # typecheck · lint · lint:css · format:check · test · test:e2e · docs:check — package.json과 같은 한 줄
+        # Supabase 계약 층(supabase-store) — 시험용 프로젝트 키. 없으면(포크 PR 등) 그 층만 "시험 키 없음"으로 건너뛴다
+        env:
+          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_TEST_SECRET_KEY: ${{ secrets.SUPABASE_TEST_SECRET_KEY }}
+          SUPABASE_TEST_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_TEST_PUBLISHABLE_KEY }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
