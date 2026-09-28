@@ -8,6 +8,8 @@ const BLOCK_HANDLES_WIDTH_PX = 104;
 const FRAME = { frameTop: 50, frameLeft: 200, frameWidth: 800 };
 const BLOCK_LEFT = 120;
 const BLOCK_RIGHT = 680;
+/** 본문 칸 오른쪽(틀 기준) — 폭이 꽉 찬 블록의 오른쪽과 같다 */
+const COLUMN_RIGHT = BLOCK_RIGHT;
 const geometry = {
   ...FRAME,
   bands: [
@@ -16,6 +18,7 @@ const geometry = {
   ],
   lefts: [BLOCK_LEFT, BLOCK_LEFT],
   rights: [BLOCK_RIGHT, BLOCK_RIGHT],
+  columnRight: COLUMN_RIGHT,
 };
 
 const flag = (id: string, index: number): BlockFlag => ({
@@ -36,6 +39,20 @@ describe("blockFlagRows: 여백 점은 종이 안 오른쪽 여백에 둔다(#15
     expect(left + width).toBeLessThanOrEqual(FRAME.frameWidth);
     const handlesStart = BLOCK_LEFT - BLOCK_HANDLES_WIDTH_PX;
     expect(left >= BLOCK_LEFT || left + width <= handlesStart).toBe(true);
+  });
+
+  it("WHEN 블록 폭이 서로 달라도(폭 50% 그림 · 꽉 찬 문단) THEN 두 줄은 본문 칸 오른쪽 같은 left에서 시작하고 폭은 거기서 종이 끝까지다", () => {
+    const halfRight = BLOCK_LEFT + (BLOCK_RIGHT - BLOCK_LEFT) / 2;
+    const rows = blockFlagRows([flag("paragraph", 0), flag("image", 1)], {
+      ...geometry,
+      rights: [BLOCK_RIGHT, halfRight],
+    });
+
+    expect(rows.map((row) => row.left)).toEqual([COLUMN_RIGHT, COLUMN_RIGHT]);
+    expect(rows.map((row) => row.maxWidth)).toEqual([
+      FRAME.frameWidth - COLUMN_RIGHT,
+      FRAME.frameWidth - COLUMN_RIGHT,
+    ]);
   });
 
   it("WHEN 문서에 없는 블록 번호(5)를 가리키는 점 THEN 그 줄은 버리고 있는 블록의 줄만 남는다", () => {
