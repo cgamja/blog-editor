@@ -111,7 +111,7 @@ codex exec \
 
 **웹 검색.** Codex 기본 웹 검색(`web_search = "cached"`)은 OpenAI가 관리하는 색인만 보고 원문 페이지에 가지 않는다(같은 config-reference). `/blog-write`는 숫자 · 사실을 원문에서 확인하므로 실시간 검색을 켠다: 대화형은 `codex --search`, `codex exec`는 `-c 'web_search="live"'`, 늘 쓰려면 `web_search = "live"`. 켜지 않으면 스킬은 원문을 확인하지 못한 사실을 쓰지 않고 그렇다고 알린다.
 
-레포 스킬은 Codex에서 `$blog-write <주제>`로 부른다. "블로그 초안 써 줘"처럼 말해도 설명을 보고 고른다. Codex는 레포의 `.agents/skills/`를 읽고, 그 안의 `blog-write`는 `.claude/skills/blog-write`를 가리키는 링크다. 그래서 원본은 하나다(adr-035, https://learn.chatgpt.com/docs/build-skills). Claude Code에는 저장 직후 SEO 훅이 생길 예정이다(#149). Codex에는 그런 장치가 없으므로, 저장 응답의 seo 결과를 스킬 규칙이 확인한다.
+레포 스킬은 Codex에서 `$blog-write <주제>`로 부른다. "블로그 초안 써 줘"처럼 말해도 설명을 보고 고른다. Codex는 레포의 `.agents/skills/`를 읽고, 그 안의 `blog-write`는 `.claude/skills/blog-write`를 가리키는 링크다. 그래서 원본은 하나다(adr-035, https://learn.chatgpt.com/docs/build-skills). Claude Code에서는 저장 직후 SEO 훅(`scripts/seo-hook.lib.ts`)이 must를 AI에게 되먹인다(#149). 같은 글에 3번까지이고, should · info는 알리기만 한다. Codex에는 그런 장치가 없으므로, 저장 응답의 seo 결과를 스킬 규칙이 확인한다.
 
 ## 도구
 
