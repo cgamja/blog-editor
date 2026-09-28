@@ -867,6 +867,50 @@ describe("markdown-range-edit — 여러 블록 바꾸기가 사진 설명(brief
     expect(result.messages.join("\n")).toMatch(/블록 3/);
   });
 
+  it("WHEN 설명 · 프롬프트가 있는 그림과 프롬프트만 있는 그림을 덮는 범위를 같은 src 그림 둘이 든 markdown으로 바꾼다 THEN 새 그림들이 옛 설명 · 프롬프트를 그대로 가진다", () => {
+    const PROMPT = "A sleeping baby in a dim nursery, soft window light";
+    const OTHER_SRC = "/images/window.webp";
+    const input = doc(
+      paragraph("낮잠 앞 문단"),
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: BRIEF, prompt: PROMPT } },
+      { type: "image", attrs: { src: OTHER_SRC, alt: "창가", prompt: PROMPT } },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: `새 앞 문단\n\n![낮잠 방](${SRC})\n\n![창가](${OTHER_SRC})\n\n새 뒤 문단`,
+    });
+
+    expectOk(result);
+    const images = result.doc.content.filter((block) => block.type === "image");
+    expect(images.map((image) => image.attrs)).toEqual([
+      { src: SRC, alt: "낮잠 방", brief: BRIEF, prompt: PROMPT },
+      { src: OTHER_SRC, alt: "창가", prompt: PROMPT },
+    ]);
+  });
+
+  it("WHEN 프롬프트만 있는 그림을 덮는 범위를 그 src 그림이 없는 markdown으로 바꾼다 THEN 실패이고 메시지에 그림 src가 있다", () => {
+    const input = doc(
+      paragraph("낮잠 앞 문단"),
+      {
+        type: "image",
+        attrs: { src: SRC, alt: "낮잠 방", prompt: "A sleeping baby in a dim nursery" },
+      },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: "합친 문단",
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toContain(SRC);
+  });
+
   it("WHEN brief 그림을 덮는 범위를 빈 markdown으로 지운다 THEN 성공하고 그림도 지워진다", () => {
     const input = doc(...briefed().content, paragraph("끝"));
 

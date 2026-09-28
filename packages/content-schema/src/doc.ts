@@ -94,9 +94,14 @@ export const CAPTION_MAX_LENGTH = 120;
 
 /**
  * 사진 설명(adr-033) — 사진 자리가 비워 둔 "이런 사진"이고, 채운 뒤에는 그림의 에디터 전용 칸으로 남는다.
- * AI 이미지 생성(adr-029)의 주문서라 한 문단이 넉넉히 들어가는 길이다.
+ * 사람이 사진을 고르거나 만들 때 기준이 되는 설명이라 한 문단이 넉넉히 들어가는 길이다(이미지 도구용 영어 글은 prompt).
  */
 export const BRIEF_MAX_LENGTH = 300;
+/**
+ * 이미지 프롬프트(adr-043) — 사람이 Midjourney 등 이미지 도구에 붙여 넣을 영어 주문서. 설명(brief)은 대체 글자도
+ * 겸하는 한국어라 따로 둔다. 스타일 · 조명 · 구도까지 한 문단에 담는 길이다.
+ */
+export const PROMPT_MAX_LENGTH = 1000;
 /** 사진 자리가 바라는 비율 — 가로 · 정사각 · 세로. 이미지 생성 모델이 받는 비율 범위에 맞췄다(adr-029). */
 export const PHOTO_RATIOS = ["16:9", "3:2", "4:3", "1:1", "3:4", "2:3", "9:16"] as const;
 
@@ -296,14 +301,23 @@ export function naturalSizeOf(attrs: NaturalSizeAttrs): { width: number; height:
   return { width: naturalWidth, height: naturalHeight };
 }
 
-/** 한 줄 · 앞뒤 공백 없음 — markdown 한 줄로 오가고, 보이지 않는 차이로 같은 설명이 둘이 되지 않게 */
-const briefSchema = z
-  .string()
-  .min(1)
-  .max(BRIEF_MAX_LENGTH)
-  .refine((brief) => !/[\r\n]/.test(brief) && brief === brief.trim(), {
-    message: "사진 설명은 한 줄이고 앞뒤 공백이 없다",
-  });
+/**
+ * 한 줄 · 앞뒤 공백 없음 — 첫 글자와 끝 글자가 공백이 아니고 사이에 줄바꿈이 없다. JS `\s`는 `trim()`이 떼는 글자와
+ * 같다. refine이 아니라 정규식으로 적는다 — 계약(api/openapi.json)에 `pattern`으로 그대로 나간다(refine은 나가지 않는다).
+ */
+const ONE_LINE_TRIMMED = /^\S(?:[^\r\n]*\S)?$/;
+
+const oneLineTextSchema = (maxLength: number, message: string) =>
+  z.string().min(1).max(maxLength).regex(ONE_LINE_TRIMMED, { message });
+
+/** 사진 설명 — markdown 한 줄로 오가고, 보이지 않는 차이로 같은 설명이 둘이 되지 않게 */
+const briefSchema = oneLineTextSchema(BRIEF_MAX_LENGTH, "사진 설명은 한 줄이고 앞뒤 공백이 없다");
+
+/** 이미지 프롬프트 — 설명(brief)과 같은 까닭으로 markdown 한 문단으로 오간다 */
+const promptSchema = oneLineTextSchema(
+  PROMPT_MAX_LENGTH,
+  "이미지 프롬프트는 한 줄이고 앞뒤 공백이 없다",
+);
 
 const imageAttrsSchema = z
   .strictObject({
@@ -311,6 +325,7 @@ const imageAttrsSchema = z
     alt: z.string().max(ALT_MAX_LENGTH),
     // 에디터 전용(adr-033) — 공개 렌더 · 공개 API에는 나가지 않는다
     brief: briefSchema.optional(),
+    prompt: promptSchema.optional(),
     naturalWidth: naturalSizeSchema.optional(),
     naturalHeight: naturalSizeSchema.optional(),
     motion: z.enum(MOTIONS).optional(),
@@ -469,6 +484,8 @@ const photoPlaceholderSchema = z.strictObject({
   attrs: z.strictObject({
     brief: briefSchema,
     ratio: z.enum(PHOTO_RATIOS).optional(),
+    // 에디터 전용(adr-043) — 설명처럼 공개 렌더 · 공개 API에 나가지 않는다
+    prompt: promptSchema.optional(),
   }),
 });
 

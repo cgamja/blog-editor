@@ -35,10 +35,11 @@ export const pmSchema = new Schema({
       content: "(paragraph | bulletList | orderedList)+",
       attrs: { tone: { default: DEFAULT_CALLOUT_TONE } },
     },
-    // 사진 자리(adr-033) — `:::photo` 안 설명 한 문단. parser.ts가 문단 글자를 attrs.brief로 옮긴다
+    // 사진 자리(adr-033 · adr-043) — `:::photo` 안 설명 한 문단 · `prompt:` 문단(생략 가능). parser.ts가 문단
+    // 글자를 attrs.brief · attrs.prompt로 옮긴다
     photoPlaceholder: {
       group: "block",
-      content: "paragraph",
+      content: "paragraph paragraph?",
       attrs: { ratio: { default: undefined } },
     },
     bulletList: { group: "block", content: "listItem+" },

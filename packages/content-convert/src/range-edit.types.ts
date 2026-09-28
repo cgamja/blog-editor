@@ -54,10 +54,15 @@ export interface EditRange extends Found {
   blocks: readonly TextBlockRef[];
 }
 
-/** 옛 그림의 사진 설명(adr-033) — markdown에는 brief 자리가 없어 새 블록이 스스로 가질 수 없다 */
+/**
+ * 옛 그림의 에디터 전용 칸 — 사진 설명(adr-033) · 이미지 프롬프트(adr-043). markdown에는 둘의 자리가 없어 새 블록이
+ * 스스로 가질 수 없다. 둘 중 하나 이상이 있는 그림만 담는다(설명을 지운 뒤 프롬프트만 남은 그림도 있다) — 둘은 한
+ * 묶음으로 옮긴다.
+ */
 export interface BriefedImage {
   src: string;
-  brief: string;
+  brief?: string;
+  prompt?: string;
   /** 문서 최상위 블록 번호(1부터) — 형식 가이드의 '블록 n'과 같다 */
   blockNumber: number;
 }

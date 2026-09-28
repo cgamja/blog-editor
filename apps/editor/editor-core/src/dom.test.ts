@@ -291,3 +291,19 @@ describe("editor-dom: HTML 속성을 검증 없이 attrs로 읽지 않는다", (
     expect(toDom(node)).toEqual(["ol", { start: "3" }, 0]);
   });
 });
+
+describe("editor-dom: 에디터 전용 설명 · 프롬프트는 에디터 안 복사 · 붙여넣기로 따라온다(adr-043)", () => {
+  it("WHEN 설명 · 프롬프트 그림, 프롬프트만 있는 그림, 프롬프트 사진 자리를 DOM으로 냈다가 다시 읽는다 THEN attrs가 같다", () => {
+    const prompt = "A sleeping baby in a dim nursery, soft window light";
+    const blocks = [
+      schema.nodes.image!.create({ src: "/images/a.webp", alt: "", brief: "낮잠 방", prompt }),
+      schema.nodes.image!.create({ src: "/images/a.webp", alt: "", prompt }),
+      schema.nodes.photoPlaceholder!.create({ brief: "낮잠 방", ratio: "4:3", prompt }),
+    ];
+
+    for (const block of blocks) {
+      const read = readWith(schema, "nodes", block.type.name, elementFromSpec(toDom(block)));
+      expect(comparable(read as object), block.type.name).toEqual(comparable(block.attrs));
+    }
+  });
+});

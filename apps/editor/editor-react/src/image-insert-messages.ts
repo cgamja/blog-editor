@@ -24,4 +24,12 @@ export const IMAGE_INSERT_MESSAGES = {
   briefHint:
     "어떤 사진인지 적어 두면 사진을 고르거나 바꿀 때 참고가 돼요. 공개 글에는 나오지 않아요. Enter로 적용, Esc로 닫기",
   toPlaceholder: "사진 자리로 되돌리기",
+  // 이미지 프롬프트(adr-043) — 사람이 Midjourney 등에 붙여 넣어 사진을 만든다
+  promptButton: "이미지 프롬프트",
+  promptLabel: "이미지 프롬프트(에디터에만 보여요)",
+  promptHint:
+    "이미지 도구(Midjourney 등)에 붙여 넣을 영어 글이에요. 공개 글에는 나오지 않아요. Enter로 적용, Esc로 닫기",
+  copyPrompt: "프롬프트 복사",
+  promptCopied: "복사했어요 — 이미지 도구에 붙여 넣으세요",
+  promptCopyFailed: "복사하지 못했어요 — 입력칸의 글을 직접 골라 복사해 주세요",
 } as const;

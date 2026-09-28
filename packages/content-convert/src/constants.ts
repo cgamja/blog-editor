@@ -24,6 +24,8 @@ export const CALLOUT_CONTAINER_NAME = "callout";
 
 /** 사진 자리 컨테이너 이름(`:::photo`, adr-033) — tokens.ts · check.ts · serialize.ts가 같이 쓴다. */
 export const PHOTO_CONTAINER_NAME = "photo";
+/** 사진 자리 안 둘째 문단이 이것으로 시작하면 이미지 프롬프트다(adr-043) */
+export const PHOTO_PROMPT_PREFIX = "prompt:";
 
 /** 범위 고치기 동작(adr-031) — range-edit.ts와 MCP update_draft 입력 스키마가 같은 값을 본다. */
 export const RANGE_EDIT_COMMANDS = ["replace", "insert_after"] as const;

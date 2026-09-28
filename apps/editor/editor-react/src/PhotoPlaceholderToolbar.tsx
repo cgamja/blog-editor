@@ -4,6 +4,7 @@ import { NodeSelection } from "@tiptap/pm/state";
 import type { ImageUploadPlacement } from "@blog-editor/editor-core";
 import { BriefControl } from "./BriefControl";
 import { IMAGE_INSERT_MESSAGES } from "./image-insert-messages";
+import { PromptControl } from "./PromptControl";
 import { useBlockAnchor } from "./use-block-anchor";
 
 export interface PhotoPlaceholderToolbarProps {
@@ -15,11 +16,14 @@ export interface PhotoPlaceholderToolbarProps {
 interface PlaceholderTarget {
   pos: number;
   brief: string;
+  prompt: string | null;
+  ratio: string | null;
 }
 
 /**
  * 사진 자리를 노드로 골랐을 때 블록 위에 뜨는 도구줄(adr-033) — 「사진 올리기」로 고른 사진이 이 자리를 채우고,
- * 「사진 설명」으로 설명을 보고 고친다. 부르는 쪽은 에디터와 이 도구줄을 `position: relative` 상자 하나에 함께 둔다.
+ * 「사진 설명」으로 설명을, 「이미지 프롬프트」로 사람이 이미지 도구에 붙여 넣을 프롬프트(adr-043)를 보고 고친다.
+ * 부르는 쪽은 에디터와 이 도구줄을 `position: relative` 상자 하나에 함께 둔다.
  */
 export function PhotoPlaceholderToolbar({ editor, openPicker }: PhotoPlaceholderToolbarProps) {
   const target = useEditorState({
@@ -30,9 +34,14 @@ export function PhotoPlaceholderToolbar({ editor, openPicker }: PhotoPlaceholder
         selection instanceof NodeSelection &&
         selection.node.type.name === "photoPlaceholder" &&
         selection.$from.depth === 0;
-      return isPlaceholder
-        ? { pos: selection.from, brief: String(selection.node.attrs.brief) }
-        : null;
+      if (!isPlaceholder) return null;
+      const { brief, prompt, ratio } = selection.node.attrs;
+      return {
+        pos: selection.from,
+        brief: String(brief),
+        prompt: (prompt as string | null) ?? null,
+        ratio: (ratio as string | null) ?? null,
+      };
     },
   });
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -61,6 +70,13 @@ export function PhotoPlaceholderToolbar({ editor, openPicker }: PhotoPlaceholder
         pos={target.pos}
         brief={target.brief}
         canRevert={false}
+      />
+      <PromptControl
+        key={`prompt-${target.pos}`}
+        editor={editor}
+        pos={target.pos}
+        prompt={target.prompt}
+        ratio={target.ratio}
       />
     </div>
   );

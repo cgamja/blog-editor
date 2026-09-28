@@ -186,6 +186,50 @@ describe("photo-placeholder — 에디터에서 사진 자리를 채우고 설�
   });
 });
 
+describe("photo-prompt — 사진을 채우면 프롬프트가 그림에 남는다", () => {
+  it("WHEN 프롬프트가 있는 사진 자리에 사진을 채운다 THEN 그 그림이 같은 prompt를 가진다", () => {
+    const prompt = "A sleeping baby in a dim nursery, soft window light, 35mm film photo";
+    const initial = stateOf(paragraph, {
+      type: "photoPlaceholder",
+      attrs: { brief: BRIEF, ratio: "4:3", prompt },
+    });
+
+    const started = run(initial, startImageUpload("a", AFTER_PARAGRAPH, { fill: true })).state;
+    const finished = run(started, finishImageUpload("a", UPLOADED));
+
+    expect(docFromNode(finished.state.doc).content).toEqual([
+      paragraph,
+      {
+        type: "image",
+        attrs: {
+          src: IMAGE_SRC,
+          alt: BRIEF,
+          brief: BRIEF,
+          prompt,
+          naturalWidth: 800,
+          naturalHeight: 600,
+        },
+      },
+    ]);
+  });
+});
+
+describe("photo-prompt — 그림을 사진 자리로 되돌리면 프롬프트도 돌아간다", () => {
+  it("WHEN 설명 · 프롬프트가 있는 800×600 그림을 사진 자리로 되돌린다 THEN 같은 설명 · 프롬프트의 4:3 사진 자리다", () => {
+    const prompt = "A sleeping baby in a dim nursery, soft window light";
+    const withImage = stateOf({
+      type: "image",
+      attrs: { ...UPLOADED, alt: "봄", brief: BRIEF, prompt },
+    });
+
+    const reverted = run(withImage, imageToPlaceholder(0));
+
+    expect(docFromNode(reverted.state.doc).content).toEqual([
+      { type: "photoPlaceholder", attrs: { brief: BRIEF, prompt, ratio: "4:3" } },
+    ]);
+  });
+});
+
 describe("photo-placeholder — 채우기 · 되돌리기 뒤 끝 자리와 다시 시도(adr-039 · #172)", () => {
   const SECOND = { ...UPLOADED, src: "/images/fedcba9876543210fedcba9876543210.webp" };
 
