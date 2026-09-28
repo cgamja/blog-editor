@@ -85,3 +85,23 @@ export function collectErrors(page: Page): string[] {
   page.on("pageerror", (error) => errors.push(error.message));
   return errors;
 }
+
+/**
+ * 다른 곳(AI의 MCP 도구 · 다른 탭)에서 초안을 고친 것처럼 저장소의 글을 바로 바꾼다 — 화면 밖의 요청이라
+ * `page.request`(같은 세션 쿠키, 페이지의 fetch가 아니다)로 읽고 받은 revision으로 `If-Match` 저장한다.
+ */
+export async function editDraftElsewhere(
+  page: Page,
+  slug: string,
+  edit: (file: { doc: { content: Record<string, unknown>[] } }) => void,
+): Promise<void> {
+  const current = await page.request.get(`/api/posts/${slug}`);
+  expect(current.status()).toBe(200);
+  const file = (await current.json()) as { doc: { content: Record<string, unknown>[] } };
+  edit(file);
+  const saved = await page.request.put(`/api/posts/${slug}`, {
+    headers: { "Content-Type": "application/json", "If-Match": current.headers()["etag"] ?? "" },
+    data: file,
+  });
+  expect(saved.ok()).toBe(true);
+}
