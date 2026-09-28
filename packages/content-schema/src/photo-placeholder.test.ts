@@ -121,3 +121,24 @@ describe("photo-placeholder — 사진 자리가 남으면 발행 확인이 알�
     );
   });
 });
+
+describe("photo-prompt — 설명 · 프롬프트는 한 줄이고 앞뒤 공백이 없다(계약 pattern과 같은 규칙)", () => {
+  it("WHEN 가운데 공백 · 한 글자 · 앞 공백 · 뒤 공백 · \\r이 든 설명과 프롬프트를 검사한다 THEN 앞의 둘만 통과한다", () => {
+    const values = ["a b", "a", " a", "a ", "a\rb"];
+
+    const results = values.map((value) => [
+      docSchema.safeParse(docOf({ type: "photoPlaceholder", attrs: { brief: value } })).success,
+      docSchema.safeParse(
+        docOf({ type: "photoPlaceholder", attrs: { brief: BRIEF, prompt: value } }),
+      ).success,
+    ]);
+
+    expect(results).toEqual([
+      [true, true],
+      [true, true],
+      [false, false],
+      [false, false],
+      [false, false],
+    ]);
+  });
+});

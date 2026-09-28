@@ -140,3 +140,39 @@ test("WHEN 비율 4:3 · 프롬프트가 있는 사진 자리에서 「이미지
     .toEqual([`${PROMPT} --ar 4:3`]);
   expect(errors).toEqual([]);
 });
+
+test("WHEN 프롬프트 없는 그림을 골라 「이미지 프롬프트」 빈 칸에 프롬프트를 쓰고 Enter를 누른다 THEN 저장된 그림이 그 prompt를 가진다", async ({
+  page,
+}, testInfo) => {
+  await logIn(page);
+  const slug = `e2e-image-prompt-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
+  await createDraftWithBlocks(page, slug, "그림에 프롬프트 넣기", [
+    { type: "paragraph", content: [{ type: "text", text: "낮잠 이야기" }] },
+    {
+      type: "image",
+      attrs: { src: "/images/cherry-walk.webp", alt: "", naturalWidth: 800, naturalHeight: 600 },
+    },
+  ]);
+  await page.goto(`/posts/${slug}/edit`);
+  const body = page.getByLabel("본문", { exact: true });
+  await body.locator("figure.post-image").click();
+  const toolbar = page.getByRole("toolbar", { name: "사진 폭" });
+
+  await toolbar.getByRole("button", { name: /이미지 프롬프트/ }).click();
+  const input = page.getByRole("textbox", { name: /이미지 프롬프트/ });
+  await expect(input).toHaveValue("");
+  await expect(toolbar.getByRole("button", { name: "프롬프트 복사" })).toHaveCount(0);
+  await input.fill(PROMPT);
+  await input.press("Enter");
+
+  await expect
+    .poll(async () =>
+      page.evaluate(async (slug) => {
+        const saved = (await (await fetch(`/api/posts/${slug}`)).json()) as {
+          doc: { content: { type: string; attrs: { prompt?: string } }[] };
+        };
+        return saved.doc.content.find((block) => block.type === "image")?.attrs.prompt ?? null;
+      }, slug),
+    )
+    .toBe(PROMPT);
+});
