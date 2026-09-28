@@ -79,7 +79,27 @@ function restoreLostDecoration(
   });
 }
 
-/** 최상위 목록에서 항목을 빼낸 뒤 — 움직임 · 스티커 · 간격은 한 곳에만, 글꼴은 조각마다 남긴다 */
+/**
+ * 간격은 원래 목록 위 자리라 그 자리의 첫 최상위 블록 것이다(spec: editor-list-keys, adr-037). 첫 항목을 빼내면
+ * liftListItem이 [빠진 블록, 남은 목록{attrs}]를 만들어 간격이 남은 목록으로 밀린다 — 첫 블록으로 옮기고 남은 목록에서 지운다.
+ * 스티커 · 움직임은 건드리지 않는다. https://prosemirror.net/docs/ref/#transform.Transform.setNodeAttribute
+ */
+function keepSpaceOnFirstBlock(
+  tr: Transaction,
+  top: Node,
+  blocks: { node: Node; pos: number }[],
+): void {
+  const space = top.attrs.space;
+  const [first, ...rest] = blocks;
+  if (space == null || first === undefined || first.node.attrs.space === space) return;
+  tr.setNodeAttribute(first.pos, "space", space);
+  for (const { node, pos } of rest) {
+    if (node.type === top.type && node.attrs.space === space)
+      tr.setNodeAttribute(pos, "space", null);
+  }
+}
+
+/** 최상위 목록에서 항목을 빼낸 뒤 — 움직임 · 스티커 · 간격은 한 곳에만(간격은 첫 블록), 글꼴은 조각마다 남긴다 */
 function keepTopListDecoration(state: EditorState, tr: Transaction): Transaction {
   const { $from } = state.selection;
   const top = $from.node(1);
@@ -89,6 +109,7 @@ function keepTopListDecoration(state: EditorState, tr: Transaction): Transaction
     topBlocksIn(tr.doc, tr.mapping.map(topPos, -1), tr.mapping.map(topPos + top.nodeSize, 1));
   dropDuplicatedDecoration(tr, top, blocks());
   restoreLostDecoration(tr, top, blocks());
+  keepSpaceOnFirstBlock(tr, top, blocks());
   return tr;
 }
 
