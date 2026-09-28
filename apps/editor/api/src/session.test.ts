@@ -150,6 +150,36 @@ describe("api-session — 로그인 잠금 (보호 대상 — 고쳐서 통과�
 
     expect(res.status).toBe(204);
   });
+
+  it("WHEN 첫 잠금이 풀린 뒤 다시 5번 실패하고 16분 뒤 맞는 비밀번호로 로그인하면 THEN 401이고 30분이 넘게 흐른 뒤에는 204다", async () => {
+    const { app, advance } = setup();
+    await failRepeatedly(app);
+    advance(LOCKOUT_MS + 1000);
+    await failRepeatedly(app);
+
+    advance(16 * 60 * 1000);
+    const stillLocked = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+    advance(14 * 60 * 1000 + 1000);
+    const released = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(stillLocked.status).toBe(401);
+    expect(released.status).toBe(204);
+  });
+
+  it("WHEN 두 번 잠긴 뒤 풀려서 맞는 비밀번호로 로그인하고 다시 5번 실패하면 THEN 이번 잠금은 15분 뒤 풀려 204다", async () => {
+    const { app, advance } = setup();
+    await failRepeatedly(app);
+    advance(LOCKOUT_MS + 1000);
+    await failRepeatedly(app);
+    advance(2 * LOCKOUT_MS + 1000);
+    await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+    await failRepeatedly(app);
+
+    advance(LOCKOUT_MS + 1000);
+    const res = await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password);
+
+    expect(res.status).toBe(204);
+  });
 });
 
 describe("api-session — 로그아웃", () => {

@@ -11,6 +11,8 @@ import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../test-a
 import { hashConnectionToken } from "./connection-tokens";
 import { createMemoryConnectionTokenStore } from "./memory-connection-token-store";
 import { MCP_WORKSPACE_GUIDE_HEADING } from "./messages";
+import { capturePreview } from "./preview-capture";
+import type { McpOptions } from "./route";
 
 const CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const TOKEN = "test-connection-token-0123456789abcdef";
@@ -19,7 +21,10 @@ const EDITOR_BASE_URL = "https://editor.example.test";
 // 2025-era 무상태 요청 — SDK가 세션 없이 요청마다 새 서버로 답한다(adr-016)
 const PROTOCOL_VERSION = "2025-06-18";
 
-function setup(store: PostStore = createMemoryPostStore()) {
+function setup(
+  store: PostStore = createMemoryPostStore(),
+  mcpOptions: Pick<McpOptions, "capturePreview"> = {},
+) {
   const settings = createMemorySettingsStore();
   const app = createApp({
     store,
@@ -33,6 +38,7 @@ function setup(store: PostStore = createMemoryPostStore()) {
       ]),
       editorBaseUrl: EDITOR_BASE_URL,
       formatGuide: "형식 가이드",
+      ...mcpOptions,
     },
   });
   return { store, settings, app };
@@ -793,7 +799,7 @@ describe("mcp-drafts — preview_post(미리보기 이미지)", () => {
   }
 
   it("WHEN 저장소에 없는 slug로 preview_post를 부르면 THEN 도구 오류이고 이미지가 없다", async () => {
-    const { app } = setup();
+    const { app } = setup(createMemoryPostStore(), { capturePreview });
 
     const result = await preview(app, { slug: "no-such-post" });
 
@@ -804,7 +810,7 @@ describe("mcp-drafts — preview_post(미리보기 이미지)", () => {
   it(
     "WHEN 문단 · 스티커가 있는 초안으로 preview_post를 부르면 THEN 데스크톱 · 모바일 순 JPEG 두 장이 폭 1280 · 390 이하 · 긴 변 1568 이하이고 글은 그대로다",
     async () => {
-      const { store, app } = setup();
+      const { store, app } = setup(createMemoryPostStore(), { capturePreview });
       const { revision } = await store.put("spring-walk", STICKERED, null);
 
       const result = await preview(app, { slug: "spring-walk" });
@@ -831,7 +837,7 @@ describe("mcp-drafts — preview_post(미리보기 이미지)", () => {
   it(
     "WHEN 한 구간보다 긴 초안을 part 없이 · part 2로 부르면 THEN 응답 글에 폭마다 전체 구간 수(2 이상)가 있고 part 2도 두 장이며 전체보다 큰 part는 도구 오류다",
     async () => {
-      const { store, app } = setup();
+      const { store, app } = setup(createMemoryPostStore(), { capturePreview });
       const paragraphs = Array.from({ length: 120 }, (_, index) => ({
         type: "paragraph" as const,
         content: [
@@ -862,4 +868,17 @@ describe("mcp-drafts — preview_post(미리보기 이미지)", () => {
     },
     BROWSER_TIMEOUT_MS,
   );
+
+  describe("edge-deploy — 찍기 수단 없는 배포 앱", () => {
+    it("WHEN 찍기 수단 없이 만든 앱으로 있는 글의 preview_post를 부르면 THEN 도구 오류이고 이미지가 없으며 로컬 서버 안내가 있다", async () => {
+      const { store, app } = setup();
+      await store.put("spring-walk", STICKERED, null);
+
+      const result = await preview(app, { slug: "spring-walk" });
+
+      expect(result.isError).toBe(true);
+      expect(result.images).toEqual([]);
+      expect(result.text).toContain("로컬 서버");
+    });
+  });
 });
