@@ -138,12 +138,14 @@ describe("mcp-auth — 연결용 토큰 (보호 대상 — 고쳐서 통과시�
 });
 
 describe("mcp-drafts — 초안만 (보호 대상 — 고쳐서 통과시키지 않는다)", () => {
-  it("WHEN 유효한 토큰으로 tools/list를 부르면 THEN 도구가 정확히 6개이고 발행 도구가 없다", async () => {
+  // 도구를 더할 때는 이 허용 목록에 한 줄을 더한다(사람 승인 — 2026-09-28). 발행 도구가 없다는 단언은 목록과 따로 둔다
+  it("WHEN 유효한 토큰으로 tools/list를 부르면 THEN 도구가 허용 목록과 정확히 같고 발행 도구가 없다", async () => {
     const { app } = setup();
 
     const result = await resultOf(await rpc(app, "tools/list", {}));
     const names = (result.tools as Array<{ name: string }>).map((tool) => tool.name).sort();
 
+    expect(names.filter((name) => /publish/i.test(name))).toEqual([]);
     expect(names).toEqual([
       "check_draft",
       "create_draft",
