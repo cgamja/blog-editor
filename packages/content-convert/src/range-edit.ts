@@ -9,9 +9,11 @@ import {
   selectionNotFoundMessage,
   selectionPartialBlockMessage,
   selectionPlace,
+  briefsWouldDropMessage,
   stickersWouldDropMessage,
 } from "./range-edit.messages";
 import type {
+  BriefedImage,
   EditRange,
   Found,
   InlineText,
@@ -295,6 +297,76 @@ function droppedStickers(replaced: readonly JsonNode[], added: readonly JsonNode
   return replaced.flatMap((node) => stickersOf(node) ?? []);
 }
 
+/** 노드와 그 안의 그림 — 문서 순서가 중요하다. 같은 src 그림이 여럿이면 옛 것과 새 것을 앞에서부터 짝짓는다 */
+function imagesIn(node: JsonNode): JsonNode[] {
+  if (node.type === "image") return [node];
+  return (node.content ?? []).flatMap(imagesIn);
+}
+
+function briefedImages(replaced: readonly JsonNode[], firstTop: number): BriefedImage[] {
+  return replaced.flatMap((node, index) =>
+    imagesIn(node).flatMap((image) => {
+      const { src, brief } = image.attrs ?? {};
+      if (typeof src !== "string" || typeof brief !== "string") return [];
+      return [{ src, brief, blockNumber: firstTop + index + 1 }];
+    }),
+  );
+}
+
+/** 새 블록들의 같은 src 그림에 옛 brief를 앞에서부터 준다 */
+function withCarriedBriefs(
+  nodes: readonly JsonNode[],
+  briefs: ReadonlyMap<string, readonly string[]>,
+): JsonNode[] {
+  const used = new Map<string, number>();
+  const visit = (node: JsonNode): JsonNode => {
+    if (node.type !== "image") {
+      return node.content === undefined ? node : { ...node, content: node.content.map(visit) };
+    }
+    const src = node.attrs?.src;
+    if (node.attrs?.brief !== undefined || typeof src !== "string") return node;
+    const at = used.get(src) ?? 0;
+    const brief = briefs.get(src)?.[at];
+    if (brief === undefined) return node;
+    used.set(src, at + 1);
+    return { ...node, attrs: { ...node.attrs, brief } };
+  };
+  return nodes.map(visit);
+}
+
+/**
+ * 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮을 때(#172) — 새 markdown에 같은 src 그림이 있으면 설명을
+ * 그 그림으로 옮기고, 옮길 그림이 없는 옛 그림은 `missing`으로 돌려준다(부르는 쪽이 실패로 알린다). 사람이 쓴
+ * 설명이 말없이 사라지지 않게 한다. 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다(스티커와 같다).
+ */
+function carryBriefs(
+  replaced: readonly JsonNode[],
+  added: readonly JsonNode[],
+  firstTop: number,
+): { nodes: JsonNode[]; missing: BriefedImage[] } {
+  const old = briefedImages(replaced, firstTop);
+  if (old.length === 0 || added.length === 0) return { nodes: [...added], missing: [] };
+  const available = new Map<string, number>();
+  added.flatMap(imagesIn).forEach((image) => {
+    const src = image.attrs?.src;
+    if (typeof src === "string" && image.attrs?.brief === undefined) {
+      available.set(src, (available.get(src) ?? 0) + 1);
+    }
+  });
+  const briefs = new Map<string, string[]>();
+  const missing: BriefedImage[] = [];
+  old.forEach((image) => {
+    const left = available.get(image.src) ?? 0;
+    if (left === 0) {
+      missing.push(image);
+      return;
+    }
+    available.set(image.src, left - 1);
+    briefs.set(image.src, [...(briefs.get(image.src) ?? []), image.brief]);
+  });
+  return { nodes: withCarriedBriefs(added, briefs), missing };
+}
+
 /**
  * 범위가 걸친 최상위 블록들의 보이는 글자를 처음부터 끝까지 덮는가 — 일부만 덮은 채 블록을 통째로
  * 바꾸면 고르지 않은 글자(다른 목록 항목 · 인용 문단)가 말없이 사라진다. 앞뒤 공백은 보이지 않으므로
@@ -381,9 +453,11 @@ function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditR
     return fail(
       stickersWouldDropMessage(dropped.map(formatStickerDirective), added.some(canHoldStickers)),
     );
+  const briefs = carryBriefs(replaced, carryStickers(replaced, added), startRef.top);
+  if (briefs.missing.length > 0) return fail(briefsWouldDropMessage(briefs.missing));
   return finish([
     ...content.slice(0, startRef.top),
-    ...carryStickers(replaced, added),
+    ...briefs.nodes,
     ...content.slice(endRef.top + 1),
   ]);
 }
@@ -404,7 +478,8 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
  *     찾지만 글자만 바꾸는 길이 없다 — 블록째 바꾼다(adr-033).
  *   - 그 밖에는 범위가 걸친 최상위 블록들을 새 markdown 블록들로 바꾼다. 범위가 그 블록들 전체를
  *     덮지 않으면 실패한다. 새 markdown이 sticker=를 쓰지 않았을 때 사람이 붙인 스티커를 지키려고,
- *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032).
+ *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032). 덮은 그림의 사진
+ *     설명(brief)은 새 markdown의 같은 src 그림으로 옮기고, 그런 그림이 없으면 실패로 알린다(adr-039).
  * - `insert_after`: 범위 끝이 든 최상위 블록 뒤에 넣는다.
  */
 export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {

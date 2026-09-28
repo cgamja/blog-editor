@@ -809,3 +809,74 @@ describe("markdown-range-edit — 스티커 지시어(adr-032)", () => {
     expect(removed.doc.content).toEqual([paragraph("끝")]);
   });
 });
+
+describe("markdown-range-edit — 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮는다(adr-033 · #172)", () => {
+  const BRIEF = "잠든 아기 옆 낮잠 방";
+  const SRC = "/images/nap-room.webp";
+  const briefed = () =>
+    doc(
+      paragraph("낮잠 앞 문단"),
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: BRIEF } },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+  it("WHEN 앞 문단부터 뒤 문단까지를 같은 src 그림이 든 markdown으로 바꾼다 THEN 새 그림이 옛 brief를 가진다", () => {
+    const result = editDocRange(briefed(), {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: `새 앞 문단\n\n![낮잠 방](${SRC})\n\n새 뒤 문단`,
+    });
+
+    expectOk(result);
+    const image = result.doc.content.find((block) => block.type === "image");
+    expect(image?.attrs).toMatchObject({ src: SRC, brief: BRIEF });
+  });
+
+  it("WHEN 같은 범위를 그 src 그림이 없는 markdown으로 바꾼다 THEN 실패이고 메시지에 그림 src와 블록 번호가 있으며 문서는 그대로다", () => {
+    const input = briefed();
+    const before = structuredClone(input);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: "합친 문단",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain(SRC);
+    expect(message).toMatch(/블록 2/);
+    expect(input).toEqual(before);
+  });
+
+  it("WHEN 같은 src brief 그림 둘을 그 src 그림 하나로 바꾼다 THEN 실패이고 메시지에 짝 없는 그림의 블록 번호가 있다", () => {
+    const input = doc(
+      paragraph("낮잠 앞 문단"),
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: BRIEF } },
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: "창가 쪽 낮잠 방" } },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: `새 앞 문단\n\n![낮잠 방](${SRC})\n\n새 뒤 문단`,
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/블록 3/);
+  });
+
+  it("WHEN brief 그림을 덮는 범위를 빈 markdown으로 지운다 THEN 성공하고 그림도 지워진다", () => {
+    const input = doc(...briefed().content, paragraph("끝"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: "",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([paragraph("끝")]);
+  });
+});

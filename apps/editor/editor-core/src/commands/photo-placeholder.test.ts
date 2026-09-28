@@ -1,3 +1,4 @@
+import { history, undo } from "@tiptap/pm/history";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import type { Command } from "@tiptap/pm/state";
 import { ALT_MAX_LENGTH, docSchema } from "@blog-editor/content-schema";
@@ -5,9 +6,12 @@ import {
   createEditorSchema,
   docFromNode,
   docToNode,
+  failImageUpload,
   finishImageUpload,
   imageToPlaceholder,
   imageUpload,
+  imageUploadsOf,
+  retryImageUpload,
   setBrief,
   startImageUpload,
 } from "../index";
@@ -111,6 +115,23 @@ describe("photo-placeholder — 에디터에서 사진 자리를 채우고 설�
     expect(srcs).toEqual([IMAGE_SRC, "/images/fedcba9876543210fedcba9876543210.webp", "paragraph"]);
   });
 
+  it("WHEN 끝 블록인 사진 자리를 채우는 동안 문서 끝 자리에서 다른 올리기가 기다린다 THEN 채우기가 끝나도 끝 자리가 살아 채운 그림 뒤에 들어간다", () => {
+    const second = { ...UPLOADED, src: "/images/fedcba9876543210fedcba9876543210.webp" };
+    const initial = stateOf(paragraph, { type: "photoPlaceholder", attrs: { brief: BRIEF } });
+    let state = run(initial, startImageUpload("a", AFTER_PARAGRAPH, { fill: true })).state;
+    state = run(state, startImageUpload("end", state.doc.content.size)).state;
+    state = run(state, finishImageUpload("a", UPLOADED)).state;
+
+    const finished = run(state, finishImageUpload("end", second));
+
+    expect(finished.ok).toBe(true);
+    expect(
+      docFromNode(finished.state.doc).content.map((block) =>
+        block.type === "image" ? block.attrs.src : block.type,
+      ),
+    ).toEqual(["paragraph", IMAGE_SRC, second.src]);
+  });
+
   it("WHEN ALT_MAX_LENGTH-1자 뒤에 이모지가 오는 설명의 사진 자리를 채운다 THEN alt에 외톨이 서러게이트가 없다", () => {
     const brief = `${"가".repeat(ALT_MAX_LENGTH - 1)}🌸 낮잠`;
     const initial = stateOf(paragraph, { type: "photoPlaceholder", attrs: { brief } });
@@ -161,6 +182,76 @@ describe("photo-placeholder — 에디터에서 사진 자리를 채우고 설�
     expect(emptyPlaceholder.ok).toBe(false);
     expect(docFromNode(reverted.state.doc).content).toEqual([
       { type: "photoPlaceholder", attrs: { brief: BRIEF, ratio: "16:9" } },
+    ]);
+  });
+});
+
+describe("photo-placeholder — 채우기 · 되돌리기 뒤 끝 자리와 다시 시도(adr-039 · #172)", () => {
+  const SECOND = { ...UPLOADED, src: "/images/fedcba9876543210fedcba9876543210.webp" };
+
+  function historyStateOf(...content: unknown[]): EditorState {
+    const doc = docToNode(schema, { type: "doc", content });
+    return EditorState.create({ doc, plugins: [history(), imageUpload()] });
+  }
+
+  const shapes = (state: EditorState) =>
+    docFromNode(state.doc).content.map((block) =>
+      block.type === "image" ? block.attrs.src : block.type,
+    );
+
+  it("WHEN 문단 · 사진 자리 문서에서 사진 자리를 채운 뒤 끝 자리 올리기를 두고 채우기를 되돌린다 THEN 끝 자리가 살아 사진 자리 뒤에 들어간다", () => {
+    const initial = historyStateOf(paragraph, {
+      type: "photoPlaceholder",
+      attrs: { brief: BRIEF },
+    });
+    let state = run(initial, startImageUpload("a", AFTER_PARAGRAPH, { fill: true })).state;
+    state = run(state, finishImageUpload("a", UPLOADED)).state;
+    state = run(state, startImageUpload("end", state.doc.content.size)).state;
+
+    state = run(state, undo).state;
+
+    expect(imageUploadsOf(state).map((entry) => entry.id)).toEqual(["end"]);
+    const finished = run(state, finishImageUpload("end", SECOND));
+    expect(finished.ok).toBe(true);
+    expect(shapes(finished.state)).toEqual(["paragraph", "photoPlaceholder", SECOND.src]);
+  });
+
+  it("WHEN 사진 자리 하나뿐인 문서에서 사진 자리를 채운 뒤 끝 자리 올리기를 두고 채우기를 되돌린다 THEN 끝 자리가 살아 사진 자리 뒤에 들어간다", () => {
+    const initial = historyStateOf({ type: "photoPlaceholder", attrs: { brief: BRIEF } });
+    let state = run(initial, startImageUpload("a", 0, { fill: true })).state;
+    state = run(state, finishImageUpload("a", UPLOADED)).state;
+    state = run(state, startImageUpload("end", state.doc.content.size)).state;
+
+    state = run(state, undo).state;
+
+    expect(imageUploadsOf(state).map((entry) => entry.id)).toEqual(["end"]);
+    const finished = run(state, finishImageUpload("end", SECOND));
+    expect(finished.ok).toBe(true);
+    expect(shapes(finished.state)).toEqual(["photoPlaceholder", SECOND.src]);
+  });
+
+  it("WHEN 사진 자리 A · B 중 A를 채우던 올리기가 실패한 뒤 A를 지우고 다시 시도해 끝낸다 THEN B는 사진 자리 그대로이고 그림은 B 앞에 설명 없이 들어간다", () => {
+    const initial = stateOf(
+      paragraph,
+      { type: "photoPlaceholder", attrs: { brief: "A 사진 설명" } },
+      { type: "photoPlaceholder", attrs: { brief: "B 사진 설명" } },
+    );
+    let state = run(initial, startImageUpload("a", AFTER_PARAGRAPH, { fill: true })).state;
+    state = run(state, failImageUpload("a", "서버에 닿지 못했어요")).state;
+    state = state.apply(state.tr.delete(AFTER_PARAGRAPH, AFTER_PARAGRAPH + 1));
+
+    const retried = run(state, retryImageUpload("a"));
+    const finished = run(retried.state, finishImageUpload("a", UPLOADED));
+
+    expect(retried.ok).toBe(true);
+    expect(finished.ok).toBe(true);
+    expect(docFromNode(finished.state.doc).content).toEqual([
+      paragraph,
+      {
+        type: "image",
+        attrs: { src: IMAGE_SRC, alt: "", naturalWidth: 800, naturalHeight: 600 },
+      },
+      { type: "photoPlaceholder", attrs: { brief: "B 사진 설명" } },
     ]);
   });
 });

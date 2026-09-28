@@ -82,6 +82,19 @@ describe("editor-image-insert: 올리는 동안의 자리 표시는 문서가 �
     expect(imageUploadsOf(cleared)).toEqual([]);
   });
 
+  it("WHEN 문서 맨 끝 자리를 둔 뒤 마지막 문단의 글꼴을 setNodeMarkup으로 바꾼다 THEN 자리가 문서 끝에 남는다", () => {
+    const initial = start();
+    const end = initial.doc.content.size;
+    const withPlace = run(initial, startImageUpload("last", end)).state;
+    const last = withPlace.doc.child(1);
+
+    const restyled = withPlace.apply(
+      withPlace.tr.setNodeMarkup(GAP, undefined, { ...last.attrs, font: "gaegu" }),
+    );
+
+    expect(imageUploadsOf(restyled)).toEqual([{ id: "last", pos: end, status: "uploading" }]);
+  });
+
   it("WHEN 자리를 더한 뒤 두 문단에 걸친 범위를 지운다 THEN 자리가 사라진다", () => {
     const withPlace = run(start(), startImageUpload("a", GAP)).state;
 

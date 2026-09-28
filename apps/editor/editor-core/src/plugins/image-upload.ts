@@ -6,10 +6,13 @@
  * - StateField.apply · Mapping.mapResult · MapResult.deletedAcross:
  *   https://prosemirror.net/docs/ref/#state.StateField.apply · https://prosemirror.net/docs/ref/#transform.MapResult
  * - NodeSelection.create: https://prosemirror.net/docs/ref/#state.NodeSelection^create
+ * - ReplaceStep(from · to · slice) · Transform.docs: https://prosemirror.net/docs/ref/#transform.ReplaceStep ·
+ *   https://prosemirror.net/docs/ref/#transform.Transform.docs
  */
 import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Command, EditorState, Transaction } from "@tiptap/pm/state";
-import type { Node as PmNode } from "@tiptap/pm/model";
+import type { Node as PmNode, Slice } from "@tiptap/pm/model";
+import { ReplaceStep } from "@tiptap/pm/transform";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { ALT_MAX_LENGTH } from "@blog-editor/content-schema";
 import { imagePathOrNull, naturalSizeFrom } from "../closed-values";
@@ -27,15 +30,21 @@ import type {
  */
 interface TrackedUpload extends ImageUploadEntry {
   isTouched: boolean;
-  /** 자리 바로 뒤 사진 자리를 채우는 올리기(adr-033) — 끝날 때 그 사진 자리를 그림으로 바꾼다 */
-  fill: boolean;
+  /**
+   * 채울 사진 자리의 설명 — 자리 바로 뒤 사진 자리를 채우는 올리기(adr-033)면 올리기를 시작할 때 그 사진 자리의 brief,
+   * 아니면 null. 끝날 때 자리 바로 뒤 사진 자리의 설명이 이것과 같을 때만 채운다 — 그새 그 사진 자리가 지워져 다른
+   * 사진 자리가 붙었으면 그것을 채우지 않고 그냥 넣는다(adr-039).
+   */
+  fillBrief: string | null;
 }
 
 export const imageUploadKey = new PluginKey<readonly TrackedUpload[]>("imageUpload");
 
 type UploadMeta =
-  | { type: "start"; id: string; pos: number; fill: boolean }
+  | { type: "start"; id: string; pos: number; fillBrief: string | null }
   | { type: "fail"; id: string; message: string }
+  /** 실패한 자리를 같은 자리 · 같은 채우기로 다시 올린다 */
+  | { type: "retry"; id: string }
   | { type: "remove"; id: string }
   /** 끝난 올리기 — 그 자리(`pos`, 이 트랜잭션 전 좌표)에서 기다리던 다른 자리는 넣은 그림 뒤(`after`)로 간다 */
   | { type: "finish"; id: string; pos: number; after: number };
@@ -43,17 +52,38 @@ type UploadMeta =
 /** 자리는 뒤 블록 쪽에 붙는다 — 같은 자리에 앞 그림이 들어가면 뒤 자리는 그 뒤로 밀린다(파일 순서 유지) */
 const STICK_TO_NEXT = 1;
 
+/** 문서가 잎 블록(그림 · 사진 자리) 하나뿐이고 그것을 잎 블록 하나로 바꾸는가 — 사진 자리 채우기와 그 되돌리기 */
+function isLeafSwap(before: PmNode, slice: Slice): boolean {
+  const old = before.childCount === 1 ? before.firstChild : null;
+  const fresh = slice.content.childCount === 1 ? slice.content.firstChild : null;
+  return old !== null && fresh !== null && old.isLeaf && fresh.isLeaf;
+}
+
+/**
+ * 트랜잭션이 문서를 통째로 바꿨는가 — 0부터 그 단계 전 문서 끝까지를 덮는 ReplaceStep이 있으면 그렇다.
+ * ReplaceAroundStep(setNodeMarkup으로 글꼴 등 블록 꾸밈 바꾸기)은 내용을 남기므로 아니다. 잎 블록 하나뿐인 문서에서 그
+ * 블록을 바꾸는 것도 블록 하나를 바꾼 것이지 새로 쓴 것이 아니다 — 잎 노드의 setNodeMarkup도 replaceWith가 된다.
+ */
+function replacesWholeDoc(tr: Transaction): boolean {
+  return tr.steps.some((step, index) => {
+    const before = tr.docs[index];
+    if (!(step instanceof ReplaceStep) || before === undefined) return false;
+    return step.from === 0 && step.to === before.content.size && !isLeafSwap(before, step.slice);
+  });
+}
+
 /**
  * 삭제가 자리를 가로지르면(되돌리기로 그 자리가 지워진 경우 포함) 자리는 사라진다 — 끝난 결과는 버린다.
- * 문서 맨 앞 · 맨 끝 자리는 한쪽이 문서 경계라 가로지름이 잡히지 않는다 — 경계 아닌 쪽이 지워지면 버린다
- * (전체를 지우고 새로 쓴 문서에 옛 그림이 끼어들지 않게).
+ * 문서 맨 앞 · 맨 끝 자리는 한쪽이 문서 경계라 가로지름이 잡히지 않는다. 맨 앞 자리는 뒤쪽이 지워지면 버린다.
+ * 맨 끝 자리는 문서를 통째로 바꾼 경우에만 버린다 — 전체를 지우고 새로 쓴 문서에 옛 그림이 끼어들지 않게. 바로 앞
+ * 블록만 바뀐 것(사진 자리 채우기 · 되돌리기 · 꾸밈 바꾸기)이면 살아서 끝에 들어간다(adr-039).
  */
 function survives(entry: TrackedUpload, tr: Transaction): { pos: number } | null {
   const result = tr.mapping.mapResult(entry.pos, STICK_TO_NEXT);
   const isAtStart = entry.pos === 0;
   const isAtEnd = entry.pos === tr.before.content.size;
   const isLost =
-    result.deletedAcross || (isAtStart && result.deletedAfter) || (isAtEnd && result.deletedBefore);
+    result.deletedAcross || (isAtStart && result.deletedAfter) || (isAtEnd && replacesWholeDoc(tr));
   return isLost ? null : { pos: result.pos };
 }
 
@@ -80,8 +110,22 @@ function mapEntries(
 
 function applyMeta(entries: TrackedUpload[], meta: UploadMeta): TrackedUpload[] {
   if (meta.type === "start") {
-    const { id, pos, fill } = meta;
-    return [...entries, { id, pos, status: "uploading", isTouched: false, fill }];
+    const { id, pos, fillBrief } = meta;
+    return [...entries, { id, pos, status: "uploading", isTouched: false, fillBrief }];
+  }
+  if (meta.type === "retry") {
+    // 처음 올리기처럼 손대지 않은 자리로 되돌린다 — 끝나면 넣은 그림을 고른다
+    return entries.map((entry) =>
+      entry.id === meta.id
+        ? {
+            id: entry.id,
+            pos: entry.pos,
+            status: "uploading",
+            isTouched: false,
+            fillBrief: entry.fillBrief,
+          }
+        : entry,
+    );
   }
   if (meta.type === "fail") {
     return entries.map((entry) =>
@@ -102,7 +146,8 @@ export function imageUpload(render?: ImageUploadRender): Plugin<readonly Tracked
         const meta = tr.getMeta(imageUploadKey) as UploadMeta | undefined;
         const mapped = tr.docChanged ? mapEntries(previous, tr, meta) : [...previous];
         // 자리를 두는 트랜잭션 말고 글이나 선택이 바뀌면 그 전부터 있던 자리는 모두 "손댔다"
-        const isEdited = meta?.type !== "start" && (tr.docChanged || tr.selectionSet);
+        const isEdited =
+          meta?.type !== "start" && meta?.type !== "retry" && (tr.docChanged || tr.selectionSet);
         const marked = isEdited ? mapped.map((entry) => ({ ...entry, isTouched: true })) : mapped;
         return meta === undefined ? marked : applyMeta(marked, meta);
       },
@@ -178,9 +223,10 @@ export function startImageUpload(
     if (!hasPlugin(state) || !isTopGap(state.doc, pos) || findEntry(state, id) !== undefined) {
       return false;
     }
-    const fill = placement.fill ?? false;
+    const target = placement.fill === true ? photoPlaceholderAt(state.doc, pos) : null;
+    const fillBrief = (target?.attrs.brief as string | undefined) ?? null;
     dispatch?.(
-      state.tr.setMeta(imageUploadKey, { type: "start", id, pos, fill } satisfies UploadMeta),
+      state.tr.setMeta(imageUploadKey, { type: "start", id, pos, fillBrief } satisfies UploadMeta),
     );
     return true;
   };
@@ -199,6 +245,18 @@ export function failImageUpload(id: string, message: string): Command {
     dispatch?.(
       state.tr.setMeta(imageUploadKey, { type: "fail", id, message } satisfies UploadMeta),
     );
+    return true;
+  };
+}
+
+/**
+ * 실패한 올리기를 같은 자리에서 다시 올리는 중으로 되돌린다 — 채우기였다면 처음 고른 사진 자리를 그대로 채운다(#172).
+ * 실패한 자리가 아니면 false다. 파일을 다시 올리는 일은 자리를 그린 쪽(올리기 줄)이 한다.
+ */
+export function retryImageUpload(id: string): Command {
+  return (state, dispatch) => {
+    if (findEntry(state, id)?.status !== "failed") return false;
+    dispatch?.(state.tr.setMeta(imageUploadKey, { type: "retry", id } satisfies UploadMeta));
     return true;
   };
 }
@@ -227,8 +285,10 @@ export function finishImageUpload(id: string, attrs: UploadedImageAttrs): Comman
     if (dispatch === undefined) return true;
 
     const gap = nearestTopGap(state.doc, entry.pos, false);
-    // 채우기면 사진 자리의 설명을 alt 기본값과 그림 설명으로 옮긴다(adr-033). 그새 사진 자리가 없어졌으면 그냥 넣는다
-    const placeholder = entry.fill ? photoPlaceholderAt(state.doc, gap) : null;
+    // 채우기면 사진 자리의 설명을 alt 기본값과 그림 설명으로 옮긴다(adr-033). 그새 그 사진 자리가 없어졌으면
+    // (바로 뒤가 사진 자리가 아니거나 설명이 다른 사진 자리) 채우지 않고 그냥 넣는다(adr-039)
+    const next = entry.fillBrief === null ? null : photoPlaceholderAt(state.doc, gap);
+    const placeholder = next?.attrs.brief === entry.fillBrief ? next : null;
     const brief = (placeholder?.attrs.brief as string | undefined) ?? null;
     const image = imageType.create({
       src: attrs.src,
