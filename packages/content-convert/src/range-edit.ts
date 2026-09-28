@@ -9,9 +9,11 @@ import {
   selectionNotFoundMessage,
   selectionPartialBlockMessage,
   selectionPlace,
+  briefsWouldDropMessage,
   stickersWouldDropMessage,
 } from "./range-edit.messages";
 import type {
+  BriefedImage,
   EditRange,
   Found,
   InlineText,
@@ -138,15 +140,40 @@ function candidatesOf(blocks: readonly TextBlockRef[], start: string, end: strin
   return candidates;
 }
 
+/** 여러 곳 중 고를 수 있는 블록 전체 — 최상위 블록 하나의 보이는 글자 전체와 같은 곳 */
+function isWholeTopBlock(blocks: readonly TextBlockRef[], found: Found): boolean {
+  const ref = refAt(blocks, found.start.block);
+  return (
+    found.start.block === found.end.block &&
+    ref.path.length === 1 &&
+    coversWholeBlocks(blocks, found)
+  );
+}
+
+/**
+ * 소제목 "산책"을 집었는데 문단 "오늘 산책을 했다"에도 있으면 AI가 뜻한 것은 소제목이다. 지우기는 잘못 고르면
+ * 글이 말없이 사라지고, 목록 항목 · 표 칸 · 인용 안 문단은 AI가 그 블록 하나를 뜻했다고 볼 근거가 약하다.
+ * 범위형은 AI가 이미 앞뒤를 골랐다(#158 · adr-038).
+ */
 function pick(
   blocks: readonly TextBlockRef[],
   selection: string,
   candidates: readonly Found[],
-  hasEllipsis: boolean,
+  {
+    hasEllipsis,
+    isLiteral,
+    isDeletion,
+  }: { hasEllipsis: boolean; isLiteral: boolean; isDeletion: boolean },
 ): Located {
   const [only, ...rest] = candidates;
   if (only === undefined) return fail(selectionNotFoundMessage(selection, hasEllipsis));
   if (rest.length === 0) return { ok: true, found: only };
+  // 지우기도 블록 전체와 같은 곳은 센다 — 고르지는 않고, 짧은 블록을 지우는 길을 알리는 데 쓴다(#178)
+  const wholeBlocks = isLiteral ? candidates.filter((found) => isWholeTopBlock(blocks, found)) : [];
+  const [onlyWhole, ...moreWhole] = wholeBlocks;
+  if (!isDeletion && onlyWhole !== undefined && moreWhole.length === 0) {
+    return { ok: true, found: onlyWhole };
+  }
   const places = candidates.slice(0, MAX_PLACES).map(({ start, end }) => {
     const ref = blocks[start.block];
     const text = ref?.text ?? "";
@@ -154,29 +181,38 @@ function pick(
     const around = text.slice(Math.max(0, start.offset - AROUND_CHARS), until + AROUND_CHARS);
     return selectionPlace((ref?.top ?? 0) + 1, around);
   });
-  return fail(selectionAmbiguousMessage(selection, candidates.length, places));
+  const wholeBlockNumbers = wholeBlocks.map(({ start }) => refAt(blocks, start.block).top + 1);
+  return fail(
+    selectionAmbiguousMessage(selection, candidates.length, places, wholeBlockNumbers, isDeletion),
+  );
 }
 
 /**
  * 시도 순서는 첫 `...`에서 나누기 → (점이 넷 이상이면) 마지막 `...`에서 나누기 → 글자 그대로다.
  * 한 곳으로 정해지는 첫 시도를 쓰고, 없으면 여러 곳인 첫 시도로 알리고, 그것도 없으면 못 찾았다고 알린다.
+ * 글자 그대로 찾기로 돌아왔으면 `...`는 글자라 범위형이 아니다 — 블록 전체 고르기를 쓴다.
+ * @param isDeletion 빈 markdown으로 바꾸기(지우기)인가 — 블록 전체 고르기를 쓰지 않고 안내만 한다
  */
-function locate(blocks: readonly TextBlockRef[], selection: string): Located {
+function locate(blocks: readonly TextBlockRef[], selection: string, isDeletion: boolean): Located {
   if (selection === "") return fail(selectionEmptyMessage());
-  const literal = () => candidatesOf(blocks, selection, null);
+  const literal = candidatesOf(blocks, selection, null);
   const splits = splitSelection(selection);
-  if (splits.length === 0) return pick(blocks, selection, literal(), false);
+  const hasEllipsis = splits.length > 0;
   const attempts = [
     ...splits.map(({ start, end }) =>
       start === "" || end === "" ? [] : candidatesOf(blocks, start, end),
     ),
-    literal(),
+    literal,
   ];
   const chosen =
     attempts.find((found) => found.length === 1) ??
     attempts.find((found) => found.length > 1) ??
     [];
-  return pick(blocks, selection, chosen, true);
+  return pick(blocks, selection, chosen, {
+    hasEllipsis,
+    isLiteral: chosen === literal,
+    isDeletion,
+  });
 }
 
 /** 꾸밈 없는 문단 하나면 그 인라인 글 — 한 블록 안 글자 바꾸기로 쓸 수 있다 */
@@ -261,12 +297,84 @@ function droppedStickers(replaced: readonly JsonNode[], added: readonly JsonNode
   return replaced.flatMap((node) => stickersOf(node) ?? []);
 }
 
+/** 노드와 그 안의 그림 — 문서 순서가 중요하다. 같은 src 그림이 여럿이면 옛 것과 새 것을 앞에서부터 짝짓는다 */
+function imagesIn(node: JsonNode): JsonNode[] {
+  if (node.type === "image") return [node];
+  return (node.content ?? []).flatMap(imagesIn);
+}
+
+function briefedImages(replaced: readonly JsonNode[], firstTop: number): BriefedImage[] {
+  return replaced.flatMap((node, index) =>
+    imagesIn(node).flatMap((image) => {
+      const { src, brief } = image.attrs ?? {};
+      if (typeof src !== "string" || typeof brief !== "string") return [];
+      return [{ src, brief, blockNumber: firstTop + index + 1 }];
+    }),
+  );
+}
+
+/** 새 블록들의 같은 src 그림에 옛 brief를 앞에서부터 준다 */
+function withCarriedBriefs(
+  nodes: readonly JsonNode[],
+  briefs: ReadonlyMap<string, readonly string[]>,
+): JsonNode[] {
+  const used = new Map<string, number>();
+  const visit = (node: JsonNode): JsonNode => {
+    if (node.type !== "image") {
+      return node.content === undefined ? node : { ...node, content: node.content.map(visit) };
+    }
+    const src = node.attrs?.src;
+    if (node.attrs?.brief !== undefined || typeof src !== "string") return node;
+    const at = used.get(src) ?? 0;
+    const brief = briefs.get(src)?.[at];
+    if (brief === undefined) return node;
+    used.set(src, at + 1);
+    return { ...node, attrs: { ...node.attrs, brief } };
+  };
+  return nodes.map(visit);
+}
+
+/**
+ * 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮을 때(#172) — 새 markdown에 같은 src 그림이 있으면 설명을
+ * 그 그림으로 옮기고, 옮길 그림이 없는 옛 그림은 `missing`으로 돌려준다(부르는 쪽이 실패로 알린다). 사람이 쓴
+ * 설명이 말없이 사라지지 않게 한다. 지우기(`added`가 빔)는 블록째 없애 달라는 뜻이라 막지 않는다(스티커와 같다).
+ */
+function carryBriefs(
+  replaced: readonly JsonNode[],
+  added: readonly JsonNode[],
+  firstTop: number,
+): { nodes: JsonNode[]; missing: BriefedImage[] } {
+  const old = briefedImages(replaced, firstTop);
+  if (old.length === 0 || added.length === 0) return { nodes: [...added], missing: [] };
+  const available = new Map<string, number>();
+  added.flatMap(imagesIn).forEach((image) => {
+    const src = image.attrs?.src;
+    if (typeof src === "string" && image.attrs?.brief === undefined) {
+      available.set(src, (available.get(src) ?? 0) + 1);
+    }
+  });
+  const briefs = new Map<string, string[]>();
+  const missing: BriefedImage[] = [];
+  old.forEach((image) => {
+    const left = available.get(image.src) ?? 0;
+    if (left === 0) {
+      missing.push(image);
+      return;
+    }
+    available.set(image.src, left - 1);
+    briefs.set(image.src, [...(briefs.get(image.src) ?? []), image.brief]);
+  });
+  return { nodes: withCarriedBriefs(added, briefs), missing };
+}
+
 /**
  * 범위가 걸친 최상위 블록들의 보이는 글자를 처음부터 끝까지 덮는가 — 일부만 덮은 채 블록을 통째로
  * 바꾸면 고르지 않은 글자(다른 목록 항목 · 인용 문단)가 말없이 사라진다. 앞뒤 공백은 보이지 않으므로
  * 덮지 않아도 된다.
  */
-function coversWholeBlocks({ blocks, start, end, startRef, endRef }: EditRange): boolean {
+function coversWholeBlocks(blocks: readonly TextBlockRef[], { start, end }: Found): boolean {
+  const startRef = refAt(blocks, start.block);
+  const endRef = refAt(blocks, end.block);
   const isBlank = (ref: TextBlockRef) => ref.text.trim() === "";
   const leadingSpaces = startRef.text.length - startRef.text.trimStart().length;
   const beforeStart = blocks.slice(0, start.block).filter(({ top }) => top === startRef.top);
@@ -334,7 +442,7 @@ function replaceInline(
 
 /** 범위가 걸친 최상위 블록 전체를 덮지 않으면 실패한다. `added`가 비면 그 블록들을 지운다 */
 function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditResult {
-  if (!coversWholeBlocks(range)) {
+  if (!coversWholeBlocks(range.blocks, range)) {
     const isInOneCodeBlock = range.start.block === range.end.block && range.startRef.isCode;
     return fail(selectionPartialBlockMessage(isInOneCodeBlock));
   }
@@ -345,9 +453,11 @@ function replaceBlocks(range: EditRange, added: readonly JsonNode[]): RangeEditR
     return fail(
       stickersWouldDropMessage(dropped.map(formatStickerDirective), added.some(canHoldStickers)),
     );
+  const briefs = carryBriefs(replaced, carryStickers(replaced, added), startRef.top);
+  if (briefs.missing.length > 0) return fail(briefsWouldDropMessage(briefs.missing));
   return finish([
     ...content.slice(0, startRef.top),
-    ...carryStickers(replaced, added),
+    ...briefs.nodes,
     ...content.slice(endRef.top + 1),
   ]);
 }
@@ -368,7 +478,8 @@ function refAt(blocks: readonly TextBlockRef[], index: number): TextBlockRef {
  *     찾지만 글자만 바꾸는 길이 없다 — 블록째 바꾼다(adr-033).
  *   - 그 밖에는 범위가 걸친 최상위 블록들을 새 markdown 블록들로 바꾼다. 범위가 그 블록들 전체를
  *     덮지 않으면 실패한다. 새 markdown이 sticker=를 쓰지 않았을 때 사람이 붙인 스티커를 지키려고,
- *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032).
+ *     블록 하나를 블록 하나로 바꾸면 옛 스티커를 옮기고 그 밖에는 실패로 알린다(adr-032). 덮은 그림의 사진
+ *     설명(brief)은 새 markdown의 같은 src 그림으로 옮기고, 그런 그림이 없으면 실패로 알린다(adr-039).
  * - `insert_after`: 범위 끝이 든 최상위 블록 뒤에 넣는다.
  */
 export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
@@ -376,9 +487,12 @@ export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   const blocks = collectTextBlocks(root);
   // 글자 그대로 먼저 — 코드 블록에는 `\` + 줄바꿈이 글자로 있다. 못 찾으면 get_post의 강제 줄바꿈 표기로 읽는다
   const asHardBreaks = edit.selection.replace(MARKDOWN_HARD_BREAK, HARD_BREAK_TEXT);
-  const literal = locate(blocks, edit.selection);
+  const isDeletion = edit.command === "replace" && edit.markdown.trim() === "";
+  const literal = locate(blocks, edit.selection, isDeletion);
   const located =
-    literal.ok || asHardBreaks === edit.selection ? literal : locate(blocks, asHardBreaks);
+    literal.ok || asHardBreaks === edit.selection
+      ? literal
+      : locate(blocks, asHardBreaks, isDeletion);
   if (!located.ok) return located;
   const { start, end } = located.found;
   const range: EditRange = {
@@ -391,13 +505,12 @@ export function editDocRange(doc: Doc, edit: RangeEdit): RangeEditResult {
   };
   if (edit.command === "insert_after") return insertAfterRange(range, edit.markdown);
 
-  const isEmpty = edit.markdown.trim() === "";
-  if (isEmpty && coversWholeBlocks(range)) return replaceBlocks(range, []);
+  if (isDeletion && coversWholeBlocks(blocks, range)) return replaceBlocks(range, []);
   const isSameBlock = start.block === end.block;
   if (isSameBlock && range.startRef.isCode && !CODE_FENCE.test(edit.markdown)) {
     return replaceCodeText(range, edit.markdown);
   }
-  const converted = isEmpty ? null : convertMarkdown(edit.markdown);
+  const converted = isDeletion ? null : convertMarkdown(edit.markdown);
   if (converted !== null && !converted.ok) return converted;
   const inline = converted === null ? [] : inlineOnly(converted.doc);
   if (

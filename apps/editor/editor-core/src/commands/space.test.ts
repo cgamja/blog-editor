@@ -218,6 +218,37 @@ describe("editor-list-keys: 목록을 빼내도 간격은 한 조각에만 남�
     expect(result.saved.content.map((block) => block.type)).toEqual(["paragraph"]);
     expect(spacesOf(result.saved)).toEqual(["lg"]);
   });
+
+  // 세 키 모두 liftItemFixingSplit으로 모이지만, 빈 첫 항목 Enter는 enterInList의 다른 갈래를 탄다 — 키마다 한 줄
+  it.each([
+    ["Shift-Tab", "가"],
+    ["Backspace", "가"],
+    ["Enter", ""],
+  ] as const)(
+    "WHEN 앞 문단 뒤 간격 lg · 스티커 점 목록 [첫 항목, 나]의 첫 항목 맨 앞에서 %s(첫 항목 글자 '%s')로 빼낸다 THEN 빠진 첫 블록이 lg를 갖고 남은 목록은 간격 없이 스티커만 가진다",
+    (key, first) => {
+      // at(1, 2) — 목록 · 항목 · 문단 여는 토큰 뒤, 첫 항목 글자 앞
+      const result = run(
+        stateAt(
+          doc(
+            paragraph("앞"),
+            bullet([item(first), item("나")], { space: "lg", stickers: [sticker] }),
+          ),
+          at(1, 2),
+        ),
+        listKeymap[key]!,
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.saved.content.map((block) => block.type)).toEqual([
+        "paragraph",
+        "paragraph",
+        "bulletList",
+      ]);
+      expect(attrsOf(result.saved, 1)).toEqual({ space: "lg" });
+      expect(attrsOf(result.saved, 2)).toEqual({ stickers: [sticker] });
+    },
+  );
 });
 
 describe("editor-wrap: 감싸면 간격은 바깥 블록으로 옮기고 정렬은 지운다", () => {

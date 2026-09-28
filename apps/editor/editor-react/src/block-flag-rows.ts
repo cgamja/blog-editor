@@ -7,6 +7,8 @@ export interface BlockFlagGeometry {
   lefts: readonly number[];
   /** 최상위 블록 각각의 틀 기준 right */
   rights: readonly number[];
+  /** 본문 칸 오른쪽(틀 기준) — 점 줄은 블록 폭과 상관없이 여기서 시작해 같은 세로줄에 선다 */
+  columnRight: number;
   /** 틀의 화면 top */
   frameTop: number;
   /** 틀 왼쪽부터 종이 오른쪽 끝까지의 폭 — 점은 이 안에 둔다 */
@@ -17,12 +19,13 @@ export interface BlockFlagGeometry {
 
 /**
  * 점을 블록별 줄로 묶고 틀 기준 자리를 정한다(#151 디자인 C). 없는 블록(문서가 바뀌어 번호가 넘친)을 가리키는 점은 뺀다.
- * 줄은 블록 오른쪽 가장자리 너머 종이 오른쪽 여백에서 시작한다 — 왼쪽 손잡이 줄과 본문 글자를 가리지 않는다.
+ * 줄은 본문 칸 오른쪽 가장자리 너머 종이 오른쪽 여백에서 시작한다 — 폭을 줄인 그림의 점도 문단 점과 같은 세로줄에 서고,
+ * 왼쪽 손잡이 줄과 본문 글자를 가리지 않는다.
  * 여백이 점 여러 개보다 좁으면 줄 폭(maxWidth)에서 접혀 아래로 쌓인다(editor.css `.block-flag-row` flex-wrap).
  */
 export function blockFlagRows(
   flags: readonly BlockFlag[],
-  { bands, lefts, rights, frameTop, frameWidth, lineHeight }: BlockFlagGeometry,
+  { bands, lefts, rights, columnRight, frameTop, frameWidth, lineHeight }: BlockFlagGeometry,
 ): BlockFlagRow[] {
   const byIndex = new Map<number, BlockFlag[]>();
   for (const flag of flags) {
@@ -40,8 +43,8 @@ export function blockFlagRows(
       return {
         index,
         top: band.top - frameTop + firstLine / 2,
-        left: blockRight,
-        maxWidth: Math.max(frameWidth - blockRight, 0),
+        left: columnRight,
+        maxWidth: Math.max(frameWidth - columnRight, 0),
         block: {
           top: band.top - frameTop,
           left: blockLeft,

@@ -15,13 +15,38 @@ export function selectionNotFoundMessage(selection: string, hasEllipsis: boolean
     : base;
 }
 
-/** @param count 찾은 곳 전체 수 — `places`는 그중 보여 줄 앞쪽 몇 곳이다 */
+/**
+ * @param count 찾은 곳 전체 수 — `places`는 그중 보여 줄 앞쪽 몇 곳이다
+ * @param wholeBlockNumbers 블록 글자 전체와 같은 곳의 블록 번호(1부터) — 비면 그 줄을 쓰지 않는다(#158 · adr-038)
+ * @param isDeletion 지우기였나 — 짧은 블록은 더 긴 글로 집을 수 없어 지우는 길을 따로 알린다(#178)
+ */
 export function selectionAmbiguousMessage(
   selection: string,
   count: number,
   places: readonly string[],
+  wholeBlockNumbers: readonly number[],
+  isDeletion: boolean,
 ): string {
-  return `범위가 ${count}곳에 있다(받음: "${selection}") — 더 긴 글로 한 곳만 집는다:\n${places.map((place) => `- ${place}`).join("\n")}`;
+  const lines = [
+    `범위가 ${count}곳에 있다(받음: "${selection}") — 더 긴 글로 한 곳만 집는다:`,
+    ...places.map((place) => `- ${place}`),
+  ];
+  if (wholeBlockNumbers.length > 0) {
+    const numbers = wholeBlockNumbers.map((number) => `블록 ${number}`).join(", ");
+    const rangeForm =
+      "범위형으로 바로 앞 블록 글자부터 이 블록까지(시작 글=앞 블록 글자...끝 글=이 블록 글자, 첫 블록이면 이 블록부터 바로 뒤 블록 글자까지) 집어";
+    const saveWhole = "글 전체 markdown으로 저장한다(앞 · 뒤 블록에 글자가 없으면 이 길)";
+    // 바꿔서 유일하게 만드는 길은 블록 전체와 같은 곳이 하나일 때만 — 둘 이상이면 어느 것을 바꿀지부터 못 집는다
+    const renameFirst =
+      wholeBlockNumbers.length === 1 ? "먼저 이 블록 글자를 바꿔 유일하게 만든 뒤 지우거나, " : "";
+    const ways = isDeletion
+      ? `지우기는 블록 전체를 고르지 않는다. 이 블록만 지우려면 ${rangeForm} 새 markdown에 이웃 블록 글만 다시 쓰거나(빈 markdown이면 이웃도 지워진다), ${renameFirst}${saveWhole}`
+      : `하나만 고치려면 ${rangeForm} 새 markdown에 이웃 블록 글과 함께 다시 쓰거나 ${saveWhole}`;
+    lines.push(
+      `블록 전체와 같은 곳이 ${wholeBlockNumbers.length}곳이다: ${numbers} — ${ways}. 이웃 블록까지 다시 쓸 때는 이웃 블록의 지시어(font · align 등)도 함께 적는다 — 적지 않으면 초기화된다`,
+    );
+  }
+  return lines.join("\n");
 }
 
 /** 여러 곳을 알릴 때 한 곳의 모습 — 블록 번호는 1부터(형식 가이드의 '블록 n'과 같다) */
@@ -58,4 +83,17 @@ export function stickersWouldDropMessage(
     ? `남기려면 새 markdown 블록의 지시어에 ${stickerDirectives.join(" ")}를 적고, `
     : "새 블록(사진 자리)은 스티커를 받지 않는다. ";
   return `바꾸는 블록에 붙은 스티커 ${stickerDirectives.length}개가 사라진다 — ${keep}버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤, 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다`;
+}
+
+/**
+ * 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮는데 새 markdown에 같은 src 그림이 없다(#172 · adr-039).
+ * markdown에는 설명 자리가 없어 AI가 설명을 다시 쓸 수 없다 — 같은 src로 그림을 다시 쓰게 안내한다.
+ */
+export function briefsWouldDropMessage(
+  images: readonly { src: string; brief: string; blockNumber: number }[],
+): string {
+  const list = images
+    .map(({ src, brief, blockNumber }) => `블록 ${blockNumber}: ![](${src}) (설명: "${brief}")`)
+    .join(", ");
+  return `바꾸는 블록의 그림 ${images.length}개에 붙은 사진 설명이 사라진다 — ${list}. 그림을 같은 src로 다시 쓰면 설명이 옮겨진다(![대체 글](src)). 그림째 버리려면 insert_after로 새 글을 옛 블록 뒤에 먼저 넣은 뒤 옛 블록을 빈 markdown으로 지운다. 글 전체를 고친다면 글 전체 markdown으로 다시 저장해도 된다(그때 사진 설명은 남지 않는다)`;
 }

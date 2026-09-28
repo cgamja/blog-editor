@@ -17,9 +17,14 @@ export interface BlockFlagLayerProps {
  */
 export function BlockFlagLayer({ editor, frameRef, flags }: BlockFlagLayerProps) {
   const rows = useBlockFlagRows(editor, frameRef, flags.items);
-  const [highlighted, setHighlighted] = useState<number | null>(null);
+  // 강조는 블록이 아니라 포인터 · 포커스가 있는 점(flag.id)을 따른다 — 칠할 블록은 그 점이 선 줄에서 얻는다
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const target = rows.find((row) => row.flags.some((flag) => flag.id === highlighted));
+  // 강조 중인 점이 사라지면(점 목록이 비거나 다시 매겨 그 점만 빠지면) 버튼이 없어 pointerleave · blur가 오지 않는다 —
+  // 상태 자체를 지워야 점이 돌아와도 강조가 남지 않는다. 렌더 중 상태 조정
+  // (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  if (highlighted !== null && target === undefined) setHighlighted(null);
   if (rows.length === 0) return null;
-  const target = rows.find((row) => row.index === highlighted);
   return (
     <div className="block-flags">
       {target !== undefined && (
@@ -40,9 +45,9 @@ export function BlockFlagLayer({ editor, frameRef, flags }: BlockFlagLayerProps)
               aria-label={flag.label}
               title={flag.label}
               onClick={() => flags.onPress(flag)}
-              onPointerEnter={() => setHighlighted(row.index)}
+              onPointerEnter={() => setHighlighted(flag.id)}
               onPointerLeave={() => setHighlighted(null)}
-              onFocus={() => setHighlighted(row.index)}
+              onFocus={() => setHighlighted(flag.id)}
               onBlur={() => setHighlighted(null)}
             />
           ))}

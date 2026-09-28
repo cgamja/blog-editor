@@ -22,6 +22,27 @@ const POSTS_LIST_ATTEMPTS = 4;
 const LONGEST_RETRY_DELAY_MS = 4_000;
 const FAST_FORWARD_CHECK_MS = 200;
 
+// 여백 점 이름 — image-alt는 must(꼭 고치기)
+const IMAGE_ALT_DOT = `꼭 고치기: ${IMAGE_ALT_MESSAGE}`;
+// 제목 권장 길이(10~35자)보다 짧은 제목 · 핵심 검색어 없음 — 제목 · 설명 · 검색어 칸 항목이 모두 생긴다
+const SHORT_TITLE = "봄 산책";
+const TITLE_LENGTH_MESSAGE = "제목이 권장 길이(10~35자)를 벗어나요.";
+const KEYWORD_MISSING_MESSAGE = "핵심 검색어가 정해지지 않았어요.";
+/** web constants.ts SEO_LIVE_DELAY_MS — 입력이 멈추고 이만큼 지나면 다시 매긴다 */
+const SEO_LIVE_DELAY_MS = 400;
+/**
+ * 시계를 멈출 자리 — 지금에서 다시 매기기 지연의 이 배수만큼 뒤. `pauseAt`은 시계를 앞으로 건너뛰어 멈추므로
+ * (https://playwright.dev/docs/api/class-clock#clock-pause-at) 페이지 시계보다 뒤인 때를 주고, 테스트 쪽 `Date.now()`와 페이지 시계 사이 어긋남(로그인 · 이동에 흐른 시간)을 넉넉히 덮는다
+ */
+const CLOCK_PAUSE_MARGIN = 10;
+/** 4×3 불투명 PNG(photo-placeholder.spec.ts와 같은 바이트) — 자연 크기 없이 넣은 그림의 실제 응답 */
+const PNG_4X3 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAQAAAADCAIAAAA7ljmRAAAAEElEQVR4nGM4UREARww4OQBzdhLBZPAGSAAAAABJRU5ErkJggg==",
+  "base64",
+);
+// 점과 블록 자리 비교의 허용 오차(px) — 소수점 반올림만 봐준다
+const PX_TOLERANCE = 1;
+
 const slugOf = (name: string, testInfo: TestInfo) =>
   `e2e-seo-panel-${name}-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
 
@@ -208,4 +229,187 @@ test("WHEN 점검 목록에서 대체 텍스트가 빈 그림(블록 2) 항목�
       })()`),
     )
     .toEqual({ focused: true, selectedIsImage: true });
+});
+
+/** 점에 올렸을 때 칠하는 블록 사각형 — 장식(aria-hidden)이라 역할 · 이름이 없어 클래스로 찾는다(BlockFlagLayer.tsx) */
+function blockHighlight(page: Page): Locator {
+  return page.locator(".block-flag-highlight");
+}
+
+/** 요소의 화면 세로 자리(top · height, 정수 px) — 점 · 강조 · 블록을 서로 대 본다 */
+async function verticalBox(locator: Locator): Promise<{ top: number; height: number }> {
+  const box = await locator.boundingBox();
+  return { top: Math.round(box?.y ?? Number.NaN), height: Math.round(box?.height ?? Number.NaN) };
+}
+
+test("WHEN 여백 점이 있는 채 본문에 블록을 끼워 넣으면 THEN 다시 매길 때까지 점이 없고 블록 항목만 막히며, 다시 매기면 지금 문서의 블록 옆에 점이 돌아온다", async ({
+  page,
+}, testInfo) => {
+  // 다시 매기기(디바운스)를 멈춰 두고 그 사이를 본다 — 시계는 첫 이동 전에 건다
+  await page.clock.install();
+  await logIn(page);
+  const slug = slugOf("stale", testInfo);
+  // 문단(블록 1) · 대체 텍스트가 빈 그림(블록 2) — 핵심 검색어가 없고 제목 · 설명이 짧다
+  await createDraftWithBlocks(page, slug, SHORT_TITLE, [
+    { type: "paragraph", content: [{ type: "text", text: FIRST_PARAGRAPH }] },
+    { type: "image", attrs: { src: "/images/cherry-walk.webp", alt: "" } },
+  ]);
+  await page.goto(`/posts/${slug}/edit`);
+  const dot = page.getByRole("button", { name: IMAGE_ALT_DOT, exact: true });
+  await expect(dot).toBeVisible();
+  await page.clock.pauseAt(new Date(Date.now() + SEO_LIVE_DELAY_MS * CLOCK_PAUSE_MARGIN));
+
+  // 문단 끝에서 Enter로 새 문단을 끼운다 — 그림이 블록 2에서 블록 3이 된다
+  await page.getByLabel("본문", { exact: true }).getByText(FIRST_PARAGRAPH).click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("사이에 넣은 문단");
+
+  await expect(dot).toHaveCount(0);
+  const popover = await openSeoPopover(page);
+  await expect(popover.getByRole("button", { name: escaped(IMAGE_ALT_MESSAGE) })).toBeDisabled();
+  for (const message of [
+    TITLE_LENGTH_MESSAGE,
+    DESCRIPTION_LENGTH_MESSAGE,
+    KEYWORD_MISSING_MESSAGE,
+  ]) {
+    await expect(popover.getByRole("button", { name: escaped(message) })).toBeEnabled();
+  }
+  await page.keyboard.press("Escape");
+
+  await page.clock.runFor(SEO_LIVE_DELAY_MS);
+  await expect(dot).toBeVisible();
+  // 점의 세로 가운데가 그림(지금 블록 3)의 범위 안이다 — 옛 번호(블록 2 = 끼운 문단) 옆이 아니다
+  const dotBox = await dot.boundingBox();
+  const imageBox = await page.getByLabel("본문", { exact: true }).locator("img").boundingBox();
+  const dotCenterY = (dotBox?.y ?? 0) + (dotBox?.height ?? 0) / 2;
+  expect(dotCenterY).toBeGreaterThanOrEqual(imageBox?.y ?? Infinity);
+  expect(dotCenterY).toBeLessThanOrEqual((imageBox?.y ?? 0) + (imageBox?.height ?? 0));
+});
+
+test("WHEN 첫 문단 옆 점에 마우스를 올리면 THEN 첫 문단 자리가 옅게 칠해진다", async ({
+  page,
+}, testInfo) => {
+  await logIn(page);
+  await openDraft(page, slugOf("highlight", testInfo));
+  await page.getByRole("textbox", { name: "핵심 검색어" }).fill(KEYWORD_OUTSIDE_FIRST_PARAGRAPH);
+  const dot = page.getByRole("button", { name: FIRST_PARAGRAPH_DOT, exact: true });
+  const paragraph = page.getByLabel("본문", { exact: true }).getByText(FIRST_PARAGRAPH);
+
+  await dot.hover();
+
+  await expect(blockHighlight(page)).toBeVisible();
+  const highlight = await verticalBox(blockHighlight(page));
+  const block = await verticalBox(paragraph);
+  expect(
+    Math.abs(highlight.top - block.top),
+    JSON.stringify({ highlight, block }),
+  ).toBeLessThanOrEqual(PX_TOLERANCE);
+  expect(
+    Math.abs(highlight.height - block.height),
+    JSON.stringify({ highlight, block }),
+  ).toBeLessThanOrEqual(PX_TOLERANCE);
+});
+
+test("WHEN 점에 마우스를 올린 채 본문을 고치고 포인터를 치운 뒤 점이 돌아오면 THEN 어느 블록도 칠해져 있지 않다", async ({
+  page,
+}, testInfo) => {
+  await logIn(page);
+  await openDraft(page, slugOf("highlight-stale", testInfo));
+  await page.getByRole("textbox", { name: "핵심 검색어" }).fill(KEYWORD_OUTSIDE_FIRST_PARAGRAPH);
+  const dot = page.getByRole("button", { name: FIRST_PARAGRAPH_DOT, exact: true });
+  // 커서를 본문에 두고(포커스는 본문) 포인터만 점에 올린다
+  await page.getByLabel("본문", { exact: true }).getByText(FIRST_PARAGRAPH).click();
+  await dot.hover();
+  await expect(blockHighlight(page)).toBeVisible();
+
+  await page.keyboard.type("!");
+  await expect(dot).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await expect(dot).toBeVisible();
+
+  await expect(blockHighlight(page)).toHaveCount(0);
+});
+
+test("WHEN 자연 크기 없는 그림 아래 문단에 점이 선 뒤 그림이 늦게 불러와지면 THEN 점이 밀려난 문단 옆으로 따라간다", async ({
+  page,
+}, testInfo) => {
+  let releaseImage: () => void = () => undefined;
+  const imageHeld = new Promise<void>((resolve) => {
+    releaseImage = resolve;
+  });
+  await page.route("**/images/late-walk.png", async (route) => {
+    await imageHeld;
+    await route.fulfill({ status: 200, contentType: "image/png", body: PNG_4X3 });
+  });
+  await logIn(page);
+  const slug = slugOf("late-image", testInfo);
+  // 그림(블록 1, naturalWidth · naturalHeight 없음) · 문단(블록 2 — 첫 문단). 그림 폭을 최소(25%)로 두어
+  // 그림이 그려져도 본문이 편집 영역 최소 높이(editor.css `.ProseMirror` min-height) 안에 남는다 — 틀 크기가 그대로다
+  await createDraftWithBlocks(page, slug, "아이랑 봄 산책하기 좋은 서울 공원", [
+    {
+      type: "image",
+      attrs: { src: "/images/late-walk.png", alt: "벚꽃길을 걷는 유모차", width: 25 },
+    },
+    { type: "paragraph", content: [{ type: "text", text: FIRST_PARAGRAPH }] },
+  ]);
+  await page.goto(`/posts/${slug}/edit`);
+  await page.getByRole("textbox", { name: "핵심 검색어" }).fill(KEYWORD_OUTSIDE_FIRST_PARAGRAPH);
+  const dot = page.getByRole("button", { name: FIRST_PARAGRAPH_DOT, exact: true });
+  const paragraph = page.getByLabel("본문", { exact: true }).getByText(FIRST_PARAGRAPH);
+  await expect(dot).toBeVisible();
+  const paragraphBefore = await verticalBox(paragraph);
+
+  releaseImage();
+  // 그림이 그려져 문단이 아래로 밀릴 때까지 기다린다
+  await expect
+    .poll(async () => (await verticalBox(paragraph)).top)
+    .toBeGreaterThan(paragraphBefore.top);
+
+  // 점의 세로 가운데가 밀려난 문단의 줄 범위 안이다 — 값은 문단 가운데에서 벗어난 거리 − 문단 높이 절반(px, 0 이하면 안)
+  await expect
+    .poll(async () => {
+      const dotBox = await dot.boundingBox();
+      const block = await verticalBox(paragraph);
+      const dotCenterY = (dotBox?.y ?? 0) + (dotBox?.height ?? 0) / 2;
+      return Math.round(Math.abs(dotCenterY - (block.top + block.height / 2)) - block.height / 2);
+    })
+    .toBeLessThanOrEqual(0);
+});
+
+test("WHEN 폭을 50%로 줄인 그림과 문단에 점이 서면 THEN 두 점은 본문 칸 오른쪽 같은 세로줄에 선다", async ({
+  page,
+}, testInfo) => {
+  await page.route("**/images/half-walk.png", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: PNG_4X3 }),
+  );
+  await logIn(page);
+  const slug = slugOf("half-image", testInfo);
+  // 문단(블록 1 — 첫 문단) · 대체 텍스트가 빈 폭 50% 그림(블록 2)
+  await createDraftWithBlocks(page, slug, "아이랑 봄 산책하기 좋은 서울 공원", [
+    { type: "paragraph", content: [{ type: "text", text: FIRST_PARAGRAPH }] },
+    {
+      type: "image",
+      attrs: {
+        src: "/images/half-walk.png",
+        alt: "",
+        naturalWidth: 4,
+        naturalHeight: 3,
+        width: 50,
+      },
+    },
+  ]);
+  await page.goto(`/posts/${slug}/edit`);
+  await page.getByRole("textbox", { name: "핵심 검색어" }).fill(KEYWORD_OUTSIDE_FIRST_PARAGRAPH);
+  const paragraphDot = page.getByRole("button", { name: FIRST_PARAGRAPH_DOT, exact: true });
+  const imageDot = page.getByRole("button", { name: IMAGE_ALT_DOT, exact: true });
+  await expect(paragraphDot).toBeVisible();
+  await expect(imageDot).toBeVisible();
+
+  const paragraphX = (await paragraphDot.boundingBox())?.x ?? Number.NaN;
+  const imageX = (await imageDot.boundingBox())?.x ?? Number.NaN;
+
+  expect(Math.abs(imageX - paragraphX), JSON.stringify({ paragraphX, imageX })).toBeLessThanOrEqual(
+    PX_TOLERANCE,
+  );
 });

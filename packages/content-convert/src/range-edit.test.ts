@@ -437,6 +437,177 @@ describe("markdown-range-edit — 범위 찾기 보강", () => {
   });
 });
 
+describe("markdown-range-edit — 여러 곳이면 블록 전체와 같은 곳을 고른다(#158)", () => {
+  const WALK_HEADING = { type: "heading", attrs: { level: 2 }, content: [text("산책")] };
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 소제목만 바뀌고 문단은 그대로다", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [text("아침 산책")] },
+      input.content[1],
+    ]);
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'으로 replace하면 THEN 실패이고 블록 전체와 같은 곳(블록 1 · 블록 2)을 한 줄로 따로 알린다", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/블록 전체[^\n]*블록 1[^\n]*블록 2/);
+  });
+
+  it("WHEN 문단 '산책 가자'와 '산책은 좋다'에서 '산책'으로 replace하면 THEN 블록 전체와 같은 곳이 없어 지금처럼 실패한다", () => {
+    const input = doc(paragraph("산책 가자"), paragraph("산책은 좋다"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("2곳");
+    expect(message).not.toContain("블록 전체");
+  });
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책'을 빈 markdown으로 replace하면 THEN 지우기엔 블록 전체 고르기를 쓰지 않아 '여러 곳'으로 실패하고, 블록 전체와 같은 곳(블록 1)을 지우는 길 — 범위형으로 앞 블록부터 · 이웃 블록 지시어도 함께 — 을 알린다(#178)", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, { command: "replace", selection: "산책", markdown: "" });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain("2곳");
+    expect(message).toMatch(/블록 전체[^\n]*블록 1/);
+    expect(message).toContain("범위형");
+    expect(message).toContain("앞 블록");
+    expect(message).toContain("지시어");
+    expect(message).toContain("고르지 않는다");
+    expect(message).toContain("이웃 블록 글만");
+    expect(message).toContain("뒤 블록");
+    expect(message).toContain("유일하게");
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'을 빈 markdown으로 replace하면 THEN 블록 전체와 같은 곳이 둘이라 '먼저 바꿔 유일하게 만든 뒤 지우기' 길은 알리지 않고 범위형 · 글 전체 저장만 알린다(#178)", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, { command: "replace", selection: "산책", markdown: "" });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toMatch(/블록 전체[^\n]*블록 1[^\n]*블록 2/);
+    expect(message).toContain("범위형");
+    expect(message).toContain("글 전체 markdown");
+    expect(message).not.toContain("유일하게");
+  });
+
+  it("WHEN 문단 'a⏎b'(강제 줄바꿈 — 소제목은 줄바꿈을 받지 않는다)와 문단 'x a⏎b y'에서 get_post 표기 'a\\⏎b'를 빈 markdown으로 replace하면 THEN 강제 줄바꿈으로 다시 찾을 때도 지우기라 블록 전체 고르기를 쓰지 않고 '2곳'으로 실패한다", () => {
+    const input = doc(
+      { type: "paragraph", content: [text("a"), { type: "hardBreak" }, text("b")] },
+      { type: "paragraph", content: [text("x a"), { type: "hardBreak" }, text("b y")] },
+    );
+
+    const result = editDocRange(input, { command: "replace", selection: "a\\\nb", markdown: "" });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toContain("2곳");
+  });
+
+  it("WHEN 머리 칸이 '산책'인 표와 문단 '오늘 산책'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 표 칸은 최상위 블록이 아니라 실패한다", () => {
+    const cell = (value: string) => ({
+      type: "tableCell",
+      content: [value === "" ? { type: "paragraph" } : paragraph(value)],
+    });
+    const row = (...values: string[]) => ({ type: "tableRow", content: values.map(cell) });
+    const input = doc(
+      { type: "table", content: [row("산책", ""), row("", "")] },
+      paragraph("오늘 산책"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectFail(result);
+  });
+
+  it("WHEN 점 목록 항목 '산책' 하나와 문단 '오늘 산책'에서 '산책'을 '## 아침 산책'으로 replace하면 THEN 목록 항목은 최상위 블록이 아니라 실패한다", () => {
+    const input = doc(
+      { type: "bulletList", content: [{ type: "listItem", content: [paragraph("산책")] }] },
+      paragraph("오늘 산책"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "## 아침 산책",
+    });
+
+    expectFail(result);
+  });
+
+  it("WHEN 소제목 '잠깐...'과 문단 '그래서 잠깐... 했다'에서 '잠깐...'을 '## 잠깐만'으로 replace하면 THEN 글자 그대로 찾기로 돌아온 것이라 소제목만 바뀐다", () => {
+    const input = doc(
+      { type: "heading", attrs: { level: 2 }, content: [text("잠깐...")] },
+      paragraph("그래서 잠깐... 했다"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "잠깐...",
+      markdown: "## 잠깐만",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([
+      { type: "heading", attrs: { level: 2 }, content: [text("잠깐만")] },
+      input.content[1],
+    ]);
+  });
+
+  it("WHEN 소제목 '산책' 두 개에서 '산책'으로 replace하면 THEN 안내에 되지 않는 길 '앞뒤 블록 글자까지 넣어'가 없다", () => {
+    const input = doc(WALK_HEADING, WALK_HEADING);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "산책",
+      markdown: "새 글",
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).not.toContain("앞뒤 블록 글자까지 넣어");
+  });
+
+  it("WHEN 소제목 '산책'과 문단 '오늘 산책을 했다'에서 '산책' 뒤에 insert_after로 새 문단을 넣으면 THEN 소제목 바로 뒤에 들어간다", () => {
+    const input = doc(WALK_HEADING, paragraph("오늘 산책을 했다"));
+
+    const result = editDocRange(input, {
+      command: "insert_after",
+      selection: "산책",
+      markdown: "새 문단",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([input.content[0], paragraph("새 문단"), input.content[1]]);
+  });
+});
+
 describe("markdown-range-edit — 표", () => {
   it("WHEN 표의 두 행에 걸친 일부를 골라 replace하면 THEN 실패이고 '블록 일부'와 표 전체를 고르라고 알린다", () => {
     const cell = (value: string) => ({ type: "tableCell", content: [paragraph(value)] });
@@ -636,5 +807,76 @@ describe("markdown-range-edit — 스티커 지시어(adr-032)", () => {
     expect(rewritten.doc.content[0]?.attrs).toEqual({ stickers: [MINT] });
     expectOk(removed);
     expect(removed.doc.content).toEqual([paragraph("끝")]);
+  });
+});
+
+describe("markdown-range-edit — 여러 블록 바꾸기가 사진 설명(brief) 있는 그림을 덮는다(adr-033 · #172)", () => {
+  const BRIEF = "잠든 아기 옆 낮잠 방";
+  const SRC = "/images/nap-room.webp";
+  const briefed = () =>
+    doc(
+      paragraph("낮잠 앞 문단"),
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: BRIEF } },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+  it("WHEN 앞 문단부터 뒤 문단까지를 같은 src 그림이 든 markdown으로 바꾼다 THEN 새 그림이 옛 brief를 가진다", () => {
+    const result = editDocRange(briefed(), {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: `새 앞 문단\n\n![낮잠 방](${SRC})\n\n새 뒤 문단`,
+    });
+
+    expectOk(result);
+    const image = result.doc.content.find((block) => block.type === "image");
+    expect(image?.attrs).toMatchObject({ src: SRC, brief: BRIEF });
+  });
+
+  it("WHEN 같은 범위를 그 src 그림이 없는 markdown으로 바꾼다 THEN 실패이고 메시지에 그림 src와 블록 번호가 있으며 문서는 그대로다", () => {
+    const input = briefed();
+    const before = structuredClone(input);
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: "합친 문단",
+    });
+
+    expectFail(result);
+    const message = result.messages.join("\n");
+    expect(message).toContain(SRC);
+    expect(message).toMatch(/블록 2/);
+    expect(input).toEqual(before);
+  });
+
+  it("WHEN 같은 src brief 그림 둘을 그 src 그림 하나로 바꾼다 THEN 실패이고 메시지에 짝 없는 그림의 블록 번호가 있다", () => {
+    const input = doc(
+      paragraph("낮잠 앞 문단"),
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: BRIEF } },
+      { type: "image", attrs: { src: SRC, alt: "낮잠 방", brief: "창가 쪽 낮잠 방" } },
+      paragraph("낮잠 뒤 문단"),
+    );
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: `새 앞 문단\n\n![낮잠 방](${SRC})\n\n새 뒤 문단`,
+    });
+
+    expectFail(result);
+    expect(result.messages.join("\n")).toMatch(/블록 3/);
+  });
+
+  it("WHEN brief 그림을 덮는 범위를 빈 markdown으로 지운다 THEN 성공하고 그림도 지워진다", () => {
+    const input = doc(...briefed().content, paragraph("끝"));
+
+    const result = editDocRange(input, {
+      command: "replace",
+      selection: "낮잠 앞...뒤 문단",
+      markdown: "",
+    });
+
+    expectOk(result);
+    expect(result.doc.content).toEqual([paragraph("끝")]);
   });
 });
