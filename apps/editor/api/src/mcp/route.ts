@@ -5,6 +5,7 @@ import { bodyLimit } from "hono/body-limit";
 import { blogToday } from "../blog-date";
 import type { SessionConfig } from "../session";
 import type { AiUndoStore } from "../ai-undo-store";
+import type { ImageStore } from "../image-store";
 import type { SettingsStore } from "../settings-store";
 import type { PostStore } from "../store";
 import { hashConnectionToken } from "./connection-tokens";
@@ -50,6 +51,10 @@ export function registerMcpRoute(
     session: SessionConfig;
     settings: SettingsStore;
     aiUndo: AiUndoStore;
+    /** preview_post 문서 재료 — 공개 렌더와 같은 값(app.ts) */
+    imageBaseUrl: string;
+    postCss: string;
+    images?: ImageStore;
   },
 ): void {
   const {
@@ -62,7 +67,11 @@ export function registerMcpRoute(
     session,
     settings,
     aiUndo,
+    imageBaseUrl,
+    postCss,
+    images,
   } = options;
+  const preview = { imageBaseUrl, postCss, ...(images === undefined ? {} : { images }) };
   if (oauth !== undefined) registerOAuthRoutes(app, { ...oauth, session });
   const today = options.today ?? blogToday;
   const handler = createMcpHandler(({ authInfo }) => {
@@ -77,6 +86,7 @@ export function registerMcpRoute(
       aiUndo,
       today,
       source: `token:${authInfo.clientId}`,
+      preview,
     });
   });
 
