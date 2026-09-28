@@ -12,18 +12,18 @@ import { ROUTES } from "../../../shared/routes/constants";
 import { loginPathFor } from "../../../shared/routes/next-path";
 import { useAiUndo } from "../hooks/use-ai-undo";
 import { useAutosave } from "../hooks/use-autosave";
-import { useConflictActions } from "../hooks/use-conflict-actions";
-import { useImageUploader } from "../hooks/use-image-uploader";
-import { useLiveReflectDecision } from "../hooks/use-live-reflect-decision";
-import { useLiveRevisionQuery } from "../hooks/use-live-revision-query";
-import { usePostCategories } from "../hooks/use-post-categories";
-import { usePublishCheck } from "../hooks/use-publish-check";
+import { useEditorDialogActions } from "../hooks/use-editor-dialog-actions";
 import { useEditorSeo } from "../hooks/use-editor-seo";
-import { readDocOrNull } from "../read-doc";
+import { useImageUploader } from "../hooks/use-image-uploader";
+import { useLiveReflect } from "../hooks/use-live-reflect";
+import { usePostCategories } from "../hooks/use-post-categories";
 import { usePostForm } from "../hooks/use-post-form";
+import { usePublishCheck } from "../hooks/use-publish-check";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
 import { useServerSave } from "../hooks/use-server-save";
-import type { EditableMeta, EditingStart, EditorOverlay } from "../types";
+import { createPostFieldHandlers } from "../post-field-handlers";
+import { readDocOrNull } from "../read-doc";
+import type { EditingStart, EditorOverlay } from "../types";
 import { AiUndoButton } from "./AiUndoButton";
 import { EditorDialogs } from "./EditorDialogs";
 import { ExpiredBanner } from "./ExpiredBanner";
@@ -56,19 +56,15 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   const [overlay, setOverlay] = useState<EditorOverlay>(
     start.restore === "conflict" ? "conflict" : null,
   );
+  const openConflict = () => setOverlay("conflict");
+  const closeOverlay = () => setOverlay(null);
   const [tab, setTab] = useState<SideTab>("postInfo");
   // 미리보기는 연 순간의 문서를 그린다 — 렌더마다 읽으면 요청이 되풀이된다
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const uploadImage = useImageUploader();
   const categories = usePostCategories();
   const form = usePostForm(start);
-  const server = useServerSave({
-    getDoc,
-    start,
-    form,
-    onAdopt,
-    onConflict: () => setOverlay("conflict"),
-  });
+  const server = useServerSave({ getDoc, start, form, onAdopt, onConflict: openConflict });
   // 자기 글은 제목 중복 비교에서 뺀다 — 주소를 바꾼 초안의 옛 주소도 자기 글이다
   const publishCheck = usePublishCheck(getDoc, [form.slug, start.slug, server.savedSlug()]);
   const seo = useEditorSeo({
@@ -78,34 +74,14 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     others: publishCheck.others,
     openTab: setTab,
   });
-  const revision = useLiveRevisionQuery(server.savedSlug(), server.syncMark);
-  const live = useLiveReflectDecision({
-    editor,
-    getDoc,
-    server,
-    form,
-    isOverlayOpen: overlay !== null,
-    revision,
-  });
+  const live = useLiveReflect({ editor, getDoc, server, form, isOverlayOpen: overlay !== null });
   const autosave = useAutosave({
     editor,
     save: server.save,
     shouldSaveSoon: start.restore === "restore",
   });
 
-  const handleMetaChange = (patch: EditableMeta) => {
-    form.changeMeta(patch);
-    autosave.schedule();
-  };
-  const handleTitleChange = (title: string) => {
-    form.changeTitle(title, server.savedSlug() === null);
-    autosave.schedule();
-  };
-  const handleSlugChange = (slug: string) => {
-    form.changeSlug(slug);
-    server.clearSlugError();
-    autosave.schedule();
-  };
+  const fields = createPostFieldHandlers({ form, server, autosave });
 
   const openPublish = () => {
     publishCheck.captureDoc();
@@ -136,29 +112,15 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     setOverlay("preview");
   };
 
-  const conflict = useConflictActions({
+  const aiUndo = useAiUndo({ server, autosave, onConflict: openConflict, onReload });
+  const dialogActions = useEditorDialogActions({
     editor,
     server,
     autosave,
-    onClose: () => setOverlay(null),
+    aiUndo,
+    onClose: closeOverlay,
     onReload,
   });
-
-  const aiUndo = useAiUndo({
-    server,
-    autosave,
-    onConflict: () => setOverlay("conflict"),
-    onReload,
-  });
-  const closeAiUndo = () => {
-    aiUndo.clearFailure();
-    setOverlay(null);
-  };
-
-  const handleConfirmPublish = () => {
-    setOverlay(null);
-    void autosave.run("publish");
-  };
 
   // 세션 만료가 먼저다 — 다시 로그인해야 불러오기도 된다
   const liveBanner = live.notice === null ? undefined : <LiveReflectBanner onLoad={live.load} />;
@@ -191,7 +153,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
           <TitleField
             title={form.meta.title}
             isAiDraft={form.meta.source !== "editor"}
-            onTitleChange={handleTitleChange}
+            onTitleChange={fields.handleTitleChange}
             onEnter={() => focusEditorStart(editor)}
             inputRef={seo.fieldRefs.title}
           />
@@ -201,7 +163,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
             meta={form.meta}
             isPublished={server.isPublished}
             categories={categories}
-            onMetaChange={handleMetaChange}
+            onMetaChange={fields.handleMetaChange}
             onOpenDecorate={() => setTab("decorate")}
             fieldRefs={seo.fieldRefs}
             slugField={
@@ -209,7 +171,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
                 slug={form.slug}
                 isLocked={server.isPublished}
                 error={server.slugError}
-                onChange={handleSlugChange}
+                onChange={fields.handleSlugChange}
               />
             }
           />
@@ -223,13 +185,7 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
         publishDoc={publishCheck.publishDoc}
         others={publishCheck.others}
         aiUndo={aiUndo}
-        actions={{
-          onClose: () => setOverlay(null),
-          ...conflict,
-          onConfirmPublish: handleConfirmPublish,
-          onConfirmAiUndo: aiUndo.discardAndRevert,
-          onCancelAiUndo: closeAiUndo,
-        }}
+        actions={dialogActions}
       />
     </>
   );

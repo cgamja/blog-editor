@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ConflictError } from "../../../shared/api/errors";
 import { fetchAiUndo, revertAiEdit } from "../api";
-import { POST_QUERY_KEY, aiUndoQueryKey } from "../constants";
+import { aiUndoQueryKey, aiUndoQueryPrefix } from "../constants";
 import { clearLocalDraft } from "../local-draft";
 import type { Autosave } from "../autosave";
 import type { ServerSave } from "./use-server-save";
@@ -40,7 +40,7 @@ export function useAiUndo({ server, autosave, onConflict, onReload }: UseAiUndoO
     enabled: canAsk,
   });
   const forget = (target: string) =>
-    queryClient.invalidateQueries({ queryKey: [POST_QUERY_KEY, target, "ai-undo"] });
+    queryClient.invalidateQueries({ queryKey: aiUndoQueryPrefix(target) });
 
   const mutation = useMutation({
     mutationFn: async (target: string) => {
