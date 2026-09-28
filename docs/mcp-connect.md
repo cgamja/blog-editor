@@ -81,13 +81,13 @@ codex mcp list   # blog-editor가 보이면 된다
 
 로컬 루프백 서버라 `~/.zshrc`에 두는 편리함을 고를 수도 있다. 그 경우에는 그 파일이 어디로 복사 · 동기화되는지 알고 고른다.
 
-**도구 허락 — 쓰기만 묻기.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 서버가 읽기 도구 4개(`get_writing_guide` · `list_posts` · `get_post` · `check_draft`)에 `readOnlyHint: true`를 달아 두었으므로(#159), `default_tools_approval_mode = "writes"` 한 줄이면 읽기는 묻지 않고 쓰기 도구 3개(`create_draft` · `update_draft` · `update_writing_guide`)만 묻는다("The `writes` mode prompts for tools that aren't marked read-only", https://learn.chatgpt.com/docs/extend/mcp?surface=cli · 키는 https://learn.chatgpt.com/docs/config-file/config-reference). `~/.codex/config.toml`:
+**도구 허락 — 쓰기만 묻기.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 서버가 읽기 도구 5개(`get_writing_guide` · `list_posts` · `get_post` · `check_draft` · `preview_post`)에 `readOnlyHint: true`를 달아 두었으므로(#159), `default_tools_approval_mode = "writes"` 한 줄이면 읽기는 묻지 않고 쓰기 도구 4개(`create_draft` · `update_draft` · `revert_draft` · `update_writing_guide`)만 묻는다("The `writes` mode prompts for tools that aren't marked read-only", https://learn.chatgpt.com/docs/extend/mcp?surface=cli · 키는 https://learn.chatgpt.com/docs/config-file/config-reference). `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.blog-editor]
 url = "http://127.0.0.1:8787/mcp"
 bearer_token_env_var = "BLOG_EDITOR_MCP_TOKEN"
-# 읽기 4개는 묻지 않고, 초안을 만들거나 고치는 2개만 묻는다
+# 읽기 5개는 묻지 않고, 쓰기 4개만 묻는다
 default_tools_approval_mode = "writes"
 ```
 
@@ -123,4 +123,6 @@ codex exec \
 | `check_draft`          | 저장하지 않고 형식만 검사                                       |
 | `create_draft`         | 새 초안 저장(항상 초안, 출처 `token:<이름>`)                    |
 | `update_draft`         | revision이 맞을 때만 초안을 고침. 발행된 글은 못 고친다         |
+| `revert_draft`         | 마지막 AI 저장을 되돌림(그 뒤 다른 저장이 없을 때만, 초안만)    |
+| `preview_post`         | 데스크톱 · 모바일 미리보기 JPEG(읽기 전용, 긴 글은 `part`)      |
 | `update_writing_guide` | 워크스페이스 글쓰기 가이드 전체를 바꿈. 형식 가이드는 못 고친다 |

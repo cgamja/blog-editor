@@ -1,3 +1,5 @@
+import { PREVIEW_MAX_EDGE, PREVIEW_WIDTHS } from "./constants";
+
 /**
  * MCP 도구 오류 문장 — 받는 쪽은 AI다. 무엇이 틀렸고 다음에 어느 도구를 부르면 되는지를 같이 적어
  * AI가 스스로 고치게 한다(adr-007 "검증 실패 메시지를 보고 AI가 스스로 고친다").
@@ -27,6 +29,30 @@ export const MCP_REVERT_UNAVAILABLE_MESSAGES = {
     "마지막 AI 저장 뒤 글이 다른 곳(사람 · 다른 저장)에서 바뀌어 되돌리지 않았다 — get_post로 지금 글을 읽고 update_draft로 고친다",
   published: MCP_PUBLISHED_READ_ONLY_MESSAGE,
 } as const;
+/** preview_post가 쓰는 로컬 Chromium(e2e와 같은 설치본, ADR-042)이 없을 때 — 사람이 한 번 설치하면 된다 */
+export const MCP_PREVIEW_BROWSER_MISSING_MESSAGE =
+  "미리보기를 찍을 브라우저가 이 서버에 설치돼 있지 않다 — 사용자에게 레포 루트에서 `pnpm exec playwright install chromium`을 한 번 실행해 달라고 알린다. 그동안 글은 get_post로 확인한다";
+
+/** part가 두 폭의 구간 수보다 클 때 — 전체 구간 수를 함께 알려 다시 부를 수 있게 한다 */
+export function previewPartOutOfRangeMessage(parts: { desktop: number; mobile: number }): string {
+  return `그 part는 없다 — 전체 구간은 데스크톱 ${parts.desktop}개 · 모바일 ${parts.mobile}개다. part는 1부터 ${Math.max(parts.desktop, parts.mobile)}까지 준다`;
+}
+
+/** preview_post 응답 글 — 몇 번째 구간인지, 다음 구간이 있는지, 끝난 폭은 이미지를 뺐다는 것 */
+export function previewPartNote(part: number, parts: { desktop: number; mobile: number }): string {
+  const ended = (["desktop", "mobile"] as const)
+    .filter((width) => part > parts[width])
+    .map((width) => (width === "desktop" ? "데스크톱" : "모바일"));
+  const notes = [
+    `이미지는 데스크톱(${PREVIEW_WIDTHS.desktop}) · 모바일(${PREVIEW_WIDTHS.mobile}) 순으로 ${part}번째 구간이다.`,
+    ...(ended.length === 0 ? [] : [`${ended.join(" · ")}은 이미 끝나 이 part에서 이미지를 뺐다.`]),
+    part < Math.max(parts.desktop, parts.mobile)
+      ? `아래가 더 있다 — part: ${part + 1}로 이어 본다.`
+      : "마지막 구간이다.",
+  ];
+  return notes.join(" ");
+}
+
 export const MCP_INTERNAL_ERROR_MESSAGE =
   "서버에서 처리하지 못했다 — 잠시 뒤 다시 시도하고, 계속되면 사람에게 알린다";
 const BYTES_PER_KIB = 1024;
@@ -80,6 +106,10 @@ export const MCP_TOOL_TEXT = {
     description:
       "이 글의 마지막 AI 저장(create_draft · update_draft) 한 번을 그 저장 직전 판으로 되돌린다. 사용자가 '방금 거 되돌려'처럼 방금 AI가 고친 것을 무르라고 할 때 부른다. 한 단계만 되돌리고(두 번 부르면 실패), 그 뒤 사람이 에디터에서 저장했거나 다른 저장이 있으면 · 새로 만든 글이면 · 발행된 글이면 실패하고 글은 그대로다. 응답에 되돌린 글의 새 revision이 있다.",
   },
+  preview_post: {
+    title: "미리보기 이미지",
+    description: `글을 공개 블로그와 같은 모양으로 데스크톱(폭 ${PREVIEW_WIDTHS.desktop}) · 모바일(폭 ${PREVIEW_WIDTHS.mobile})에서 찍어 JPEG 두 장(데스크톱 · 모바일 순)으로 돌려준다. 읽기 전용이고 글을 바꾸지 않는다. 꾸민 뒤(font · sticker · align · space) 불러 스티커가 글자를 가리거나 서로 겹치지 않는지, 글꼴 · 줄바꿈이 어색하지 않은지 눈으로 보고 update_draft의 edit로 스스로 고친다. 한 장의 긴 변은 ${PREVIEW_MAX_EDGE}px까지라 긴 글은 구간으로 나뉜다 — 응답 글의 parts(폭마다 전체 구간 수)를 보고 part(1부터, 기본 1)로 다음 구간을 받는다. 모바일이 더 길어 뒤쪽 part에는 모바일 이미지만 올 수 있다.`,
+  },
   update_draft: {
     title: "초안 고치기",
     description:
@@ -97,5 +127,6 @@ export const MCP_SERVER_INSTRUCTIONS = [
   "이미 있는 초안의 일부를 고칠 때는 update_draft의 edit(범위 '시작 글...끝 글')를 쓴다 — 글 전체 markdown을 다시 보내지 않는다.",
   `사용자가 말투 · 형식 불만을 말하면 update_writing_guide로 글쓰기 가이드에 남길지 묻는다. ${GUIDE_EDIT_CONSENT}. ${WORKSPACE_GUIDE_BOUNDARY} — 그 부분에서 고칠 줄만 바꿔 전체를 보낸다.`,
   "사용자가 '방금 거 되돌려'라고 하면 revert_draft로 마지막 AI 저장 한 번을 되돌린다 — 그 뒤 사람이 고쳤으면 되돌리지 않는다.",
+  "꾸밈(font · sticker · align · space)을 넣거나 고친 뒤에는 preview_post로 데스크톱 · 모바일 모양을 보고, 스티커가 글자를 가리거나 겹치면 · 글꼴이 어색하면 update_draft의 edit로 스스로 고친다. 긴 글은 응답의 parts를 보고 part로 나머지 구간도 본다.",
   "check_draft · create_draft · update_draft 응답의 seo는 검색 노출 점검이고 seoScore는 그 점수(0~100)다 — must부터 고쳐 update_draft하고, should · info는 글에 맞으면 반영한다. 고친 뒤 seoScore가 올랐는지 본다.",
 ].join("\n");

@@ -21,6 +21,7 @@ import type { Doc, PostFile, PostSource, SeoFinding, SeoInput } from "@blog-edit
 import { revertAiEdit } from "../ai-undo";
 import type { AiUndoEntry, AiUndoStore } from "../ai-undo-store";
 import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
+import type { ImageStore } from "../image-store";
 import type { SettingsStore } from "../settings-store";
 import { ConflictError } from "../store";
 import type { PostStore } from "../store";
@@ -32,13 +33,18 @@ import {
   MCP_META_MISMATCH_MESSAGE,
   MCP_NOTHING_TO_UPDATE_MESSAGE,
   MCP_POST_NOT_FOUND_MESSAGE,
+  MCP_PREVIEW_BROWSER_MISSING_MESSAGE,
   MCP_PUBLISHED_READ_ONLY_MESSAGE,
   MCP_REVERT_UNAVAILABLE_MESSAGES,
   MCP_SERVER_INSTRUCTIONS,
   MCP_SLUG_TAKEN_MESSAGE,
   MCP_TOOL_TEXT,
   MCP_WORKSPACE_GUIDE_HEADING,
+  previewPartNote,
+  previewPartOutOfRangeMessage,
 } from "./messages";
+import { capturePreview } from "./preview-capture";
+import { previewPageHtml } from "./preview-page";
 
 export interface DraftToolsOptions {
   store: PostStore;
@@ -54,6 +60,8 @@ export interface DraftToolsOptions {
   today: () => string;
   /** 이 요청을 보낸 연결용 토큰에서 온 초안 출처 */
   source: PostSource;
+  /** preview_post가 찍는 문서의 재료 — 공개 렌더와 같은 imageBaseUrl · post.css, 올린 이미지 저장소(있으면) */
+  preview: { imageBaseUrl: string; postCss: string; images?: ImageStore };
 }
 
 const SERVER_INFO = { name: "simsimee-blog-editor", version: "0.1.0" };
@@ -165,12 +173,21 @@ function byDateDesc(a: { date: string; slug: string }, b: { date: string; slug: 
 }
 
 /**
- * 도구 8개(plan 3-12 + 글쓰기 가이드 고치기 #143 + AI 수정 되돌리기 #186). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
+ * 도구 9개(plan 3-12 + 글쓰기 가이드 고치기 #143 + AI 수정 되돌리기 #186 + 미리보기 이미지 #139). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
  * 입력에 `draft` 자리가 없고(strictObject라 넣으면 입력 오류) 저장하는 글을 항상 `draft: true`로 둔다.
  */
 export function createDraftsServer(options: DraftToolsOptions): McpServer {
-  const { store, categories, editorBaseUrl, formatGuide, settings, aiUndo, today, source } =
-    options;
+  const {
+    store,
+    categories,
+    editorBaseUrl,
+    formatGuide,
+    settings,
+    aiUndo,
+    today,
+    source,
+    preview,
+  } = options;
   const postFileSchema = createPostFileSchema({ categories });
   // instructions는 초기화 응답에 실린다 — @modelcontextprotocol/server 2.0 ServerOptions.instructions
   // (dist/createMcpHandler-*.d.mts "Optional instructions describing how to use the server")
@@ -325,6 +342,50 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
         markdown,
         losses,
       });
+    }),
+  );
+
+  server.registerTool(
+    "preview_post",
+    {
+      ...MCP_TOOL_TEXT.preview_post,
+      annotations: READ_ONLY_TOOL,
+      inputSchema: z.strictObject({ slug: slugSchema, part: z.int().min(1).optional() }),
+    },
+    guarded(async ({ slug, part = 1 }) => {
+      const found = await store.get(slug);
+      if (found === null) return toolError(MCP_POST_NOT_FOUND_MESSAGE);
+      const html = previewPageHtml(found.file, preview);
+      const captured = await capturePreview(html, part, {
+        imageBaseUrl: preview.imageBaseUrl,
+        ...(preview.images === undefined ? {} : { images: preview.images }),
+      });
+      if (!captured.ok) {
+        return toolError(
+          captured.reason === "browserMissing"
+            ? MCP_PREVIEW_BROWSER_MISSING_MESSAGE
+            : previewPartOutOfRangeMessage(captured.parts),
+        );
+      }
+      const { parts, images } = captured;
+      const shots = [images.desktop, images.mobile].filter((image) => image !== null);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              { slug, part, parts, note: previewPartNote(part, parts) },
+              null,
+              2,
+            ),
+          },
+          ...shots.map((image) => ({
+            type: "image" as const,
+            mimeType: "image/jpeg",
+            data: image.toString("base64"),
+          })),
+        ],
+      };
     }),
   );
 

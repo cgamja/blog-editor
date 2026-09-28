@@ -216,7 +216,17 @@ export function createApp(options: AppOptions): Hono {
   registerImportRoutes(app, { imageBaseUrl });
 
   if (options.mcp !== undefined) {
-    registerMcpRoute(app, { ...options.mcp, store, categories, session, settings, aiUndo });
+    registerMcpRoute(app, {
+      ...options.mcp,
+      store,
+      categories,
+      session,
+      settings,
+      aiUndo,
+      imageBaseUrl,
+      postCss,
+      ...(options.images === undefined ? {} : { images: options.images }),
+    });
   }
 
   return app;
