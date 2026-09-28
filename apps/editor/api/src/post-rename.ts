@@ -11,6 +11,7 @@ import {
   PUBLISHED_SLUG_LOCKED_MESSAGE,
   SLUG_TAKEN_MESSAGE,
 } from "./messages";
+import type { AiUndoStore } from "./ai-undo-store";
 import type { RenameConflictReason } from "./rename-reasons";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
@@ -22,9 +23,9 @@ const conflictBody = (message: string, reason: RenameConflictReason) => ({ messa
 /**
  * 초안 주소 바꾸기(edit-screen design 5) — 새 주소에 쓰고 옛 주소를 지운다. 옛 글 지우기가 어긋나면
  * 새 주소를 지워 되돌린다. 같은 프로세스 안에서만 원자적이다(운영은 S3 조건부 쓰기 몫 — adr-014와 같은 한계).
- * 발행 글은 주소가 URL이라 잠겨 있다(plan 주소 규칙).
+ * 발행 글은 주소가 URL이라 잠겨 있다(plan 주소 규칙). 옛 주소에 남은 AI 되돌릴 판은 지운다(ADR-041 — 옮기지 않는다).
  */
-export function registerRenameRoute(app: Hono, store: PostStore): void {
+export function registerRenameRoute(app: Hono, store: PostStore, aiUndo: AiUndoStore): void {
   app.post("/api/posts/:slug/rename", async (c) => {
     const from = c.req.param("slug");
     if (!slugSchema.safeParse(from).success) {
@@ -71,6 +72,10 @@ export function registerRenameRoute(app: Hono, store: PostStore): void {
       }
       throw error;
     }
+    // 옮긴 뒤라 실패해도 응답은 성공이다 — 남은 판은 옛 주소에 같은 내용이 다시 생기기 전에는 쓰이지 않는다
+    await aiUndo.delete(from).catch((error: unknown) => {
+      console.error("rename: 옛 주소의 AI 되돌릴 판 지우기 실패", error);
+    });
     c.header("ETag", etagOf(moved.revision));
     return c.json({ slug: to, revision: moved.revision });
   });

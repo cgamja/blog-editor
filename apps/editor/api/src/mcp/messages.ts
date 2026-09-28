@@ -16,6 +16,17 @@ export const MCP_EDIT_WITH_MARKDOWN_MESSAGE =
   "markdown(글 전체)과 edit(부분)을 함께 줄 수 없다 — 한 부분만 고치면 edit만, 글 전체를 다시 쓰면 markdown만 준다";
 export const MCP_NOTHING_TO_UPDATE_MESSAGE =
   "바꿀 것이 없다 — markdown(글 전체) · edit(부분) · title · description · category · keyword 중 하나 이상을 준다";
+/** revert_draft가 되돌리지 못한 까닭(ai-undo.ts `AiUndoRefusal`) — 글은 그대로다 */
+export const MCP_REVERT_UNAVAILABLE_MESSAGES = {
+  notFound: MCP_POST_NOT_FOUND_MESSAGE,
+  nothing:
+    "되돌릴 AI 저장이 없다 — 되돌리기는 마지막 create_draft · update_draft 한 번만, 한 번만 할 수 있다. 더 고치려면 get_post로 읽고 update_draft한다",
+  newPost:
+    "이 글은 create_draft로 새로 만든 글이라 되돌릴 이전 판이 없다 — 지우기는 사람이 에디터에서 한다",
+  changed:
+    "마지막 AI 저장 뒤 글이 다른 곳(사람 · 다른 저장)에서 바뀌어 되돌리지 않았다 — get_post로 지금 글을 읽고 update_draft로 고친다",
+  published: MCP_PUBLISHED_READ_ONLY_MESSAGE,
+} as const;
 export const MCP_INTERNAL_ERROR_MESSAGE =
   "서버에서 처리하지 못했다 — 잠시 뒤 다시 시도하고, 계속되면 사람에게 알린다";
 const BYTES_PER_KIB = 1024;
@@ -64,6 +75,11 @@ export const MCP_TOOL_TEXT = {
     title: "글쓰기 가이드 고치기",
     description: `이 블로그의 글쓰기 가이드(말투 · 독자 · 구성) 전체를 guide로 바꾸고, 저장된 가이드를 돌려준다. ${GUIDE_EDIT_CONSENT}. 먼저 get_writing_guide로 지금 가이드를 읽는다 — ${WORKSPACE_GUIDE_BOUNDARY}. 그 부분에서 고칠 줄만 바꾼 전체를 보낸다(보내지 않은 줄은 사라진다). 형식 가이드는 고치지 못하고, guide에 형식 가이드 · 워크스페이스 가이드 제목 줄이 들어 있으면 실패한다. 글 종류별 틀은 '### 글 종류별 틀' 구역 아래 '#### <글 종류>'(예: #### 앱 소개) 소제목으로 둔다.`,
   },
+  revert_draft: {
+    title: "AI 수정 되돌리기",
+    description:
+      "이 글의 마지막 AI 저장(create_draft · update_draft) 한 번을 그 저장 직전 판으로 되돌린다. 사용자가 '방금 거 되돌려'처럼 방금 AI가 고친 것을 무르라고 할 때 부른다. 한 단계만 되돌리고(두 번 부르면 실패), 그 뒤 사람이 에디터에서 저장했거나 다른 저장이 있으면 · 새로 만든 글이면 · 발행된 글이면 실패하고 글은 그대로다. 응답에 되돌린 글의 새 revision이 있다.",
+  },
   update_draft: {
     title: "초안 고치기",
     description:
@@ -80,5 +96,6 @@ export const MCP_SERVER_INSTRUCTIONS = [
   "글을 쓰기 전에 get_writing_guide를 먼저 읽고, 형식 · 말투 · SEO 규칙을 따른다.",
   "이미 있는 초안의 일부를 고칠 때는 update_draft의 edit(범위 '시작 글...끝 글')를 쓴다 — 글 전체 markdown을 다시 보내지 않는다.",
   `사용자가 말투 · 형식 불만을 말하면 update_writing_guide로 글쓰기 가이드에 남길지 묻는다. ${GUIDE_EDIT_CONSENT}. ${WORKSPACE_GUIDE_BOUNDARY} — 그 부분에서 고칠 줄만 바꿔 전체를 보낸다.`,
+  "사용자가 '방금 거 되돌려'라고 하면 revert_draft로 마지막 AI 저장 한 번을 되돌린다 — 그 뒤 사람이 고쳤으면 되돌리지 않는다.",
   "check_draft · create_draft · update_draft 응답의 seo는 검색 노출 점검이고 seoScore는 그 점수(0~100)다 — must부터 고쳐 update_draft하고, should · info는 글에 맞으면 반영한다. 고친 뒤 seoScore가 올랐는지 본다.",
 ].join("\n");

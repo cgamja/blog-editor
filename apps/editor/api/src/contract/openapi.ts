@@ -7,6 +7,8 @@ import {
   slugSchema,
 } from "@blog-editor/content-schema";
 import {
+  aiUndoStatusSchema,
+  aiUndoUnavailableBodySchema,
   createPostListSchema,
   createSettingsSchema,
   imageUploadResultSchema,
@@ -24,6 +26,7 @@ import {
 import { CONTENT_TYPE_OF } from "../images";
 import { previewBodySchema } from "../post-preview";
 import { renameBodySchema } from "../post-rename";
+import { AI_UNDO_REVISION_QUERY } from "../ai-undo-routes";
 import {
   IMAGE_FORMAT_MESSAGE,
   IMAGE_ROTATED_MESSAGE,
@@ -75,6 +78,8 @@ function contractSchemas(categories: Categories) {
     RenameBody: renameBodySchema,
     RenameResult: renameResultSchema,
     RenameConflictBody: renameConflictBodySchema,
+    AiUndoStatus: aiUndoStatusSchema,
+    AiUndoUnavailableBody: aiUndoUnavailableBodySchema,
     PreviewBody: previewBodySchema,
     PreviewResult: previewResultSchema,
     ImageUploadResult: imageUploadResultSchema,
@@ -258,6 +263,68 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
           description:
             "reason — published: 발행한 글이다(주소 잠금) · stale: revision이 맞지 않는다 · taken: 새 주소에 글이 이미 있다. 어느 쪽도 바뀌지 않는다",
           schema: schemas.RenameConflictBody,
+        },
+        428: { description: "If-Match가 없다", schema: schemas.MessageBody },
+      },
+    },
+    {
+      method: "get",
+      path: "/api/posts/{slug}/ai-undo",
+      operationId: "getAiUndo",
+      tag: "posts",
+      summary: "AI 수정 되돌리기 가능 여부",
+      description:
+        "MCP create_draft · update_draft가 남긴 마지막 AI 저장을 지금 되돌릴 수 있는가(ADR-041). 초안이고, 그 저장 뒤 다른 저장이 없고, 새로 만든 글이 아닐 때만 true. 남긴 판은 내보내지 않는다.",
+      requiresSession: true,
+      parameters: [
+        slugParameter,
+        {
+          name: AI_UNDO_REVISION_QUERY,
+          in: "query",
+          required: false,
+          description:
+            "편집 화면이 가진 revision — 주면 그 판이 지금 판일 때만 true(옛 판으로 되돌리면 409뿐이다)",
+        },
+      ],
+      responses: {
+        200: { description: "되돌릴 수 있는가", schema: schemas.AiUndoStatus },
+        400: { description: "주소 모양이 틀렸다", schema: schemas.MessageBody },
+        401: unauthorized,
+        404: { description: "글이 없다", schema: schemas.MessageBody },
+      },
+    },
+    {
+      method: "post",
+      path: "/api/posts/{slug}/ai-undo",
+      operationId: "revertAiEdit",
+      tag: "posts",
+      summary: "AI 수정 되돌리기",
+      description:
+        "마지막 AI 저장을 그 직전 판으로 되돌려 새 revision으로 저장하고 남긴 판을 지운다(MCP revert_draft와 같은 규칙). 본문은 없다.",
+      requiresSession: true,
+      parameters: [
+        slugParameter,
+        {
+          name: "If-Match",
+          in: "header",
+          required: true,
+          description: "읽을 때 받은 ETag — 그 뒤 다른 곳에서 고쳤으면 409",
+        },
+      ],
+      responses: {
+        200: {
+          description: "되돌렸다",
+          schema: schemas.SaveResult,
+          headers: { ETag: "새 revision" },
+        },
+        400: { description: "주소 모양이 틀렸다", schema: schemas.MessageBody },
+        401: unauthorized,
+        404: { description: "글이 없다", schema: schemas.MessageBody },
+        409: { description: "revision이 맞지 않는다", schema: schemas.MessageBody },
+        422: {
+          description:
+            "되돌릴 수 없다 — reason: nothing(남긴 판 없음 · 이미 되돌림) · newPost(새로 만든 글) · changed(그 뒤 다른 저장) · published(발행 글이거나 되돌릴 판이 초안이 아니다). 글은 그대로다",
+          schema: schemas.AiUndoUnavailableBody,
         },
         428: { description: "If-Match가 없다", schema: schemas.MessageBody },
       },

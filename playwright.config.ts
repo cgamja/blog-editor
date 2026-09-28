@@ -3,7 +3,7 @@ import { createServer, type AddressInfo, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { E2E_ACCOUNT } from "./e2e/account.test.helpers";
+import { E2E_ACCOUNT, E2E_MCP_TOKEN } from "./e2e/account.test.helpers";
 
 /**
  * 실브라우저 층(plan 05 · adr-024) — api와 web dev 서버를 테스트 전용 포트 · 계정 · 빈 저장 루트로 띄운다.
@@ -90,6 +90,9 @@ export default defineConfig({
         ADMIN_PASSWORD_HASH: "",
         // .env에 터널 주소가 있으면 세션 쿠키가 Secure로 돌아가 WebKit이 로그인하지 못한다(adr-026) — 여기선 끈다
         PUBLIC_BASE_URL: "",
+        // AI 수정 되돌리기 시나리오가 `/mcp`로 초안을 고친다 — .env의 사람 토큰 대신 테스트 토큰을 쓴다
+        MCP_CONNECTION_TOKEN: E2E_MCP_TOKEN,
+        MCP_CONNECTION_TOKEN_NAME: "e2e",
       },
       reuseExistingServer: false,
       timeout: SERVER_START_TIMEOUT_MS,

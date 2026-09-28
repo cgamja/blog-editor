@@ -18,10 +18,10 @@ export interface ContractResponse {
 
 export interface ContractParameter {
   name: string;
-  in: "path" | "header";
+  in: "path" | "header" | "query";
   required: boolean;
   description: string;
-  /** 경로 매개변수의 zod 스키마 — 헤더는 문자열 */
+  /** 경로 매개변수의 zod 스키마 — 헤더 · 쿼리는 문자열 */
   schema?: z.ZodType;
 }
 

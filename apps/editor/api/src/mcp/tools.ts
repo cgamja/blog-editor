@@ -18,6 +18,8 @@ import {
   slugSchema,
 } from "@blog-editor/content-schema";
 import type { Doc, PostFile, PostSource, SeoFinding, SeoInput } from "@blog-editor/content-schema";
+import { revertAiEdit } from "../ai-undo";
+import type { AiUndoEntry, AiUndoStore } from "../ai-undo-store";
 import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 import type { SettingsStore } from "../settings-store";
 import { ConflictError } from "../store";
@@ -31,6 +33,7 @@ import {
   MCP_NOTHING_TO_UPDATE_MESSAGE,
   MCP_POST_NOT_FOUND_MESSAGE,
   MCP_PUBLISHED_READ_ONLY_MESSAGE,
+  MCP_REVERT_UNAVAILABLE_MESSAGES,
   MCP_SERVER_INSTRUCTIONS,
   MCP_SLUG_TAKEN_MESSAGE,
   MCP_TOOL_TEXT,
@@ -45,6 +48,8 @@ export interface DraftToolsOptions {
   formatGuide: string;
   /** 워크스페이스 글쓰기 가이드 — 사람이 AI 연결 화면에서 저장한다 */
   settings: SettingsStore;
+  /** 글마다 마지막 AI 저장(ADR-041) — 쓰기 도구가 남기고 revert_draft · 편집 화면이 되돌린다 */
+  aiUndo: AiUndoStore;
   /** 새 초안의 `date`(YYYY-MM-DD) */
   today: () => string;
   /** 이 요청을 보낸 연결용 토큰에서 온 초안 출처 */
@@ -69,6 +74,16 @@ const CREATE_DRAFT_TOOL = {
 } as const;
 /** 초안 내용을 바꿔 쓴다(이전 본문 · 글 정보가 사라진다 → destructive). revision을 맞춰야 쓰므로 같은 인자로 다시 부르면 충돌로 거절되거나 같은 내용이 된다 */
 const UPDATE_DRAFT_TOOL = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+/**
+ * 마지막 AI 저장을 그 직전 판으로 되돌린다(지금 본문이 사라진다 → destructive). 되돌린 뒤 남긴 판을 지우므로
+ * 같은 인자로 다시 부르면 글은 더 바뀌지 않고 실패로 알린다
+ */
+const REVERT_DRAFT_TOOL = {
   readOnlyHint: false,
   destructiveHint: true,
   idempotentHint: true,
@@ -150,11 +165,12 @@ function byDateDesc(a: { date: string; slug: string }, b: { date: string; slug: 
 }
 
 /**
- * 도구 7개(plan 3-12 + 글쓰기 가이드 고치기 #143). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
+ * 도구 8개(plan 3-12 + 글쓰기 가이드 고치기 #143 + AI 수정 되돌리기 #186). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
  * 입력에 `draft` 자리가 없고(strictObject라 넣으면 입력 오류) 저장하는 글을 항상 `draft: true`로 둔다.
  */
 export function createDraftsServer(options: DraftToolsOptions): McpServer {
-  const { store, categories, editorBaseUrl, formatGuide, settings, today, source } = options;
+  const { store, categories, editorBaseUrl, formatGuide, settings, aiUndo, today, source } =
+    options;
   const postFileSchema = createPostFileSchema({ categories });
   // instructions는 초기화 응답에 실린다 — @modelcontextprotocol/server 2.0 ServerOptions.instructions
   // (dist/createMcpHandler-*.d.mts "Optional instructions describing how to use the server")
@@ -187,6 +203,18 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     } catch (error) {
       console.error("mcp: SEO 점검 실패", error);
       return null;
+    }
+  }
+
+  /**
+   * AI 저장이 성공한 뒤 되돌릴 판을 남긴다(ADR-041). 글은 이미 저장됐으므로 남기기가 실패해도 성공 응답을 막지
+   * 않는다 — 옛 판이 남아도 그 after가 지금 revision과 달라 되돌리기는 거절된다. 원문은 서버 로그에만.
+   */
+  async function rememberAiSave(slug: string, entry: AiUndoEntry): Promise<void> {
+    try {
+      await aiUndo.put(slug, entry);
+    } catch (error) {
+      console.error("mcp: 되돌릴 판 남기기 실패", error);
     }
   }
 
@@ -354,6 +382,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       const built = buildFile(markdown, meta);
       if (!built.ok) return built.error;
       const { revision } = await store.put(slug, built.file, null);
+      await rememberAiSave(slug, { before: null, after: revision });
       const seo = await seoAfterSave(slug, built.file);
       return jsonResult({ slug, revision, editorUrl: editorUrlOf(slug), ...seoReport(seo) });
     }, MCP_SLUG_TAKEN_MESSAGE),
@@ -402,6 +431,7 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
       const built = rebuild(found.file.doc, meta, { markdown, edit });
       if (!built.ok) return built.error;
       const saved = await store.put(slug, built.file, found.revision);
+      await rememberAiSave(slug, { before: found.file, after: saved.revision });
       const seo = await seoAfterSave(slug, built.file);
       return jsonResult({
         slug,
@@ -410,6 +440,20 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
         ...seoReport(seo),
       });
     }, MCP_CONFLICT_MESSAGE),
+  );
+
+  server.registerTool(
+    "revert_draft",
+    {
+      ...MCP_TOOL_TEXT.revert_draft,
+      annotations: REVERT_DRAFT_TOOL,
+      inputSchema: z.strictObject({ slug: slugSchema }),
+    },
+    guarded(async ({ slug }) => {
+      const reverted = await revertAiEdit(store, aiUndo, slug);
+      if (!reverted.ok) return toolError(MCP_REVERT_UNAVAILABLE_MESSAGES[reverted.reason]);
+      return jsonResult({ slug, revision: reverted.revision, editorUrl: editorUrlOf(slug) });
+    }, MCP_REVERT_UNAVAILABLE_MESSAGES.changed),
   );
 
   return server;

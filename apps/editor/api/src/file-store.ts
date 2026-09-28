@@ -4,27 +4,11 @@ import { join } from "node:path";
 import { slugSchema } from "@blog-editor/content-schema";
 import type { PostFile } from "@blog-editor/content-schema";
 import { revisionOf, serialize } from "./revision";
+import { serialized } from "./serialized";
 import { ConflictError } from "./store";
 import type { PostStore } from "./store";
 
 const POST_EXTENSION = ".json";
-
-/**
- * 경로별 직렬화 — 확인(읽기)과 쓰기 사이의 await 틈에 다른 put이 끼지 못하게 한다.
- * 같은 프로세스 안에서만 원자적이다(로컬 개발은 프로세스 하나, 운영 원자성은 S3 조건부 쓰기 — adr-014).
- * 모듈 전역이라 같은 루트를 연 저장소 인스턴스끼리도 줄을 선다.
- */
-const queues = new Map<string, Promise<unknown>>();
-
-function serialized<T>(key: string, task: () => Promise<T>): Promise<T> {
-  const previous = queues.get(key) ?? Promise.resolve();
-  const result = previous.then(task, task);
-  queues.set(
-    key,
-    result.catch(() => undefined),
-  );
-  return result;
-}
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
