@@ -106,3 +106,30 @@ test("WHEN 편집 화면에서 고치고 저장하면 THEN 자기 저장이라 �
   await expect(body.locator(CHANGED_BLOCK)).toHaveCount(0);
   await expect(body).toContainText(TYPED);
 });
+
+test("WHEN 저장 충돌 대화상자에서 「최신 글 열기」를 누른 뒤 창에 돌아오거나 몇 초가 지나면 THEN 본문은 불러온 최신 글 그대로다", async ({
+  page,
+}, testInfo) => {
+  await logIn(page);
+  const slug = slugOf("conflict-reload", testInfo);
+  await openDraft(page, slug);
+  const body = page.getByLabel("본문", { exact: true });
+
+  // 창 복귀를 알리지 않아 열린 화면은 다른 곳의 고침을 모른다 — 옛 판으로 저장하면 충돌이다
+  await typeAtBodyEnd(page, TYPED);
+  await editSecondParagraph(page, slug);
+  await page.keyboard.press("ControlOrMeta+S");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "내 글을 복사해 두고 최신 글 열기" })
+    .click();
+  await expect(body).toContainText(SECOND_BY_AI);
+
+  // 새 편집 화면이 옛 화면이 읽어 둔 서버 판(고치기 전)을 "새 판"으로 보고 바꿔 끼우면 안 된다(#142 결함)
+  await returnToWindow(page);
+  await page.waitForTimeout(3000);
+
+  await expect(body).toContainText(SECOND_BY_AI);
+  await expect(body).not.toContainText(SECOND);
+  await expect(body).not.toContainText(TYPED);
+});

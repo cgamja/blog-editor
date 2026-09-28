@@ -157,6 +157,7 @@ describe("mcp-drafts — 초안만 (보호 대상 — 고쳐서 통과시키지 
       "get_post",
       "get_writing_guide",
       "list_posts",
+      "revert_draft",
       "update_draft",
       "update_writing_guide",
     ]);
@@ -616,7 +617,7 @@ describe("mcp-drafts — update_draft 부분 고치기", () => {
 });
 
 describe("mcp-drafts — 도구 표시(annotations)", () => {
-  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 3개는 아니다", async () => {
+  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 4개는 아니다", async () => {
     // 클라이언트(Codex writes 모드 등)는 readOnlyHint로 확인 없이 부를 도구를 고른다
     const { app } = setup();
 
@@ -632,8 +633,119 @@ describe("mcp-drafts — 도구 표시(annotations)", () => {
       get_post: true,
       get_writing_guide: true,
       list_posts: true,
+      revert_draft: false,
       update_draft: false,
       update_writing_guide: false,
     });
+  });
+});
+
+describe("mcp-drafts — revert_draft(AI 수정 되돌리기)", () => {
+  it("WHEN update_draft로 문단을 고친 뒤 revert_draft를 부르면 THEN 글이 고치기 전 내용이고 응답에 새 revision이 있으며 다시 부르면 되돌릴 판이 없다는 오류다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("beta-open", fixtures.minimal, null);
+    await callTool(app, "update_draft", {
+      slug: "beta-open",
+      revision,
+      markdown: "AI가 고친 문단입니다.",
+    });
+
+    const reverted = await callTool(app, "revert_draft", { slug: "beta-open" });
+    const again = await callTool(app, "revert_draft", { slug: "beta-open" });
+
+    expect(reverted.isError).toBe(false);
+    const saved = await store.get("beta-open");
+    expect(saved?.file).toEqual(fixtures.minimal);
+    expect((JSON.parse(reverted.text) as { revision: string }).revision).toBe(saved?.revision);
+    expect(again.isError).toBe(true);
+    expect((await store.get("beta-open"))?.file).toEqual(fixtures.minimal);
+  });
+
+  it("WHEN update_draft 뒤 에디터(REST)에서 같은 글을 저장하고 revert_draft를 부르면 THEN 도구 오류이고 글은 사람이 저장한 내용 그대로다", async () => {
+    const { store, app } = setup();
+    const { revision } = await store.put("beta-open", fixtures.minimal, null);
+    const updated = await callTool(app, "update_draft", {
+      slug: "beta-open",
+      revision,
+      markdown: "AI가 고친 문단입니다.",
+    });
+    const aiRevision = (JSON.parse(updated.text) as { revision: string }).revision;
+    const aiSaved = await store.get("beta-open");
+    if (aiSaved === null) throw new Error("AI가 고친 글이 없다");
+    const byHuman: PostFile = {
+      ...aiSaved.file,
+      meta: { ...aiSaved.file.meta, title: "사람이 고친 제목" },
+    };
+    const cookie = cookieOf(await loginRequest(app, TEST_ACCOUNT.username, TEST_ACCOUNT.password));
+    const humanSave = await app.request("/api/posts/beta-open", {
+      method: "PUT",
+      headers: { "content-type": "application/json", cookie, "If-Match": `"${aiRevision}"` },
+      body: JSON.stringify(byHuman),
+    });
+    expect(humanSave.status).toBe(200);
+
+    const result = await callTool(app, "revert_draft", { slug: "beta-open" });
+
+    expect(result.isError).toBe(true);
+    expect((await store.get("beta-open"))?.file).toEqual(byHuman);
+  });
+
+  it("WHEN create_draft로 새 글을 만든 뒤 revert_draft를 부르면 THEN 도구 오류이고 글은 그대로다", async () => {
+    const { store, app } = setup();
+    await callTool(app, "create_draft", NEW_DRAFT);
+    const before = await store.get(NEW_DRAFT.slug);
+
+    const result = await callTool(app, "revert_draft", { slug: NEW_DRAFT.slug });
+
+    expect(result.isError).toBe(true);
+    expect(await store.get(NEW_DRAFT.slug)).toEqual(before);
+  });
+});
+
+describe("posts-api — AI 수정 되돌리기", () => {
+  /** MCP update_draft로 초안 하나를 고쳐 둔다 — 남긴 판이 생긴다 */
+  async function aiEdited() {
+    const env = setup();
+    const { revision } = await env.store.put("beta-open", fixtures.minimal, null);
+    const updated = await callTool(env.app, "update_draft", {
+      slug: "beta-open",
+      revision,
+      markdown: "AI가 고친 문단입니다.",
+    });
+    const aiRevision = (JSON.parse(updated.text) as { revision: string }).revision;
+    const cookie = cookieOf(
+      await loginRequest(env.app, TEST_ACCOUNT.username, TEST_ACCOUNT.password),
+    );
+    return { ...env, aiRevision, cookie };
+  }
+
+  it("WHEN MCP update_draft 뒤 로그인 세션으로 GET · POST(If-Match 지금 revision)를 부르면 THEN GET은 available true이고 POST 뒤 글은 고치기 전 내용이며 GET은 available false다", async () => {
+    const { store, app, aiRevision, cookie } = await aiEdited();
+
+    const before = await app.request("/api/posts/beta-open/ai-undo", { headers: { cookie } });
+    const reverted = await app.request("/api/posts/beta-open/ai-undo", {
+      method: "POST",
+      headers: { cookie, "If-Match": `"${aiRevision}"` },
+    });
+    const after = await app.request("/api/posts/beta-open/ai-undo", { headers: { cookie } });
+
+    expect(before.status).toBe(200);
+    expect(await before.json()).toEqual({ available: true });
+    expect(reverted.status).toBe(200);
+    expect((await store.get("beta-open"))?.file).toEqual(fixtures.minimal);
+    expect(await after.json()).toEqual({ available: false });
+  });
+
+  it("WHEN If-Match가 지금 revision과 다른 채 POST하면 THEN 409이고 글은 AI가 고친 그대로다", async () => {
+    const { store, app, cookie } = await aiEdited();
+    const aiSaved = await store.get("beta-open");
+
+    const res = await app.request("/api/posts/beta-open/ai-undo", {
+      method: "POST",
+      headers: { cookie, "If-Match": '"stale-revision"' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await store.get("beta-open")).toEqual(aiSaved);
   });
 });
