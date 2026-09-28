@@ -54,14 +54,15 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
       return brief ?? "";
     },
   });
-  // 사진 자리에서 옮겨 온 이미지 프롬프트(adr-043) — 있는 그림에서만 보인다(사진을 다시 만들 때 참고)
+  // 그림의 이미지 프롬프트(adr-043) — 그림이 아니면 null, 프롬프트 없는 그림이면 빈 글(프롬프트는 빈 글일 수 없다).
+  // 없는 그림에도 칸을 보여 새로 넣을 수 있게 한다(사진을 다시 만들 때 참고)
   const imagePrompt = useEditorState({
     editor,
     selector: ({ editor: current }) => {
       const { selection } = current.state;
       if (!(selection instanceof NodeSelection) || selection.node.type.name !== "image")
         return null;
-      return (selection.node.attrs.prompt as string | null) ?? null;
+      return (selection.node.attrs.prompt as string | null) ?? "";
     },
   });
   const run = useCommandRunner(editor);
@@ -123,7 +124,7 @@ export function WidthToolbar({ editor }: WidthToolbarProps) {
           key={`prompt-${target.pos}`}
           editor={editor}
           pos={target.pos}
-          prompt={imagePrompt}
+          prompt={imagePrompt === "" ? null : imagePrompt}
           ratio={null}
         />
       )}

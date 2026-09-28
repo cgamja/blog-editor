@@ -301,23 +301,23 @@ export function naturalSizeOf(attrs: NaturalSizeAttrs): { width: number; height:
   return { width: naturalWidth, height: naturalHeight };
 }
 
-/** 한 줄 · 앞뒤 공백 없음 — markdown 한 줄로 오가고, 보이지 않는 차이로 같은 설명이 둘이 되지 않게 */
-const briefSchema = z
-  .string()
-  .min(1)
-  .max(BRIEF_MAX_LENGTH)
-  .refine((brief) => !/[\r\n]/.test(brief) && brief === brief.trim(), {
-    message: "사진 설명은 한 줄이고 앞뒤 공백이 없다",
-  });
+/**
+ * 한 줄 · 앞뒤 공백 없음 — 첫 글자와 끝 글자가 공백이 아니고 사이에 줄바꿈이 없다. JS `\s`는 `trim()`이 떼는 글자와
+ * 같다. refine이 아니라 정규식으로 적는다 — 계약(api/openapi.json)에 `pattern`으로 그대로 나간다(refine은 나가지 않는다).
+ */
+const ONE_LINE_TRIMMED = /^\S(?:[^\r\n]*\S)?$/;
 
-/** 한 줄 · 앞뒤 공백 없음 — 설명(brief)과 같은 까닭으로 markdown 한 문단으로 오간다 */
-const promptSchema = z
-  .string()
-  .min(1)
-  .max(PROMPT_MAX_LENGTH)
-  .refine((prompt) => !/[\r\n]/.test(prompt) && prompt === prompt.trim(), {
-    message: "이미지 프롬프트는 한 줄이고 앞뒤 공백이 없다",
-  });
+const oneLineTextSchema = (maxLength: number, message: string) =>
+  z.string().min(1).max(maxLength).regex(ONE_LINE_TRIMMED, { message });
+
+/** 사진 설명 — markdown 한 줄로 오가고, 보이지 않는 차이로 같은 설명이 둘이 되지 않게 */
+const briefSchema = oneLineTextSchema(BRIEF_MAX_LENGTH, "사진 설명은 한 줄이고 앞뒤 공백이 없다");
+
+/** 이미지 프롬프트 — 설명(brief)과 같은 까닭으로 markdown 한 문단으로 오간다 */
+const promptSchema = oneLineTextSchema(
+  PROMPT_MAX_LENGTH,
+  "이미지 프롬프트는 한 줄이고 앞뒤 공백이 없다",
+);
 
 const imageAttrsSchema = z
   .strictObject({

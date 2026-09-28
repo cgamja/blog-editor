@@ -1826,12 +1826,14 @@
                         "brief": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 300
+                          "maxLength": 300,
+                          "pattern": "^\\S(?:[^\\r\\n]*\\S)?$"
                         },
                         "prompt": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 1000
+                          "maxLength": 1000,
+                          "pattern": "^\\S(?:[^\\r\\n]*\\S)?$"
                         },
                         "naturalWidth": {
                           "type": "integer",
@@ -2361,7 +2363,8 @@
                         "brief": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 300
+                          "maxLength": 300,
+                          "pattern": "^\\S(?:[^\\r\\n]*\\S)?$"
                         },
                         "ratio": {
                           "type": "string",
@@ -2370,7 +2373,8 @@
                         "prompt": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 1000
+                          "maxLength": 1000,
+                          "pattern": "^\\S(?:[^\\r\\n]*\\S)?$"
                         }
                       },
                       "required": ["brief"],
