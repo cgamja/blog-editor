@@ -5,17 +5,7 @@ import type {
   OAuthStore,
   RefreshToken,
 } from "./store";
-
-/**
- * 등록(`/register`)은 인증 없이 열려 있다 — 누가 계속 등록해도 메모리가 끝없이 늘지 않게 상한을 둔다.
- * 계정 1개 본인용이라 claude.ai · Claude Code 연결 몇 번이면 충분하다.
- */
-const DEFAULT_MAX_CLIENTS = 100;
-/**
- * 막 등록한 클라이언트는 사람이 로그인 · 동의하는 동안 토큰이 없다 — 그 사이 등록 폭주에 밀려나지 않게
- * 이만큼은 밀어내지 않는다(code 수명 5분의 두 배).
- */
-export const UNCONNECTED_CLIENT_GRACE_SECONDS = 10 * 60;
+import { DEFAULT_MAX_CLIENTS, UNCONNECTED_CLIENT_GRACE_SECONDS } from "./constants";
 
 /** 만료된 항목은 돌려주지 않고 지운다 */
 function findLive<T extends { expiresAt: number }>(
@@ -42,7 +32,7 @@ function takeLive<T extends { expiresAt: number }>(
   return value;
 }
 
-/** 재시작하면 모두 사라진다 — 클라이언트는 401을 받고 다시 연결한다(영속은 M4) */
+/** 재시작하면 모두 사라진다 — 클라이언트는 401을 받고 다시 연결한다(로컬 전용 · 배포는 supabase/oauth-store.ts) */
 export function createMemoryOAuthStore(options: { maxClients?: number } = {}): OAuthStore {
   const maxClients = options.maxClients ?? DEFAULT_MAX_CLIENTS;
   const clients = new Map<string, OAuthClient>();

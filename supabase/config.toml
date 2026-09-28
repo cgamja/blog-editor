@@ -1,0 +1,8 @@
+# Supabase CLI 설정 — 이 레포는 로컬 Docker Supabase를 띄우지 않는다(ADR-044). 배포 · 마이그레이션 명령이 읽는 값만 둔다.
+project_id = "blog-editor"
+
+# 에디터 API(edge-deploy). 번들(app.js)은 `pnpm --filter @blog-editor/api build:edge`가 만든다 — 커밋하지 않는다.
+# JWT 검증을 끈다 — 이 API는 자체 세션 쿠키 · MCP 토큰으로 인증한다(Supabase Auth를 쓰지 않는다)
+[functions.editor]
+verify_jwt = false
+entrypoint = "./functions/editor/index.ts"

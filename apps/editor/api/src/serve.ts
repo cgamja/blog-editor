@@ -1,7 +1,7 @@
 /**
  * 로컬 Node 진입점(D12 · adr-014) — `pnpm --filter @blog-editor/api dev`.
  * Node는 타입을 벗겨 TS를 바로 돌리지만 확장자 없는 상대 import(`./app`)는 풀지 못한다.
- * 의존성을 더하지 않고 해석 훅 하나로 `.ts`를 붙인다. Lambda 진입점(M4)은 번들되므로 이 훅이 필요 없다.
+ * 의존성을 더하지 않고 해석 훅 하나로 `.ts`를 붙인다. 배포 진입점(edge.ts)은 번들되므로 이 훅이 필요 없다(ADR-046).
  * 훅이 먼저 걸려야 하므로 앱 모듈은 정적 import가 아니라 훅 등록 뒤 동적 import로 불러온다.
  *
  * env — 레포 루트 `.env`(gitignore됨)가 있으면 읽고, 셸에 이미 있는 값이 이긴다:
@@ -12,7 +12,7 @@
  *   PORT · POST_STORE_ROOT(글과 올린 이미지 `<root>/images` — ADR-021) · IMAGE_BASE_URL
  * `.env`에서 `#` · 공백이 든 값은 큰따옴표로 감싼다 — 따옴표 없으면 `#` 뒤가 주석으로 잘린다
  * (Node 26 실측: `ADMIN_PASSWORD=12#34` → "12").
- * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
+ * 로컬 전용이라 짧은 비밀번호를 받는다(local-config.ts) — 배포 진입점(edge-config.ts)은 이 경로를 쓰지 않는다.
  * 세션 쿠키도 `__Host-` · Secure 없는 `session`이다(Safari가 http 루프백에서 Secure 쿠키를 버림 — adr-026).
  * PUBLIC_BASE_URL을 주면 공개 터널 뒤에 서므로 배포와 같은 `__Host-session`(Secure)으로 돌아간다.
  *
@@ -50,17 +50,15 @@ const { createFileAiUndoStore } = await import("./file-ai-undo-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
 const { readLocalConfig } = await import("./local-config");
 const { readMcpOptionsFromEnv } = await import("./mcp/env");
+const { capturePreview } = await import("./mcp/preview-capture");
+const { DEFAULT_CATEGORIES, DEFAULT_IMAGE_BASE_URL, DEFAULT_WORKSPACE_ID, SEED_ACCOUNT_ID } =
+  await import("./seed");
 
 const DEFAULT_PORT = 8787;
 // TLS 없는 로컬 개발 서버다 — 로그인 비밀번호와 세션 쿠키가 평문으로 오가므로 같은 네트워크의 다른 기기에 열지 않는다
 const HOSTNAME = "127.0.0.1";
 const MAX_PORT = 65535;
 const DEFAULT_ROOT = ".data";
-const DEFAULT_WORKSPACE_ID = "default";
-// 1단계 워크스페이스 카테고리 — 사이트 BLOG_CATEGORIES와 같다. 설정 API는 읽기만 한다(카테고리 편집은 기존 글 이관과 함께)
-const DEFAULT_CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
-const DEFAULT_IMAGE_BASE_URL = "https://simsimeestudio.com";
-const SEED_ACCOUNT_ID = "owner";
 // dev 스크립트는 apps/editor/api에서 돌므로 작업 디렉터리가 아니라 이 파일 기준으로 레포 루트를 찾는다
 const ENV_FILE = fileURLToPath(new URL("../../../../.env", import.meta.url));
 
@@ -109,7 +107,8 @@ const app = createApp({
   ]),
   sessionSecret: config.sessionSecret,
   sessionCookie: config.sessionCookie,
-  ...(mcp === null ? {} : { mcp }),
+  // 미리보기 찍기(playwright-core)는 로컬 진입점만 넘긴다 — 배포 번들에는 들지 않는다(edge-deploy)
+  ...(mcp === null ? {} : { mcp: { ...mcp, capturePreview } }),
 });
 
 serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {

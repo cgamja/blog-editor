@@ -14,6 +14,7 @@ import { MCP_UNAUTHORIZED_MESSAGE, bodyTooLargeMessage } from "./messages";
 import { DRAFTS_SCOPE } from "./constants";
 import { registerOAuthRoutes } from "./oauth/routes";
 import { findAccessTokenSourceName, protectedResourceMetadataUrl } from "./oauth/tokens";
+import type { capturePreview } from "./preview-capture";
 import type { OAuthOptions } from "./oauth/types";
 import { createDraftsServer } from "./tools";
 
@@ -27,6 +28,11 @@ export interface McpOptions {
   today?: () => string;
   /** 있으면 같은 서비스가 OAuth 인가 서버가 되고 `/mcp`가 OAuth 액세스 토큰도 받는다(mcp-oauth) */
   oauth?: OAuthOptions;
+  /**
+   * preview_post 찍기 수단(playwright-core) — 로컬 진입점만 넘긴다. 없으면 preview_post는 "지원 안 함" 도구
+   * 오류다(edge-deploy — 배포 함수에는 브라우저가 없고, 번들에 playwright-core가 들지 않게 import하지 않는다)
+   */
+  capturePreview?: typeof capturePreview;
 }
 
 const MCP_PATH = "/mcp";
@@ -70,8 +76,14 @@ export function registerMcpRoute(
     imageBaseUrl,
     postCss,
     images,
+    capturePreview,
   } = options;
-  const preview = { imageBaseUrl, postCss, ...(images === undefined ? {} : { images }) };
+  const preview = {
+    imageBaseUrl,
+    postCss,
+    ...(images === undefined ? {} : { images }),
+    ...(capturePreview === undefined ? {} : { capture: capturePreview }),
+  };
   if (oauth !== undefined) registerOAuthRoutes(app, { ...oauth, session });
   const today = options.today ?? blogToday;
   const handler = createMcpHandler(({ authInfo }) => {

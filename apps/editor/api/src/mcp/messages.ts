@@ -33,6 +33,10 @@ export const MCP_REVERT_UNAVAILABLE_MESSAGES = {
 export const MCP_PREVIEW_BROWSER_MISSING_MESSAGE =
   "미리보기를 찍을 브라우저가 이 서버에 설치돼 있지 않다 — 사용자에게 레포 루트에서 `pnpm exec playwright install chromium`을 한 번 실행해 달라고 알린다. 그동안 글은 get_post로 확인한다";
 
+/** 찍기 수단 없이 뜬 서버(배포 함수 — 브라우저가 없다, edge-deploy) — 안 되는 이유와 대신 할 것을 같이 알린다 */
+export const MCP_PREVIEW_UNSUPPORTED_MESSAGE =
+  "이 서버에서는 미리보기 이미지를 찍을 수 없다 — 로컬 서버에서 부르거나 get_post로 확인한다";
+
 /** part가 두 폭의 구간 수보다 클 때 — 전체 구간 수를 함께 알려 다시 부를 수 있게 한다 */
 export function previewPartOutOfRangeMessage(parts: { desktop: number; mobile: number }): string {
   return `그 part는 없다 — 전체 구간은 데스크톱 ${parts.desktop}개 · 모바일 ${parts.mobile}개다. part는 1부터 ${Math.max(parts.desktop, parts.mobile)}까지 준다`;

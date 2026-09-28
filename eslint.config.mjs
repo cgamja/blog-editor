@@ -216,5 +216,12 @@ export default defineConfig([
       [...WEB_PACKAGE, WEB_FEATURE_INTERNALS, ...webFeatureOutward(depth)],
     ),
   ),
-  globalIgnores(["**/node_modules/**", "**/dist/**", "**/coverage/**", ".claude/**"]),
+  globalIgnores([
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    ".claude/**",
+    // 배포 번들(ADR-046, build:edge 생성물 · gitignore) — 원본은 apps/editor/api/src에서 린트한다
+    "supabase/functions/editor/app.js",
+  ]),
 ]);

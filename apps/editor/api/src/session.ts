@@ -16,12 +16,17 @@ import {
   UNAUTHORIZED_MESSAGE,
 } from "./messages";
 import { DUMMY_PASSWORD_HASH, verifyPassword } from "./password";
-import { COOKIE_NAME_PREFIX_OF, COOKIE_PREFIX, SESSION_COOKIE_OF } from "./session-constants";
+import {
+  COOKIE_NAME_PREFIX_OF,
+  COOKIE_PREFIX,
+  MIN_SESSION_SECRET_BYTES,
+  SESSION_COOKIE_OF,
+} from "./session-constants";
 import type { CookieOptions, SessionCookieMode } from "./session-types";
 
 export interface SessionOptions {
   accounts: AccountStore;
-  /** HMAC 키 — 32바이트 이상. 바꾸면 모든 세션이 끊긴다 */
+  /** HMAC 키 — `MIN_SESSION_SECRET_BYTES` 이상. 바꾸면 모든 세션이 끊긴다 */
   sessionSecret: string;
   /** 세션 수명(초). 기본 7일 */
   sessionTtlSeconds?: number;
@@ -31,6 +36,8 @@ export interface SessionOptions {
   now?: () => number;
   /** 기본 `secure`. `loopback-http`는 로컬 진입점만 넘긴다(SessionCookieMode) */
   sessionCookie?: SessionCookieMode;
+  /** 로그인 잠금 저장소(ADR-045). 기본은 메모리 — 배포 진입점은 함수가 새로 켜져도 남는 Supabase 잠금을 넘긴다 */
+  lockout?: LoginLockout;
 }
 
 export interface SessionConfig {
@@ -41,13 +48,12 @@ export interface SessionConfig {
   nowSeconds: () => number;
   /** 쓰기 · 읽기 · 지우기가 같은 이름 · 속성을 쓰도록 모드에서 한 번 정한다 */
   cookie: CookieOptions;
-  /** 앱 하나에 하나 — 재시작하면 초기화된다 */
+  /** 앱 하나에 하나 — 메모리 기본값은 재시작하면 초기화되고, 배포의 Supabase 잠금은 남는다 */
   lockout: LoginLockout;
 }
 
 const SESSION_COOKIE = "session";
 const SESSION_PATH = "/api/session";
-const MIN_SECRET_BYTES = 32;
 const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60;
 const DEFAULT_FAILURE_DELAY_MS = 1000;
 const MS_PER_SECOND = 1000;
@@ -79,9 +85,10 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
     loginFailureDelayMs = DEFAULT_FAILURE_DELAY_MS,
     now = Date.now,
     sessionCookie = "secure",
+    lockout = createLoginLockout(),
   } = options;
-  if (Buffer.byteLength(sessionSecret, "utf8") < MIN_SECRET_BYTES) {
-    throw new Error(`sessionSecret은 ${MIN_SECRET_BYTES}바이트 이상이어야 한다`);
+  if (Buffer.byteLength(sessionSecret, "utf8") < MIN_SESSION_SECRET_BYTES) {
+    throw new Error(`sessionSecret은 ${MIN_SESSION_SECRET_BYTES}바이트 이상이어야 한다`);
   }
   const nowSeconds = () => Math.floor(now() / MS_PER_SECOND);
   return {
@@ -91,7 +98,7 @@ export function resolveSessionConfig(options: SessionOptions): SessionConfig {
     loginFailureDelayMs,
     nowSeconds,
     cookie: SESSION_COOKIE_OF[sessionCookie],
-    lockout: createLoginLockout(),
+    lockout,
   };
 }
 
@@ -117,6 +124,7 @@ export async function sessionAccountId(
  * 아이디 · 비밀번호 확인 — `/api/session`과 OAuth `/authorize`가 같은 것을 쓴다. 실패하면 고정 지연 뒤 null.
  * 없는 계정도 scrypt를 한 번 돌린다 — 응답 시간으로 계정 유무가 드러나지 않게(D8). 잠긴 계정은 비밀번호가
  * 맞아도 실패다(login-lockout) — 잠긴 동안에도 scrypt와 지연을 똑같이 거쳐 응답으로 잠금 여부가 갈리지 않는다.
+ * 시도는 비밀번호를 보기 전에 실패로 먼저 센다 — 확인 뒤에 세면 병렬 요청이 잠기기 전에 전부 판정을 받는다(ADR-045).
  */
 export async function authenticate(
   { accounts, loginFailureDelayMs, lockout, nowSeconds }: SessionConfig,
@@ -124,18 +132,15 @@ export async function authenticate(
   password: string,
 ): Promise<Account | null> {
   const account = await accounts.findByUsername(username);
-  const matched = await verifyPassword(password, account?.passwordHash ?? DUMMY_PASSWORD_HASH);
   // 없는 아이디는 하나로 묶어 센다 — 잠금으로도 계정 유무가 드러나지 않게
   const key = account?.id ?? UNKNOWN_ACCOUNT_KEY;
-  const now = nowSeconds();
-  const locked = lockout.isLocked(key, now);
-  if (account === null || !matched || locked) {
-    // 잠긴 동안의 시도는 세지 않는다 — 잠금이 끝없이 늘어나지 않게
-    if (!locked) lockout.recordFailure(key, now);
+  const counted = await lockout.recordFailure(key, nowSeconds());
+  const matched = await verifyPassword(password, account?.passwordHash ?? DUMMY_PASSWORD_HASH);
+  if (account === null || !matched || !counted) {
     await sleep(loginFailureDelayMs);
     return null;
   }
-  lockout.recordSuccess(key);
+  await lockout.recordSuccess(key);
   return account;
 }
 
