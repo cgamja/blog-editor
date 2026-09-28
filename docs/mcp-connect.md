@@ -1,6 +1,6 @@
 # AI 연결 — `/mcp`에 Claude · Codex 붙이기
 
-AI(채팅 앱)가 블로그 초안을 쓰게 하는 MCP 커넥터(adr-007 · adr-016). 도구는 6개이고 **초안만** 쓴다 — 발행은 사람이 에디터에서 한다.
+AI(채팅 앱)가 블로그 초안을 쓰게 하는 MCP 커넥터(adr-007 · adr-016). 도구는 7개이고 **초안과 글쓰기 가이드만** 쓴다(발행 없음) — 발행은 사람이 에디터에서 한다.
 
 ## 1. 로컬 서버를 MCP와 같이 띄운다
 
@@ -58,7 +58,7 @@ OAuth 상태(등록 · 토큰)는 메모리에 있다 — 서버를 다시 켜�
 
 ## 2-c. Codex CLI (로컬 그대로)
 
-Codex도 같은 `/mcp`에 붙는다. 도구 6개와 "초안만" 규칙은 Claude Code와 같다. 설정 파일에는 토큰 값을 적지 않고 **환경 변수 이름만** 적는다(`bearer_token_env_var`, https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+Codex도 같은 `/mcp`에 붙는다. 도구 7개와 "초안 · 글쓰기 가이드만, 발행 없음" 규칙은 Claude Code와 같다. 설정 파일에는 토큰 값을 적지 않고 **환경 변수 이름만** 적는다(`bearer_token_env_var`, https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
 
 ```bash
 codex mcp add blog-editor --url http://127.0.0.1:8787/mcp --bearer-token-env-var BLOG_EDITOR_MCP_TOKEN
@@ -81,7 +81,7 @@ codex mcp list   # blog-editor가 보이면 된다
 
 로컬 루프백 서버라 `~/.zshrc`에 두는 편리함을 고를 수도 있다. 그 경우에는 그 파일이 어디로 복사 · 동기화되는지 알고 고른다.
 
-**도구 허락 — 쓰기만 묻기.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 서버가 읽기 도구 4개(`get_writing_guide` · `list_posts` · `get_post` · `check_draft`)에 `readOnlyHint: true`를 달아 두었으므로(#159), `default_tools_approval_mode = "writes"` 한 줄이면 읽기는 묻지 않고 쓰기 도구 2개(`create_draft` · `update_draft`)만 묻는다("The `writes` mode prompts for tools that aren't marked read-only", https://learn.chatgpt.com/docs/extend/mcp?surface=cli · 키는 https://learn.chatgpt.com/docs/config-file/config-reference). `~/.codex/config.toml`:
+**도구 허락 — 쓰기만 묻기.** 대화형 Codex는 도구를 부를 때 허락을 묻는다. 서버가 읽기 도구 4개(`get_writing_guide` · `list_posts` · `get_post` · `check_draft`)에 `readOnlyHint: true`를 달아 두었으므로(#159), `default_tools_approval_mode = "writes"` 한 줄이면 읽기는 묻지 않고 쓰기 도구 3개(`create_draft` · `update_draft` · `update_writing_guide`)만 묻는다("The `writes` mode prompts for tools that aren't marked read-only", https://learn.chatgpt.com/docs/extend/mcp?surface=cli · 키는 https://learn.chatgpt.com/docs/config-file/config-reference). `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.blog-editor]
@@ -91,7 +91,7 @@ bearer_token_env_var = "BLOG_EDITOR_MCP_TOKEN"
 default_tools_approval_mode = "writes"
 ```
 
-대안 — 도구별 설정. `create_draft`까지 묻지 않게 하려면(새 초안만 만들고, 이미 있는 주소면 거부되어 남의 글을 덮지 못한다) 그 도구만 덮어쓴다. `update_draft`는 사람이 에디터에서 쓰는 중인 글을 바꿀 수 있어 늘 묻게 둔다:
+대안 — 도구별 설정. `create_draft`까지 묻지 않게 하려면(새 초안만 만들고, 이미 있는 주소면 거부되어 남의 글을 덮지 못한다) 그 도구만 덮어쓴다. `update_draft`는 사람이 에디터에서 쓰는 중인 글을 바꿀 수 있고, `update_writing_guide`는 모든 세션이 먼저 읽는 가이드를 바꾸므로 둘 다 늘 묻게 둔다:
 
 ```toml
 [mcp_servers.blog-editor.tools.create_draft]
@@ -115,11 +115,12 @@ codex exec \
 
 ## 도구
 
-| 도구                | 하는 일                                                 |
-| ------------------- | ------------------------------------------------------- |
-| `get_writing_guide` | 형식 가이드(블록 · 콜아웃 · 꾸미기 지시어 · 이미지)     |
-| `list_posts`        | 글 목록 요약                                            |
-| `get_post`          | 글 하나를 markdown + revision으로                       |
-| `check_draft`       | 저장하지 않고 형식만 검사                               |
-| `create_draft`      | 새 초안 저장(항상 초안, 출처 `token:<이름>`)            |
-| `update_draft`      | revision이 맞을 때만 초안을 고침. 발행된 글은 못 고친다 |
+| 도구                   | 하는 일                                                         |
+| ---------------------- | --------------------------------------------------------------- |
+| `get_writing_guide`    | 형식 가이드(블록 · 콜아웃 · 꾸미기 지시어 · 이미지)             |
+| `list_posts`           | 글 목록 요약                                                    |
+| `get_post`             | 글 하나를 markdown + revision으로                               |
+| `check_draft`          | 저장하지 않고 형식만 검사                                       |
+| `create_draft`         | 새 초안 저장(항상 초안, 출처 `token:<이름>`)                    |
+| `update_draft`         | revision이 맞을 때만 초안을 고침. 발행된 글은 못 고친다         |
+| `update_writing_guide` | 워크스페이스 글쓰기 가이드 전체를 바꿈. 형식 가이드는 못 고친다 |

@@ -2,11 +2,14 @@ import { convertMarkdown, serializeMarkdown } from "@blog-editor/content-convert
 import { fixtures, scoreSeo } from "@blog-editor/content-schema";
 import type { PostFile, SeoFinding } from "@blog-editor/content-schema";
 import { createApp } from "../app";
+import { MAX_GUIDE_LENGTH } from "../input-limits";
 import { createMemoryPostStore } from "../memory-store";
+import { createMemorySettingsStore } from "../memory-settings-store";
 import type { PostStore } from "../store";
 import { TEST_ACCOUNT, cookieOf, loginRequest, testAuthOptions } from "../test-app.test.helpers";
 import { hashConnectionToken } from "./connection-tokens";
 import { createMemoryConnectionTokenStore } from "./memory-connection-token-store";
+import { MCP_WORKSPACE_GUIDE_HEADING } from "./messages";
 
 const CATEGORIES = ["studio", "parenting", "parenting-assistant"] as const;
 const TOKEN = "test-connection-token-0123456789abcdef";
@@ -16,8 +19,10 @@ const EDITOR_BASE_URL = "https://editor.example.test";
 const PROTOCOL_VERSION = "2025-06-18";
 
 function setup(store: PostStore = createMemoryPostStore()) {
+  const settings = createMemorySettingsStore();
   const app = createApp({
     store,
+    settings,
     categories: CATEGORIES,
     imageBaseUrl: "https://simsimeestudio.com",
     ...testAuthOptions,
@@ -29,7 +34,7 @@ function setup(store: PostStore = createMemoryPostStore()) {
       formatGuide: "형식 가이드",
     },
   });
-  return { store, app };
+  return { store, settings, app };
 }
 
 type App = ReturnType<typeof setup>["app"];
@@ -153,6 +158,7 @@ describe("mcp-drafts — 초안만 (보호 대상 — 고쳐서 통과시키지 
       "get_writing_guide",
       "list_posts",
       "update_draft",
+      "update_writing_guide",
     ]);
   });
 
@@ -347,6 +353,47 @@ describe("mcp-drafts — 워크스페이스 글쓰기 가이드", () => {
     expect(result.isError).toBe(false);
     expect(result.text.startsWith("형식 가이드")).toBe(true);
     expect(result.text).toContain(guide);
+  });
+
+  it("WHEN update_writing_guide로 가이드를 바꾸면 THEN 응답 · 설정 저장소에 그 가이드가 있고 get_writing_guide가 형식 가이드 뒤에 준다", async () => {
+    const { settings, app } = setup();
+    const guide = "문단은 세 줄 이내로 쓴다.";
+
+    const updated = await callTool(app, "update_writing_guide", { guide });
+
+    expect(updated.isError).toBe(false);
+    expect(updated.text).toContain(guide);
+    expect((await settings.get()).guide).toBe(guide);
+    const read = await callTool(app, "get_writing_guide", {});
+    expect(read.text.startsWith("형식 가이드")).toBe(true);
+    expect(read.text.indexOf(guide)).toBeGreaterThan(read.text.indexOf("형식 가이드"));
+  });
+
+  it("WHEN 설정 저장 상한보다 긴 가이드로 update_writing_guide를 부르면 THEN 도구 오류이고 저장된 가이드는 그대로다", async () => {
+    const { settings, app } = setup();
+    await settings.put({ guide: "원래 가이드" });
+
+    const result = await callTool(app, "update_writing_guide", {
+      guide: "가".repeat(MAX_GUIDE_LENGTH + 1),
+    });
+
+    expect(result.isError).toBe(true);
+    expect((await settings.get()).guide).toBe("원래 가이드");
+  });
+
+  it("WHEN get_writing_guide 응답 전체(형식 가이드 · 워크스페이스 가이드 제목 포함)로 update_writing_guide를 부르면 THEN 도구 오류이고 저장된 가이드는 그대로다", async () => {
+    const { settings, app } = setup();
+    await settings.put({ guide: "원래 가이드" });
+    const whole = (await callTool(app, "get_writing_guide", {})).text;
+    const headingOnly = `${MCP_WORKSPACE_GUIDE_HEADING}\n\n문단은 짧게 쓴다.`;
+
+    const withWhole = await callTool(app, "update_writing_guide", { guide: `${whole}\n새 줄` });
+    const withHeading = await callTool(app, "update_writing_guide", { guide: headingOnly });
+
+    expect(withWhole.isError).toBe(true);
+    expect(withHeading.isError).toBe(true);
+    expect(withHeading.text).toContain("워크스페이스 가이드 부분만");
+    expect((await settings.get()).guide).toBe("원래 가이드");
   });
 });
 
@@ -569,7 +616,7 @@ describe("mcp-drafts — update_draft 부분 고치기", () => {
 });
 
 describe("mcp-drafts — 도구 표시(annotations)", () => {
-  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 2개는 아니다", async () => {
+  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 3개는 아니다", async () => {
     // 클라이언트(Codex writes 모드 등)는 readOnlyHint로 확인 없이 부를 도구를 고른다
     const { app } = setup();
 
@@ -586,6 +633,7 @@ describe("mcp-drafts — 도구 표시(annotations)", () => {
       get_writing_guide: true,
       list_posts: true,
       update_draft: false,
+      update_writing_guide: false,
     });
   });
 });
