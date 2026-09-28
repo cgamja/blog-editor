@@ -18,13 +18,14 @@ import {
   slugSchema,
 } from "@blog-editor/content-schema";
 import type { Doc, PostFile, PostSource, SeoFinding, SeoInput } from "@blog-editor/content-schema";
-import { MAX_MARKDOWN_LENGTH } from "../input-limits";
+import { MAX_GUIDE_LENGTH, MAX_MARKDOWN_LENGTH } from "../input-limits";
 import type { SettingsStore } from "../settings-store";
 import { ConflictError } from "../store";
 import type { PostStore } from "../store";
 import {
   MCP_CONFLICT_MESSAGE,
   MCP_EDIT_WITH_MARKDOWN_MESSAGE,
+  MCP_GUIDE_WITH_FORMAT_MESSAGE,
   MCP_INTERNAL_ERROR_MESSAGE,
   MCP_META_MISMATCH_MESSAGE,
   MCP_NOTHING_TO_UPDATE_MESSAGE,
@@ -73,6 +74,13 @@ const UPDATE_DRAFT_TOOL = {
   idempotentHint: true,
   openWorldHint: false,
 } as const;
+/** 워크스페이스 글쓰기 가이드 전체를 바꿔 쓴다(이전 가이드가 사라진다 → destructive). 같은 인자로 다시 부르면 같은 가이드다 */
+const UPDATE_GUIDE_TOOL = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
 /** 부분 고치기(adr-031) — 범위는 "시작 글...끝 글", 새 글은 markdown */
 const rangeEditSchema = z.strictObject({
   command: z.enum(RANGE_EDIT_COMMANDS),
@@ -85,6 +93,25 @@ type BuiltFile = { ok: true; file: PostFile } | { ok: false; error: CallToolResu
 /** 형식 가이드(문법) 뒤에 이 블로그의 글쓰기 가이드(말투 · 독자 · 구성)를 붙인다 */
 function withWorkspaceGuide(formatGuide: string, guide: string): string {
   return `${formatGuide.trimEnd()}\n\n${MCP_WORKSPACE_GUIDE_HEADING}\n\n${guide.trim()}\n`;
+}
+
+/** 형식 가이드의 첫 제목 줄 — 워크스페이스 가이드에 섞여 들어왔는지 가리는 표지 */
+function firstLineOf(text: string): string {
+  return (
+    text
+      .split("\n")
+      .find((line) => line.trim() !== "")
+      ?.trim() ?? ""
+  );
+}
+
+/**
+ * get_writing_guide 응답을 통째로(또는 워크스페이스 가이드 제목째) 보냈는가 — 그대로 저장하면 다음 응답에
+ * 형식 가이드 · 제목이 두 번 붙는다. 워크스페이스 가이드는 그 제목 아래 부분만이다.
+ */
+function mixesFormatGuide(guide: string, formatGuide: string): boolean {
+  const markers = [MCP_WORKSPACE_GUIDE_HEADING, firstLineOf(formatGuide)].filter((m) => m !== "");
+  return guide.split("\n").some((line) => markers.includes(line.trim()));
 }
 
 function textResult(text: string): CallToolResult {
@@ -123,7 +150,7 @@ function byDateDesc(a: { date: string; slug: string }, b: { date: string; slug: 
 }
 
 /**
- * 도구 6개(plan 3-12). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
+ * 도구 7개(plan 3-12 + 글쓰기 가이드 고치기 #143). 쓰기 도구 응답에는 SEO 점검 `seo`가 늘 붙는다(adr-030). 발행 · 삭제 도구는 만들지 않는다 — 이것이 안전 경계다(adr-007). 쓰기 도구는
  * 입력에 `draft` 자리가 없고(strictObject라 넣으면 입력 오류) 저장하는 글을 항상 `draft: true`로 둔다.
  */
 export function createDraftsServer(options: DraftToolsOptions): McpServer {
@@ -213,6 +240,24 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     guarded(async () => {
       const { guide } = await settings.get();
       return textResult(guide.trim() === "" ? formatGuide : withWorkspaceGuide(formatGuide, guide));
+    }),
+  );
+
+  server.registerTool(
+    "update_writing_guide",
+    {
+      ...MCP_TOOL_TEXT.update_writing_guide,
+      annotations: UPDATE_GUIDE_TOOL,
+      // 설정 저장(REST PUT /settings)과 같은 상한 — 넘으면 입력 오류로 저장하지 않는다
+      inputSchema: z.strictObject({ guide: z.string().max(MAX_GUIDE_LENGTH) }),
+    },
+    guarded(async ({ guide }) => {
+      if (mixesFormatGuide(guide, formatGuide)) return toolError(MCP_GUIDE_WITH_FORMAT_MESSAGE);
+      // 형식 가이드는 건드리지 않는다 — 바꾸는 것은 워크스페이스 설정의 가이드뿐이고 다른 설정은 지킨다
+      const current = await settings.get();
+      await settings.put({ ...current, guide });
+      const { guide: saved } = await settings.get();
+      return textResult(saved);
     }),
   );
 
