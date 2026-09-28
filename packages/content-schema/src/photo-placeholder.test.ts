@@ -66,6 +66,39 @@ describe("photo-placeholder — 공개용 문서에는 사진 자리와 그림 �
   });
 });
 
+const PROMPT = "A sleeping baby in a dim nursery, soft window light, 35mm film photo";
+
+describe("photo-prompt — 사진 자리 · 그림은 에디터 전용 이미지 프롬프트를 가진다", () => {
+  it("WHEN 1000자 프롬프트 · 1001자 프롬프트 · 줄바꿈 프롬프트의 사진 자리를 검사한다 THEN 1000자만 통과한다", () => {
+    const prompts = ["a".repeat(1000), "a".repeat(1001), "first line\nsecond line"];
+
+    const results = prompts.map(
+      (prompt) =>
+        docSchema.safeParse(docOf({ type: "photoPlaceholder", attrs: { brief: BRIEF, prompt } }))
+          .success,
+    );
+
+    expect(results).toEqual([true, false, false]);
+  });
+
+  it("WHEN 프롬프트가 있는 사진 자리 · 프롬프트가 남은 그림 문서에 publicDocOf를 부른다 THEN 공개 문서 어디에도 프롬프트 글이 없다", () => {
+    const doc = docSchema.parse(
+      docOf(
+        paragraph,
+        { type: "photoPlaceholder", attrs: { brief: BRIEF, ratio: "4:3", prompt: PROMPT } },
+        { type: "image", attrs: { src: IMAGE_SRC, alt: "봄 산책", brief: BRIEF, prompt: PROMPT } },
+      ),
+    );
+
+    const result = publicDocOf(doc);
+
+    expect(result).toEqual({
+      type: "doc",
+      content: [paragraph, { type: "image", attrs: { src: IMAGE_SRC, alt: "봄 산책" } }],
+    });
+  });
+});
+
 describe("photo-placeholder — 사진 자리가 남으면 발행 확인이 알린다", () => {
   it("WHEN 두 번째 블록이 사진 자리인 글을 checkSeo로 점검한다 THEN photo-placeholder must 발견이 블록 2를 가리킨다", () => {
     const doc = docSchema.parse(

@@ -99,3 +99,44 @@ test("WHEN 사진 자리에 올린 이미지가 서버에 닿지 못해 실패�
   // 끊긴 올리기가 콘솔에 남기는 네트워크 오류는 이 시나리오의 일부다
   expect(errors.filter((error) => !error.includes("net::"))).toEqual([]);
 });
+
+/** 브라우저 쪽 전역 — e2e tsconfig에는 DOM 타입이 없어 필요한 모양만 적는다 */
+interface ClipboardRecorder {
+  __copied: string[];
+  navigator: { clipboard: { writeText: (text: string) => Promise<void> } };
+}
+
+const PROMPT = "A sleeping baby in a dim nursery, soft window light, 35mm film photo";
+
+test("WHEN 비율 4:3 · 프롬프트가 있는 사진 자리에서 「이미지 프롬프트」를 열어 보고 「프롬프트 복사」를 누른다 THEN 프롬프트가 보이고 클립보드에 프롬프트 뒤 --ar 4:3이 붙은 글이 있다", async ({
+  page,
+}, testInfo) => {
+  // 클립보드 읽기 권한은 chromium만 줄 수 있다 — 두 엔진 모두 같은 방법으로 보려고 쓰기 호출을 받아 적는다
+  await page.addInitScript(() => {
+    const browser = globalThis as unknown as ClipboardRecorder;
+    browser.__copied = [];
+    browser.navigator.clipboard.writeText = async (text) => {
+      browser.__copied.push(text);
+    };
+  });
+  await logIn(page);
+  const errors = collectErrors(page);
+  const slug = `e2e-photo-prompt-${testInfo.project.name}-${testInfo.repeatEachIndex}-${testInfo.retry}`;
+  await createDraftWithBlocks(page, slug, "사진 자리 프롬프트 복사", [
+    { type: "paragraph", content: [{ type: "text", text: "낮잠 이야기" }] },
+    { type: "photoPlaceholder", attrs: { brief: BRIEF, ratio: "4:3", prompt: PROMPT } },
+  ]);
+  await page.goto(`/posts/${slug}/edit`);
+  const body = page.getByLabel("본문", { exact: true });
+  await body.locator("figure.photo-placeholder").click();
+  const bar = page.getByRole("toolbar", { name: "사진 자리" });
+
+  await bar.getByRole("button", { name: /이미지 프롬프트/ }).click();
+  await expect(page.getByRole("textbox", { name: /이미지 프롬프트/ })).toHaveValue(PROMPT);
+  await bar.getByRole("button", { name: "프롬프트 복사" }).click();
+
+  await expect
+    .poll(() => page.evaluate(() => (globalThis as unknown as ClipboardRecorder).__copied))
+    .toEqual([`${PROMPT} --ar 4:3`]);
+  expect(errors).toEqual([]);
+});

@@ -80,6 +80,23 @@ describe("photo-placeholder — markdown :::photo는 사진 자리다", () => {
   });
 });
 
+describe("photo-prompt — 사진 자리의 이미지 프롬프트는 markdown으로 왕복한다", () => {
+  it("WHEN 설명과 prompt: 문단이 있는 :::photo ratio=4:3을 변환하고 다시 직렬화한다 THEN 사진 자리의 prompt가 그 글이고 같은 markdown이 나온다", () => {
+    const prompt = "A sleeping baby in a dim nursery, soft window light, 35mm film photo";
+    const markdown = [":::photo ratio=4:3", BRIEF, "", `prompt: ${prompt}`, ":::"].join("\n");
+
+    const result = convertMarkdown(markdown);
+    const back = result.ok ? serializeMarkdown(result.doc) : null;
+
+    expect(result).toEqual({
+      ok: true,
+      doc: doc({ type: "photoPlaceholder", attrs: { brief: BRIEF, ratio: "4:3", prompt } }),
+      messages: [],
+    });
+    expect(back).toEqual({ markdown: `${markdown}\n`, losses: [] });
+  });
+});
+
 describe("photo-placeholder — 부분 고치기는 사진 자리를 설명으로 집는다", () => {
   it("WHEN 설명 전체로 새 사진 자리로 바꾸고 · 빈 글로 지우고 · 설명 일부만 바꾼다 THEN 새 사진 자리 · 문단만 · 블록 일부 실패다", () => {
     const input = doc(paragraph("봄 산책"), placeholder(BRIEF));
@@ -104,5 +121,43 @@ describe("photo-placeholder — 부분 고치기는 사진 자리를 설명으�
     expect(removed).toEqual({ ok: true, doc: doc(paragraph("봄 산책")), messages: [] });
     expect(partial.ok).toBe(false);
     expect(partial.messages.join("\n")).toContain("블록 일부");
+  });
+});
+
+describe("photo-prompt — prompt: 문단은 설명과 빈 줄로 나뉜 둘째 문단이다", () => {
+  const PROMPT = "A sleeping baby in a dim nursery, soft window light";
+
+  it("WHEN 설명 바로 다음 줄에 prompt:를 쓰고 · 설명 없이 prompt:로 시작한다 THEN 둘 다 실패이고 설명과 prompt: 사이에 빈 줄을 두라고 알린다", () => {
+    const joined = convertMarkdown([":::photo", BRIEF, `prompt: ${PROMPT}`, ":::"].join("\n"));
+    const promptOnly = convertMarkdown([":::photo", `prompt: ${PROMPT}`, ":::"].join("\n"));
+
+    for (const result of [joined, promptOnly]) {
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("설명과 prompt: 사이에 빈 줄");
+    }
+  });
+
+  it("WHEN 빈 prompt: · 1001자 prompt: · prompt:로 시작하지 않는 둘째 문단을 쓴다 THEN 각각 빈 프롬프트 · 1000자 · prompt: 문단 형식 실패다", () => {
+    const withSecond = (second: string) =>
+      convertMarkdown([":::photo", BRIEF, "", second, ":::"].join("\n"));
+
+    const results = [
+      withSecond("prompt:"),
+      withSecond(`prompt: ${"a".repeat(1001)}`),
+      withSecond(PROMPT),
+    ];
+
+    expect(results.map((result) => result.ok)).toEqual([false, false, false]);
+    expect(results[0]!.messages.join("\n")).toContain("이미지 프롬프트가 있어야");
+    expect(results[1]!.messages.join("\n")).toContain("1000자");
+    expect(results[2]!.messages.join("\n")).toContain("prompt:로 시작하는");
+  });
+
+  it("WHEN 에디터에서 prompt:로 시작하게 고친 설명을 직렬화하고 다시 변환한다 THEN 같은 설명의 사진 자리다", () => {
+    const input = doc(placeholder(`prompt: ${BRIEF}`));
+
+    const back = convertMarkdown(serializeMarkdown(input).markdown);
+
+    expect(back).toEqual({ ok: true, doc: input, messages: [] });
   });
 });
