@@ -49,12 +49,14 @@ export const postQueryKey = (slug: string) => [POST_QUERY_KEY, slug] as const;
  */
 export const liveRevisionQueryKey = (slug: string) => [POST_QUERY_KEY, slug, "live"] as const;
 
+/** 한 글의 AI 되돌리기 가능 여부 쿼리 전부 — 판과 무관하게 무효화할 때 */
+export const aiUndoQueryPrefix = (slug: string) => [POST_QUERY_KEY, slug, "ai-undo"] as const;
 /**
  * 마지막 AI 저장을 되돌릴 수 있는가(ADR-041) — 판(revision)이 키에 있어 저장할 때마다 다시 묻는다.
  * 글 쿼리 키 아래라 그 글의 무효화가 함께 닿는다
  */
 export const aiUndoQueryKey = (slug: string, revision: string) =>
-  [POST_QUERY_KEY, slug, "ai-undo", revision] as const;
+  [...aiUndoQueryPrefix(slug), revision] as const;
 /**
  * 편집 화면이 읽는 글 목록 요약 — 카테고리 제안과 발행 확인의 제목 · 설명 중복 점검이 `select`로 나눠 쓴다.
  * 글 목록 `["posts"]` 아래라 목록 무효화가 함께 닿는다
