@@ -32,11 +32,12 @@ const TONE_OF_LEVEL: Record<SeoLevel, BlockFlagTone> = {
 /** 블록을 가리키는 발견만 본문 여백 점으로 — 이름은 "<등급>: <문구>" */
 export function seoFlagsOf(findings: readonly SeoFinding[]): BlockFlag[] {
   const { seo } = EDITOR_MESSAGES;
-  return findings.flatMap((finding, order) =>
+  return findings.flatMap((finding) =>
     finding.target.kind === "block"
       ? [
           {
-            id: `${finding.rule}-${order}`,
+            // 순번이 아니라 규칙 · 블록으로 — 다시 매겨도 같은 발견은 같은 id라 강조 상태가 다른 점에 옮겨 붙지 않는다
+            id: `${finding.rule}-${finding.target.block}`,
             // 발견의 블록 번호는 1부터(변환 메시지의 "블록 N"), 점은 0부터다
             index: finding.target.block - 1,
             label: seo.dotName(seo.levels[finding.level], finding.message),
