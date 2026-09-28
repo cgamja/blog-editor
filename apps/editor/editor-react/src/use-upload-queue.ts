@@ -6,6 +6,7 @@ import {
   failImageUpload,
   finishImageUpload,
   imageUploadsOf,
+  retryImageUpload,
   startImageUpload,
 } from "@blog-editor/editor-core";
 import { prepareImage } from "./encode-image";
@@ -103,15 +104,23 @@ export function useUploadQueue(editor: Editor, upload: ImageUploader | undefined
     [editor, run],
   );
 
+  /** 자리 id의 올리기를 줄 끝에 세운다 — 파일은 files에 들어 있어야 한다 */
+  const schedule = useCallback(
+    (id: string) => {
+      const { signal } = lifetime.current;
+      queue.current = queue.current.then(() => process(id, signal)).catch(() => undefined);
+    },
+    [process],
+  );
+
   const enqueueOne = useCallback(
     (file: File, gap: number, fill = false) => {
       const id = `image-${(nextId.current += 1)}`;
       if (!run(startImageUpload(id, gap, { fill }))) return;
       files.current.set(id, file);
-      const { signal } = lifetime.current;
-      queue.current = queue.current.then(() => process(id, signal)).catch(() => undefined);
+      schedule(id);
     },
-    [process, run],
+    [run, schedule],
   );
 
   const enqueue = useCallback(
@@ -124,17 +133,15 @@ export function useUploadQueue(editor: Editor, upload: ImageUploader | undefined
   const actions = useMemo<PlaceholderActions>(
     () => ({
       retry: (id) => {
-        const file = files.current.get(id);
-        const entry = imageUploadsOf(editor.state).find((item) => item.id === id);
-        if (file === undefined || entry === undefined) return;
-        run(cancelImageUpload(id));
-        enqueueOne(file, entry.pos);
+        // 같은 자리를 되살린다 — 사진 자리를 채우던 올리기면 처음 고른 그 사진 자리를 채운다(#172)
+        if (!files.current.has(id) || !run(retryImageUpload(id))) return;
+        schedule(id);
       },
       remove: (id) => {
         run(cancelImageUpload(id));
       },
     }),
-    [editor, enqueueOne, run],
+    [run, schedule],
   );
 
   return { enqueue, actions };

@@ -53,3 +53,11 @@ export interface EditRange extends Found {
   endRef: TextBlockRef;
   blocks: readonly TextBlockRef[];
 }
+
+/** 옛 그림의 사진 설명(adr-033) — markdown에는 brief 자리가 없어 새 블록이 스스로 가질 수 없다 */
+export interface BriefedImage {
+  src: string;
+  brief: string;
+  /** 문서 최상위 블록 번호(1부터) — 형식 가이드의 '블록 n'과 같다 */
+  blockNumber: number;
+}

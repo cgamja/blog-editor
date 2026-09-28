@@ -152,6 +152,7 @@ export {
   imageUploadKey,
   imageUploadsOf,
   nearestTopGap,
+  retryImageUpload,
   startImageUpload,
   topGapAfterSelection,
 } from "./plugins/image-upload";
