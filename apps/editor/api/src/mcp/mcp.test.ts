@@ -2,6 +2,7 @@ import { convertMarkdown, serializeMarkdown } from "@blog-editor/content-convert
 import { fixtures, scoreSeo } from "@blog-editor/content-schema";
 import type { PostFile, SeoFinding } from "@blog-editor/content-schema";
 import { createApp } from "../app";
+import { probeImage } from "../image-probe";
 import { MAX_GUIDE_LENGTH } from "../input-limits";
 import { createMemoryPostStore } from "../memory-store";
 import { createMemorySettingsStore } from "../memory-settings-store";
@@ -157,6 +158,7 @@ describe("mcp-drafts — 초안만 (보호 대상 — 고쳐서 통과시키지 
       "get_post",
       "get_writing_guide",
       "list_posts",
+      "preview_post",
       "revert_draft",
       "update_draft",
       "update_writing_guide",
@@ -617,7 +619,7 @@ describe("mcp-drafts — update_draft 부분 고치기", () => {
 });
 
 describe("mcp-drafts — 도구 표시(annotations)", () => {
-  it("WHEN tools/list를 부르면 THEN 읽기 도구 4개는 readOnlyHint가 true이고 쓰기 도구 4개는 아니다", async () => {
+  it("WHEN tools/list를 부르면 THEN 읽기 도구 5개는 readOnlyHint가 true이고 쓰기 도구 4개는 아니다", async () => {
     // 클라이언트(Codex writes 모드 등)는 readOnlyHint로 확인 없이 부를 도구를 고른다
     const { app } = setup();
 
@@ -633,6 +635,7 @@ describe("mcp-drafts — 도구 표시(annotations)", () => {
       get_post: true,
       get_writing_guide: true,
       list_posts: true,
+      preview_post: true,
       revert_draft: false,
       update_draft: false,
       update_writing_guide: false,
@@ -748,4 +751,115 @@ describe("posts-api — AI 수정 되돌리기", () => {
     expect(res.status).toBe(409);
     expect(await store.get("beta-open")).toEqual(aiSaved);
   });
+});
+
+describe("mcp-drafts — preview_post(미리보기 이미지)", () => {
+  // 실제 Chromium(playwright-core, e2e와 같은 설치본)으로 찍는다 — 띄우는 시간을 넉넉히 둔다
+  const BROWSER_TIMEOUT_MS = 60_000;
+  const MAX_EDGE = 1568;
+  const STICKERED: PostFile = {
+    ...fixtures.minimal,
+    doc: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          attrs: { stickers: [{ id: "heart", x: 90, y: 10, size: 12, rotate: 15 }] },
+          content: [{ type: "text", text: "벚꽃길은 주말에 붐빈다." }],
+        },
+        { type: "paragraph", content: [{ type: "text", text: "도시락은 전날 싼다." }] },
+      ],
+    },
+  };
+
+  type Content = Array<{ type: string; text?: string; data?: string; mimeType?: string }>;
+
+  async function preview(app: App, args: Record<string, unknown>) {
+    const result = await resultOf(
+      await rpc(app, "tools/call", { name: "preview_post", arguments: args }),
+    );
+    const content = result.content as Content;
+    const images = content
+      .filter((part) => part.type === "image")
+      .map((part) => ({
+        mimeType: part.mimeType,
+        size: probeImage(new Uint8Array(Buffer.from(part.data ?? "", "base64"))),
+      }));
+    const text = content
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n");
+    return { isError: result.isError === true, text, images };
+  }
+
+  it("WHEN 저장소에 없는 slug로 preview_post를 부르면 THEN 도구 오류이고 이미지가 없다", async () => {
+    const { app } = setup();
+
+    const result = await preview(app, { slug: "no-such-post" });
+
+    expect(result.isError).toBe(true);
+    expect(result.images).toEqual([]);
+  });
+
+  it(
+    "WHEN 문단 · 스티커가 있는 초안으로 preview_post를 부르면 THEN 데스크톱 · 모바일 순 JPEG 두 장이 폭 1280 · 390 이하 · 긴 변 1568 이하이고 글은 그대로다",
+    async () => {
+      const { store, app } = setup();
+      const { revision } = await store.put("spring-walk", STICKERED, null);
+
+      const result = await preview(app, { slug: "spring-walk" });
+
+      expect(result.isError).toBe(false);
+      expect(result.images.map((image) => image.mimeType)).toEqual(["image/jpeg", "image/jpeg"]);
+      const [desktop, mobile] = result.images.map((image) => image.size);
+      expect(desktop?.format).toBe("jpeg");
+      expect(mobile?.format).toBe("jpeg");
+      expect(desktop?.width).toBeLessThanOrEqual(1280);
+      expect(mobile?.width).toBeLessThanOrEqual(390);
+      for (const size of [desktop, mobile]) {
+        expect(Math.max(size?.width ?? Infinity, size?.height ?? Infinity)).toBeLessThanOrEqual(
+          MAX_EDGE,
+        );
+      }
+      const saved = await store.get("spring-walk");
+      expect(saved?.revision).toBe(revision);
+      expect(saved?.file).toEqual(STICKERED);
+    },
+    BROWSER_TIMEOUT_MS,
+  );
+
+  it(
+    "WHEN 한 구간보다 긴 초안을 part 없이 · part 2로 부르면 THEN 응답 글에 폭마다 전체 구간 수(2 이상)가 있고 part 2도 두 장이며 전체보다 큰 part는 도구 오류다",
+    async () => {
+      const { store, app } = setup();
+      const paragraphs = Array.from({ length: 120 }, (_, index) => ({
+        type: "paragraph" as const,
+        content: [
+          { type: "text" as const, text: `${index + 1}번째 문단 — 긴 글을 구간으로 나눠 찍는다.` },
+        ],
+      }));
+      await store.put(
+        "long-walk",
+        { ...fixtures.minimal, doc: { type: "doc", content: paragraphs } },
+        null,
+      );
+
+      const first = await preview(app, { slug: "long-walk" });
+      const { parts } = JSON.parse(first.text) as { parts: { desktop: number; mobile: number } };
+      const second = await preview(app, { slug: "long-walk", part: 2 });
+      const beyond = await preview(app, {
+        slug: "long-walk",
+        part: Math.max(parts.desktop, parts.mobile) + 1,
+      });
+
+      expect(first.isError).toBe(false);
+      expect(parts.desktop).toBeGreaterThanOrEqual(2);
+      expect(parts.mobile).toBeGreaterThanOrEqual(2);
+      expect(second.isError).toBe(false);
+      expect(second.images.map((image) => image.mimeType)).toEqual(["image/jpeg", "image/jpeg"]);
+      expect(beyond.isError).toBe(true);
+      expect(beyond.images).toEqual([]);
+    },
+    BROWSER_TIMEOUT_MS,
+  );
 });
