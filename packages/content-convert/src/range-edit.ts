@@ -157,16 +157,21 @@ function pick(
   blocks: readonly TextBlockRef[],
   selection: string,
   candidates: readonly Found[],
-  { hasEllipsis, canPickWholeBlock }: { hasEllipsis: boolean; canPickWholeBlock: boolean },
+  {
+    hasEllipsis,
+    isLiteral,
+    isDeletion,
+  }: { hasEllipsis: boolean; isLiteral: boolean; isDeletion: boolean },
 ): Located {
   const [only, ...rest] = candidates;
   if (only === undefined) return fail(selectionNotFoundMessage(selection, hasEllipsis));
   if (rest.length === 0) return { ok: true, found: only };
-  const wholeBlocks = canPickWholeBlock
-    ? candidates.filter((found) => isWholeTopBlock(blocks, found))
-    : [];
+  // 지우기도 블록 전체와 같은 곳은 센다 — 고르지는 않고, 짧은 블록을 지우는 길을 알리는 데 쓴다(#178)
+  const wholeBlocks = isLiteral ? candidates.filter((found) => isWholeTopBlock(blocks, found)) : [];
   const [onlyWhole, ...moreWhole] = wholeBlocks;
-  if (onlyWhole !== undefined && moreWhole.length === 0) return { ok: true, found: onlyWhole };
+  if (!isDeletion && onlyWhole !== undefined && moreWhole.length === 0) {
+    return { ok: true, found: onlyWhole };
+  }
   const places = candidates.slice(0, MAX_PLACES).map(({ start, end }) => {
     const ref = blocks[start.block];
     const text = ref?.text ?? "";
@@ -175,14 +180,16 @@ function pick(
     return selectionPlace((ref?.top ?? 0) + 1, around);
   });
   const wholeBlockNumbers = wholeBlocks.map(({ start }) => refAt(blocks, start.block).top + 1);
-  return fail(selectionAmbiguousMessage(selection, candidates.length, places, wholeBlockNumbers));
+  return fail(
+    selectionAmbiguousMessage(selection, candidates.length, places, wholeBlockNumbers, isDeletion),
+  );
 }
 
 /**
  * 시도 순서는 첫 `...`에서 나누기 → (점이 넷 이상이면) 마지막 `...`에서 나누기 → 글자 그대로다.
  * 한 곳으로 정해지는 첫 시도를 쓰고, 없으면 여러 곳인 첫 시도로 알리고, 그것도 없으면 못 찾았다고 알린다.
  * 글자 그대로 찾기로 돌아왔으면 `...`는 글자라 범위형이 아니다 — 블록 전체 고르기를 쓴다.
- * @param isDeletion 빈 markdown으로 바꾸기(지우기)인가 — 블록 전체 고르기를 쓰지 않는다
+ * @param isDeletion 빈 markdown으로 바꾸기(지우기)인가 — 블록 전체 고르기를 쓰지 않고 안내만 한다
  */
 function locate(blocks: readonly TextBlockRef[], selection: string, isDeletion: boolean): Located {
   if (selection === "") return fail(selectionEmptyMessage());
@@ -201,7 +208,8 @@ function locate(blocks: readonly TextBlockRef[], selection: string, isDeletion: 
     [];
   return pick(blocks, selection, chosen, {
     hasEllipsis,
-    canPickWholeBlock: !isDeletion && chosen === literal,
+    isLiteral: chosen === literal,
+    isDeletion,
   });
 }
 
