@@ -49,7 +49,6 @@ export async function revertAiEdit(
   if (!check.ok) return check;
   const { revision } = await store.put(slug, check.before, expected ?? check.revision);
   // 쓰기와 지우기 사이에 새 AI 저장이 들어왔으면 그 판은 새 저장의 것이다 — 되돌린 판(after)일 때만 지운다
-  const latest = await aiUndo.get(slug);
-  if (latest?.after === check.revision) await aiUndo.delete(slug);
+  await aiUndo.delete(slug, check.revision);
   return { ok: true, revision };
 }

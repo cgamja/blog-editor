@@ -14,6 +14,9 @@ export interface AiUndoEntry {
 export interface AiUndoStore {
   get(slug: string): Promise<AiUndoEntry | null>;
   put(slug: string, entry: AiUndoEntry): Promise<void>;
-  /** 없는 slug를 지워도 실패하지 않는다 */
-  delete(slug: string): Promise<void>;
+  /**
+   * 없는 slug를 지워도 실패하지 않는다. `after`를 주면 지금 기록의 `after`가 같을 때만 지운다 — 확인과 지우기가
+   * 저장소 안에서 한 번에 일어나, 그사이 새 AI 저장이 남긴 기록을 지우지 않는다
+   */
+  delete(slug: string, after?: string): Promise<void>;
 }

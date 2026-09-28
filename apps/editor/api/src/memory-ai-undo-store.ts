@@ -11,7 +11,10 @@ export function createMemoryAiUndoStore(): AiUndoStore {
     async put(slug, entry) {
       entries.set(slug, JSON.stringify(entry));
     },
-    async delete(slug) {
+    async delete(slug, after) {
+      const text = entries.get(slug);
+      if (text === undefined) return;
+      if (after !== undefined && (JSON.parse(text) as AiUndoEntry).after !== after) return;
       entries.delete(slug);
     },
   };
