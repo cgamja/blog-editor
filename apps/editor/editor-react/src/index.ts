@@ -6,9 +6,10 @@ export {
   focusEditorBlock,
   focusEditorStart,
   isEditorComposing,
+  replaceEditorDoc,
   useDocChange,
 } from "./editor-bridge";
-export type { BlogEditorInstance } from "./editor-bridge";
+export type { BlogEditorInstance, DocChange } from "./editor-bridge";
 export type { BlogEditorHandle, BlogEditorOptions } from "./use-blog-editor";
 export { BlogEditor } from "./BlogEditor";
 // 패널 격자(#60)가 끌기를 시작할 때 쓴다 — 받는 쪽은 StickerLayer의 handleDrop

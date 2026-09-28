@@ -181,3 +181,12 @@ export type {
   ImageFileLike,
   PastedContent,
 } from "./plugins/image-file-input.types";
+export {
+  endLiveChanged,
+  isDocumentReplacement,
+  liveChanged,
+  liveChangedKey,
+  replaceDocument,
+} from "./plugins/live-changed";
+export type { LiveChangedState } from "./plugins/live-changed";
+export { LIVE_CHANGED_ATTR } from "./plugins/live-changed.constants";

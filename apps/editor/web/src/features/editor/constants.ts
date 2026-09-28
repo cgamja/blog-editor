@@ -6,6 +6,12 @@ export const AUTOSAVE_DELAY_MS = 2000;
 /** 입력이 멈추고 이만큼 지나면 머리줄 검색 노출 점검을 다시 한다(#151) — 자동 저장보다 짧게, 타자마다는 아니게 */
 export const SEO_LIVE_DELAY_MS = 400;
 
+/** 편집 화면이 보이는 동안 서버 판을 확인하는 간격(openspec editor-live-reflect) — 창에 돌아올 때도 확인한다 */
+export const LIVE_REFLECT_INTERVAL_MS = 5000;
+
+/** 조합 중이라 바꿔 끼우기를 미뤘을 때 다시 볼 간격 */
+export const LIVE_REFLECT_DEFER_MS = 300;
+
 /** slugSchema의 최대 길이(content-schema meta.ts) */
 export const SLUG_MAX_LENGTH = 80;
 
@@ -37,6 +43,11 @@ export const PREVIEW_TOKEN_NAMES = [
 
 export const POST_QUERY_KEY = "post";
 export const postQueryKey = (slug: string) => [POST_QUERY_KEY, slug] as const;
+/**
+ * 열린 편집 화면이 서버 판을 확인하는 쿼리 — 편집 세션의 첫 읽기(`postQueryKey`, staleTime Infinity)와 캐시를
+ * 나눈다. 같은 키면 확인할 때마다 세션 쿼리의 데이터가 바뀐다
+ */
+export const liveRevisionQueryKey = (slug: string) => [POST_QUERY_KEY, slug, "live"] as const;
 /**
  * 편집 화면이 읽는 글 목록 요약 — 카테고리 제안과 발행 확인의 제목 · 설명 중복 점검이 `select`로 나눠 쓴다.
  * 글 목록 `["posts"]` 아래라 목록 무효화가 함께 닿는다
