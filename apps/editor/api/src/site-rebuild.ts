@@ -27,12 +27,14 @@ export function createSiteRebuild(options: SiteRebuildOptions): SiteRebuild {
   });
   const isLatest = async (requestId: string) => (await store.get()).requestId === requestId;
 
-  /** 훅 한 번 — 2xx면 sent, 그 밖의 상태 · 네트워크 오류 · 시간 초과(중단)는 failed. 던지지 않는다 */
+  /** 훅 한 번 — 2xx면 sent, 그 밖의 상태(3xx 포함) · 네트워크 오류 · 시간 초과(중단)는 failed. 던지지 않는다 */
   async function callHook(requestId: string): Promise<SiteRebuildState> {
     let ok: boolean;
     try {
       const res = await fetchHook(hookUrl, {
         method: "POST",
+        // 따라가면 POST가 GET으로 바뀌어 빌드 없이 2xx를 받을 수 있다 — 3xx는 그대로 실패로 본다
+        redirect: "manual",
         signal: AbortSignal.timeout(SITE_BUILD_HOOK_TIMEOUT_MS),
       });
       ok = res.ok;
