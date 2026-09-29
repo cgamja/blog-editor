@@ -4,6 +4,10 @@ import type { LoginLockout } from "./login-lockout";
 
 const T0 = Date.UTC(2026, 8, 28) / 1000;
 const DAY = 24 * 60 * 60;
+/** 잠긴 횟수가 수십 번이면 잠금 시간 계산이 bigint를 넘었다(55번째부터) — 그보다 넉넉히 */
+const MANY_LOCKS = 60;
+// 원격 DB 왕복 60번 — 러너와 DB가 멀면 몇십 초가 걸린다
+const MANY_LOCKS_TIMEOUT_MS = 120_000;
 
 async function failTimes(lockout: LoginLockout, key: string, nowSeconds: number, times: number) {
   for (let attempt = 0; attempt < times; attempt += 1) {
@@ -110,19 +114,29 @@ export function describeLoginLockoutContract(
       expect(await lockout.isLocked(key, T0)).toBe(true);
     });
 
-    it("WHEN 잠금을 60번 거듭하면 THEN 기록이 실패하지 않고 마지막 잠금은 24시간 뒤에 풀린다", async () => {
-      const lockout = await createLockout();
-      const key = newKey();
-      let now = T0;
-      for (let lock = 1; lock < 60; lock += 1) {
-        await failTimes(lockout, key, now, MAX_CONSECUTIVE_FAILURES);
-        now += DAY + 1;
-      }
+    // 잠금마다 실패 5개를 동시에 보내 DB 왕복을 줄인다(동시 기록이 빠짐없이 세지는 것은 위 두 테스트가 본다) —
+    // 차례로 300번이면 CI 러너(미국) → Supabase(서울) 왕복만으로 30초를 넘었다
+    it(
+      "WHEN 잠금을 60번 거듭하면 THEN 기록이 실패하지 않고 마지막 잠금은 24시간 뒤에 풀린다",
+      async () => {
+        const lockout = await createLockout();
+        const key = newKey();
+        const failAtOnce = (now: number) =>
+          Promise.all(
+            Array.from({ length: MAX_CONSECUTIVE_FAILURES }, () => lockout.recordFailure(key, now)),
+          );
+        let now = T0;
+        for (let lock = 1; lock < MANY_LOCKS; lock += 1) {
+          await failAtOnce(now);
+          now += DAY + 1;
+        }
 
-      await failTimes(lockout, key, now, MAX_CONSECUTIVE_FAILURES);
+        await failAtOnce(now);
 
-      expect(await lockout.isLocked(key, now + DAY - 1)).toBe(true);
-      expect(await lockout.isLocked(key, now + DAY)).toBe(false);
-    });
+        expect(await lockout.isLocked(key, now + DAY - 1)).toBe(true);
+        expect(await lockout.isLocked(key, now + DAY)).toBe(false);
+      },
+      MANY_LOCKS_TIMEOUT_MS,
+    );
   });
 }
