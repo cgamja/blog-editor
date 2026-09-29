@@ -6,12 +6,14 @@ import { pngBytes } from "../images.test.helpers";
 import { describeLoginLockoutContract } from "../login-lockout.contract";
 import type { AuthorizationCode, OAuthClient } from "../mcp/oauth/store";
 import { describePostStoreContract } from "../post-store.contract";
+import { describeSiteRebuildStoreContract } from "../site-rebuild-store.contract";
 import { createSupabaseAiUndoStore } from "./ai-undo-store";
 import { createSupabaseImageStore } from "./image-store";
 import { createSupabaseLoginLockout } from "./login-lockout";
 import { createSupabaseOAuthStore } from "./oauth-store";
 import { createSupabasePostStore } from "./post-store";
 import { createSupabaseSettingsStore } from "./settings-store";
+import { createSupabaseSiteRebuildStore } from "./site-rebuild-store";
 import {
   createTestServerClient,
   supabaseSuiteName,
@@ -37,6 +39,13 @@ describe.skipIf(supabaseTestEnv === null)(supabaseSuiteName("Supabase 저장소"
 
   describeAiUndoStoreContract("SupabaseAiUndoStore", async () =>
     createSupabaseAiUndoStore({
+      client: createTestServerClient(),
+      workspaceId: data.newWorkspaceId(),
+    }),
+  );
+
+  describeSiteRebuildStoreContract("SupabaseSiteRebuildStore", async () =>
+    createSupabaseSiteRebuildStore({
       client: createTestServerClient(),
       workspaceId: data.newWorkspaceId(),
     }),
