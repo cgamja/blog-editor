@@ -894,6 +894,84 @@
         }
       }
     },
+    "/api/site-rebuild": {
+      "get": {
+        "operationId": "getSiteRebuild",
+        "tags": ["site-rebuild"],
+        "summary": "사이트 반영 상태",
+        "description": "발행 · 발행 취소 · 발행 글 수정 뒤 사이트 재빌드 훅을 부른 결과(ADR-047). 훅(SITE_BUILD_HOOK_URL)이 없으면 off, 30초 묶는 동안 pending, 훅이 2xx면 sent, 아니면 failed.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "상태",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteRebuildStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "retrySiteRebuild",
+        "tags": ["site-rebuild"],
+        "summary": "사이트 반영 다시 시도",
+        "description": "묶지 않고 바로 훅을 불러 결과 상태를 준다. 본문은 없다.",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "다시 시도한 결과",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteRebuildStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "로그인이 필요하다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "사이트 재빌드 훅이 설정되지 않았다",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/import/preview": {
       "post": {
         "operationId": "previewImport",
@@ -2865,6 +2943,20 @@
           }
         },
         "required": ["guide"],
+        "additionalProperties": false
+      },
+      "SiteRebuildStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["off", "idle", "pending", "sent", "failed"]
+          },
+          "updatedAt": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["status", "updatedAt"],
         "additionalProperties": false
       },
       "ImportPreviewRequest": {

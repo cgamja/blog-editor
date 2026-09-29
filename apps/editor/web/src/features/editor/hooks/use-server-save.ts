@@ -19,6 +19,16 @@ export interface UseServerSaveOptions {
   onAdopt: (slug: string) => void;
   /** 서버가 먼저 바뀌었다(409) */
   onConflict: () => void;
+  /** 사이트에 보이는 글을 저장했다(첫 발행 · 발행 글 반영) — 사이트 반영 상태를 다시 읽는다 */
+  onSiteChange?: () => void;
+}
+
+/**
+ * 발행 글을 저장했나(첫 발행 · 발행 글 반영) — 서버가 재빌드를 부른 저장이다. 서버는 발행 취소도 재빌드하지만
+ * 화면에는 발행 취소가 없어 여기서는 이 둘만 본다
+ */
+function isPublishedSave(status: SaveStatus): boolean {
+  return status.kind === "published" || (status.kind === "saved" && status.isPublished);
 }
 
 /**
@@ -26,7 +36,14 @@ export interface UseServerSaveOptions {
  * 저장 한 번마다 쓰던 글을 브라우저 localDraft에 남기고 성공하면 지운다(부수 효과, `PostSaver.save`).
  * 서버 쪽 진실(주소 · revision · 발행 여부)은 saver가 닫힌 값으로 가진다 — 여기 상태는 그리기용 사본이다.
  */
-export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseServerSaveOptions) {
+export function useServerSave({
+  getDoc,
+  start,
+  form,
+  onAdopt,
+  onConflict,
+  onSiteChange,
+}: UseServerSaveOptions) {
   const [isPublished, setPublished] = useState(start.isPublished);
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [isExpired, setExpired] = useState(false);
@@ -44,8 +61,24 @@ export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseS
   });
 
   // saver는 한 번 만들고, 매 렌더의 값(입력 · 콜백 · mutation)은 ref로 읽는다
-  const latest = useRef({ form, getDoc, onAdopt, onConflict, saveMutation, renameMutation });
-  latest.current = { form, getDoc, onAdopt, onConflict, saveMutation, renameMutation };
+  const latest = useRef({
+    form,
+    getDoc,
+    onAdopt,
+    onConflict,
+    onSiteChange,
+    saveMutation,
+    renameMutation,
+  });
+  latest.current = {
+    form,
+    getDoc,
+    onAdopt,
+    onConflict,
+    onSiteChange,
+    saveMutation,
+    renameMutation,
+  };
   // 떠난 화면에서 끝난 저장이 주소를 옮기지 않게 한다
   const isMounted = useRef(true);
   useEffect(() => {
@@ -65,7 +98,10 @@ export function useServerSave({ getDoc, start, form, onAdopt, onConflict }: UseS
         latest.current.renameMutation.mutateAsync({ from, to, revision }),
       drafts: browserDrafts,
       events: {
-        onStatus: setStatus,
+        onStatus: (next) => {
+          setStatus(next);
+          if (isPublishedSave(next)) latest.current.onSiteChange?.();
+        },
         onAdopt: (slug) => {
           if (isMounted.current) latest.current.onAdopt(slug);
         },

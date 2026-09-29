@@ -41,6 +41,8 @@ import { registerImportRoutes } from "./import-preview";
 import { createMemorySettingsStore } from "./memory-settings-store";
 import { registerSettingsRoutes } from "./settings";
 import type { SettingsStore } from "./settings-store";
+import type { SiteRebuild } from "./site-rebuild-types";
+import { registerSiteRebuildRoutes } from "./site-rebuild-routes";
 
 export interface AppOptions extends SessionOptions {
   store: PostStore;
@@ -61,6 +63,11 @@ export interface AppOptions extends SessionOptions {
    * ADR-046). 없으면 패키지 파일에서 읽는다(로컬 · 테스트)
    */
   postCss?: string;
+  /**
+   * 사이트 재빌드(openspec site-rebuild · ADR-047) — 훅(SITE_BUILD_HOOK_URL)이 있을 때만. 없으면 저장이 재빌드를
+   * 부르지 않고 `GET /api/site-rebuild`는 off다
+   */
+  siteRebuild?: SiteRebuild;
   /** 발행 글 `updated`에 쓰는 오늘(`YYYY-MM-DD`). 기본은 블로그 시간대의 오늘 */
   today?: () => string;
 }
@@ -93,12 +100,26 @@ function summaryOf(slug: string, meta: PostFile["meta"]) {
   };
 }
 
+/** 사이트에 보이는 글이 바뀌는 저장인가 — 저장 전이나 뒤 중 하나라도 발행 상태(발행 · 발행 취소 · 발행 글 수정) */
+function touchesSite(saved: PostFile | null, next: PostFile): boolean {
+  return saved?.meta.draft === false || next.meta.draft === false;
+}
+
+/** 재빌드 실패는 저장 응답을 바꾸지 않는다 — 결과는 재빌드 상태로 남고 화면이 다시 시도한다 */
+async function requestRebuild(siteRebuild: SiteRebuild): Promise<void> {
+  try {
+    await siteRebuild.request();
+  } catch {
+    // 상태 저장소 오류 — 저장은 이미 끝났다
+  }
+}
+
 function invalidSlug(c: Context) {
   return c.json({ message: INVALID_SLUG_MESSAGE }, 400);
 }
 
 export function createApp(options: AppOptions): Hono {
-  const { store, categories, imageBaseUrl, today = blogToday } = options;
+  const { store, categories, imageBaseUrl, siteRebuild, today = blogToday } = options;
   const postFileSchema = createPostFileSchema({ categories });
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
   const postCss = options.postCss ?? readPostCss();
@@ -147,11 +168,15 @@ export function createApp(options: AppOptions): Hono {
     }
 
     const normalized: PostFile = { ...parsed.data, doc: normalize(parsed.data.doc) };
-    const current = needsSavedForUpdate(expected, normalized) ? await store.get(slug) : null;
+    // 재빌드가 켜져 있으면 발행 취소(발행 → 초안)를 알아보려고 고치기마다 저장된 판을 읽는다
+    const readSaved =
+      needsSavedForUpdate(expected, normalized) || (siteRebuild !== undefined && expected !== null);
+    const current = readSaved ? await store.get(slug) : null;
     const saved = current?.revision === expected ? current.file : null;
     const file = withPublishedUpdate(saved, normalized, today());
     try {
       const { revision } = await store.put(slug, file, expected);
+      if (siteRebuild !== undefined && touchesSite(saved, file)) await requestRebuild(siteRebuild);
       c.header("ETag", etagOf(revision));
       return c.json({ revision }, expected === null ? 201 : 200);
     } catch (error) {
@@ -219,6 +244,7 @@ export function createApp(options: AppOptions): Hono {
     },
   });
   registerImportRoutes(app, { imageBaseUrl });
+  registerSiteRebuildRoutes(app, siteRebuild);
 
   if (options.mcp !== undefined) {
     registerMcpRoute(app, {

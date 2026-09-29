@@ -54,6 +54,11 @@ export const EDITOR_MESSAGES = {
     text: "AI가 고쳤어요. 불러오면 지금 고친 내용은 사라져요.",
     action: "불러오기",
   },
+  /** 발행 관련 저장 뒤 사이트 재빌드가 실패했다(openspec site-rebuild) */
+  siteRebuild: {
+    failed: "사이트 반영 실패",
+    retry: "다시 시도",
+  },
   conflict: {
     title: "저장하지 못했어요. 이 글이 다른 곳에서 먼저 바뀌었어요.",
     body: "지금 저장하면 그 내용이 사라지기 때문에 멈췄습니다. 쓰던 내용은 이 브라우저에 그대로 남아 있어요.",

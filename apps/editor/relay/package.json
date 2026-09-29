@@ -1,0 +1,10 @@
+{
+  "name": "@blog-editor/relay",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "에디터 주소의 Cloudflare Worker — 화면 파일 옆에서 API 경로를 Supabase 함수로 중계한다(ADR-047). 아무것도 import하지 않는 잎.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

@@ -22,6 +22,7 @@ import {
   saveResultSchema,
   schemaErrorBodySchema,
   settingsUpdateSchema,
+  siteRebuildStatusSchema,
 } from "./api-schemas";
 import { CONTENT_TYPE_OF } from "../images";
 import { previewBodySchema } from "../post-preview";
@@ -36,6 +37,7 @@ import {
   IMPORT_BODY_MESSAGE,
   REQUEST_TOO_LARGE_MESSAGE,
   SETTINGS_BODY_MESSAGE,
+  SITE_REBUILD_OFF_MESSAGE,
 } from "../messages";
 import { SESSION_COOKIE_NAME } from "../session";
 import type {
@@ -88,6 +90,7 @@ function contractSchemas(categories: Categories) {
     SaveBadRequestBody: z.union([schemaErrorBodySchema, messageBodySchema]),
     Settings: createSettingsSchema({ categories }),
     SettingsUpdate: settingsUpdateSchema,
+    SiteRebuildStatus: siteRebuildStatusSchema,
     ImportPreviewRequest: importPreviewRequestSchema,
     ImportPreviewResult: importPreviewResultSchema,
   } satisfies Record<string, z.ZodType>;
@@ -399,6 +402,34 @@ function operationsFrom(schemas: ContractSchemas): ContractOperation[] {
         400: { description: SETTINGS_BODY_MESSAGE, schema: schemas.MessageBody },
         401: unauthorized,
         413: { description: REQUEST_TOO_LARGE_MESSAGE, schema: schemas.MessageBody },
+      },
+    },
+    {
+      method: "get",
+      path: "/api/site-rebuild",
+      operationId: "getSiteRebuild",
+      tag: "site-rebuild",
+      summary: "사이트 반영 상태",
+      description:
+        "발행 · 발행 취소 · 발행 글 수정 뒤 사이트 재빌드 훅을 부른 결과(ADR-047). 훅(SITE_BUILD_HOOK_URL)이 없으면 off, 30초 묶는 동안 pending, 훅이 2xx면 sent, 아니면 failed.",
+      requiresSession: true,
+      responses: {
+        200: { description: "상태", schema: schemas.SiteRebuildStatus },
+        401: unauthorized,
+      },
+    },
+    {
+      method: "post",
+      path: "/api/site-rebuild",
+      operationId: "retrySiteRebuild",
+      tag: "site-rebuild",
+      summary: "사이트 반영 다시 시도",
+      description: "묶지 않고 바로 훅을 불러 결과 상태를 준다. 본문은 없다.",
+      requiresSession: true,
+      responses: {
+        200: { description: "다시 시도한 결과", schema: schemas.SiteRebuildStatus },
+        401: unauthorized,
+        404: { description: SITE_REBUILD_OFF_MESSAGE, schema: schemas.MessageBody },
       },
     },
     {
