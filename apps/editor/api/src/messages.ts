@@ -20,6 +20,8 @@ export const PREVIEW_TOO_LARGE_MESSAGE = "미리보기로 보내기엔 글이 �
 export const LOGIN_BODY_MESSAGE = "username과 password 문자열이 필요하다";
 export const LOGIN_FAILED_MESSAGE = "아이디 또는 비밀번호가 맞지 않는다";
 export const UNAUTHORIZED_MESSAGE = "로그인이 필요하다";
+/** 함수 주소를 바로 부른 요청 403 — 에디터 주소(중계)로만 받는다(editor-relay) */
+export const RELAY_ONLY_MESSAGE = "에디터 주소로만 받는다";
 export const IMAGE_TOO_LARGE_MESSAGE = `이미지는 ${IMAGE_MAX_BYTES / BYTES_PER_MB}MB 이하만 올릴 수 있다`;
 export const IMAGE_FORMAT_MESSAGE = "JPEG · PNG · WebP · GIF 이미지만 올릴 수 있다";
 export const IMAGE_TOO_WIDE_MESSAGE = `긴 변을 ${NATURAL_SIZE_RANGE.max}px 이하로 줄여서 올린다`;
@@ -28,3 +30,5 @@ export const IMAGE_ROTATED_MESSAGE =
 export const SETTINGS_BODY_MESSAGE = `설정은 { guide } 하나만 — 가이드는 ${MAX_GUIDE_LENGTH.toLocaleString("ko-KR")}자까지`;
 export const IMPORT_BODY_MESSAGE = `markdown 문자열이 필요하다 — ${MAX_MARKDOWN_LENGTH.toLocaleString("ko-KR")}자까지`;
 export const REQUEST_TOO_LARGE_MESSAGE = "요청 본문이 너무 크다";
+/** 훅(SITE_BUILD_HOOK_URL)이 없는 서버에 다시 시도를 보냈다 */
+export const SITE_REBUILD_OFF_MESSAGE = "사이트 재빌드 훅이 설정되지 않았다";

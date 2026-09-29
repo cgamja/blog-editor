@@ -8,6 +8,7 @@ import { readConnectionTokenName, readIssuer } from "./mcp/env";
 import { DEFAULT_IMAGE_BASE_URL, DEFAULT_USERNAME } from "./seed";
 // 앱(session.ts)도 같은 하한으로 막지만, 무엇을 고칠지(env 이름)는 설정을 읽는 여기서 알린다
 import { MIN_SESSION_SECRET_BYTES } from "./session-constants";
+import { readSiteBuildHookUrl } from "./site-rebuild-config";
 
 export interface EdgeConfig {
   username: string;
@@ -18,6 +19,10 @@ export interface EdgeConfig {
   imageBaseUrl: string;
   supabaseUrl: string;
   supabaseSecretKey: string;
+  /** 중계(Worker)와 나눠 가진 값 — 요청의 X-Relay-Secret이 이것과 같아야 앱에 넘긴다(editor-relay) */
+  relaySecret: string;
+  /** 사이트 재빌드 훅(SITE_BUILD_HOOK_URL) — 없으면 null, 재빌드를 부르지 않는다 */
+  siteBuildHookUrl: string | null;
   /** 연결용 토큰 해시 — 없으면 `/mcp`는 OAuth 토큰만 받는다 */
   connection: { name: string; tokenHash: string } | null;
 }
@@ -95,6 +100,7 @@ export function readEdgeConfig(env: Env): EdgeConfig {
   const publicBaseUrl = readPublicBaseUrl(env);
   const supabaseUrl = required(env, "SUPABASE_URL");
   const supabaseSecretKey = required(env, "EDITOR_SECRET_KEY");
+  const relaySecret = required(env, "RELAY_SECRET");
   return {
     username: env.ADMIN_USERNAME?.trim() || DEFAULT_USERNAME,
     passwordHash,
@@ -105,6 +111,8 @@ export function readEdgeConfig(env: Env): EdgeConfig {
     imageBaseUrl: env.IMAGE_BASE_URL || DEFAULT_IMAGE_BASE_URL,
     supabaseUrl,
     supabaseSecretKey,
+    relaySecret,
+    siteBuildHookUrl: readSiteBuildHookUrl(env.SITE_BUILD_HOOK_URL),
     connection: readConnection(env),
   };
 }

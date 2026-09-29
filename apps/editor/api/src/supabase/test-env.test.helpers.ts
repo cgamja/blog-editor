@@ -74,7 +74,7 @@ export function useSupabaseTestData() {
   afterAll(async () => {
     if (supabaseTestEnv === null) return;
     const client = createTestServerClient();
-    for (const table of ["posts", "workspace_settings", "ai_undo"]) {
+    for (const table of ["posts", "workspace_settings", "ai_undo", "site_rebuilds"]) {
       await removeRows(client, table, "workspace_id", workspaces);
     }
     await removeRows(client, "oauth_clients", "client_id", oauthClients);

@@ -54,6 +54,7 @@ const ALL = [
   "editor-react",
   "api",
   "web",
+  "relay",
 ];
 const except = (...allowed) => ALL.filter((n) => !allowed.includes(n));
 
@@ -205,6 +206,8 @@ export default defineConfig([
       forbidWorkspace(...except("content-schema", "content-convert", "content-render")),
     ],
   ),
+  // 에디터 주소의 Worker(ADR-047) — 표준 Request/Response만 쓰는 잎
+  boundary(["apps/editor/relay/**"], [TIPTAP, PROSEMIRROR, REACT, forbidWorkspace(...except())]),
   boundary(["apps/editor/web/**"], WEB_PACKAGE),
   // 뒤 블록이 규칙을 통째로 덮어쓰므로 패키지 경계(WEB_PACKAGE)를 층마다 다시 넣는다
   // 기능에 속하지 않는 화면(앱 틀 · 404 · 오류)은 app 아래라 따로 층을 두지 않는다 — 최상위 폴더는 테스트가 고정한다

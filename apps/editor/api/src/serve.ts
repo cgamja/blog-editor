@@ -22,6 +22,9 @@
  *   EDITOR_BASE_URL            초안 응답의 에디터 링크 앞부분
  *   PUBLIC_BASE_URL            claude.ai가 닿는 주소(터널 origin) — 있으면 OAuth도 연다(mcp-oauth).
  *                              OAuth 상태는 메모리라 재시작하면 claude.ai에서 다시 연결한다
+ *
+ * 선택 — 있으면 발행 · 발행 취소 · 발행 글 수정 뒤 사이트 재빌드를 부른다(openspec site-rebuild · ADR-047):
+ *   SITE_BUILD_HOOK_URL        사이트 배포 훅(https:) — 30초 묶어 한 번 POST. 상태는 메모리라 재시작하면 idle
  */
 import { fileURLToPath } from "node:url";
 import { registerHooks } from "node:module";
@@ -49,6 +52,8 @@ const { createFileSettingsStore } = await import("./file-settings-store");
 const { createFileAiUndoStore } = await import("./file-ai-undo-store");
 const { createMemoryAccountStore } = await import("./memory-account-store");
 const { readLocalConfig } = await import("./local-config");
+const { createMemorySiteRebuildStore } = await import("./memory-site-rebuild-store");
+const { createSiteRebuild } = await import("./site-rebuild");
 const { readMcpOptionsFromEnv } = await import("./mcp/env");
 const { capturePreview } = await import("./mcp/preview-capture");
 const { DEFAULT_CATEGORIES, DEFAULT_IMAGE_BASE_URL, DEFAULT_WORKSPACE_ID, SEED_ACCOUNT_ID } =
@@ -89,6 +94,15 @@ const config = await readLocalConfig(process.env);
 const port = readPort(process.env.PORT);
 const root = process.env.POST_STORE_ROOT ?? DEFAULT_ROOT;
 const mcp = readMcpOptionsFromEnv(process.env);
+// Node는 응답 뒤에도 프로세스가 살아 있어 묶음 대기를 그냥 흘려보낸다 — 넘기는 일은 던지지 않는다(site-rebuild.ts)
+const siteRebuild =
+  config.siteBuildHookUrl === null
+    ? null
+    : createSiteRebuild({
+        hookUrl: config.siteBuildHookUrl,
+        store: createMemorySiteRebuildStore(),
+        runLater: (task) => void task,
+      });
 
 const app = createApp({
   store: createFilePostStore({ root, workspaceId: DEFAULT_WORKSPACE_ID }),
@@ -109,6 +123,7 @@ const app = createApp({
   sessionCookie: config.sessionCookie,
   // 미리보기 찍기(playwright-core)는 로컬 진입점만 넘긴다 — 배포 번들에는 들지 않는다(edge-deploy)
   ...(mcp === null ? {} : { mcp: { ...mcp, capturePreview } }),
+  ...(siteRebuild === null ? {} : { siteRebuild }),
 });
 
 serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
@@ -127,6 +142,11 @@ serve({ fetch: app.fetch, port, hostname: HOSTNAME }, (info) => {
     mcp === null
       ? "mcp: 꺼짐 (MCP_CONNECTION_TOKEN 없음)"
       : `mcp: http://${HOSTNAME}:${info.port}/mcp`,
+  );
+  console.log(
+    siteRebuild === null
+      ? "사이트 재빌드: 꺼짐 (SITE_BUILD_HOOK_URL 없음)"
+      : "사이트 재빌드: 켜짐 (발행 관련 저장 30초 뒤 훅)",
   );
   if (mcp?.oauth !== undefined)
     console.log(`oauth: ${mcp.oauth.issuer} (발급자 · MCP URL ${mcp.oauth.issuer}/mcp)`);

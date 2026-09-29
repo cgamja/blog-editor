@@ -1,8 +1,8 @@
 import type { Doc, PostFile } from "@blog-editor/content-schema";
 import { apiRequest } from "../../shared/api/http";
-import { POSTS_PATH, PREVIEW_PATH, postQueryKey } from "./constants";
+import { POSTS_PATH, PREVIEW_PATH, SITE_REBUILD_PATH, postQueryKey } from "./constants";
 import { saveHeadersOf } from "./save-model";
-import type { LoadedPost } from "./types";
+import type { LoadedPost, SiteRebuildState } from "./types";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -100,4 +100,16 @@ export async function fetchPreviewHtml(doc: Doc): Promise<string> {
     body: JSON.stringify({ doc }),
   });
   return ((await response.json()) as { html: string }).html;
+}
+
+/** `GET /api/site-rebuild` — 발행 관련 저장 뒤 사이트 재빌드 상태(훅이 없으면 off) */
+export async function fetchSiteRebuild(): Promise<SiteRebuildState> {
+  const response = await apiRequest(SITE_REBUILD_PATH);
+  return (await response.json()) as SiteRebuildState;
+}
+
+/** `POST /api/site-rebuild` — 묶지 않고 바로 훅을 다시 불러 결과 상태를 받는다 */
+export async function retrySiteRebuild(): Promise<SiteRebuildState> {
+  const response = await apiRequest(SITE_REBUILD_PATH, { method: "POST" });
+  return (await response.json()) as SiteRebuildState;
 }

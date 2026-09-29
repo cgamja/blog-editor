@@ -45,6 +45,12 @@ export const aiUndoUnavailableBodySchema = z.strictObject({
   reason: z.enum(AI_UNDO_UNAVAILABLE_REASONS),
 });
 
+/** `GET · POST /api/site-rebuild` — 사이트 반영 상태(openspec site-rebuild). 훅이 없으면 `off` */
+export const siteRebuildStatusSchema = z.strictObject({
+  status: z.enum(["off", "idle", "pending", "sent", "failed"]),
+  updatedAt: z.string().nullable(),
+});
+
 /** 공개 렌더러가 그린 본문 HTML(`<div class="post-body">…</div>`) */
 export const previewResultSchema = z.strictObject({ html: z.string() });
 

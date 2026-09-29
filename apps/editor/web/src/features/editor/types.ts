@@ -9,6 +9,12 @@ import type {
 /** 저장을 막을 수 있는 「글 정보」 칸 — `missingForSave`가 이 순서로 돌려준다 */
 export type MetaField = "title" | "description" | "category" | "slug";
 
+/** 사이트 반영(재빌드) 상태 — `GET · POST /api/site-rebuild` 응답(openspec site-rebuild) */
+export interface SiteRebuildState {
+  status: "off" | "idle" | "pending" | "sent" | "failed";
+  updatedAt: string | null;
+}
+
 /** 머리줄 저장 상태(디자인 결정 4-A) */
 export type SaveStatus =
   | { kind: "idle" }

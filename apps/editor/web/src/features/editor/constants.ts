@@ -9,6 +9,9 @@ export const SEO_LIVE_DELAY_MS = 400;
 /** 편집 화면이 보이는 동안 서버 판을 확인하는 간격(openspec editor-live-reflect) — 창에 돌아올 때도 확인한다 */
 export const LIVE_REFLECT_INTERVAL_MS = 5000;
 
+/** 사이트 반영이 pending인 동안 상태를 다시 읽는 간격(openspec site-rebuild) — 서버는 30초 묶은 뒤 훅을 부른다 */
+export const SITE_REBUILD_POLL_MS = 5000;
+
 /** 조합 중이라 바꿔 끼우기를 미뤘을 때 다시 볼 간격 */
 export const LIVE_REFLECT_DEFER_MS = 300;
 
@@ -21,6 +24,8 @@ export const NEW_POST_KEY = "new";
 export const POSTS_PATH = "/api/posts";
 export const PREVIEW_PATH = "/api/preview";
 export const IMAGE_UPLOAD_PATH = "/api/images";
+/** 사이트 반영(재빌드) 상태 · 다시 시도(openspec site-rebuild) */
+export const SITE_REBUILD_PATH = "/api/site-rebuild";
 /** 공개 렌더러 스타일 — 미리보기 iframe이 불러온다(공개 API와 같은 파일) */
 export const POST_CSS_PATH = "/public/post.css";
 /** post.css가 이름으로 참조하는 사이트 토큰 — 미리보기 iframe에 옮긴다(content-render post.css의 var() 목록) */
@@ -62,6 +67,9 @@ export const aiUndoQueryKey = (slug: string, revision: string) =>
  * 글 목록 `["posts"]` 아래라 목록 무효화가 함께 닿는다
  */
 export const POST_SUMMARIES_QUERY_KEY = ["posts", "summaries"] as const;
+
+/** 워크스페이스 하나의 사이트 반영 상태 — 글과 무관해 글 쿼리 키 밖에 둔다 */
+export const SITE_REBUILD_QUERY_KEY = ["site-rebuild"] as const;
 
 /** 주소 바꾸기 409의 `reason` 중 충돌 대화상자로 가는 것(post-rename-api) */
 export const RENAME_STALE_REASON = "stale";

@@ -21,6 +21,7 @@ import { usePostForm } from "../hooks/use-post-form";
 import { usePublishCheck } from "../hooks/use-publish-check";
 import { useSaveShortcut } from "../hooks/use-save-shortcut";
 import { useServerSave } from "../hooks/use-server-save";
+import { useSiteRebuild } from "../hooks/use-site-rebuild";
 import { createPostFieldHandlers } from "../post-field-handlers";
 import { readDocOrNull } from "../read-doc";
 import type { EditingStart, EditorOverlay } from "../types";
@@ -31,6 +32,7 @@ import { LiveReflectBanner } from "./LiveReflectBanner";
 import { PostInfoPanel } from "./PostInfoPanel";
 import { SaveStatusLine } from "./SaveStatusLine";
 import { SeoChip } from "./SeoChip";
+import { SiteRebuildBanner } from "./SiteRebuildBanner";
 import { SlugField } from "./SlugField";
 import { TitleField } from "./TitleField";
 
@@ -64,7 +66,15 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
   const uploadImage = useImageUploader();
   const categories = usePostCategories();
   const form = usePostForm(start);
-  const server = useServerSave({ getDoc, start, form, onAdopt, onConflict: openConflict });
+  const siteRebuild = useSiteRebuild();
+  const server = useServerSave({
+    getDoc,
+    start,
+    form,
+    onAdopt,
+    onConflict: openConflict,
+    onSiteChange: siteRebuild.refresh,
+  });
   // 자기 글은 제목 중복 비교에서 뺀다 — 주소를 바꾼 초안의 옛 주소도 자기 글이다
   const publishCheck = usePublishCheck(getDoc, [form.slug, start.slug, server.savedSlug()]);
   const seo = useEditorSeo({
@@ -122,8 +132,12 @@ export function LoadedPostEditor({ start, handle, onAdopt, onReload }: LoadedPos
     onReload,
   });
 
-  // 세션 만료가 먼저다 — 다시 로그인해야 불러오기도 된다
-  const liveBanner = live.notice === null ? undefined : <LiveReflectBanner onLoad={live.load} />;
+  // 세션 만료가 먼저다 — 다시 로그인해야 불러오기도 된다. 사이트 반영 실패는 쓰던 글과 무관해 맨 뒤다
+  const rebuildBanner = siteRebuild.isFailed ? (
+    <SiteRebuildBanner isRetrying={siteRebuild.isRetrying} onRetry={siteRebuild.retry} />
+  ) : undefined;
+  const liveBanner =
+    live.notice === null ? rebuildBanner : <LiveReflectBanner onLoad={live.load} />;
   const banner = server.isExpired ? <ExpiredBanner onRelogin={handleRelogin} /> : liveBanner;
 
   return (

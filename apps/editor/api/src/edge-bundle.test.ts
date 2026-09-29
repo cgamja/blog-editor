@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { buildEdge } from "../scripts/build-edge";
 import type { BuildEdgeResult } from "../scripts/build-edge";
+import { VALID_ENV } from "./edge-env.test.helpers";
 import { hashPassword } from "./password";
 import { supabaseSuiteName, supabaseTestEnv } from "./supabase/test-env.test.helpers";
 
@@ -16,6 +17,8 @@ const BUILD_TIMEOUT_MS = 60_000;
 const DENO_TIMEOUT_MS = 180_000;
 // Supabase Edge Runtime과 같은 주 버전(ADR-046 스파이크) — 올릴 때 같이 맞춘다
 const DENO = "deno@2.9.6";
+// 함수는 중계가 붙인 시크릿 헤더가 있어야 앱에 넘긴다(editor-relay)
+const EDGE_RELAY_SECRET = "edge-bundle-relay-secret";
 
 let built: Promise<BuildEdgeResult> | undefined;
 /** 두 테스트가 같은 번들을 본다 — 한 번만 묶는다 */
@@ -44,6 +47,27 @@ describe("edge-deploy — 배포 번들", () => {
   );
 });
 
+// edge.ts는 본문 CSS · 형식 가이드를 text 모듈로 import해 vitest가 직접 못 부른다 — 묶은 번들로 부른다
+describe("editor-relay — 함수는 중계를 거친 요청만 받는다 (보호 대상 — 고쳐서 통과시키지 않는다)", () => {
+  it(
+    "WHEN X-Relay-Secret 없이 함수의 GET /public/posts를 부르면 THEN 403이다",
+    async () => {
+      const { files } = await buildOnce();
+      const entry = files.find((file) => /\.m?js$/.test(file));
+      if (entry === undefined) throw new Error(`번들 JS가 없다: ${files.join(", ")}`);
+      const { createEdgeHandler } = (await import(pathToFileURL(entry).href)) as EdgeModule;
+      const handle = createEdgeHandler(VALID_ENV);
+
+      const response = await handle(
+        new Request("https://ref.supabase.co/functions/v1/editor/public/posts"),
+      );
+
+      expect(response.status).toBe(403);
+    },
+    BUILD_TIMEOUT_MS,
+  );
+});
+
 describe.skipIf(supabaseTestEnv === null)(
   supabaseSuiteName("edge-deploy — 번들 핸들러(시험 프로젝트)"),
   () => {
@@ -62,10 +86,12 @@ describe.skipIf(supabaseTestEnv === null)(
           PUBLIC_BASE_URL: "https://editor.example.test",
           SUPABASE_URL: env.url,
           EDITOR_SECRET_KEY: env.secretKey,
+          RELAY_SECRET: EDGE_RELAY_SECRET,
         });
+        const relayed = { headers: { "X-Relay-Secret": EDGE_RELAY_SECRET } };
 
-        const posts = await handle(new Request("http://x/editor/public/posts"));
-        const css = await handle(new Request("http://x/editor/public/post.css"));
+        const posts = await handle(new Request("http://x/editor/public/posts", relayed));
+        const css = await handle(new Request("http://x/editor/public/post.css", relayed));
 
         expect(posts.status).toBe(200);
         expect((await posts.json()) as unknown).toMatchObject({ posts: expect.any(Array) });
@@ -84,16 +110,18 @@ describe.skipIf(supabaseTestEnv === null)(
 const DENO_SMOKE = `
 const [entry, envJson, password, token] = Deno.args;
 const { createEdgeHandler } = await import(entry);
-const handle = createEdgeHandler(JSON.parse(envJson));
+const env = JSON.parse(envJson);
+const handle = createEdgeHandler(env);
 const json = { "content-type": "application/json" };
+const relay = { "X-Relay-Secret": env.RELAY_SECRET };
 const login = await handle(new Request("https://editor.example.test/editor/api/session", {
-  method: "POST", headers: { ...json, origin: "https://editor.example.test" },
+  method: "POST", headers: { ...json, ...relay, origin: "https://editor.example.test" },
   body: JSON.stringify({ username: "admin", password }),
 }));
-const posts = await handle(new Request("https://editor.example.test/editor/public/posts"));
+const posts = await handle(new Request("https://editor.example.test/editor/public/posts", { headers: relay }));
 const tools = await handle(new Request("https://editor.example.test/editor/mcp", {
   method: "POST",
-  headers: { ...json, accept: "application/json, text/event-stream", authorization: "Bearer " + token },
+  headers: { ...json, ...relay, accept: "application/json, text/event-stream", authorization: "Bearer " + token },
   body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
 }));
 const toolsText = await tools.text();
@@ -128,6 +156,7 @@ describe.skipIf(supabaseTestEnv === null)(
           PUBLIC_BASE_URL: "https://editor.example.test",
           SUPABASE_URL: env.url,
           EDITOR_SECRET_KEY: env.secretKey,
+          RELAY_SECRET: EDGE_RELAY_SECRET,
           MCP_CONNECTION_TOKEN_HASH: createHash("sha256").update(token).digest("hex"),
         };
 

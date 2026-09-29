@@ -8,6 +8,7 @@ import { hashPassword, isValidPasswordHash } from "./password";
 import { readIssuer } from "./mcp/env";
 import type { SessionCookieMode } from "./session-types";
 import { DEFAULT_USERNAME } from "./seed";
+import { readSiteBuildHookUrl } from "./site-rebuild-config";
 
 export interface LocalConfig {
   username: string;
@@ -16,6 +17,8 @@ export interface LocalConfig {
   /** SESSION_SECRET이 없어 새로 만들었다 — 재시작하면 세션이 끊긴다 */
   generatedSecret: boolean;
   sessionCookie: SessionCookieMode;
+  /** 사이트 재빌드 훅(SITE_BUILD_HOOK_URL) — 없으면 null, 재빌드를 부르지 않는다 */
+  siteBuildHookUrl: string | null;
 }
 
 const GENERATED_SECRET_BYTES = 32;
@@ -56,6 +59,7 @@ export async function readLocalConfig(
   const passwordHash = await readPasswordHash(env);
   const username = env.ADMIN_USERNAME?.trim() || DEFAULT_USERNAME;
   const sessionCookie = sessionCookieModeOf(env);
+  const siteBuildHookUrl = readSiteBuildHookUrl(env.SITE_BUILD_HOOK_URL);
   const givenSecret = env.SESSION_SECRET;
   if (givenSecret !== undefined && givenSecret !== "") {
     return {
@@ -64,6 +68,7 @@ export async function readLocalConfig(
       sessionSecret: givenSecret,
       generatedSecret: false,
       sessionCookie,
+      siteBuildHookUrl,
     };
   }
   return {
@@ -72,5 +77,6 @@ export async function readLocalConfig(
     sessionCookie,
     sessionSecret: randomBytes(GENERATED_SECRET_BYTES).toString("base64"),
     generatedSecret: true,
+    siteBuildHookUrl,
   };
 }
