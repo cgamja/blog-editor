@@ -67,6 +67,15 @@ describe("site-rebuild — 묶어 보내기", () => {
     expect((await rebuild.status()).status).toBe("failed");
   });
 
+  // 다른 실패: fetch가 리다이렉트를 따라가면 3xx 뒤 다른 주소의 2xx를 sent로 적는다(POST가 GET으로 바뀌어 빌드가 안 돈다)
+  it("WHEN 훅을 부르면 THEN 리다이렉트를 따라가지 않는다", async () => {
+    const { rebuild, fetch } = setup(204);
+
+    await rebuild.retry();
+
+    expect(fetch).toHaveBeenCalledWith(HOOK_URL, expect.objectContaining({ redirect: "manual" }));
+  });
+
   // 다시 시도는 묶지 않는다 — e2e는 이 경로를 네트워크 경계에서 가짜로 두므로 "바로 훅을 부른다"는 여기서만 잡힌다
   it("WHEN 다시 시도하고 훅이 2xx를 주면 THEN 기다리지 않고 훅 POST가 한 번이고 돌려받은 상태가 sent다", async () => {
     const { rebuild, fetch } = setup(204);
