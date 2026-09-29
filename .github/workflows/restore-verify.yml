@@ -1,0 +1,81 @@
+# 복구 검증(backup-restore) — 가장 최근 성공한 백업을 시험용 Supabase 프로젝트에 복원하고,
+# 글 revision · 사진 이름이 백업의 대조 목록과 같은지 본다. 분기마다 + 수동.
+# 시험 프로젝트를 비우고 다시 만든다 — 계약 테스트(CI)는 무작위 워크스페이스라 그 뒤 다시 돌면 된다.
+name: Restore verify
+
+on:
+  schedule:
+    - cron: "0 19 1 1,4,7,10 *" # 분기 첫날 04:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read # 백업 워크플로의 아티팩트를 받는다
+
+concurrency:
+  group: supabase-test-project
+  cancel-in-progress: false
+
+jobs:
+  restore-verify:
+    runs-on: ubuntu-latest
+    # 비밀은 쓰는 스텝에만 준다 — 체크아웃 · 설치 스텝은 백업 암호 · 키를 보지 못한다
+    steps:
+      - name: 시크릿 확인
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+          TARGET_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          TARGET_SECRET_KEY: ${{ secrets.SUPABASE_TEST_SECRET_KEY }}
+        run: |
+          missing=""
+          for name in BACKUP_PASSPHRASE SUPABASE_TEST_DB_URL TARGET_SUPABASE_URL TARGET_SECRET_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::시크릿 없음: $name"; missing=1; fi
+          done
+          [ -z "$missing" ]
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@blog-editor/api..."
+      - name: psql 17
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+      - name: 최근 백업 받기 · 풀기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          run_id=$(gh run list --workflow backup.yml --status success --limit 1 --json databaseId -q '.[0].databaseId')
+          [ -n "$run_id" ] || { echo "::error::성공한 백업이 없다"; exit 1; }
+          gh run download "$run_id" --dir artifact
+          gpg --batch --yes --decrypt --passphrase-fd 3 \
+            --output backup.tar.gz artifact/*/editor-backup.tar.gz.gpg 3<<<"$BACKUP_PASSPHRASE"
+          tar -xzf backup.tar.gz
+      # 마이그레이션(레포) → 데이터 덤프 → 사진 순서 — docs/deploy-supabase.md 복구 절과 같다
+      - name: 시험 프로젝트 비우고 스키마 만들기
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: npx -y supabase@2.118.0 db reset --db-url "$SUPABASE_TEST_DB_URL" --yes
+      # 레포가 공개라 로그도 공개다 — COPY 오류는 행 데이터(초안 본문)를 찍으므로 출력을 로그에 남기지 않는다
+      - name: 데이터 복원
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: |
+          /usr/lib/postgresql/17/bin/psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 --quiet \
+            --file backup/dump.sql > /dev/null 2>&1 \
+            || { echo "::error::데이터 복원 실패 — 상세는 공개 로그에 남기지 않는다. 로컬에서 docs/deploy-supabase.md 복구 절로 재현"; exit 1; }
+      - name: 사진 복원
+        env:
+          TARGET_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          TARGET_SECRET_KEY: ${{ secrets.SUPABASE_TEST_SECRET_KEY }}
+        run: node apps/editor/api/scripts/backup-storage.ts restore backup
+      - name: 대조
+        env:
+          TARGET_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          TARGET_SECRET_KEY: ${{ secrets.SUPABASE_TEST_SECRET_KEY }}
+        run: node apps/editor/api/scripts/backup-storage.ts verify backup

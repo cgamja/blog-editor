@@ -34,6 +34,7 @@ import {
   MCP_NOTHING_TO_UPDATE_MESSAGE,
   MCP_POST_NOT_FOUND_MESSAGE,
   MCP_PREVIEW_BROWSER_MISSING_MESSAGE,
+  MCP_PREVIEW_UNSUPPORTED_MESSAGE,
   MCP_PUBLISHED_READ_ONLY_MESSAGE,
   MCP_REVERT_UNAVAILABLE_MESSAGES,
   MCP_SERVER_INSTRUCTIONS,
@@ -43,7 +44,8 @@ import {
   previewPartNote,
   previewPartOutOfRangeMessage,
 } from "./messages";
-import { capturePreview } from "./preview-capture";
+// 타입만 — 값으로 부르면 배포 번들에 playwright-core가 든다. 찍기 수단은 로컬 진입점이 넘긴다(edge-deploy)
+import type { capturePreview } from "./preview-capture";
 import { previewPageHtml } from "./preview-page";
 
 export interface DraftToolsOptions {
@@ -60,8 +62,16 @@ export interface DraftToolsOptions {
   today: () => string;
   /** 이 요청을 보낸 연결용 토큰에서 온 초안 출처 */
   source: PostSource;
-  /** preview_post가 찍는 문서의 재료 — 공개 렌더와 같은 imageBaseUrl · post.css, 올린 이미지 저장소(있으면) */
-  preview: { imageBaseUrl: string; postCss: string; images?: ImageStore };
+  /**
+   * preview_post가 찍는 문서의 재료 — 공개 렌더와 같은 imageBaseUrl · post.css, 올린 이미지 저장소(있으면).
+   * capture가 없으면(배포 함수 — 브라우저 없음) preview_post는 "지원 안 함" 도구 오류다
+   */
+  preview: {
+    imageBaseUrl: string;
+    postCss: string;
+    images?: ImageStore;
+    capture?: typeof capturePreview;
+  };
 }
 
 const SERVER_INFO = { name: "simsimee-blog-editor", version: "0.1.0" };
@@ -355,8 +365,9 @@ export function createDraftsServer(options: DraftToolsOptions): McpServer {
     guarded(async ({ slug, part = 1 }) => {
       const found = await store.get(slug);
       if (found === null) return toolError(MCP_POST_NOT_FOUND_MESSAGE);
+      if (preview.capture === undefined) return toolError(MCP_PREVIEW_UNSUPPORTED_MESSAGE);
       const html = previewPageHtml(found.file, preview);
-      const captured = await capturePreview(html, part, {
+      const captured = await preview.capture(html, part, {
         imageBaseUrl: preview.imageBaseUrl,
         ...(preview.images === undefined ? {} : { images: preview.images }),
       });

@@ -1,12 +1,13 @@
 /**
  * 로컬 진입점(serve.ts)의 env 해석. 서버 기동과 떼어 둔 것은 규칙을 테스트하기 위해서다.
- * 로컬 서버는 루프백 전용이라 짧은 비밀번호(예: 1234)를 받는다 — 배포(M4) 진입점은 이 경로를 쓰지 않는다.
- * 그쪽은 D8 전제(긴 무작위 비밀번호)를 지키거나 잠금 카운터를 같이 넣는다.
+ * 로컬 서버는 루프백 전용이라 짧은 비밀번호(예: 1234)를 받는다 — 배포 진입점(edge-config.ts)은 이 경로를 쓰지 않는다.
+ * 그쪽은 해시만 받고 누적 잠금(ADR-045)이 짧은 비밀번호를 버틴다.
  */
 import { randomBytes } from "node:crypto";
 import { hashPassword, isValidPasswordHash } from "./password";
 import { readIssuer } from "./mcp/env";
 import type { SessionCookieMode } from "./session-types";
+import { DEFAULT_USERNAME } from "./seed";
 
 export interface LocalConfig {
   username: string;
@@ -17,7 +18,6 @@ export interface LocalConfig {
   sessionCookie: SessionCookieMode;
 }
 
-const DEFAULT_USERNAME = "admin";
 const GENERATED_SECRET_BYTES = 32;
 
 /** 비밀번호는 기본값이 없다 — 코드에 박힌 비밀번호는 레포를 읽는 누구나 아는 비밀번호다 */

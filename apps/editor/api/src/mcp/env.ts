@@ -40,13 +40,7 @@ export function readMcpOptionsFromEnv(env: NodeJS.ProcessEnv): McpOptions | null
       `MCP_CONNECTION_TOKEN은 ${MIN_TOKEN_LENGTH}자 이상 · 공백 없이 — openssl rand -hex 32`,
     );
   }
-  const name = env.MCP_CONNECTION_TOKEN_NAME || DEFAULT_TOKEN_NAME;
-  // 이름은 초안 출처 `token:<name>`이 된다 — 모양 규칙은 출처 스키마 한 곳에 있다
-  const source = postSourceSchema.safeParse(`token:${name}`);
-  if (!source.success) {
-    const reason = source.error.issues.map((issue) => issue.message).join(" · ");
-    throw new Error(`MCP_CONNECTION_TOKEN_NAME이 틀렸다(${reason}) — 받은 값: "${name}"`);
-  }
+  const name = readConnectionTokenName(env.MCP_CONNECTION_TOKEN_NAME);
   const issuer = readIssuer(env.PUBLIC_BASE_URL);
   return {
     connectionTokens: createMemoryConnectionTokenStore([
@@ -57,6 +51,20 @@ export function readMcpOptionsFromEnv(env: NodeJS.ProcessEnv): McpOptions | null
     formatGuide: readFormatGuide(),
     ...(issuer === null ? {} : { oauth: { issuer, store: createMemoryOAuthStore() } }),
   };
+}
+
+/**
+ * `MCP_CONNECTION_TOKEN_NAME`(없으면 local) — 로컬 · 배포 진입점이 같은 규칙을 쓴다.
+ * 이름은 초안 출처 `token:<name>`이 된다 — 모양 규칙은 출처 스키마 한 곳에 있다
+ */
+export function readConnectionTokenName(raw: string | undefined): string {
+  const name = raw || DEFAULT_TOKEN_NAME;
+  const source = postSourceSchema.safeParse(`token:${name}`);
+  if (!source.success) {
+    const reason = source.error.issues.map((issue) => issue.message).join(" · ");
+    throw new Error(`MCP_CONNECTION_TOKEN_NAME이 틀렸다(${reason}) — 받은 값: "${name}"`);
+  }
+  return name;
 }
 
 /**

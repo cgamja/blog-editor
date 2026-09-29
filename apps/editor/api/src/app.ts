@@ -56,6 +56,11 @@ export interface AppOptions extends SessionOptions {
   settings?: SettingsStore;
   /** 글마다 마지막 AI 저장(ADR-041) — 없으면 메모리. REST 되돌리기와 `/mcp`가 같은 인스턴스를 쓴다 */
   aiUndo?: AiUndoStore;
+  /**
+   * 본문 CSS(content-render `post.css`) 원문 — 배포 번들은 text 모듈로 넣어 넘긴다(실행 중 파일 읽기 없음,
+   * ADR-046). 없으면 패키지 파일에서 읽는다(로컬 · 테스트)
+   */
+  postCss?: string;
   /** 발행 글 `updated`에 쓰는 오늘(`YYYY-MM-DD`). 기본은 블로그 시간대의 오늘 */
   today?: () => string;
 }
@@ -96,7 +101,7 @@ export function createApp(options: AppOptions): Hono {
   const { store, categories, imageBaseUrl, today = blogToday } = options;
   const postFileSchema = createPostFileSchema({ categories });
   const publicResponseSchema = createPublicPostsResponseSchema({ categories });
-  const postCss = readPostCss();
+  const postCss = options.postCss ?? readPostCss();
   const session = resolveSessionConfig(options);
   const aiUndo = options.aiUndo ?? createMemoryAiUndoStore();
   const app = new Hono();

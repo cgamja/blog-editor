@@ -12,3 +12,7 @@ coverage
 .claude/settings.local.json
 test-results
 playwright-report
+# Supabase CLI가 link 때 만드는 로컬 상태(프로젝트 ref · 버전) — 커밋하지 않는다
+supabase/.temp
+# 배포 번들(ADR-046) — build:edge 생성물
+supabase/functions/editor/app.js

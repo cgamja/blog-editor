@@ -16,3 +16,6 @@ export const SESSION_COOKIE_OF: Record<SessionCookieMode, CookieOptions> = {
   secure: { prefix: COOKIE_PREFIX, httpOnly: true, secure: true, sameSite: "Strict", path: "/" },
   "loopback-http": { httpOnly: true, sameSite: "Strict", path: "/" },
 };
+
+/** 세션 쿠키 HMAC 키의 하한 — 앱(session.ts)과 배포 설정 읽기(edge-config.ts)가 같은 값을 본다 */
+export const MIN_SESSION_SECRET_BYTES = 32;

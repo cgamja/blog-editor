@@ -1,0 +1,77 @@
+# 운영 Supabase 백업(backup-restore · ADR-044) — 무료 플랜엔 받을 수 있는 자동 백업이 없어 직접 한다.
+# DB(public 스키마 데이터) 덤프 + 사진 버킷 객체 + 대조 목록을 묶어 **암호화한 파일만** 아티팩트로 올린다.
+# 레포가 공개라 평문 덤프 · 사진은 어디에도 올리지 않는다. 푸는 법 · 복구 순서는 docs/deploy-supabase.md.
+name: Backup
+
+on:
+  schedule:
+    - cron: "0 18 * * *" # 매일 03:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    # 비밀은 job 전체가 아니라 쓰는 스텝에만 준다 — 체크아웃 · 설치(의존성 스크립트) 스텝은 운영 키를 보지 못한다
+    steps:
+      # 빠진 시크릿이 있으면 아무것도 만들지 않고 실패한다 — 빨간불이 GitHub 알림이 된다
+      - name: 시크릿 확인
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SOURCE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SOURCE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          missing=""
+          for name in SUPABASE_DB_URL SOURCE_SUPABASE_URL SOURCE_SECRET_KEY BACKUP_PASSPHRASE; do
+            if [ -z "${!name}" ]; then echo "::error::시크릿 없음: $name"; missing=1; fi
+          done
+          [ -z "$missing" ]
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@blog-editor/api..."
+      # Supabase는 Postgres 17 — 우분투 기본 클라이언트보다 새 pg_dump가 필요하다
+      - name: pg_dump 17
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+      # 스키마는 레포의 마이그레이션이 원천이다 — 데이터만 뜬다(복구는 마이그레이션 → 이 덤프 순서)
+      # 레포가 공개라 로그도 공개다 — 오류 출력(행 데이터가 섞일 수 있다)은 로그에 남기지 않는다
+      - name: DB 덤프
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p backup
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --data-only --schema=public \
+            --no-owner --no-privileges --file backup/dump.sql 2>/dev/null \
+            || { echo "::error::pg_dump 실패 — 상세는 공개 로그에 남기지 않는다. 로컬에서 같은 명령으로 확인"; exit 1; }
+      - name: 사진 · 대조 목록
+        env:
+          SOURCE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SOURCE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node apps/editor/api/scripts/backup-storage.ts snapshot backup
+      - name: 묶어서 암호화
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          tar -czf - backup \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                --passphrase-fd 3 --output editor-backup.tar.gz.gpg 3<<<"$BACKUP_PASSPHRASE"
+          rm -rf backup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: editor-backup-${{ github.run_id }}
+          path: editor-backup.tar.gz.gpg
+          retention-days: 90
+          if-no-files-found: error
