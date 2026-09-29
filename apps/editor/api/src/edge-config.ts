@@ -71,7 +71,10 @@ function readSessionSecret(env: Env): string {
 function readPublicBaseUrl(env: Env): string {
   const issuer = readIssuer(required(env, "PUBLIC_BASE_URL"));
   if (issuer === null || new URL(issuer).protocol !== "https:") {
-    throw new Error(`PUBLIC_BASE_URL은 https origin이다 — 받은 값: "${env.PUBLIC_BASE_URL}"`);
+    throw new Error(
+      `PUBLIC_BASE_URL은 경로 없는 https origin — 에디터 주소(https://editor.simsimeestudio.com, /api 중계)다. ` +
+        `Supabase 함수 주소(…/functions/v1/editor)가 아니다 — 받은 값: "${env.PUBLIC_BASE_URL}"`,
+    );
   }
   return issuer;
 }
